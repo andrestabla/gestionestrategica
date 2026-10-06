@@ -67,6 +67,17 @@ export type VariableCapture = {
   at: string;                   // ISO
 };
 
+/** Test de capacidad empresarial respondido desde la plataforma (uno por persona). */
+export type TestResponse = {
+  email: string;
+  name: string;
+  role: string;
+  cargo?: string;
+  objetivo?: string;
+  at: string;                   // ISO
+  r: Record<string, number | string>;   // 1..24 → 1–5 | "NI" · 25 → A–E
+};
+
 /** Valor de KPI reportado desde la plataforma (se suma a la serie del seed). */
 export type KpiReport = {
   code: string;
@@ -96,6 +107,7 @@ const g = globalThis as unknown as {
   __pgtdCapture?: Map<string, VariableCapture>;
   __pgtdPublished?: AssessmentRecord | null;
   __pgtdKpiReports?: Map<string, KpiReport[]>;
+  __pgtdTests?: Map<string, TestResponse>;
   __pgtdIniOverrides?: Map<string, InitiativeOverride>;
   __pgtdHydrated?: boolean;
 };
@@ -117,6 +129,7 @@ if (!g.__pgtdBaseline) {
 if (!g.__pgtdCapture) g.__pgtdCapture = new Map();
 if (g.__pgtdPublished === undefined) g.__pgtdPublished = null;
 if (!g.__pgtdKpiReports) g.__pgtdKpiReports = new Map();
+if (!g.__pgtdTests) g.__pgtdTests = new Map();
 if (!g.__pgtdIniOverrides) g.__pgtdIniOverrides = new Map();
 
 const tasks = () => g.__pgtdTasks!;
@@ -754,6 +767,52 @@ export function publishCapture(
   audit(user, "task", "A3", "medición A3 publicada (corte vigente)");
   void dimOf;
   return { ok: true, assessment };
+}
+
+/* ═══ Test de capacidad empresarial ═══
+   Cualquier usuario con sesión responde el test; cada persona guarda una
+   sola respuesta (la última reemplaza). El advisor y el líder ven todas;
+   los demás solo la propia. */
+
+const testStore = () => g.__pgtdTests!;
+
+export const getTestResponses = (user: SessionUser): TestResponse[] => {
+  const all = [...testStore().values()];
+  return user.role === "CONSULTOR" || user.role === "LIDER" || user.role === "ADMIN"
+    ? all : all.filter((t) => t.email === user.email);
+};
+
+export function saveTestResponse(
+  user: SessionUser,
+  input: { r: Record<string, unknown>; cargo?: string; objetivo?: string },
+): { ok: true; response: TestResponse } | { ok: false; status: number; error: string } {
+  const r: Record<string, number | string> = {};
+  let answered = 0;
+  for (let n = 1; n <= 24; n++) {
+    const v = input.r?.[String(n)];
+    if (v === undefined || v === null || v === "") continue;
+    if (v === "NI") { r[n] = "NI"; continue; }
+    if (!inRange(typeof v === "string" ? Number(v) : v, 1, 5)) {
+      return { ok: false, status: 422, error: `La pregunta ${n} admite 1 a 5 o «Sin información».` };
+    }
+    r[n] = Number(v); answered++;
+  }
+  const q25 = input.r?.["25"];
+  if (q25 !== undefined && q25 !== "" && !["A", "B", "C", "D", "E"].includes(String(q25))) {
+    return { ok: false, status: 422, error: "La pregunta 25 admite una opción de A a E." };
+  }
+  if (q25) r[25] = String(q25);
+  if (answered < 12) {
+    return { ok: false, status: 422, error: `Responde al menos 12 preguntas con un número para guardar el test (llevas ${answered}).` };
+  }
+  const response: TestResponse = {
+    email: user.email, name: user.name, role: user.role,
+    cargo: input.cargo?.trim() || undefined, objetivo: input.objetivo?.trim() || undefined,
+    at: new Date().toISOString(), r,
+  };
+  testStore().set(user.email, response);
+  audit(user, "task", `test:${user.email}`, `test de capacidad empresarial guardado (${answered} respuestas)`);
+  return { ok: true, response };
 }
 
 /* ═══ Reporte de valores de KPI ═══
@@ -1460,6 +1519,7 @@ export function resetStore() {
   g.__pgtdCapture = new Map();
   g.__pgtdPublished = null;
   g.__pgtdKpiReports = new Map();
+  g.__pgtdTests = new Map();
   g.__pgtdIniOverrides = new Map();
   (g as unknown as { __pgtdArchived?: Task[] }).__pgtdArchived = [];
   (g as unknown as { __pgtdNotifRead?: Map<string, Set<string>> }).__pgtdNotifRead = new Map();

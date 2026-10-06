@@ -124,9 +124,8 @@ export default function LoginPage() {
         {(b?.showHeroTitle ?? true) && (
           <h1 className="mt-4 max-w-[20ch] text-[34px] font-extrabold leading-[1.15] tracking-tight text-white">
             {b ? b.heroTitle : (
-              <>Plataforma de Gestión de la{" "}
-                <span style={{ color: "#4fd0ec" }}>Transformación Digital</span>{" "}
-                con <span style={{ color: "#f1ba5b" }}>Enfoque Territorial</span></>
+              <>Plataforma de gestión estratégica{" "}
+                <span style={{ color: "#D4AF37" }}>4Shine Empresas</span></>
             )}
           </h1>
         )}
@@ -138,7 +137,7 @@ export default function LoginPage() {
         )}
       </div>
       <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-white/60">
-        {b?.showHeroSupport && b.heroSupport ? b.heroSupport : (b?.tagline ?? "Soluciones digitales con sentido humano")}
+        {b?.showHeroSupport && b.heroSupport ? b.heroSupport : (b?.tagline ?? "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.")}
       </div>
     </div>
   );
@@ -152,9 +151,10 @@ export default function LoginPage() {
           <img src={b.logoLight} alt="" className="h-9 max-w-[220px] object-contain" />
         ) : (
           <>
-            <AlgoritmoMark size={26} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
             <span className="text-[15px] font-extrabold text-ink">
-              {b?.showPlatformName ? b.platformName : "PGTD"}
+              {b?.showPlatformName ? b.platformName : "4Shine Empresas"}
             </span>
           </>
         )}
@@ -223,7 +223,7 @@ export default function LoginPage() {
         <div className="space-y-1">
           {DEMO_ACCOUNTS.map((a) => (
             <button key={a.email} type="button"
-              onClick={() => { setEmail(a.email); setPassword("pgtd-demo-2026"); }}
+              onClick={() => { setEmail(a.email); setPassword("4shine-demo-2026"); }}
               className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2">
               <span className="font-medium text-ink-soft">{a.label}</span>
               <span className="truncate font-mono text-[10.5px] text-faint">{a.email}</span>
@@ -231,7 +231,7 @@ export default function LoginPage() {
           ))}
         </div>
         <div className="mt-2.5 border-t border-line pt-2 font-mono text-[10px] text-faint">
-          contraseña común · pgtd-demo-2026
+          contraseña común · 4shine-demo-2026
         </div>
       </div>
     </div>

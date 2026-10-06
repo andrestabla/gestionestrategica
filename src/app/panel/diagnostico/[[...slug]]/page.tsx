@@ -8,7 +8,7 @@
 //   /panel/diagnostico/brechas              → brechas priorizadas y nivel de acompañamiento
 //   /panel/diagnostico/captura              → captura del corte A3 (autoevaluación y verificación)
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge } from "@/components/ui";
@@ -16,17 +16,18 @@ import { AccessChip, useCan } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar } from "@/components/charts";
 import { LINES, fmtNum } from "@/data/demo";
 import {
-  CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, GUIDES, FLAG_TEXT,
+  CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, TEST_QUESTIONS, GUIDES, FLAG_TEXT,
   methodologyOf, frameworkOf, frameworkOfPractice, DRAG_WEIGHT, THRESHOLD, levelName,
 } from "@/data/mapa";
 import { CONSOLIDATED, EVIDENCE_CATALOG, ASSESSMENTS, responsible } from "@/data/cmi";
 import { OD_RESPONSES } from "@/data/od-demo";
 import { readTest, recommend, testContrast, avg, rangeText, type DimResult } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
-import type { VariableCapture } from "@/server/store";
+import type { VariableCapture, TestResponse } from "@/server/store";
+import type { Response } from "@/lib/od";
 import {
-  Radar, Layers, ClipboardList, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
-  AlertTriangle, Info, Loader2, Upload, FileCheck2,
+  Radar, Layers, ClipboardList, Flame, PenLine, ArrowLeft, CheckCircle2,
+  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send,
 } from "lucide-react";
 
 type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura";
@@ -68,7 +69,7 @@ export default function DiagnosticoPage() {
       {tab === "resumen" && <Resumen />}
       {tab === "capacidad" && <Capacidad n={Number(arg ?? 1)} />}
       {tab === "dimension" && arg && <Dimension code={arg} />}
-      {tab === "test" && <TestTab />}
+      {tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : <TestTab />)}
       {tab === "brechas" && <Brechas />}
       {tab === "captura" && <Captura />}
     </>
@@ -306,23 +307,46 @@ function Dimension({ code }: { code: string }) {
 
 /* ═══ Test ═══ */
 
+const toResponse = (t: TestResponse): Response => ({ tipo: "test", meta: { nombre: t.name, cargo: t.cargo ?? t.role, empresa: "" }, r: t.r });
+
+function useTestResponses() {
+  const [stored, setStored] = useState<TestResponse[]>([]);
+  const [mine, setMine] = useState<TestResponse | null>(null);
+  const refetch = useCallback(async () => {
+    try { const r = await fetch("/api/td/test"); if (r.ok) { const j = await r.json(); setStored(j.responses ?? []); setMine(j.mine ?? null); } } catch { /* demo */ }
+  }, []);
+  useEffect(() => { refetch(); }, [refetch]);
+  return { stored, mine, refetch };
+}
+
 function TestTab() {
-  const tests = OD_RESPONSES.filter((x) => x.tipo === "test");
+  const { stored, mine } = useTestResponses();
+  const demo = OD_RESPONSES.filter((x) => x.tipo === "test");
+  const tests = [...demo, ...stored.map(toResponse)];
   const reads = tests.map((t) => readTest(t.r));
   const contrast = testContrast(tests);
   const stages = new Set(reads.map((r) => r.stage));
+  const lead = reads[0];
   return (
     <>
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Puerta de entrada</div>
+          <div className="text-[15px] font-extrabold">{mine ? "Ya respondiste el test" : "Responde el test de capacidad empresarial"}</div>
+          <div className="text-[12px] text-white/75">{mine ? `Guardado el ${new Date(mine.at).toLocaleDateString("es-CO")}. Puedes corregirlo; la última respuesta reemplaza a la anterior.` : "24 preguntas, seis por capacidad, más el desafío dominante. Unos 20 minutos; cada número trae la guía de lo que habría que poder mostrar."}</div>
+        </div>
+        <Link href="/panel/diagnostico/test/responder" className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardList size={13} /> {mine ? "Revisar mi test" : "Responder el test"}</Link>
+      </div>
       <div className="mb-5 grid gap-5 lg:grid-cols-[1fr_340px]">
         <Card className="rise rise-1">
-          <CardHeader title="Participantes" sub="24 preguntas, seis por capacidad, más el desafío dominante · cobertura mínima 5 de 6 para reportar" />
+          <CardHeader title="Participantes" sub={`${demo.length} de la demo${stored.length ? ` · ${stored.length} desde la plataforma` : ""} · cobertura mínima 5 de 6 para reportar una capacidad`} />
           <div className="overflow-x-auto px-2 pb-3">
             <table className="w-full text-[12.5px]">
               <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{TEST.bloques.map((b) => <th key={b.cap} className="num px-2 py-2 text-center">{b.cap}</th>)}<th className="px-3 py-2">Etapa según respuestas</th><th className="px-3 py-2">Pregunta 25</th></tr></thead>
               <tbody>
                 {tests.map((t, i) => (
                   <tr key={i} className="border-t border-line">
-                    <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[10.5px] text-faint">{String(t.meta.cargo ?? "")}</div></td>
+                    <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[10.5px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""}</div></td>
                     {reads[i].caps.map((c) => <td key={c.n} className={`num px-2 py-2 text-center ${c.avg != null && c.avg < THRESHOLD ? "font-bold" : ""}`} style={c.avg != null && c.avg < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(c.avg, 2)}<div className="text-[9.5px] font-normal text-faint">{c.cov}/6</div></td>)}
                     <td className="px-3 py-2 font-semibold text-ink">{reads[i].stage}{reads[i].provisional ? " (provisional)" : ""}</td>
                     <td className="px-3 py-2 text-muted">{reads[i].hypothesis ?? "—"}</td>
@@ -352,23 +376,137 @@ function TestTab() {
           </div>
         </Card>
         <Card className="rise rise-4">
-          <CardHeader title="Patrones y prioridades" sub="según las respuestas de la gerencia general" />
+          <CardHeader title="Patrones y prioridades" sub={`según las respuestas de ${String(tests[0].meta.nombre)}`} />
           <div className="divide-y divide-line">
-            {reads[0].patterns.map((p, i) => (
+            {lead.patterns.map((p, i) => (
               <div key={p.hip} className="px-5 py-3"><div className="label mb-0.5">{i === 0 ? "Prioridad principal" : "Prioridad de soporte"} · preguntas {p.qs.join(", ")}</div><div className="text-[13px] font-bold text-ink">{p.accion}</div><div className="text-[12px] text-muted">{p.hip}</div></div>
             ))}
-            {reads[0].pending.length > 0 && <div className="px-5 py-3 text-[12px] text-muted">Pendientes de verificación: preguntas {reads[0].pending.join(", ")}.</div>}
+            {lead.pending.length > 0 && <div className="px-5 py-3 text-[12px] text-muted">Pendientes de verificación: preguntas {lead.pending.join(", ")}.</div>}
           </div>
         </Card>
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-5">
-        {STAGES.map((s) => { const on = reads[0].stage === s.name; return (
+        {STAGES.map((s) => { const on = lead.stage === s.name; return (
           <div key={s.name} className={`rounded-xl px-4 py-3 ${on ? "text-white" : "bg-surface-2"}`} style={on ? { background: "var(--navy)" } : undefined}>
             <div className={`text-[13px] font-extrabold ${on ? "" : "text-ink"}`}>{s.name}</div>
             <div className={`mt-0.5 text-[11px] leading-snug ${on ? "text-white/80" : "text-muted"}`}>{s.pregunta}</div>
             <div className={`mt-1.5 text-[10px] font-bold uppercase tracking-wider ${on ? "text-cyan-fill" : "text-faint"}`}>Lidera {s.lider}</div>
           </div>
         ); })}
+      </div>
+    </>
+  );
+}
+
+/* ═══ Responder el test ═══ */
+
+function ResponderTest() {
+  const { mine, refetch } = useTestResponses();
+  const [r, setR] = useState<Record<string, number | string>>({});
+  const [cargo, setCargo] = useState("");
+  const [objetivo, setObjetivo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [saved, setSaved] = useState<TestResponse | null>(null);
+  useEffect(() => { if (mine) { setR(mine.r); setCargo(mine.cargo ?? ""); setObjetivo(mine.objetivo ?? ""); } }, [mine]);
+  const answered = TEST_QUESTIONS.filter((q) => r[q.n] != null && r[q.n] !== "").length;
+  const set = (n: number | string, v: number | string | undefined) => setR((prev) => { const next = { ...prev }; if (v === undefined) delete next[n]; else next[n] = v; return next; });
+  const submit = async () => {
+    setBusy(true); setMsg(null);
+    const res = await fetch("/api/td/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo, objetivo }) });
+    const j = await res.json();
+    if (!res.ok) setMsg(j.error ?? "No se pudo guardar."); else { setSaved(j.response); await refetch(); window.scrollTo({ top: 0 }); }
+    setBusy(false);
+  };
+  if (saved) {
+    const T = readTest(saved.r);
+    const stage = STAGES.find((s) => s.name === T.stage)!;
+    return (
+      <>
+        <div className="mb-4 flex items-center justify-between"><Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link><button className="chip" onClick={() => setSaved(null)}>Corregir mis respuestas</button></div>
+        <Card className="rise rise-1 mb-5">
+          <CardHeader title="Tu resultado preliminar" sub={`${saved.name}${saved.cargo ? ` · ${saved.cargo}` : ""} · ${new Date(saved.at).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}`} />
+          <div className="grid gap-5 px-5 pb-5 lg:grid-cols-[1fr_1fr]">
+            <div>
+              <div className="label mb-2">Etapa predominante</div>
+              <div className="grid grid-cols-5 gap-1">{STAGES.map((s) => <div key={s.name} className={`rounded-lg px-2 py-2 text-center text-[11px] font-bold ${s.name === T.stage ? "text-white" : s.name === T.hypothesis ? "bg-cyan-wash text-cyan-deep" : "bg-surface-2 text-muted"}`} style={s.name === T.stage ? { background: "var(--navy)" } : undefined}>{s.name}</div>)}</div>
+              <p className="mt-3 text-[13px] text-ink"><b>{stage.name}{T.provisional ? " (provisional)" : ""}.</b> {stage.pregunta} {stage.cond}</p>
+              {T.hypothesis && T.hypothesis !== T.stage && <p className="mt-2 rounded-lg bg-gold-wash px-3 py-2 text-[12px] text-ink-soft">En la pregunta 25 señalaste un desafío propio de <b>{T.hypothesis}</b>; tus respuestas apuntan a <b>{T.stage}</b>. Las dos quedan como hipótesis hasta comprobarlas con evidencia.</p>}
+              {saved.objetivo && <p className="mt-2 text-[12.5px] text-muted"><b className="text-ink">Objetivo a doce meses.</b> {saved.objetivo}</p>}
+            </div>
+            <div className="space-y-2">
+              {T.caps.map((c, i) => (
+                <div key={c.n} className="text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{c.name}</b><span className="num text-muted">{f1(c.avg, 2)} · cobertura {c.cov}/6</span></div><div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.avg ?? 0) / 5) * 100}%`, background: c.avg != null && c.avg < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div><div className="mt-0.5 text-[11px] leading-snug text-muted">{c.reportable ? rangeText(c.avg) : "Cobertura insuficiente: se necesitan al menos cinco respuestas de seis."}</div></div>
+              ))}
+            </div>
+          </div>
+          <div className="border-t border-line px-5 py-4">
+            <div className="label mb-2">Qué está limitando el crecimiento</div>
+            {T.patterns.length ? T.patterns.slice(0, 3).map((p, i) => (
+              <div key={p.hip} className="mb-2 rounded-xl bg-surface-2 px-4 py-3"><div className="text-[10px] font-bold uppercase tracking-wider text-cyan-deep">{i === 0 ? "Prioridad principal" : "Prioridad de soporte"} · preguntas {p.qs.join(", ")}</div><div className="text-[13px] font-bold text-ink">{p.accion}</div><div className="text-[12px] text-muted">{p.hip}</div></div>
+            )) : <p className="text-[12.5px] text-muted">No aparece un patrón dominante{T.lows.length ? `; las preguntas más débiles son ${T.lows.slice(0, 3).map((q) => q.n).join(", ")}` : ""}.</p>}
+            {T.pending.length > 0 && <p className="text-[12px] text-muted">Pendientes de verificación: preguntas {T.pending.join(", ")}. No cuentan como nota baja.</p>}
+            <p className="mt-2 text-[11.5px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</p>
+          </div>
+        </Card>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link>
+        <span className="num text-[12px] font-bold text-muted">{answered} de 24 respondidas</span>
+      </div>
+      <Card className="rise rise-1 mb-5">
+        <CardHeader title="Antes de comenzar" sub="Responde pensando en cómo funciona realmente la empresa en los últimos seis meses. Elige la respuesta que puedas sostener con ejemplos concretos; si no sabes, marca «Sin información»." />
+        <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
+          <label className="text-[11px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => setCargo(e.target.value)} /></label>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-faint">Principal objetivo de crecimiento a doce meses<input className="input mt-1 font-normal normal-case tracking-normal" value={objetivo} onChange={(e) => setObjetivo(e.target.value)} /></label>
+        </div>
+      </Card>
+      {TEST.bloques.map((b, bi) => (
+        <div key={b.cap} className="mb-5">
+          <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: LINES[bi].color }}><div className="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80">Bloque {bi + 1} de 4</div><div className="text-[16px] font-extrabold">{b.cap}</div><div className="text-[12px] opacity-90">{b.pregunta}</div></div>
+          {b.qs.map((q) => {
+            const g = GUIDES.test[String(q.n)]; const v = r[q.n];
+            return (
+              <Card key={q.n} className="mb-2">
+                <div className="px-5 py-4">
+                  <div className="flex gap-3"><span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "var(--navy)" }}>{q.n}</span><div><p className="text-[13.5px] font-semibold leading-snug text-ink">{q.q}</p><p className="mt-0.5 text-[11.5px] text-muted"><b className="text-[10px] uppercase tracking-wider text-cyan-deep">Lo demuestra</b> {q.demo}</p></div></div>
+                  <div className="mt-3 grid grid-cols-5 gap-1.5">
+                    {LEVELS.map((l) => (
+                      <button key={l.n} type="button" onClick={() => set(q.n, l.n)} title={g?.n?.[String(l.n)]}
+                        className={`rounded-lg border px-1 py-2 text-center transition-all ${v === l.n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === l.n ? { background: "var(--navy)" } : undefined}>
+                        <div className="num text-[16px] font-extrabold">{l.n}</div><div className={`text-[9.5px] font-semibold ${v === l.n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-start gap-2">
+                    <button type="button" onClick={() => set(q.n, v === "NI" ? undefined : "NI")} className={`chip ${v === "NI" ? "chip-warn" : ""}`}>Sin información</button>
+                    {typeof v === "number" && g?.n?.[String(v)] && <p className="flex-1 rounded-lg bg-cyan-wash px-3 py-2 text-[12px] leading-snug text-ink-soft"><b className="text-ink">{v} · {LEVELS[v - 1].name}.</b> {g.n[String(v)]}{g.q && <i className="mt-0.5 block text-muted">{g.q}</i>}</p>}
+                    {v === "NI" && g?.ni && <p className="flex-1 rounded-lg bg-surface-2 px-3 py-2 text-[12px] text-muted">{g.ni}</p>}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      ))}
+      <Card className="mb-5">
+        <CardHeader title="25 · El desafío dominante" sub="¿Cuál de estas frases describe mejor el desafío de tu empresa hoy? Elige una sola." />
+        <div className="space-y-2 px-5 pb-5">
+          {TEST.q25.map((o) => (
+            <button key={o.k} type="button" onClick={() => set(25, o.k)} className={`flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left text-[12.5px] transition-all ${r[25] === o.k ? "border-navy bg-cyan-wash" : "border-line bg-surface hover:border-gold"}`}>
+              <b className="num text-cyan-deep">{o.k}</b><span className="text-ink-soft">{o.text}</span>
+            </button>
+          ))}
+        </div>
+      </Card>
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad)" }}>{msg}</div>}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
+        <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
       </div>
     </>
   );
@@ -447,6 +585,7 @@ function Captura() {
   const vars = data?.capture.vars ?? {};
   const prog = data?.capture.progress;
   const practices = useMemo(() => PRACTICES.filter((p) => p.line === cap), [cap]);
+  const niv = (d: { code: string }) => GUIDES.niv[d.code];
   return (
     <>
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
@@ -467,6 +606,7 @@ function Captura() {
         {dimsOf(cap).map((d) => (
           <Card key={d.code}>
             <CardHeader title={`${d.code} · ${d.name}`} sub={d.defn} />
+            {niv(d) && <div className="grid gap-1.5 px-5 pb-3 sm:grid-cols-5">{[1, 2, 3, 4, 5].map((n) => <div key={n} className="rounded-lg bg-surface-2 px-2.5 py-2 text-[10.5px] leading-snug text-muted"><b className="text-ink">Nivel {n}.</b> {niv(d)[String(n)]}</div>)}</div>}
             <div className="overflow-x-auto">
               <table className="w-full text-[12.5px]">
                 <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-5 py-2">Práctica</th><th className="px-2 py-2">Autoevaluación</th><th className="px-2 py-2">Evidencia</th><th className="px-2 py-2">Nivel</th><th className="px-2 py-2">Registro</th></tr></thead>
@@ -474,13 +614,21 @@ function Captura() {
                   {practices.filter((p) => p.dim === d.code).map((p) => {
                     const c = vars[p.code];
                     return (
-                      <tr key={p.code} className="border-t border-line align-top">
+                      <Fragment key={p.code}>
+                      <tr className="border-t border-line align-top">
                         <td className="px-5 py-2.5"><span className="num text-[10.5px] font-bold text-cyan-deep">{p.code}</span><div className="text-[12px] leading-snug text-ink-soft">{p.f1}</div></td>
                         <td className="px-2 py-2.5"><select className="input" disabled={!canCapture || busy === p.code || data?.published} value={c?.perception ?? ""} onChange={(e) => send(p.code, { perception: Number(e.target.value) })}><option value="">—</option>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} · {LEVELS[n - 1].name}</option>)}</select></td>
                         <td className="px-2 py-2.5"><select className="input" disabled={!canPublish || busy === p.code || data?.published} value={c?.evidence ?? ""} onChange={(e) => send(p.code, { evidence: e.target.value })}><option value="">—</option><option value="V">Verificada</option><option value="P">Parcial</option><option value="N">No existe</option></select></td>
                         <td className="px-2 py-2.5"><select className="input" disabled={!canPublish || busy === p.code || data?.published} value={c?.level ?? ""} onChange={(e) => send(p.code, { level: Number(e.target.value) })}><option value="">—</option>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select></td>
                         <td className="px-2 py-2.5 text-[11px] text-faint">{c ? <span className="inline-flex items-center gap-1"><CheckCircle2 size={11} style={{ color: "var(--ok)" }} /> {c.by} · {new Date(c.at).toLocaleDateString("es-CO")}</span> : "sin captura"}</td>
                       </tr>
+                      {c && (c.perception || c.evidence) && (
+                        <tr className="bg-cyan-wash/50"><td colSpan={5} className="px-5 py-2 text-[11.5px] leading-snug text-ink-soft">
+                          {c.perception && GUIDES.f1[p.code]?.n?.[String(c.perception)] && <span><b className="text-ink">{c.perception} · {LEVELS[c.perception - 1].name}.</b> {GUIDES.f1[p.code].n![String(c.perception)]} </span>}
+                          {c.evidence && GUIDES.ev[p.code]?.[c.evidence] && <span className="block text-muted"><b>Evidencia {c.evidence === "V" ? "verificada" : c.evidence === "P" ? "parcial" : "no existe"}.</b> {GUIDES.ev[p.code][c.evidence]}</span>}
+                        </td></tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
