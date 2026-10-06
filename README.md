@@ -1,184 +1,62 @@
-# PGTD · Plataforma de Gestión de la Transformación Digital
+# 4Shine Empresas · Plataforma de gestión estratégica
 
-Prototipo funcional del producto descrito en la propuesta de Algoritmo T para la
-Universidad Popular del Cesar: el diagnóstico de transformación digital como
-sistema de gestión, no como documento.
-
-## Stack
-
-| Capa | Tecnología | Rol |
-|---|---|---|
-| Aplicación | Next.js 16 · React 19 | Interfaz rápida y responsive, renderizada en servidor. Un mismo código sirve el panel interno y el portal público. |
-| Base de datos | PostgreSQL · Prisma 7 | Motor relacional maduro. Cada cambio de estructura queda registrado en una migración, con historial y reversión. |
-| Infraestructura | Vercel | Despliegue continuo, ambientes separados, escalado automático y SSL. |
-| Archivos | Cloudflare R2 | Evidencias documentales, logotipos institucionales y exportaciones (SDK S3 ya instalado). |
-| Identidad | Sesión HMAC en cookie HttpOnly | Roles, expiración por inactividad; el esquema ya modela bloqueo por intentos fallidos. |
-| Inteligencia | OpenAI | Redacción asistida de fichas y normalización de importaciones (SDK instalado, pendiente de conectar). |
+Plataforma de gestión estratégica construida sobre la base de PGTD (Algoritmo T)
+con el lenguaje y las definiciones del sistema 4Shine Empresas: el diagnóstico
+como sistema de gestión, no como documento.
 
 ## Módulos
 
-| Código | Módulo | Estado |
+| Código | Módulo | Qué hace |
 |---|---|---|
-| M1 | Diagnóstico de madurez — 52 variables contra 8 referentes (eMM, D.1330, CNA, TOGAF, DAMA, INTEF, ISO 27001, CMI) con hallazgo/recomendación/evidencia, dominios diagnósticos y registros calificados | ✅ |
-| M2 | Comparación — pares, cuadrante de pertinencia, mapas de Colombia y Cesar (geometría oficial, filtro por subregión) | ✅ |
-| M3 | Capacidades — mapa estratégico navegable objetivo → capacidad → iniciativa → KPI | ✅ |
-| M4 | Indicadores — batería con serie, semáforo frente a meta, dueño y fuente | ✅ |
-| M5 | Ruta — Gantt por trimestres + matriz impacto × factibilidad, ficha de iniciativa | ✅ |
-| M6 | Seguimiento — presupuesto en tres estados, factores críticos con historial | ✅ |
-| M7 | Inteligencia — puerta a los observatorios de Algoritmo T | ✅ (enlace) |
-| GP | Gestor de proyectos — 74 tareas con fechas, responsables con nombre propio, dependencias, evidencia por entregable; kanban, cronograma y carga por persona; alertas integradas | ✅ |
+| M1 | Diagnóstico 4Shine-OD | Resumen (radar de capacidades, mapa de calor de 17 dimensiones, tres fuentes, señales), capacidades, dimensiones con sus 68 prácticas y evidencias, test de capacidad empresarial, brechas priorizadas con nivel de acompañamiento y captura del corte A3 |
+| M2 | Benchmark | Posición sectorial frente a pares, presencia territorial por departamento e indicadores frente al sector |
+| M3 | Estrategia | Cuadro de mando de cuatro perspectivas: objetivo → resultados clave (KPI) → dimensión que instala → iniciativa |
+| M4 | Indicadores | KPI con ficha, serie, semáforo, proyección y reporte de valores |
+| M5 | Ruta | Gantt por horizontes, matriz impacto × factibilidad y prioridad compuesta |
+| M6 | Iniciativas | Avance, presupuesto, factores críticos, bitácora; cada iniciativa instala una dimensión con un framework |
+| GP | Proyectos | Tareas con responsables, dependencias, evidencia, kanban, cronograma y carga |
+| M7 | Inteligencia | Fuentes del sector y del territorio (observatorios de Algoritmo T) |
+| — | Informe | Pieza imprimible para la junta |
+| — | Metodología | El sistema 4Shine Empresas leído de las mismas fuentes que usa el motor |
+| — | Administración | Usuarios, permisos, integraciones y branding |
+
+## Fuente única de las definiciones
+
+`src/data/4shine.json` se exporta desde los generadores de la línea
+(`4Shine Empresas/_generadores/export_plataforma.py`): capacidades, dimensiones,
+prácticas, evidencias, escala, metodologías, frameworks, etapas, test y guías.
+`src/data/mapa.ts` lo expone tipado; no se edita a mano.
+
+`src/lib/od.ts` es el motor del diagnóstico (documento técnico v2.0):
+test, triangulación 40/30/30 con techo de evidencia, señales, prioridad por
+arrastre y nivel de acompañamiento. `src/data/od-demo.ts` genera las
+respuestas ilustrativas de Andina Suministros con el mismo procedimiento que
+la demo del diagnóstico en línea.
 
 ## Ejecutar
 
 ```bash
 npm install
 npm run dev        # http://localhost:3000
+npm test           # 48 pruebas del motor, el store y el diagnóstico
 ```
 
-**Modo demo (por defecto):** no requiere base de datos. La autenticación valida
-contra las cuentas de demostración y todos los módulos leen `src/data/demo.ts`.
+Modo demo por defecto, sin base de datos. Cuentas:
 
 | Cuenta | Rol |
 |---|---|
-| consultor@algoritmot.com | Consultor (configura y publica) |
-| lider@unicesar.edu.co | Líder institucional |
-| academica@unicesar.edu.co | Responsable de línea 4.1 |
-| rectoria@unicesar.edu.co | Directivo (solo lectura) |
+| admin@algoritmot.com | Admin de la plataforma |
+| advisor@4shine.co | Advisor 4Shine (configura, verifica y publica) |
+| gerencia@andina.example | Líder de la empresa |
+| operaciones@andina.example | Responsable de la capacidad Ejecución |
+| junta@andina.example | Junta o directivo (solo lectura) |
 
-Contraseña común: `pgtd-demo-2026`.
+Contraseña común: `4shine-demo-2026`.
 
-## Conectar PostgreSQL
+## Origen
 
-1. Crear la base (Neon, Vercel Postgres o local) y poner `DATABASE_URL` en `.env.local`.
-2. `npm run db:migrate` — crea el esquema (11 modelos, migración versionada).
-3. `npm run db:seed` — siembra la UPC con los mismos datos del modo demo.
-4. Migrar `api/auth/login` de `DEMO_USERS` al modelo `User` (bcrypt ya instalado).
-
-`src/data/demo.ts` es la fuente única: alimenta la UI en modo demo y el seed,
-de modo que no hay divergencia entre ambos.
-
-## Arquitectura de lógica de negocio
-
-```
-docs/marco-conceptual.md      # traza literatura → reglas (9 artículos procesados)
-src/lib/ies.ts                # metodología AlgoritmoT-IES (deep-research-report):
-                              #   S = 0,40·P + 0,60·E; brecha P−E; niveles
-                              #   0–100; IIES 30/25/20/25; matriz 4×7; AIQ-IES
-                              #   con salvaguardas; cobertura; prioridad 6-criterios
-src/lib/logic.ts              # reglas puras: salud de KPI (semáforo, rezago de
-                              #   captura, proyección lineal a meta), riesgo
-                              #   compuesto de iniciativas (factores con racha,
-                              #   desalineación presupuesto↔avance, acciones
-                              #   vencidas, categorías BID), salud de objetivos
-                              #   CMI, rollup de madurez y motor de alertas
-src/app/api/td/               # API autenticada que expone la lógica:
-                              #   /summary /alerts /kpi /initiatives /portfolio
-```
-
-Las páginas consumen `logic.ts` directamente (server-side friendly) y la API
-expone lo mismo para clientes externos o para la migración a base de datos:
-al conectar Postgres solo cambia el origen de los datos, no las reglas.
-
-## Permisos (RBAC)
-
-Matriz central en `src/lib/permissions.ts` — el servidor la exige (403/422
-con explicación) y la UI la refleja (chip de acceso en cada módulo,
-controles solo donde hay permiso):
-
-| Acción | Consultor | Líder | Responsable | Directivo |
-|---|:--:|:--:|:--:|:--:|
-| Ver módulos | ✅ | ✅ | ✅ | ✅ |
-| Editar tareas del gestor | ✅ | ✅ | solo su línea | — |
-| Editar iniciativas | ✅ | ✅ | solo su línea | — |
-| Reportar valores de KPI | ✅ | ✅ | solo su línea | — |
-| Capturar celdas de medición | ✅ | — | solo su línea | — |
-| Publicar mediciones / configurar instrumento | ✅ | — | — | — |
-| Verificar evidencia | ✅ | — | — | — |
-
-Reglas de negocio en mutaciones: cerrar una tarea que exige evidencia sin
-soporte → 422; bloquear sin motivo → 422; compromiso anterior al inicio →
-422. Toda mutación escribe auditoría (quién, cuándo, qué cambió).
-
-## Escritura: memoria + write-through
-
-`src/server/store.ts`: las mutaciones viven en memoria (modo demo) y se
-persisten vía Prisma cuando `DATABASE_URL` está configurada, con hidratación
-al arrancar. Conectar Neon/Postgres no cambia ninguna regla — solo el origen.
-`POST /api/td/reset` (solo consultor) restablece la demo.
-
-## Fase 2 (local): colaboración, archivos y línea base
-
-- **Comentarios por tarea** — deliberación abierta a todos los roles
-  (incluido el directivo), con validación y auditoría.
-- **Evidencia con archivo real** — subida multipart (15 MB; pdf/office/
-  imagen/zip/csv) a `var/uploads/` con descarga autenticada
-  (`/api/files/:id`). La interfaz es la de R2: en producción cambia el
-  destino, no el contrato. La evidencia subida nace PENDIENTE, la verifica
-  el consultor, y **desbloquea el cierre** de tareas que la exigen.
-- **Línea base del cronograma** — las fechas del plan aprobado se congelan;
-  reprogramar mueve la fecha vigente y el deslizamiento se mide por tarea
-  (ficha: «línea base → vigente, +n días») y acumulado (franja del gestor:
-  días perdidos/recuperados).
-
-## Vista pública de solo lectura
-
-El botón «Vista pública» de la topbar genera un enlace firmado (HMAC del
-secreto del servidor) del tipo `/p/upc-<token>`, lo copia al portapapeles y lo
-abre. La página es un tablero ejecutivo sin sesión —madurez con serie, asuntos
-críticos, semáforo de KPI y cartera por riesgo— pensado para Consejo Superior,
-entes de control y acreditación. Un token inválido responde 404; rotar
-`AUTH_SECRET` invalida los enlaces emitidos.
-
-## Pruebas
-
-```bash
-npm test        # node:test + tsx — 18 pruebas del motor de lógica
-```
-
-Cubren: orden de periodos, semáforos y proyección lineal de KPI, rezago de
-captura por periodicidad, categorías de riesgo, ponderación de rachas,
-desalineación presupuestal, acciones vencidas, rollup de madurez, orden de
-alertas y consistencia del resumen ejecutivo.
-
-## Datos demo a escala
-
-- 3 ciclos de medición (48 celdas) con serie institucional 1,50 → 1,94
-- 18 KPI con ficha completa y series de hasta 8 cortes con notas
-- 14 iniciativas con 50 acciones, bitácoras y factores clasificados por riesgo
-- Instrumento de 52 variables (3–4 por celda) cuyo promedio ES el score de
-  celda (consistencia verificada por test), cada una con referente, hallazgo,
-  recomendación, responsable y evidencia
-- 33 registros calificados con resolución, vencimiento, estado y última
-  autoevaluación; 6 dominios diagnósticos transversales
-- 32 evidencias tipificadas con estado de verificación
-- Portafolio académico de 33 programas (13.374 estudiantes) por facultad,
-  sede, modalidad, % de créditos virtuales, deserción, Saber Pro y equilibrio
-- Huella territorial con 3 lentes por municipio (matrícula, producción de
-  investigación, convenios de extensión) + impacto nacional (12 departamentos
-  con coautorías) e internacional (8 países); consistencia con el KPI EX-01
-
-## Estructura
-
-```
-src/
-├── app/
-│   ├── page.tsx                 # portada + login
-│   ├── api/auth/                # login / logout (cookie HMAC)
-│   └── panel/                   # módulos M1–M7 (protegidos por sesión)
-├── components/
-│   ├── charts.tsx               # radar, heatmap, gantt, matriz, mapas — SVG propio
-│   ├── shell.tsx                # sidebar + topbar
-│   └── ui.tsx                   # primitivas (cards, chips, badges)
-├── data/
-│   ├── demo.ts                  # datos ilustrativos UPC (única fuente)
-│   └── geo.ts                   # paths SVG precalculados del GeoJSON oficial
-└── lib/session.ts               # sesión firmada
-prisma/
-├── schema.prisma                # multi-institución: 11 modelos
-└── seed.ts
-```
-
-## Nota sobre los datos
-
-Todos los valores son ilustrativos y así se declara en el banner de cada módulo.
-La primera medición real de la UPC se produce en la Fase 0 de la consultoría.
+Derivada de PGTD (`/Users/andrestabla/Documents/pgtd`). El historial de git
+conserva esa procedencia; el stack (Next.js 16, React 19, Prisma 7, SQLite
+local) y la arquitectura de escritura (memoria con write-through) no cambian.
+Pendiente: alinear `prisma/schema.prisma` y `prisma/seed.ts` con el modelo de
+capacidades y dimensiones.

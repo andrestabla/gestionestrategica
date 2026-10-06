@@ -77,7 +77,7 @@ test("branding: validaciones y aplicación", () => {
   assert.equal(b.heroMessages.length, 2, "los mensajes vacíos se descartan");
   assert.ok(getBrandingHistory().length >= 1, "el guardado queda en el historial");
   resetStore();
-  assert.equal(getBranding().accent, "#0e93b4");
+  assert.equal(getBranding().accent, "#8a6d1f");
   assert.equal(getBranding().loginLayout, "image-left");
 });
 

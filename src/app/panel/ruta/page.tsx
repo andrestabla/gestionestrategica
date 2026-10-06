@@ -8,7 +8,7 @@ import { PageHeader, Card, CardHeader, StatusChip } from "@/components/ui";
 import { AccessChip } from "@/components/user-context";
 import { GanttChart, PriorityMatrix } from "@/components/charts";
 import { INITIATIVES, LINES, fmtCOP } from "@/data/demo";
-import { priorityRanking } from "@/lib/ies";
+import { priorityRanking } from "@/lib/logic";
 
 export default function RutaPage() {
   const [sel, setSel] = useState<string | null>(null);
@@ -111,7 +111,7 @@ export default function RutaPage() {
             } />
           <div className="grid gap-x-8 gap-y-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <div className="label mb-1">Línea</div>
+              <div className="label mb-1">Capacidad</div>
               <div className="text-[13px] font-semibold text-ink">
                 {LINES.find((l) => l.n === ini.line)?.code}{" "}
                 {LINES.find((l) => l.n === ini.line)?.name}

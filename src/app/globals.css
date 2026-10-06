@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   PGTD · Sistema de diseño v2 — Algoritmo T
+   4Shine Empresas · Sistema de diseño — Algoritmo T
    Superficies por sombra (no por borde), hilo de gradiente de
    marca, números tabulares, movimiento con intención.
    ═══════════════════════════════════════════════════════════════ */
@@ -19,12 +19,12 @@
   --line: #e6e8ec;
   --line-strong: #d4d8df;
 
-  --navy: #1a2d5a;
-  --navy-deep: #0d1830;
-  --cyan: #0e93b4;
-  --cyan-deep: #0b6f88;
-  --cyan-fill: #4fd0ec;
-  --cyan-wash: #e9f6fa;
+  --navy: #0D1B2A;
+  --navy-deep: #08111c;
+  --cyan: #8a6d1f;
+  --cyan-deep: #6b5417;
+  --cyan-fill: #D4AF37;
+  --cyan-wash: #faf4e3;
   --gold: #a87a14;
   --gold-fill: #f1ba5b;
   --gold-wash: #fdf5e4;
@@ -40,7 +40,7 @@
   --bad: #cf5860;
 
   --grad-brand: linear-gradient(90deg, var(--cyan-fill), var(--cyan) 38%, var(--navy));
-  --grad-deep: linear-gradient(160deg, #0d1830 0%, #1a2d5a 52%, #0b6f88 130%);
+  --grad-deep: linear-gradient(160deg, #08111c 0%, #0D1B2A 52%, #6b5417 130%);
 
   /* sombras en capas, teñidas de navy — el "borde" del sistema */
   --e1: 0 0 0 1px rgb(26 45 90 / 0.07), 0 1px 2px rgb(15 21 32 / 0.05);

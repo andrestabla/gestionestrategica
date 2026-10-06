@@ -6,9 +6,9 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jbMono = JetBrains_Mono({ variable: "--font-jb", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PGTD · Plataforma de Gestión de la Transformación Digital | Algoritmo T",
+  title: "4Shine Empresas · Plataforma de gestión estratégica",
   description:
-    "Plataforma de Gestión de la Transformación Digital de la Universidad Popular del Cesar: madurez, comparación sectorial, mapa estratégico, KPI, roadmap y seguimiento.",
+    "Plataforma de gestión estratégica del sistema 4Shine Empresas: diagnóstico 4Shine-OD, benchmark, cuadro de mando y OKR, indicadores, ruta, iniciativas, proyectos e inteligencia.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

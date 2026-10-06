@@ -3,7 +3,7 @@
 // /login — acceso dirigido por el branding (Administración → Branding):
 // layout (imagen izq/der o centrado), textos con visibilidad, overlay,
 // imágenes en rotación aleatoria, logos y loader. Sin configuración
-// guardada, rinde el tema Algoritmo T por defecto.
+// guardada, rinde el tema 4Shine por defecto.
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,10 +12,10 @@ import { LogIn, Loader2 } from "lucide-react";
 
 const DEMO_ACCOUNTS = [
   { label: "Admin de la plataforma", email: "admin@algoritmot.com" },
-  { label: "Consultor Algoritmo T", email: "consultor@algoritmot.com" },
-  { label: "Líder institucional", email: "lider@unicesar.edu.co" },
-  { label: "Responsable de línea", email: "academica@unicesar.edu.co" },
-  { label: "Directivo (solo lectura)", email: "rectoria@unicesar.edu.co" },
+  { label: "Advisor 4Shine", email: "advisor@4shine.co" },
+  { label: "Líder de la empresa (gerencia)", email: "gerencia@andina.example" },
+  { label: "Responsable de capacidad (operaciones)", email: "operaciones@andina.example" },
+  { label: "Junta o directivo (solo lectura)", email: "junta@andina.example" },
 ];
 
 type Branding = {
@@ -40,8 +40,8 @@ const pick = <T,>(xs: T[] | undefined): T | null => (xs?.length ? xs[Math.floor(
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("consultor@algoritmot.com");
-  const [password, setPassword] = useState("pgtd-demo-2026");
+  const [email, setEmail] = useState("advisor@4shine.co");
+  const [password, setPassword] = useState("4shine-demo-2026");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [b, setB] = useState<Branding | null>(null);
@@ -110,10 +110,8 @@ export default function LoginPage() {
           <img src={(b!.logoDark ?? b!.logoLight)!} alt="" className="h-8 max-w-[200px] object-contain" />
         ) : (
           <>
-            <span className="font-mono text-[12px] font-bold uppercase tracking-[0.2em] text-white">
-              Algoritmo
-            </span>
-            <AlgoritmoMark size={28} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/4shine-logo-blanco.png" alt="4Shine" className="h-8 object-contain" />
           </>
         )}
         {b?.showPlatformName && !b?.logoDark && !b?.logoLight && (
@@ -161,7 +159,7 @@ export default function LoginPage() {
           </>
         )}
       </div>
-      <div className="kicker mb-1.5" style={b ? { color: b.accent } : undefined}>Acceso institucional</div>
+      <div className="kicker mb-1.5" style={b ? { color: b.accent } : undefined}>Acceso a la plataforma</div>
       {(b?.showLoginTitle ?? true) && (
         <h2 className="text-[24px] font-extrabold tracking-tight text-ink">
           {b?.loginTitle ?? "Iniciar sesión"}
@@ -169,7 +167,7 @@ export default function LoginPage() {
       )}
       {(b?.showLoginWelcome ?? true) && (
         <p className="mt-1 text-[13px] text-muted">
-          {b?.loginWelcome ?? "Entra con tu cuenta institucional asignada por el administrador."}
+          {b?.loginWelcome ?? "Entra con la cuenta que te asignó el advisor de tu empresa."}
         </p>
       )}
 

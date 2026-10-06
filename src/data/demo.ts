@@ -1,40 +1,36 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// PGTD · Datos ilustrativos de la Universidad Popular del Cesar.
-// Fuente única: alimenta el modo demo de la UI y el seed de Prisma.
-// Los valores son de ejemplo; la primera medición real se produce en Fase 0.
+// 4Shine Empresas · Datos ilustrativos de Andina Suministros (empresa
+// ficticia de distribución de suministros industriales, 85 colaboradores,
+// sedes en Bogotá, Medellín y Cali). Fuente única del modo demo y del seed.
+// Los valores son de ejemplo; la información real se produce con el
+// diagnóstico 4Shine-OD y la instalación de los frameworks.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { CAPS, DIMS, LEVELS as MAP_LEVELS } from "@/data/mapa";
+
 export const INSTITUTION = {
-  slug: "upc",
-  name: "Universidad Popular del Cesar",
-  shortName: "UPC",
-  city: "Valledupar",
-  department: "Cesar",
+  slug: "andina",
+  name: "Andina Suministros",
+  shortName: "Andina",
+  city: "Bogotá",
+  department: "Cundinamarca",
+  sector: "Distribución de suministros industriales",
+  size: "85 colaboradores · 3 sedes",
 };
+export const COMPANY = INSTITUTION;
 
-export const LINES = [
-  { n: 1, code: "4.1", name: "Academia y Virtualidad", short: "Academia", color: "#0e93b4" },
-  { n: 2, code: "4.2", name: "Investigación y CTeI", short: "Investigación", color: "#7c5cd6" },
-  { n: 3, code: "4.3", name: "Extensión, Relacionamiento y Rankings", short: "Extensión", color: "#e0913f" },
-  { n: 4, code: "4.4", name: "Arquitectura Empresarial y Gobierno Digital", short: "Arquitectura", color: "#3f9d8c" },
-] as const;
+/** Las cuatro capacidades conservan el índice «line» 1..4 en toda la plataforma. */
+export const LINES = CAPS.map((c) => ({
+  n: c.n, code: c.code, name: c.name, short: c.name, verb: c.verb, color: c.color, question: c.q,
+}));
 
-export const DIMENSIONS = [
-  { key: "organizacional", name: "Organizacional" },
-  { key: "misional", name: "Misional / pedagógica" },
-  { key: "tecnologica", name: "Tecnológica" },
-  { key: "datos", name: "Datos e información" },
-] as const;
+/** Las 17 dimensiones del mapa, con la capacidad a la que pertenecen. */
+export const DIMENSIONS = DIMS.map((d) => ({ key: d.code, line: d.line, name: d.name, defn: d.defn }));
+export const dimensionsOf = (line: number) => DIMENSIONS.filter((d) => d.line === line);
 
-export const LEVELS = [
-  { n: 1, name: "Inicial", color: "var(--n1)", desc: "Prácticas informales, dependientes de personas; sin registro sistemático." },
-  { n: 2, name: "En desarrollo", color: "var(--n2)", desc: "Documentadas en algunas unidades; herramientas aisladas, sin integración." },
-  { n: 3, name: "Definido", color: "var(--n3)", desc: "Procesos institucionalizados; responsables asignados; datos consistentes." },
-  { n: 4, name: "Gestionado", color: "var(--n4)", desc: "Procesos medidos con indicadores; decisiones con datos; interoperabilidad." },
-  { n: 5, name: "Optimizado", color: "var(--n5)", desc: "Mejora continua sobre evidencia; analítica avanzada; capacidad de referente." },
-] as const;
+export const LEVELS = MAP_LEVELS;
 
-// line → dimension → { value, target } — derivado de la medición publicada vigente
+// capacidad → dimensión → { value, target } — derivado de la medición publicada vigente
 import { currentAssessment, previousAssessment } from "./cmi";
 export const SCORES = currentAssessment().scores!;
 
@@ -49,7 +45,7 @@ export const lineTarget = (n: number) => {
 export const institutionScore = () =>
   LINES.reduce((a, l) => a + lineScore(l.n), 0) / LINES.length;
 
-// Medición anterior: promedio por línea del corte publicado previo
+// Medición anterior: promedio por capacidad del corte publicado previo
 export const PREV_SCORES: Record<number, number> = Object.fromEntries(
   [1, 2, 3, 4].map((n) => {
     const prev = previousAssessment();
@@ -59,9 +55,7 @@ export const PREV_SCORES: Record<number, number> = Object.fromEntries(
   }),
 );
 
-// Evidencias, KPI e iniciativas: la fuente detallada vive en ./cmi
-// (catálogo CMI, responsables, acciones y bitácora). Aquí se adaptan al
-// contrato que consumen las páginas.
+// Evidencias, KPI e iniciativas: la fuente detallada vive en ./cmi.
 import {
   KPI_CATALOG, INITIATIVES_FULL, EVIDENCE_CATALOG, responsible,
 } from "./cmi";
@@ -71,23 +65,20 @@ export const EVIDENCES = EVIDENCE_CATALOG.map((e) => ({
   source: responsible(e.sourceId).dependencia,
 }));
 
-// ─── Capacidades y mapa estratégico ─────────────────────────────────────────
-
+// ─── Capacidades del mapa estratégico: cada dimensión es una capacidad que
+//     las iniciativas instalan; su nivel actual y su meta vienen de la medición.
 export const OBJECTIVES = [
-  { id: "ob1", name: "Ampliar cobertura con modalidades flexibles" },
-  { id: "ob2", name: "Elevar la visibilidad científica institucional" },
-  { id: "ob3", name: "Decisiones basadas en evidencia" },
+  { id: "ob1", name: "Crecer con rentabilidad abriendo nuevos mercados" },
+  { id: "ob2", name: "Cumplir la promesa al cliente de forma consistente" },
+  { id: "ob3", name: "Operar sin depender del fundador ni de personas clave" },
 ];
+const OBJ_OF_LINE: Record<number, string> = { 1: "ob1", 2: "ob3", 3: "ob2", 4: "ob3" };
 
-export const CAPABILITIES = [
-  { id: "c1", line: 1, objective: "ob1", name: "Diseño instruccional digital", current: 2, target: 4, owner: "Vicerrectoría Académica" },
-  { id: "c2", line: 1, objective: "ob1", name: "Analítica de aprendizaje", current: 1, target: 3, owner: "División de TI" },
-  { id: "c3", line: 2, objective: "ob2", name: "Gestión de producción CTeI", current: 2, target: 4, owner: "Vicerrectoría de Investigación" },
-  { id: "c4", line: 2, objective: "ob2", name: "Visibilidad y ciencia abierta", current: 1, target: 3, owner: "Biblioteca" },
-  { id: "c5", line: 3, objective: "ob2", name: "Inteligencia de rankings", current: 1, target: 3, owner: "Planeación" },
-  { id: "c6", line: 4, objective: "ob3", name: "Gobierno de datos", current: 1, target: 4, owner: "Planeación" },
-  { id: "c7", line: 4, objective: "ob3", name: "Interoperabilidad de sistemas", current: 2, target: 4, owner: "División de TI" },
-];
+export const CAPABILITIES = DIMS.map((d) => ({
+  id: d.code, line: d.line, objective: OBJ_OF_LINE[d.line], name: d.name,
+  current: SCORES[d.line][d.code].value, target: SCORES[d.line][d.code].target,
+  owner: responsible({ 1: "R01", 2: "R01", 3: "R03", 4: "R04" }[d.line]!).dependencia,
+}));
 
 // ─── KPI ─────────────────────────────────────────────────────────────────────
 
@@ -105,90 +96,58 @@ export const INITIATIVES = INITIATIVES_FULL.map((i) => ({
 }));
 export type InitiativeDemo = (typeof INITIATIVES)[number];
 
-// ─── Territorio · municipios del Cesar ──────────────────────────────────────
+// ─── Territorio · presencia por departamento ─────────────────────────────────
 
-export type Muni = {
-  name: string; lon: number; lat: number;
-  weight: 1 | 2 | 3;               // proxy de matrícula
-  coverage: "alta" | "media" | "baja";
-  subregion: "Norte" | "Centro" | "Sur";
-  label?: { anchor: "start" | "end"; dx: number; dy: number };
+export type Territory = {
+  name: string;                 // departamento
+  weight: 1 | 2 | 3;            // peso comercial
+  presence: "sede" | "cobertura" | "oportunidad";
+  reading: string;
 };
 
-export const MUNICIPALITIES: Muni[] = [
-  { name: "Valledupar", lon: -73.25, lat: 10.46, weight: 3, coverage: "alta", subregion: "Norte", label: { anchor: "end", dx: -19, dy: 2 } },
-  { name: "Pueblo Bello", lon: -73.59, lat: 10.42, weight: 1, coverage: "baja", subregion: "Norte", label: { anchor: "end", dx: -10, dy: 14 } },
-  { name: "La Paz", lon: -73.17, lat: 10.38, weight: 1, coverage: "media", subregion: "Norte" },
-  { name: "Manaure", lon: -73.03, lat: 10.39, weight: 1, coverage: "baja", subregion: "Norte" },
-  { name: "San Diego", lon: -73.18, lat: 10.33, weight: 1, coverage: "baja", subregion: "Norte" },
-  { name: "Agustín Codazzi", lon: -73.24, lat: 10.03, weight: 2, coverage: "media", subregion: "Norte", label: { anchor: "end", dx: -10, dy: -5 } },
-  { name: "El Copey", lon: -73.96, lat: 10.15, weight: 1, coverage: "media", subregion: "Norte", label: { anchor: "start", dx: 10, dy: 3 } },
-  { name: "Bosconia", lon: -73.89, lat: 9.97, weight: 2, coverage: "media", subregion: "Centro", label: { anchor: "end", dx: -9, dy: 15 } },
-  { name: "Becerril", lon: -73.28, lat: 9.7, weight: 1, coverage: "baja", subregion: "Norte" },
-  { name: "El Paso", lon: -73.75, lat: 9.66, weight: 1, coverage: "baja", subregion: "Centro" },
-  { name: "La Jagua de Ibirico", lon: -73.33, lat: 9.56, weight: 2, coverage: "media", subregion: "Centro", label: { anchor: "end", dx: -10, dy: 3 } },
-  { name: "Astrea", lon: -73.97, lat: 9.5, weight: 1, coverage: "baja", subregion: "Centro" },
-  { name: "Chiriguaná", lon: -73.6, lat: 9.36, weight: 1, coverage: "media", subregion: "Centro", label: { anchor: "start", dx: 9, dy: -3 } },
-  { name: "Chimichagua", lon: -73.81, lat: 9.26, weight: 1, coverage: "baja", subregion: "Centro", label: { anchor: "end", dx: -9, dy: 3 } },
-  { name: "Curumaní", lon: -73.54, lat: 9.2, weight: 2, coverage: "media", subregion: "Centro", label: { anchor: "start", dx: 9, dy: 9 } },
-  { name: "Pailitas", lon: -73.62, lat: 8.95, weight: 1, coverage: "baja", subregion: "Centro" },
-  { name: "Tamalameque", lon: -73.81, lat: 8.86, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "Pelaya", lon: -73.67, lat: 8.69, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "La Gloria", lon: -73.8, lat: 8.62, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "González", lon: -73.38, lat: 8.39, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "Gamarra", lon: -73.74, lat: 8.32, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "Aguachica", lon: -73.61, lat: 8.31, weight: 3, coverage: "alta", subregion: "Sur", label: { anchor: "start", dx: 11, dy: 3 } },
-  { name: "Río de Oro", lon: -73.39, lat: 8.29, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "San Martín", lon: -73.51, lat: 8.0, weight: 1, coverage: "baja", subregion: "Sur" },
-  { name: "San Alberto", lon: -73.39, lat: 7.76, weight: 2, coverage: "media", subregion: "Sur", label: { anchor: "start", dx: 9, dy: 3 } },
+export const TERRITORIES: Territory[] = [
+  { name: "Cundinamarca", weight: 3, presence: "sede", reading: "Sede principal y bodega central; concentra el 52 % de las ventas." },
+  { name: "Bogotá D.C.", weight: 3, presence: "sede", reading: "Mercado base de clientes industriales y de construcción." },
+  { name: "Antioquia", weight: 2, presence: "sede", reading: "Sede Medellín, abierta en 2023; segunda en ventas y la mejor en recompra." },
+  { name: "Valle del Cauca", weight: 2, presence: "sede", reading: "Sede Cali; margen bajo por fletes y dependencia de dos clientes grandes." },
+  { name: "Atlántico", weight: 2, presence: "oportunidad", reading: "Barranquilla: la réplica prevista para 2027 con la ficha de unidad replicable." },
+  { name: "Santander", weight: 1, presence: "cobertura", reading: "Atendido desde Bogotá con entregas semanales." },
+  { name: "Boyacá", weight: 1, presence: "cobertura", reading: "Clientes mineros e industriales atendidos desde Bogotá." },
+  { name: "Risaralda", weight: 1, presence: "cobertura", reading: "Atendido desde Medellín." },
+  { name: "Bolívar", weight: 1, presence: "oportunidad", reading: "Demanda industrial de Cartagena sin cobertura directa." },
 ];
 
-export const SUBREGIONS = [
-  {
-    name: "Norte",
-    reading: "Concentra la matrícula y la sede principal; la virtualización libera capacidad instalada.",
-  },
-  {
-    name: "Centro",
-    reading: "Corredor minero-agroindustrial con demanda técnica y tecnológica desatendida.",
-  },
-  {
-    name: "Sur",
-    reading: "Mayor distancia a la sede principal: es donde la modalidad virtual e híbrida más aumenta la cobertura.",
-  },
-] as const;
-
-// Benchmark ilustrativo (pares comparables)
+// Comparación ilustrativa con pares del sector (distribuidores regionales)
 export const BENCHMARK = {
-  metric: "Programas con componente virtual",
-  nationalAvg: 22,
+  metric: "Entregas a tiempo y completas",
+  nationalAvg: 84,
   peers: [
-    { name: "Par A", value: 31 },
-    { name: "Par B", value: 26 },
-    { name: "UPC", value: 15, self: true },
-    { name: "Par C", value: 12 },
-    { name: "Par D", value: 9 },
+    { name: "Par A", value: 93 },
+    { name: "Par B", value: 90 },
+    { name: "Andina", value: 88, self: true },
+    { name: "Par C", value: 82 },
+    { name: "Par D", value: 76 },
   ],
 };
 
 export const QUADRANT = {
-  // pertinencia territorial: oferta (x, 0-1) vs demanda (y, 0-1)
+  // posición sectorial: madurez organizacional (x, 0-1) vs. crecimiento (y, 0-1)
   points: [
-    { name: "Cesar", x: 0.2, y: 0.78, self: true },
-    { name: "Dpto. 2", x: 0.65, y: 0.75 },
-    { name: "Dpto. 3", x: 0.8, y: 0.62 },
-    { name: "Dpto. 4", x: 0.35, y: 0.3 },
-    { name: "Dpto. 5", x: 0.7, y: 0.25 },
-    { name: "Dpto. 6", x: 0.25, y: 0.18 },
+    { name: "Andina", x: 0.46, y: 0.62, self: true },
+    { name: "Par A", x: 0.78, y: 0.7 },
+    { name: "Par B", x: 0.66, y: 0.55 },
+    { name: "Par C", x: 0.38, y: 0.42 },
+    { name: "Par D", x: 0.3, y: 0.2 },
+    { name: "Par E", x: 0.58, y: 0.28 },
   ],
 };
 
 export const DEMO_USERS = [
-  { email: "admin@algoritmot.com", name: "Admin de la Plataforma", role: "ADMIN", password: "pgtd-demo-2026" },
-  { email: "consultor@algoritmot.com", name: "Equipo Algoritmo T", role: "CONSULTOR", password: "pgtd-demo-2026" },
-  { email: "lider@unicesar.edu.co", name: "Líder Institucional", role: "LIDER", password: "pgtd-demo-2026" },
-  { email: "academica@unicesar.edu.co", name: "Responsable Academia", role: "RESPONSABLE", line: 1, password: "pgtd-demo-2026" },
-  { email: "rectoria@unicesar.edu.co", name: "Rectoría", role: "DIRECTIVO", password: "pgtd-demo-2026" },
+  { email: "admin@algoritmot.com", name: "Admin de la Plataforma", role: "ADMIN", password: "4shine-demo-2026" },
+  { email: "advisor@4shine.co", name: "Advisor 4Shine", role: "CONSULTOR", password: "4shine-demo-2026" },
+  { email: "gerencia@andina.example", name: "Laura Restrepo", role: "LIDER", password: "4shine-demo-2026" },
+  { email: "operaciones@andina.example", name: "Carolina Vélez", role: "RESPONSABLE", line: 3, password: "4shine-demo-2026" },
+  { email: "junta@andina.example", name: "Junta de socios", role: "DIRECTIVO", password: "4shine-demo-2026" },
 ] as const;
 
 export const fmtCOP = (v: number) =>

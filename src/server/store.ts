@@ -15,7 +15,7 @@ import {
   currentAssessment as staticCurrent, previousAssessment as staticPrevious,
   type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull,
 } from "@/data/cmi";
-import { VARIABLES } from "@/data/instrument";
+import { PRACTICES, DIMS, dimOf } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -57,14 +57,12 @@ export type UploadedEvidence = {
   status: EvidenceStatus;
 };
 
-/** Captura de una variable durante la medición A3 (en curso). */
+/** Captura de una práctica durante el corte en curso (A3). */
 export type VariableCapture = {
-  perception?: number;          // 1–5 · autodiagnóstico consolidado (responsable o consultor)
-  d?: number;                   // 0–4 · documentación (solo consultor)
-  i?: number;                   // 0–4 · implementación (solo consultor)
-  k?: number;                   // 0–4 · indicadores (solo consultor)
-  level?: number;               // 1–5 · nivel calificado contra la rúbrica (solo consultor)
-  note?: string;                // observación de la sesión de calificación
+  perception?: number;          // 1–5 · autoevaluación directiva (responsable de la capacidad o advisor)
+  evidence?: "V" | "P" | "N";   // evidencia verificada, parcial o no existe (solo advisor)
+  level?: number;               // 1–5 · nivel calificado contra la rúbrica (solo advisor)
+  note?: string;                // observación de la sesión de verificación
   by: string;
   at: string;                   // ISO
 };
@@ -261,7 +259,7 @@ export async function updateTask(
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no puede editar tareas."
-        : `No puedes editar tareas de la línea 4.${ini.line}: tu ámbito es la línea 4.${user.line}.`,
+        : `No puedes editar tareas de la capacidad ${capName(ini.line)}: tu ámbito es ${capName(user.line)}.`,
     };
   }
 
@@ -490,7 +488,7 @@ export function createTask(
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no crea tareas."
-        : `No puedes crear tareas en la línea 4.${ini.line}: tu ámbito es la línea 4.${user.line}.`,
+        : `No puedes crear tareas en la capacidad ${capName(ini.line)}: tu ámbito es ${capName(user.line)}.`,
     };
   }
 
@@ -624,7 +622,7 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
     if (!can(user, "edit_tasks", ini.line)) {
       return {
         ok: false, status: 403,
-        error: `El corrimiento toca la línea 4.${ini.line} (${tid}) y tu ámbito es la línea 4.${user.line}.`,
+        error: `El corrimiento toca la capacidad ${capName(ini.line)} (${tid}) y tu ámbito es ${capName(user.line)}.`,
       };
     }
   }
@@ -640,12 +638,15 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
   return { ok: true, delta: preview.delta, shifted: preview.shifts.length + 1 };
 }
 
-/* ═══ Captura de la medición A3 ═══
-   El instrumento se aplica desde la plataforma: el responsable de línea
-   registra la percepción de SUS variables; el consultor califica D/I/K
-   contra los criterios del protocolo y asigna el nivel 1–5 contra la
-   rúbrica (garantía de independencia). Publicar exige las 52 calificadas
-   y conmuta la medición vigente de toda la lógica del servidor. */
+/* ═══ Captura del corte A3 ═══
+   El diagnóstico se aplica desde la plataforma: el responsable de la
+   capacidad registra la autoevaluación de SUS prácticas; el advisor marca la
+   evidencia y asigna el nivel 1–5 contra la rúbrica (garantía de
+   independencia). Publicar exige las 68 prácticas calificadas y conmuta la
+   medición vigente de toda la lógica del servidor. */
+
+const capName = (n?: number) => DIMS.find((d) => d.line === n)
+  ? ["", "Dirección", "Liderazgo", "Ejecución", "Multiplicación"][n!] : "sin capacidad";
 
 const inRange = (v: unknown, min: number, max: number) =>
   typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
@@ -656,59 +657,51 @@ export function getCapture(): Record<string, VariableCapture> {
 
 export function captureProgress() {
   const caps = capture();
-  let perception = 0, dik = 0, level = 0;
-  for (const v of VARIABLES) {
-    const c = caps.get(v.id);
+  let perception = 0, evidence = 0, level = 0;
+  for (const p of PRACTICES) {
+    const c = caps.get(p.code);
     if (!c) continue;
     if (c.perception !== undefined) perception++;
-    if (c.d !== undefined && c.i !== undefined && c.k !== undefined) dik++;
+    if (c.evidence !== undefined) evidence++;
     if (c.level !== undefined) level++;
   }
-  return { total: VARIABLES.length, perception, dik, level };
+  return { total: PRACTICES.length, perception, dik: evidence, level };
 }
 
 export function captureVariable(
   user: SessionUser,
   varId: string,
-  patch: { perception?: number; d?: number; i?: number; k?: number; level?: number; note?: string },
+  patch: { perception?: number; evidence?: "V" | "P" | "N"; level?: number; note?: string },
 ): { ok: true; capture: VariableCapture } | { ok: false; status: number; error: string } {
-  const v = VARIABLES.find((x) => x.id === varId);
-  if (!v) return { ok: false, status: 404, error: "La variable no existe en el instrumento." };
+  const v = PRACTICES.find((x) => x.code === varId);
+  if (!v) return { ok: false, status: 404, error: "La práctica no existe en el mapa." };
   if (g.__pgtdPublished) {
     return { ok: false, status: 422, error: "El corte A3 ya está publicado: la captura está cerrada." };
   }
-
-  // permiso: captura total (consultor) o de la línea propia (responsable)
   if (!can(user, "capture_maturity", v.line)) {
     return {
       ok: false, status: 403,
       error: user.role === "RESPONSABLE"
-        ? `No puedes capturar variables de la línea 4.${v.line}: tu ámbito es la línea 4.${user.line}.`
-        : "Tu rol no participa en la captura de la medición.",
+        ? `No puedes capturar prácticas de ${capName(v.line)}: tu ámbito es ${capName(user.line)}.`
+        : "Tu rol no participa en la captura del diagnóstico.",
     };
   }
-
-  // la calificación (D/I/K y nivel) es del consultor: independencia de la medición
-  const grading = patch.d !== undefined || patch.i !== undefined ||
-    patch.k !== undefined || patch.level !== undefined;
+  const grading = patch.evidence !== undefined || patch.level !== undefined;
   if (grading && !can(user, "publish_maturity")) {
     return {
       ok: false, status: 403,
-      error: "La calificación de evidencia (D/I/K) y el nivel son del equipo consultor; tu captura registra la percepción del autodiagnóstico.",
+      error: "La verificación de evidencia y el nivel son del advisor; tu captura registra la autoevaluación.",
     };
   }
-
-  // rangos
   if (patch.perception !== undefined && !inRange(patch.perception, 1, 5)) {
-    return { ok: false, status: 422, error: "La percepción es un entero 1–5 (Likert)." };
+    return { ok: false, status: 422, error: "La autoevaluación es un entero 1–5." };
   }
-  for (const [k2, max] of [["d", 4], ["i", 4], ["k", 4], ["level", 5]] as const) {
-    const val = patch[k2 as "d" | "i" | "k" | "level"];
-    if (val !== undefined && !inRange(val, k2 === "level" ? 1 : 0, max)) {
-      return { ok: false, status: 422, error: `Valor inválido para ${k2.toUpperCase()}: entero ${k2 === "level" ? "1" : "0"}–${max}.` };
-    }
+  if (patch.evidence !== undefined && !["V", "P", "N"].includes(patch.evidence)) {
+    return { ok: false, status: 422, error: "La evidencia se marca V (verificada), P (parcial) o N (no existe)." };
   }
-
+  if (patch.level !== undefined && !inRange(patch.level, 1, 5)) {
+    return { ok: false, status: 422, error: "El nivel es un entero 1–5 contra la rúbrica." };
+  }
   const prev = capture().get(varId) ?? {} as VariableCapture;
   const next: VariableCapture = {
     ...prev,
@@ -717,18 +710,17 @@ export function captureVariable(
     at: new Date().toISOString(),
   };
   capture().set(varId, next);
-
   const what = Object.keys(patch).filter((k2) => patch[k2 as keyof typeof patch] !== undefined).join(", ");
   audit(user, "task", varId, `captura A3: ${what}`);
   return { ok: true, capture: next };
 }
 
-/** Publica el corte A3: exige las 52 variables con nivel calificado. */
+/** Publica el corte A3: exige las 68 prácticas con nivel calificado. */
 export function publishCapture(
   user: SessionUser,
 ): { ok: true; assessment: AssessmentRecord } | { ok: false; status: number; error: string } {
   if (!can(user, "publish_maturity")) {
-    return { ok: false, status: 403, error: "Solo el equipo consultor publica mediciones." };
+    return { ok: false, status: 403, error: "Solo el advisor publica mediciones." };
   }
   if (g.__pgtdPublished) {
     return { ok: true, assessment: g.__pgtdPublished };
@@ -737,35 +729,30 @@ export function publishCapture(
   if (prog.level < prog.total) {
     return {
       ok: false, status: 422,
-      error: `Faltan ${prog.total - prog.level} variables por calificar (nivel contra la rúbrica). Una medición parcial no se publica.`,
+      error: `Faltan ${prog.total - prog.level} prácticas por calificar (nivel contra la rúbrica). Una medición parcial no se publica.`,
     };
   }
-
-  // celda = promedio simple de sus variables (la misma regla del instrumento)
+  // dimensión = promedio simple de sus prácticas calificadas
   const base = staticCurrent().scores!;
-  const scores: Record<number, Record<string, CellScore>> = {};
-  for (const line of [1, 2, 3, 4]) {
-    scores[line] = {};
-    for (const dim of ["organizacional", "misional", "tecnologica", "datos"]) {
-      const vars = VARIABLES.filter((x) => x.line === line && x.dimension === dim);
-      const avg = vars.reduce((a, x) => a + capture().get(x.id)!.level!, 0) / vars.length;
-      scores[line][dim] = {
-        value: Math.round(avg * 10) / 10,
-        target: base[line][dim].target,     // la meta a 24 meses no cambia con el corte
-      };
-    }
+  const scores: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
+  for (const d of DIMS) {
+    const avg = d.prac.reduce((a, x) => a + capture().get(x.code)!.level!, 0) / d.prac.length;
+    scores[d.line][d.code] = {
+      value: Math.round(avg * 10) / 10,
+      target: base[d.line][d.code].target,     // la meta a 24 meses no cambia con el corte
+    };
   }
-
   const assessment: AssessmentRecord = {
     id: "A3",
     label: "Corte de seguimiento 2",
     period: "2027-08",
     status: "PUBLICADA",
-    note: `Publicada desde la plataforma por ${user.name}: 52 variables calificadas, percepción ${prog.perception}/52, evidencia D/I/K ${prog.dik}/52.`,
+    note: `Publicada desde la plataforma por ${user.name}: 68 prácticas calificadas, autoevaluación ${prog.perception}/68, evidencia ${prog.dik}/68.`,
     scores,
   };
   g.__pgtdPublished = assessment;
   audit(user, "task", "A3", "medición A3 publicada (corte vigente)");
+  void dimOf;
   return { ok: true, assessment };
 }
 
@@ -808,7 +795,7 @@ export function reportKpi(
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no reporta valores de KPI."
-        : `No puedes reportar KPI de la línea 4.${k.line}: tu ámbito es la línea 4.${user.line}.`,
+        : `No puedes reportar KPI de la capacidad ${capName(k.line)}: tu ámbito es ${capName(user.line)}.`,
     };
   }
 
@@ -889,7 +876,7 @@ export function updateInitiative(
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no edita iniciativas."
-        : `No puedes editar iniciativas de la línea 4.${base.line}: tu ámbito es la línea 4.${user.line}.`,
+        : `No puedes editar iniciativas de la capacidad ${capName(base.line)}: tu ámbito es ${capName(user.line)}.`,
     };
   }
 
@@ -1040,7 +1027,7 @@ export function createUser(
     createdBy: actor.name, at: new Date().toISOString(),
   };
   users().push(user);
-  audit(actor, "task", email, `usuario creado (${input.role}${user.line ? ` · línea 4.${user.line}` : ""})`);
+  audit(actor, "task", email, `usuario creado (${input.role}${user.line ? ` · ${capName(user.line)}` : ""})`);
   return { ok: true, user };
 }
 
@@ -1280,19 +1267,19 @@ export type Branding = {
 };
 
 export const DEFAULT_BRANDING: Branding = {
-  platformName: "PGTD", showPlatformName: true,
-  institutionName: "Universidad Popular del Cesar",
-  shortName: "UPC",
-  tagline: "Soluciones digitales con sentido humano",
+  platformName: "4Shine Empresas", showPlatformName: true,
+  institutionName: "Andina Suministros",
+  shortName: "Andina",
+  tagline: "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.",
   logoLight: null, logoDark: null, favicon: null,
   timezone: "America/Bogota",
-  primary: "#1a2d5a", secondary: "#0d1830", accent: "#0e93b4",
+  primary: "#0D1B2A", secondary: "#08111c", accent: "#8a6d1f",
   font: "Inter", radius: "14px", maxWidth: "1220px", buttonStyle: "solid",
   loginLayout: "image-left",
   loginTitle: "Iniciar sesión", showLoginTitle: true,
-  loginWelcome: "Entra con tu cuenta institucional asignada por el administrador.", showLoginWelcome: true,
-  loginSupport: "Soporte: soporte@algoritmot.com", showLoginSupport: false,
-  heroTitle: "Plataforma de Gestión de la Transformación Digital con Enfoque Territorial", showHeroTitle: true,
+  loginWelcome: "Entra con la cuenta que te asignó el advisor de tu empresa.", showLoginWelcome: true,
+  loginSupport: "Soporte: soporte@4shine.co", showLoginSupport: false,
+  heroTitle: "Plataforma de gestión estratégica 4Shine Empresas", showHeroTitle: true,
   heroMessages: [], showHeroMessages: true,
   heroSupport: "", showHeroSupport: false,
   overlayColor: "#0d1830", overlayOpacity: 72,

@@ -13,30 +13,31 @@ import { KPI_CATALOG, INITIATIVES_FULL } from "../src/data/cmi";
 import type { SessionUser } from "../src/lib/session";
 
 const consultor: SessionUser = { email: "c@a.co", name: "Consultor", role: "CONSULTOR" };
-const resp1: SessionUser = { email: "r@u.co", name: "Resp Academia", role: "RESPONSABLE", line: 1 };
+const resp1: SessionUser = { email: "r@u.co", name: "Resp Dirección", role: "RESPONSABLE", line: 1 };
+const resp3: SessionUser = { email: "o@u.co", name: "Resp Operaciones", role: "RESPONSABLE", line: 3 };
 const directivo: SessionUser = { email: "d@u.co", name: "Rectoría", role: "DIRECTIVO" };
 
 test("kpi: reporte con permisos por línea y validaciones", () => {
   resetStore();
-  const k = KPI_CATALOG.find((x) => x.code === "AV-01")!;   // línea 1
+  const k = KPI_CATALOG.find((x) => x.code === "DIR-01")!;   // línea 1
   const otro = KPI_CATALOG.find((x) => x.line !== 1)!;
 
   // directivo no reporta; responsable solo su línea
-  assert.ok(!(reportKpi(directivo, "AV-01", "2027-T2", 50) as { ok: boolean }).ok);
+  assert.ok(!(reportKpi(directivo, "DIR-01", "2027-T2", 50) as { ok: boolean }).ok);
   const fuera = reportKpi(resp1, otro.code, "2027-T2", 10);
   assert.ok(!fuera.ok && fuera.status === 403);
 
   // validaciones
-  assert.ok(!(reportKpi(resp1, "AV-01", "T2-2027", 50) as { ok: boolean }).ok, "periodo inválido");
-  assert.ok(!(reportKpi(resp1, "AV-01", "2027-T2", -5) as { ok: boolean }).ok, "valor negativo");
-  const viejo = reportKpi(resp1, "AV-01", "2020", 10);
+  assert.ok(!(reportKpi(resp1, "DIR-01", "T2-2027", 50) as { ok: boolean }).ok, "periodo inválido");
+  assert.ok(!(reportKpi(resp1, "DIR-01", "2027-T2", -5) as { ok: boolean }).ok, "valor negativo");
+  const viejo = reportKpi(resp1, "DIR-01", "2020", 10);
   assert.ok(!viejo.ok && viejo.status === 422, "no se reescribe la serie histórica");
 
   // reporte válido del responsable de la línea
   const before = k.series.length;
-  const r = reportKpi(resp1, "AV-01", "2027-T2", 55, "corte del LMS");
+  const r = reportKpi(resp1, "DIR-01", "2027-T2", 55, "corte del LMS");
   assert.ok(r.ok);
-  const serie = effectiveKpiSeries("AV-01");
+  const serie = effectiveKpiSeries("DIR-01");
   assert.equal(serie.length, before + 1);
   assert.equal(serie[serie.length - 1].value, 55);
 
@@ -46,19 +47,19 @@ test("kpi: reporte con permisos por línea y validaciones", () => {
   assert.equal(h.latestPeriod, "2027-T2");
 
   // corrección del mismo periodo: reemplaza, no duplica
-  const r2 = reportKpi(consultor, "AV-01", "2027-T2", 57);
+  const r2 = reportKpi(consultor, "DIR-01", "2027-T2", 57);
   assert.ok(r2.ok);
-  assert.equal(effectiveKpiSeries("AV-01").length, before + 1);
-  assert.equal(effectiveKpiSeries("AV-01").at(-1)!.value, 57);
+  assert.equal(effectiveKpiSeries("DIR-01").length, before + 1);
+  assert.equal(effectiveKpiSeries("DIR-01").at(-1)!.value, 57);
   resetStore();
 });
 
 test("iniciativas: edición con permisos, revisión de factores y bitácora", () => {
   resetStore();
-  const i5 = INITIATIVES_FULL.find((i) => i.id === "i5")!;   // línea 4
+  const i5 = INITIATIVES_FULL.find((i) => i.id === "i5")!;   // capacidad 1 · Dirección
 
-  // responsable de otra línea no edita
-  const fuera = updateInitiative(resp1, "i5", { progress: 10 });
+  // responsable de otra capacidad no edita
+  const fuera = updateInitiative(resp3, "i5", { progress: 10 });
   assert.ok(!fuera.ok && fuera.status === 403);
   // directivo no edita
   assert.ok(!(updateInitiative(directivo, "i5", { progress: 10 }) as { ok: boolean }).ok);
@@ -112,40 +113,39 @@ test("tareas: creación validada, archivo con dependientes y cascada", () => {
   // validaciones de la creación
   assert.ok(!(createTask(consultor, { iniId: "no", title: "x", desc: "x", assigneeId: "P01", start: "2027-03-01", due: "2027-03-10" }) as { ok: boolean }).ok);
   assert.ok(!(createTask(consultor, { iniId: "i2", title: "corta", desc: "descripción suficientemente larga aquí", assigneeId: "P01", start: "2027-03-01", due: "2027-03-10" }) as { ok: boolean }).ok, "título corto");
-  assert.ok(!(createTask(resp1, { iniId: "i2", title: "Tarea de otra línea válida", desc: "descripción suficientemente larga aquí", assigneeId: "P01", start: "2027-03-01", due: "2027-03-10" }) as { ok: boolean }).ok, "línea ajena");
+  assert.ok(!(createTask(resp3, { iniId: "i2", title: "Tarea de otra capacidad válida", desc: "descripción suficientemente larga aquí", assigneeId: "P01", start: "2027-03-01", due: "2027-03-10" }) as { ok: boolean }).ok, "capacidad ajena");
 
   // creación válida: id secuencial y línea base congelada
   const c = createTask(consultor, {
-    iniId: "i2", title: "Taller de dueños de dato",
-    desc: "Sesión con decanaturas para designar dueños; produce el acta.",
-    assigneeId: "P10", start: "2027-03-12", due: "2027-03-26", dependsOn: ["T-i2-04"],
+    iniId: "i2", title: "Taller de marcos de autoridad con los líderes",
+    desc: "Sesión con los líderes receptores para afinar los marcos; produce el acta.",
+    assigneeId: "P01", start: "2027-03-12", due: "2027-03-26", dependsOn: ["T-i2-04"],
   });
   assert.ok(c.ok);
-  assert.equal(c.task.id, "T-i2-08");
+  assert.equal(c.task.id, "T-i2-06");
   assert.equal(deviationDays(c.task), 0);
 
   // archivar: bloqueado si hay dependientes
   const blocked = archiveTask(consultor, "T-i2-04");
-  assert.ok(!blocked.ok && blocked.status === 422 && blocked.error.includes("T-i2-08"));
-  const arch = archiveTask(consultor, "T-i2-08");
+  assert.ok(!blocked.ok && blocked.status === 422 && blocked.error.includes("T-i2-06"));
+  const arch = archiveTask(consultor, "T-i2-06");
   assert.ok(arch.ok);
-  assert.equal(getTask("T-i2-08"), null);
+  assert.equal(getTask("T-i2-06"), null);
 
-  // cascada: preview transitiva y aplicación con desviación medida
-  const pv = cascadePreview("T-i9-03", "2027-03-14");
+  // cascada: preview y aplicación con desviación medida
+  const pv = cascadePreview("T-i1-03", "2027-03-26");
   assert.ok(pv.ok);
   assert.equal(pv.delta, 7);
-  assert.deepEqual(pv.shifts.map((s) => s.id).sort(), ["T-i9-05", "T-i9-06", "T-i9-07"]);
+  assert.deepEqual(pv.shifts.map((s) => s.id).sort(), ["T-i1-04", "T-i1-05"]);
 
-  const ap = applyCascade(consultor, "T-i9-03", "2027-03-14");
-  assert.ok(ap.ok && ap.shifted === 4);
-  assert.equal(getTask("T-i9-05")!.due, "2027-05-02");
-  assert.equal(deviationDays(getTask("T-i9-05")!), 7);
+  const ap = applyCascade(consultor, "T-i1-03", "2027-03-26");
+  assert.ok(ap.ok && ap.shifted === 3);
+  assert.equal(getTask("T-i1-04")!.due, "2027-04-17");
+  assert.equal(deviationDays(getTask("T-i1-04")!), 7);
 
-  // el responsable de línea 1 no aplica cascadas de la línea 1 si tocan… su línea sí puede:
-  const pv2 = cascadePreview("T-i9-03", "2027-03-21");
+  const pv2 = cascadePreview("T-i1-03", "2027-04-02");
   assert.ok(pv2.ok);
 
   resetStore();
-  assert.equal(getTask("T-i9-05")!.due, "2027-04-25");
+  assert.equal(getTask("T-i1-04")!.due, "2027-04-10");
 });

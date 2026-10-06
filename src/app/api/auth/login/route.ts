@@ -3,7 +3,7 @@ import { z } from "zod";
 import { findActiveUser } from "@/server/store";
 import { setSession, type SessionUser } from "@/lib/session";
 
-const DEMO_PASSWORD = "pgtd-demo-2026";
+const DEMO_PASSWORD = "4shine-demo-2026";
 
 // Prototipo: valida contra los usuarios demo. Con la base de datos conectada,
 // esta ruta pasa a consultar el modelo User (bcrypt + control de intentos).

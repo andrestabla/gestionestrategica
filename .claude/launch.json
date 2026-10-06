@@ -2,11 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "pgtd",
+      "name": "4shine",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
-      "cwd": "/Users/andrestabla/Documents/pgtd"
+      "cwd": "/Users/andrestabla/Documents/4shine-plataforma"
     }
   ]
 }

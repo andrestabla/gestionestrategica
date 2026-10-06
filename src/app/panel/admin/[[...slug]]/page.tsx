@@ -88,8 +88,8 @@ type ManagedUser = {
 const ROLE_LABEL: Record<ManagedUser["role"], string> = {
   ADMIN: "Admin de la plataforma",
   CONSULTOR: "Consultor Algoritmo T",
-  LIDER: "Líder institucional",
-  RESPONSABLE: "Responsable de línea",
+  LIDER: "Líder de la empresa",
+  RESPONSABLE: "Responsable de capacidad",
   DIRECTIVO: "Directivo",
 };
 
@@ -128,7 +128,7 @@ function UsersTab() {
             <table className="w-full min-w-[560px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-line-strong bg-surface-2/60">
-                  {["Usuario", "Rol", "Línea", "Estado", ""].map((h) => (
+                  {["Usuario", "Rol", "Capacidad", "Estado", ""].map((h) => (
                     <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>
                   ))}
                 </tr>
@@ -209,7 +209,7 @@ function NewUserCard({ saving, onCreate }: {
         <input type="text" value={name} onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo" className="input !py-2 text-[12px]" />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-          placeholder="correo@unicesar.edu.co" className="input !py-2 text-[12px]" />
+          placeholder="correo@empresa.com" className="input !py-2 text-[12px]" />
         <select value={role} onChange={(e) => setRole(e.target.value as ManagedUser["role"])}
           className="input !py-2 text-[12px]">
           {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).map((r) => (
@@ -284,7 +284,7 @@ function PermisosTab() {
                         {grant === true ? (
                           <Check size={15} className="inline" style={{ color: "var(--ok)" }} />
                         ) : grant === "line" ? (
-                          <span className="chip chip-cyan !py-0 !text-[8.5px]">su línea</span>
+                          <span className="chip chip-cyan !py-0 !text-[8.5px]">su capacidad</span>
                         ) : (
                           <Minus size={14} className="inline text-faint" />
                         )}
@@ -314,7 +314,7 @@ function PermisosTab() {
         </div>
         <div className="border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
           La matriz es código versionado (única fuente de verdad, cubierta por tests). La edición de
-          permisos por institución llega con la fase multi-tenant; hoy los ajustes se hacen por rol.
+          permisos por empresa llega con la fase multi-empresa; hoy los ajustes se hacen por rol.
         </div>
       </Card>
     </>

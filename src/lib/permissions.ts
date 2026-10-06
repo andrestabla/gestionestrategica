@@ -7,13 +7,13 @@
 // Roles:
 //  ADMIN       — administrador de la plataforma: usuarios, permisos,
 //                integraciones y branding. No opera la medición.
-//  CONSULTOR   — equipo Algoritmo T: configura el instrumento, publica
-//                mediciones, verifica evidencia. Edición completa.
-//  LIDER       — líder institucional: administra iniciativas, tareas y KPI
-//                de todas las líneas. No configura el instrumento.
-//  RESPONSABLE — responsable de línea: edita lo de SU línea (tareas de sus
-//                iniciativas, avance, evidencia propia) y reporta KPI suyos.
-//  DIRECTIVO   — Rectoría/Consejo: lectura de todo, edición de nada.
+//  CONSULTOR   — advisor 4Shine: configura el diagnóstico, verifica
+//                evidencia y publica mediciones. Edición completa.
+//  LIDER       — líder de la empresa: administra iniciativas, tareas y KPI
+//                de todas las capacidades. No configura el diagnóstico.
+//  RESPONSABLE — responsable de capacidad: edita lo de SU capacidad (tareas
+//                de sus iniciativas, avance, evidencia propia) y reporta KPI suyos.
+//  DIRECTIVO   — junta o directivo: lectura de todo, edición de nada.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { SessionUser } from "@/lib/session";
@@ -93,7 +93,7 @@ export function describeAccess(user: SessionUser | null, module: ModuleKey): {
     return { level: "full", label: "Edición completa" };
   }
   if (grants.some((g) => g === true)) return { level: "full", label: "Edición completa" };
-  const lineName = user.line ? `línea 4.${user.line}` : "tu línea";
+  const lineName = user.line ? `la capacidad ${["", "Dirección", "Liderazgo", "Ejecución", "Multiplicación"][user.line]}` : "tu capacidad";
   return { level: "line", label: `Edición de ${lineName}` };
 }
 

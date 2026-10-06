@@ -162,9 +162,9 @@ function NotificationsBell() {
 
 const NAV = [
   { href: "/panel", label: "Panel", icon: LayoutDashboard },
-  { href: "/panel/madurez", label: "Madurez", icon: Radar, code: "M1" },
-  { href: "/panel/benchmark", label: "Comparación", icon: Globe2, code: "M2" },
-  { href: "/panel/capacidades", label: "Capacidades", icon: Network, code: "M3" },
+  { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" },
+  { href: "/panel/benchmark", label: "Benchmark", icon: Globe2, code: "M2" },
+  { href: "/panel/estrategia", label: "Estrategia", icon: Network, code: "M3" },
   { href: "/panel/kpi", label: "Indicadores", icon: Gauge, code: "M4" },
   { href: "/panel/ruta", label: "Ruta", icon: MapIcon, code: "M5" },
   { href: "/panel/iniciativas", label: "Iniciativas", icon: ListChecks, code: "M6" },
@@ -176,10 +176,10 @@ const NAV = [
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin de la plataforma",
-  CONSULTOR: "Consultor Algoritmo T",
-  LIDER: "Líder institucional",
-  RESPONSABLE: "Responsable de línea",
-  DIRECTIVO: "Directivo",
+  CONSULTOR: "Advisor 4Shine",
+  LIDER: "Líder de la empresa",
+  RESPONSABLE: "Responsable de capacidad",
+  DIRECTIVO: "Junta o directivo",
 };
 
 const RAIL_W = 232;
@@ -347,7 +347,7 @@ export function AppShell({ children, user }: {
             )}
           </div>
 
-          <span className="chip chip-gold ml-1 hidden md:inline-flex" title="Datos ilustrativos. La primera medición real se produce en la Fase 0.">
+          <span className="chip chip-gold ml-1 hidden md:inline-flex" title="Datos ilustrativos de Andina Suministros. La información real se produce con el diagnóstico.">
             <FlaskConical size={11} /> Datos demo
           </span>
 
@@ -371,7 +371,7 @@ export function AppShell({ children, user }: {
         <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-8 sm:px-8">{children}</main>
 
         <footer className="px-8 pb-6 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">
-          Algoritmo T S.A.S. · PGTD · Universidad Popular del Cesar
+          Sistema 4Shine® · 4Shine Empresas · Plataforma de gestión estratégica · Algoritmo T
         </footer>
       </div>
 

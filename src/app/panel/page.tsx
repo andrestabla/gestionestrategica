@@ -1,6 +1,6 @@
 "use client";
 
-// Panel principal v2: héroe con gauge institucional, avance por línea,
+// Panel principal: héroe con gauge de la empresa, avance por capacidad,
 // feed de atención y módulos.
 
 import Link from "next/link";
@@ -40,9 +40,9 @@ export default function Panel() {
   return (
     <>
       <PageHeader
-        kicker="Universidad Popular del Cesar"
-        title="Estado de la transformación digital"
-        desc={`Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}) · publicada. Serie institucional: ${summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ")}.`}
+        kicker="Andina Suministros"
+        title="Estado de la capacidad organizacional"
+        desc={`Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}) · publicada. Serie de la empresa: ${summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ")}.`}
       />
 
       {/* ── héroe: gauge + avance por línea ── */}
@@ -51,7 +51,7 @@ export default function Panel() {
           style={{ background: "radial-gradient(560px 240px at 12% 0%, rgb(14 147 180 / 0.06), transparent 60%)" }} />
         <div className="relative grid gap-8 px-7 py-6 lg:grid-cols-[240px_1fr_320px] lg:items-center">
           <div>
-            <div className="label mb-2">Madurez institucional</div>
+            <div className="label mb-2">Madurez de la empresa</div>
             <ScoreGauge value={score} />
             <div className="mt-2 flex items-center justify-center gap-1.5 text-[11.5px] text-muted">
               <span className="chip chip-ok num">▲ {(score - prev).toFixed(1).replace(".", ",")}</span>
@@ -60,12 +60,12 @@ export default function Panel() {
           </div>
 
           <div className="space-y-4">
-            <div className="label">Avance por línea</div>
+            <div className="label">Avance por capacidad</div>
             {LINES.map((l) => {
               const now = lineScoreOf(l.n);
               const before = prevLineScoreOf(l.n) ?? PREV_SCORES[l.n];
               return (
-                <Link key={l.n} href="/panel/madurez/resumen" className="group block">
+                <Link key={l.n} href={`/panel/diagnostico/capacidad/${l.n}`} className="group block">
                   <div className="mb-1.5 flex items-baseline justify-between">
                     <span className="text-[13px] font-bold text-ink transition-colors group-hover:text-cyan-deep">
                       {l.code} <span className="font-semibold text-ink-soft">{l.name}</span>
@@ -151,15 +151,15 @@ export default function Panel() {
       <div className="rise rise-4">
         <div className="kicker mb-4">Módulos de la plataforma</div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ModuleCard href="/panel/madurez" code="M1" title="Medición de madurez"
-            desc="Radar, mapa de calor línea × dimensión, evidencia por celda e historial de mediciones."
-            tags={["16 celdas", "Evidencia"]} />
-          <ModuleCard href="/panel/benchmark" code="M2" title="Comparación sectorial"
-            desc="Posición nacional, pares comparables y cobertura territorial en los 25 municipios del Cesar."
-            tags={["357 IES", "Territorio"]} />
-          <ModuleCard href="/panel/capacidades" code="M3" title="Capacidades y mapa estratégico"
-            desc="Objetivo → capacidad → iniciativa → indicador: la trazabilidad completa, navegable."
-            tags={["7 capacidades"]} />
+          <ModuleCard href="/panel/diagnostico" code="M1" title="Diagnóstico 4Shine-OD"
+            desc="Radar de capacidades, mapa de calor de las 17 dimensiones, evidencia por práctica y serie de mediciones."
+            tags={["17 dimensiones", "68 evidencias"]} />
+          <ModuleCard href="/panel/benchmark" code="M2" title="Benchmark"
+            desc="Posición sectorial frente a pares comparables y presencia territorial por departamento."
+            tags={["Sector", "Territorio"]} />
+          <ModuleCard href="/panel/estrategia" code="M3" title="Estrategia · cuadro de mando y OKR"
+            desc="Objetivo, resultados clave, dimensión que instala e iniciativa: la trazabilidad completa, navegable."
+            tags={["4 perspectivas", "10 objetivos"]} />
           <ModuleCard href="/panel/kpi" code="M4" title="Indicadores"
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
             tags={[`${KPIS.length} indicadores`]} />

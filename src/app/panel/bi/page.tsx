@@ -1,33 +1,42 @@
 "use client";
 
-// M7 · Inteligencia de negocio: puerta a los observatorios de Algoritmo T.
+// M7 · Inteligencia: el contexto del sector y del territorio de la empresa.
+// Enlaza con los observatorios de Algoritmo T y deja declarado qué fuente
+// alimenta cada lectura. Se configura por sector en Administración.
 
 import { PageHeader, Card } from "@/components/ui";
 import { AccessChip } from "@/components/user-context";
-import { ExternalLink, Database, Briefcase, Map as MapIcon, FileOutput } from "lucide-react";
+import { INSTITUTION } from "@/data/demo";
+import { ExternalLink, Briefcase, Map as MapIcon, TrendingUp, FileOutput, Factory } from "lucide-react";
 
-const OBSERVATORIES = [
+const SOURCES = [
   {
-    icon: Database, title: "Oferta educativa",
-    desc: "Programas de educación superior (SNIES) por institución, área, nivel, modalidad y territorio, con mapas.",
-    tags: ["27.005 programas", "357 IES"],
-    href: "https://www.algoritmot.com/bi/oferta",
-  },
-  {
-    icon: Briefcase, title: "Laboral y empleabilidad",
-    desc: "Competencias demandadas, reskilling, empleabilidad y vinculación formal de graduados.",
-    tags: ["OLE", "DANE", "OIT"],
-    href: "https://www.algoritmot.com/bi/laboral",
-  },
-  {
-    icon: MapIcon, title: "Análisis regional",
-    desc: "Pertinencia territorial, vacíos de oferta, demanda potencial por cohortes y recomendación de programas.",
-    tags: ["33 departamentos", "Cohortes"],
+    icon: Factory, title: "Sector y competencia",
+    desc: "Tamaño del mercado de suministros industriales, crecimiento, concentración y márgenes de referencia de distribuidores comparables.",
+    tags: ["Supersociedades", "DANE · EAC", "Cámaras de comercio"],
     href: "https://www.algoritmot.com/bi/regional",
   },
   {
+    icon: MapIcon, title: "Territorio y demanda",
+    desc: "Actividad industrial y de construcción por departamento: dónde está la demanda que la empresa aún no atiende y qué sede la cubre mejor.",
+    tags: ["33 departamentos", "Licencias de construcción", "Parques industriales"],
+    href: "https://www.algoritmot.com/bi/regional",
+  },
+  {
+    icon: Briefcase, title: "Talento y empleabilidad",
+    desc: "Oferta de perfiles comerciales, logísticos y administrativos en las ciudades donde opera y donde planea abrir.",
+    tags: ["OLE", "DANE · GEIH"],
+    href: "https://www.algoritmot.com/bi/laboral",
+  },
+  {
+    icon: TrendingUp, title: "Señales de crecimiento",
+    desc: "Importaciones de insumos industriales, precios de referencia y ciclos de compra de los sectores cliente.",
+    tags: ["DIAN", "Banco de la República"],
+    href: "https://www.algoritmot.com/bi/oferta",
+  },
+  {
     icon: FileOutput, title: "Espacio de trabajo",
-    desc: "Informes propios combinando oferta, demanda y recomendaciones, exportables en PDF y CSV.",
+    desc: "Informes propios combinando sector, territorio y los resultados del diagnóstico, exportables en PDF y CSV.",
     tags: ["Autonomía"],
     href: "https://www.algoritmot.com/bi/workspace",
   },
@@ -36,12 +45,12 @@ const OBSERVATORIES = [
 export default function BiPage() {
   return (
     <>
-      <PageHeader kicker="M7 · Inteligencia" title="Observatorios de Algoritmo T"
-        desc="El componente comparativo de la plataforma se apoya en los observatorios ya en operación: llegan con datos desde el primer día, sin que la Universidad tenga que aportarlos." actions={<AccessChip module="bi" />} />
+      <PageHeader kicker="M7 · Inteligencia" title={`Inteligencia del sector · ${INSTITUTION.sector}`}
+        desc="El contexto que el diagnóstico no mide: cómo se mueve el sector, dónde está la demanda y qué talento hay disponible. Llega con datos desde el primer día, sin que la empresa tenga que aportarlos." actions={<AccessChip module="bi" />} />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {OBSERVATORIES.map((o, i) => (
-          <Card key={o.title} hover className={`rise rise-${i + 1} p-6`}>
+        {SOURCES.map((o, i) => (
+          <Card key={o.title} hover className={`rise rise-${Math.min(i + 1, 4)} p-6`}>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl"
               style={{ background: "linear-gradient(135deg, var(--cyan) 0%, var(--navy) 100%)" }}>
               <o.icon size={20} className="text-white" />
@@ -60,9 +69,9 @@ export default function BiPage() {
       </div>
 
       <p className="rise rise-4 mt-5 rounded-xl border border-dashed border-line-strong bg-surface px-5 py-4 text-[12.5px] leading-relaxed text-muted">
-        En el despliegue de producción este módulo enlaza con el BI de Algoritmo T mediante
-        inicio de sesión unificado, de modo que el equipo de la Universidad navega los
-        observatorios y genera informes sin una segunda credencial.
+        Las fuentes se configuran por sector en Administración. En el despliegue de producción este módulo
+        enlaza con el BI de Algoritmo T mediante inicio de sesión unificado, de modo que el equipo de la
+        empresa navega los observatorios y genera informes sin una segunda credencial.
       </p>
     </>
   );

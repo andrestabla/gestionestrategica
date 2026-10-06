@@ -1,15 +1,14 @@
 "use client";
 
-// Buscador global (⌘K / Ctrl+K): variables del instrumento, KPI,
-// iniciativas, tareas, programas, personas, dominios y módulos — todo
-// navega a su ruta profunda. Índice local: no requiere red.
+// Buscador global (⌘K / Ctrl+K): prácticas del mapa, dimensiones,
+// frameworks, KPI, iniciativas, tareas, personas y módulos — todo navega a
+// su ruta profunda. Índice local: no requiere red.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { VARIABLES, DOMAINS } from "@/data/instrument";
+import { PRACTICES, DIMS, FRAMEWORKS } from "@/data/mapa";
 import { KPI_CATALOG, INITIATIVES_FULL } from "@/data/cmi";
 import { TASKS, PEOPLE } from "@/data/proyectos";
-import { PROGRAMS } from "@/data/portfolio";
 import { Search, CornerDownLeft } from "lucide-react";
 
 type Entry = {
@@ -26,12 +25,28 @@ const norm = (s: string) =>
 
 function buildIndex(): Entry[] {
   const e: Entry[] = [];
-  for (const v of VARIABLES) {
+  for (const p of PRACTICES) {
     e.push({
-      id: v.id, group: "Variables del instrumento",
-      title: `${v.id} · ${v.name}`, sub: v.frame,
-      href: `/panel/madurez/variables/${v.id}`,
-      haystack: norm(`${v.id} ${v.name} ${v.desc} ${v.frame}`),
+      id: p.code, group: "Prácticas del mapa",
+      title: `${p.code} · ${p.f1.slice(0, 90)}`, sub: p.dim,
+      href: `/panel/diagnostico/dimension/${p.dim}`,
+      haystack: norm(`${p.code} ${p.f1} ${p.ev}`),
+    });
+  }
+  for (const d of DIMS) {
+    e.push({
+      id: d.code, group: "Dimensiones",
+      title: `${d.code} · ${d.name}`, sub: d.cap,
+      href: `/panel/diagnostico/dimension/${d.code}`,
+      haystack: norm(`${d.code} ${d.name} ${d.defn}`),
+    });
+  }
+  for (const f of FRAMEWORKS) {
+    e.push({
+      id: f.id, group: "Frameworks",
+      title: `${f.id} · ${f.name}`, sub: f.cap,
+      href: `/panel/metodologia#${f.id}`,
+      haystack: norm(`${f.id} ${f.name} ${f.promise}`),
     });
   }
   for (const k of KPI_CATALOG) {
@@ -58,14 +73,6 @@ function buildIndex(): Entry[] {
       haystack: norm(`${t.id} ${t.title} ${t.desc}`),
     });
   }
-  for (const p of PROGRAMS) {
-    e.push({
-      id: p.code, group: "Programas",
-      title: `${p.code} · ${p.name}`, sub: `${p.campus} · ${p.level}`,
-      href: `/panel/benchmark/${p.code}`,
-      haystack: norm(`${p.code} ${p.name} ${p.faculty} ${p.campus}`),
-    });
-  }
   for (const p of PEOPLE) {
     e.push({
       id: p.id, group: "Personas",
@@ -74,31 +81,20 @@ function buildIndex(): Entry[] {
       haystack: norm(`${p.name} ${p.cargo} ${p.dependencia}`),
     });
   }
-  for (const d of DOMAINS) {
-    e.push({
-      id: d.id, group: "Dominios",
-      title: d.name, sub: "dominio diagnóstico",
-      href: "/panel/madurez/dominios",
-      haystack: norm(`${d.name} ${d.desc}`),
-    });
-  }
   const MODULES: [string, string, string][] = [
     ["Panel", "estado general", "/panel"],
-    ["Madurez (M1)", "diagnóstico por línea y dimensión", "/panel/madurez/resumen"],
-    ["Captura A3", "aplicar la medición", "/panel/madurez/captura"],
-    ["Índices IES", "IIES, matriz 4×7, AIQ", "/panel/madurez/indices"],
-    ["Registros calificados", "Decreto 1330", "/panel/madurez/registros"],
-    ["Comparación (M2)", "benchmark y territorio", "/panel/benchmark"],
-    ["Capacidades (M3)", "cuadro de mando integral", "/panel/capacidades"],
-    ["Indicadores (M4)", "KPI de la educación digital", "/panel/kpi"],
+    ["Diagnóstico (M1)", "4Shine-OD: capacidades, dimensiones y prácticas", "/panel/diagnostico"],
+    ["Test de capacidad empresarial", "etapa, perfil y prioridad", "/panel/diagnostico/test"],
+    ["Brechas priorizadas", "cuello de botella y nivel de acompañamiento", "/panel/diagnostico/brechas"],
+    ["Benchmark (M2)", "posición sectorial y territorio", "/panel/benchmark"],
+    ["Estrategia (M3)", "cuadro de mando y OKR", "/panel/estrategia"],
+    ["Indicadores (M4)", "KPI con serie y semáforo", "/panel/kpi"],
     ["Ruta (M5)", "roadmap y priorización", "/panel/ruta"],
     ["Iniciativas (M6)", "seguimiento profundo", "/panel/iniciativas"],
     ["Proyectos (GP)", "plan de trabajo", "/panel/proyectos"],
-    ["Inteligencia (M7)", "BI institucional", "/panel/bi"],
-    ["Informe ejecutivo", "pieza imprimible para comité", "/panel/informe/ejecutivo"],
-    ["Analítica del programa", "tendencias, presupuesto y carga", "/panel/informe/analitica"],
-    ["Comparativo de mediciones", "vigente vs. anterior, celda a celda", "/panel/informe/comparativo"],
-    ["Metodología", "convenciones y fórmulas", "/panel/metodologia"],
+    ["Inteligencia (M7)", "BI por sector", "/panel/bi"],
+    ["Informe ejecutivo", "pieza imprimible para la junta", "/panel/informe/ejecutivo"],
+    ["Metodología", "el sistema 4Shine Empresas", "/panel/metodologia"],
   ];
   for (const [title, sub, href] of MODULES) {
     e.push({ id: href, group: "Módulos", title, sub, href, haystack: norm(`${title} ${sub}`) });

@@ -230,22 +230,23 @@ export function objectiveHealth(objId: string): ObjectiveHealth {
 export function maturityRollup() {
   const cur = currentAssessment();
   const prev = previousAssessment();
-  const cells = LINES.flatMap((l) =>
-    DIMENSIONS.map((d) => {
-      const c = cur.scores![l.n][d.key];
-      const p = prev?.scores?.[l.n]?.[d.key];
-      const evidences = EVIDENCE_CATALOG.filter((e) => e.line === l.n && e.dimension === d.key);
-      return {
-        line: l.n, dimension: d.key,
-        value: c.value, target: c.target,
-        delta: p ? c.value - p.value : 0,
-        evidences: evidences.length,
-        verified: evidences.filter((e) => e.status === "VERIFICADA").length,
-      };
-    }),
-  );
-  const lineAvg = (n: number, which: "value" | "target") =>
-    cells.filter((c) => c.line === n).reduce((a, c) => a + c[which], 0) / DIMENSIONS.length;
+  const cells = DIMENSIONS.map((d) => {
+    const c = cur.scores![d.line][d.key];
+    const p = prev?.scores?.[d.line]?.[d.key];
+    const evidences = EVIDENCE_CATALOG.filter((e) => e.dimension === d.key);
+    return {
+      line: d.line, dimension: d.key, name: d.name,
+      value: c.value, target: c.target,
+      delta: p ? c.value - p.value : 0,
+      evidences: evidences.length,
+      verified: evidences.filter((e) => e.status === "VERIFICADA").length,
+    };
+  });
+  const avgOf = (scores: Record<number, Record<string, { value: number; target: number }>>, n: number, which: "value" | "target") => {
+    const ds = Object.values(scores[n]);
+    return ds.reduce((a, c) => a + c[which], 0) / ds.length;
+  };
+  const lineAvg = (n: number, which: "value" | "target") => avgOf(cur.scores!, n, which);
   return {
     assessment: { id: cur.id, label: cur.label, period: cur.period },
     previous: prev ? { id: prev.id, label: prev.label, period: prev.period } : null,
@@ -253,26 +254,19 @@ export function maturityRollup() {
     lines: LINES.map((l) => ({
       n: l.n, code: l.code, name: l.name,
       value: lineAvg(l.n, "value"), target: lineAvg(l.n, "target"),
-      prev: prev?.scores
-        ? Object.values(prev.scores[l.n]).reduce((a, d) => a + d.value, 0) / DIMENSIONS.length
-        : null,
+      prev: prev?.scores ? avgOf(prev.scores, l.n, "value") : null,
     })),
     institution: {
       value: LINES.reduce((a, l) => a + lineAvg(l.n, "value"), 0) / LINES.length,
       target: LINES.reduce((a, l) => a + lineAvg(l.n, "target"), 0) / LINES.length,
     },
-    cellsWithoutEvidence: cells.filter((c) => c.evidences === 0),
+    cellsWithoutEvidence: cells.filter((c) => c.verified === 0),
     unverifiedEvidences: EVIDENCE_CATALOG.filter((e) => e.status === "PENDIENTE").length,
     history: SCORES_HISTORY
       .map((a) => (a.id === "A3" && publishedAssessment() ? publishedAssessment()! : a))
       .filter((a) => a.scores).map((a) => ({
       id: a.id, period: a.period,
-      institution:
-        LINES.reduce(
-          (acc, l) =>
-            acc + Object.values(a.scores![l.n]).reduce((x, d) => x + d.value, 0) / DIMENSIONS.length,
-          0,
-        ) / LINES.length,
+      institution: LINES.reduce((acc, l) => acc + avgOf(a.scores!, l.n, "value"), 0) / LINES.length,
     })),
   };
 }
@@ -415,9 +409,9 @@ export function buildAlerts(): Alert[] {
     alerts.push({
       id: `noev-${c.line}-${c.dimension}`,
       kind: "CELDA_SIN_EVIDENCIA", severity: 3,
-      title: `${line.code} · ${dim.name} sin evidencia`,
-      detail: "La calificación de esta celda no tiene soporte documental cargado.",
-      href: "/panel/madurez/variables",
+      title: `${line.code} · ${dim.name} sin evidencia verificada`,
+      detail: "Ninguna de las evidencias de esta dimensión está verificada: su madurez no supera 2,9.",
+      href: `/panel/diagnostico/dimension/${c.dimension}`,
       line: c.line,
     });
   }
@@ -427,7 +421,7 @@ export function buildAlerts(): Alert[] {
       kind: "EVIDENCIA_SIN_VERIFICAR", severity: 3,
       title: `${roll.unverifiedEvidences} evidencias pendientes de verificación`,
       detail: "Soportes cargados que aún no han sido validados por el equipo consultor.",
-      href: "/panel/madurez",
+      href: "/panel/diagnostico",
     });
   }
 
@@ -472,3 +466,33 @@ export function executiveSummary() {
     },
   };
 }
+
+/* ═══ Prioridad compuesta del portafolio (ruta) ═══
+   0,30·Impacto + 0,20·Urgencia + 0,15·Riesgo + 0,15·Alineación +
+   0,10·Factibilidad + 0,10·Dependencia, todos en 1–5. */
+
+export type PriorityBreakdown = {
+  id: string; name: string; score: number;
+  criteria: { key: string; label: string; weight: number; value: number }[];
+};
+
+export function priorityOf(i: InitiativeFull): PriorityBreakdown {
+  const risk = initiativeRisk(i);
+  const riskValue = Math.min(5, Math.max(1, Math.round(1 + (risk.score / 100) * 4)));
+  const obj = CMI_OBJECTIVES.find((o) => o.id === i.cmi);
+  const health = obj ? objectiveHealth(obj.id).semaphore : "WARN";
+  const alignment = health === "BAD" ? 5 : health === "WARN" ? 3 : 2;   // un objetivo en rojo urge más
+  const criteria = [
+    { key: "impact", label: "Impacto", weight: 0.30, value: i.impact },
+    { key: "urgency", label: "Urgencia", weight: 0.20, value: i.urgency },
+    { key: "risk", label: "Riesgo", weight: 0.15, value: riskValue },
+    { key: "alignment", label: "Alineación", weight: 0.15, value: alignment },
+    { key: "feasibility", label: "Factibilidad", weight: 0.10, value: i.feasibility },
+    { key: "dependency", label: "Dependencia", weight: 0.10, value: i.dependency },
+  ];
+  const score = criteria.reduce((a, c) => a + c.weight * c.value, 0);
+  return { id: i.id, name: i.name, score: Math.round(score * 100) / 100, criteria };
+}
+
+export const priorityRanking = () =>
+  INIS_EFF().map(priorityOf).sort((a, b) => b.score - a.score);

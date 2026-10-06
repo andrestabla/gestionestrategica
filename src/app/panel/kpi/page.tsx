@@ -440,7 +440,7 @@ function ReportForm({ kpi, onReported }: {
   if (!canReport) {
     return (
       <p className="mt-4 text-[10.5px] italic text-faint">
-        El valor del periodo lo reporta el dueño del dato (responsable de la línea 4.{kpi.line}, líder o consultor).
+        El valor del periodo lo reporta el dueño del dato (responsable de la capacidad {LINES[kpi.line - 1].name}, líder o advisor).
       </p>
     );
   }

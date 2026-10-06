@@ -1,5 +1,5 @@
-// Vista pública de solo lectura — para Consejo Superior, entes de control y
-// procesos de acreditación. Sin sesión: el acceso lo da el token firmado.
+// Vista pública de solo lectura — para la junta de socios y los aliados que
+// acompañan el crecimiento. Sin sesión: el acceso lo da el token firmado.
 // Server component: no expone APIs ni interacción de edición.
 
 import { notFound } from "next/navigation";
@@ -38,7 +38,7 @@ export default async function PublicView(
       <header className="mb-8 flex flex-wrap items-center gap-4">
         <AlgoritmoMark size={34} />
         <div className="min-w-0 flex-1">
-          <div className="kicker">Plataforma de Gestión de la Transformación Digital</div>
+          <div className="kicker">4Shine Empresas · Plataforma de gestión estratégica</div>
           <h1 className="text-[22px] font-extrabold tracking-tight text-ink">{INSTITUTION.name}</h1>
         </div>
         <span className="chip chip-cyan"><Eye size={11} /> Vista pública de solo lectura</span>
@@ -52,7 +52,7 @@ export default async function PublicView(
       {/* madurez */}
       <section className="panel mb-5 grid gap-8 px-7 py-6 lg:grid-cols-[230px_1fr_300px] lg:items-center">
         <div>
-          <div className="label mb-2">Madurez institucional</div>
+          <div className="label mb-2">Madurez de la empresa</div>
           <ScoreGauge value={s.maturity.institution.value} />
           <div className="num mt-2 text-center text-[11.5px] text-muted">
             Serie: {s.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ")}

@@ -1,10 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// PGTD · Modelo de gestión detallado (estructura del modelo de educación
-// digital de Algoritmo T, adaptado a la UPC): Cuadro de Mando Integral de
-// 5 perspectivas, responsables por cargo, iniciativas con acciones y metas
-// de resultado, bitácora de seguimiento y evidencias tipificadas.
-// Valores ilustrativos — la información real se produce en las Fases 0 a 4.
+// 4Shine Empresas · Modelo de gestión de Andina Suministros (empresa
+// ilustrativa): directorio de responsables, cuadro de mando con objetivos
+// y resultados clave (OKR) por perspectiva, catálogo de KPI con serie,
+// evidencias del mapa, iniciativas con acciones y bitácora, y la serie de
+// mediciones del diagnóstico 4Shine-OD.
+// Valores ilustrativos: la información real se produce con el diagnóstico
+// y la instalación de los frameworks en cada empresa.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { DIMS, PRACTICES, frameworkOfPractice } from "@/data/mapa";
+import { consolidate } from "@/lib/od";
+import { OD_RESPONSES } from "@/data/od-demo";
 
 /* ═══ Directorio de responsables (cargos, no personas) ═══ */
 
@@ -16,59 +22,46 @@ export type Responsible = {
 };
 
 export const RESPONSIBLES: Responsible[] = [
-  { id: "R01", cargo: "Vicerrector(a) Académico(a)", dependencia: "Vicerrectoría Académica", rolPlataforma: "RESPONSABLE" },
-  { id: "R02", cargo: "Vicerrector(a) de Investigación y Extensión", dependencia: "Vicerrectoría de Investigación y Extensión", rolPlataforma: "RESPONSABLE" },
-  { id: "R03", cargo: "Jefe de la Oficina Asesora de Planeación", dependencia: "Oficina Asesora de Planeación", rolPlataforma: "LIDER" },
-  { id: "R04", cargo: "Jefe de la División de Recursos Tecnológicos", dependencia: "División de Recursos Tecnológicos", rolPlataforma: "RESPONSABLE" },
-  { id: "R05", cargo: "Coordinador(a) de Biblioteca", dependencia: "Biblioteca Central", rolPlataforma: "APORTA" },
-  { id: "R06", cargo: "Director(a) de Bienestar Universitario", dependencia: "Bienestar Universitario", rolPlataforma: "APORTA" },
-  { id: "R07", cargo: "Coordinador(a) de Educación Virtual", dependencia: "Unidad de Educación Digital (por crear)", rolPlataforma: "RESPONSABLE" },
-  { id: "R08", cargo: "Jefe de la Oficina de Extensión", dependencia: "Oficina de Extensión y Proyección Social", rolPlataforma: "APORTA" },
-  { id: "R09", cargo: "Coordinador(a) de Autoevaluación y Acreditación", dependencia: "Oficina de Autoevaluación", rolPlataforma: "APORTA" },
-  { id: "R10", cargo: "Rector(a)", dependencia: "Rectoría", rolPlataforma: "CONSULTA" },
+  { id: "R01", cargo: "Gerente general", dependencia: "Gerencia general", rolPlataforma: "LIDER" },
+  { id: "R02", cargo: "Gerente comercial", dependencia: "Gerencia comercial", rolPlataforma: "RESPONSABLE" },
+  { id: "R03", cargo: "Jefe de operaciones y logística", dependencia: "Operaciones", rolPlataforma: "RESPONSABLE" },
+  { id: "R04", cargo: "Jefe administrativa y financiera", dependencia: "Administración y finanzas", rolPlataforma: "RESPONSABLE" },
+  { id: "R05", cargo: "Jefe de servicio al cliente", dependencia: "Servicio y posventa", rolPlataforma: "RESPONSABLE" },
+  { id: "R06", cargo: "Coordinador de talento humano", dependencia: "Talento humano", rolPlataforma: "APORTA" },
+  { id: "R07", cargo: "Analista de sistemas", dependencia: "Administración y finanzas", rolPlataforma: "APORTA" },
+  { id: "R08", cargo: "Junta de socios", dependencia: "Junta de socios", rolPlataforma: "CONSULTA" },
 ];
 
 export const responsible = (id: string) => RESPONSIBLES.find((r) => r.id === id)!;
 
-/* ═══ Cuadro de Mando Integral · 5 perspectivas ═══ */
+/* ═══ Cuadro de mando · 4 perspectivas ═══ */
 
 export const PERSPECTIVES = [
-  { id: "impacto", name: "Impacto", sub: "Social", color: "#1a2d5a", desc: "El efecto de la transformación sobre la región y las funciones misionales." },
-  { id: "sostenibilidad", name: "Sostenibilidad", sub: "Económica", color: "#0b6f88", desc: "Recursos y eficiencia administrativa que hacen viable la transformación." },
-  { id: "comunidad", name: "Comunidad", sub: "Estudiantes y egresados", color: "#0e93b4", desc: "Éxito estudiantil, reputación y empleabilidad." },
-  { id: "procesos", name: "Procesos", sub: "Operación institucional", color: "#3f9d8c", desc: "Calidad académica y eficiencia de las operaciones." },
-  { id: "innovacion", name: "Innovación", sub: "Aprendizaje y crecimiento", color: "#a87a14", desc: "Talento, tecnología y capacidad de renovarse." },
+  { id: "financiera", name: "Financiera", sub: "Crecimiento rentable", color: "#1a2d5a", desc: "El resultado económico que el crecimiento debe producir: ventas, margen y caja." },
+  { id: "clientes", name: "Clientes", sub: "Propuesta de valor", color: "#8a6d1f", desc: "Lo que los clientes prioritarios reciben y repiten: promesa cumplida, recompra y recomendación." },
+  { id: "procesos", name: "Procesos", sub: "Operación que cumple", color: "#0b6f88", desc: "Las prácticas que convierten las prioridades en resultados consistentes." },
+  { id: "aprendizaje", name: "Aprendizaje y crecimiento", sub: "Capacidad instalada", color: "#3f9d8c", desc: "Personas, sistemas y conocimiento que permiten multiplicar sin depender de pocos." },
 ] as const;
 
 export type CmiObjective = {
   id: string;          // OE-01…
   perspective: string; // id de perspectiva
   name: string;
-  kpis: string[];      // códigos de KPI
-  line?: number;       // línea 4.x dominante
+  kpis: string[];      // códigos de KPI (resultados clave)
+  line?: number;       // capacidad dominante 1..4
 };
 
 export const CMI_OBJECTIVES: CmiObjective[] = [
-  // Impacto
-  { id: "OE-01", perspective: "impacto", name: "Lograr mayor cobertura de la educación superior en el Cesar con educación digital", kpis: ["AV-01", "AV-04"], line: 1 },
-  { id: "OE-02", perspective: "impacto", name: "Incrementar y mejorar los procesos y prácticas de investigación con educación digital", kpis: ["IN-01", "IN-02"], line: 2 },
-  { id: "OE-03", perspective: "impacto", name: "Promover el emprendimiento y la extensión vía canales digitales", kpis: ["EX-01"], line: 3 },
-  // Sostenibilidad
-  { id: "OE-04", perspective: "sostenibilidad", name: "Incrementar los ingresos por matrículas en programas apoyados digitalmente", kpis: ["SO-01"], line: 1 },
-  { id: "OE-05", perspective: "sostenibilidad", name: "Mejorar el punto de equilibrio del portafolio de programas", kpis: ["SO-02"], line: 4 },
-  { id: "OE-06", perspective: "sostenibilidad", name: "Usar palancas digitales en currículos transversales y de alta matricialidad", kpis: ["AV-05"], line: 1 },
-  // Comunidad
-  { id: "OE-07", perspective: "comunidad", name: "Mejorar el éxito estudiantil", kpis: ["AV-03", "CO-01"], line: 1 },
-  { id: "OE-08", perspective: "comunidad", name: "Mejorar la reputación y visibilidad institucional", kpis: ["EX-02", "IN-02"], line: 3 },
-  { id: "OE-09", perspective: "comunidad", name: "Mejorar la empleabilidad y el vínculo con egresados", kpis: ["CO-02"], line: 3 },
-  // Procesos
-  { id: "OE-10", perspective: "procesos", name: "Garantizar la calidad académica en las modalidades digitales", kpis: ["AV-01", "PR-01"], line: 1 },
-  { id: "OE-11", perspective: "procesos", name: "Mejorar la eficiencia y la eficacia de las operaciones institucionales", kpis: ["AR-01", "AR-02"], line: 4 },
-  { id: "OE-12", perspective: "procesos", name: "Desarrollar una oferta académica robusta y diferenciada con proyección territorial", kpis: ["AV-04", "PR-02"], line: 1 },
-  // Innovación
-  { id: "OE-13", perspective: "innovacion", name: "Fortalecer el compromiso y desarrollo del talento humano docente", kpis: ["AV-02"], line: 1 },
-  { id: "OE-14", perspective: "innovacion", name: "Garantizar el gobierno de los datos institucionales", kpis: ["AR-03"], line: 4 },
-  { id: "OE-15", perspective: "innovacion", name: "Apalancar los procesos de enseñanza-aprendizaje con innovación y tecnología", kpis: ["AV-01", "AR-02"], line: 1 },
+  { id: "OE-01", perspective: "financiera", name: "Crecer 25 % en ventas abriendo Barranquilla sin deteriorar el margen", kpis: ["DIR-01", "MUL-03"], line: 1 },
+  { id: "OE-02", perspective: "financiera", name: "Sostener el margen de contribución por línea de producto", kpis: ["DIR-02"], line: 1 },
+  { id: "OE-03", perspective: "financiera", name: "Anticipar la caja con proyección a ocho semanas", kpis: ["EJE-04"], line: 3 },
+  { id: "OE-04", perspective: "clientes", name: "Cumplir la promesa de entrega en los clientes prioritarios", kpis: ["EJE-01", "EJE-02"], line: 3 },
+  { id: "OE-05", perspective: "clientes", name: "Elevar la recompra del segmento industrial", kpis: ["DIR-03"], line: 1 },
+  { id: "OE-06", perspective: "procesos", name: "Ejecutar las prioridades trimestrales con responsable único y seguimiento", kpis: ["EJE-03"], line: 3 },
+  { id: "OE-07", perspective: "procesos", name: "Estandarizar los procesos críticos de venta, compra y entrega", kpis: ["MUL-01"], line: 4 },
+  { id: "OE-08", perspective: "aprendizaje", name: "Delegar decisiones y liberar la agenda estratégica del gerente", kpis: ["LID-01", "LID-02"], line: 2 },
+  { id: "OE-09", perspective: "aprendizaje", name: "Preparar reemplazos para los cargos críticos", kpis: ["LID-03"], line: 2 },
+  { id: "OE-10", perspective: "aprendizaje", name: "Operar con datos confiables y sin recaptura manual", kpis: ["MUL-02"], line: 4 },
 ];
 
 /* ═══ Catálogo de KPI con ficha completa ═══ */
@@ -82,7 +75,7 @@ export type KpiFull = {
   formula: string;
   unit: string;
   frequency: "Mensual" | "Trimestral" | "Semestral" | "Anual";
-  source: string;            // sistema o dependencia que produce el dato
+  source: string;            // sistema o área que produce el dato
   ownerId: string;           // responsable del dato (directorio)
   baseline: number;
   target: number;
@@ -90,314 +83,177 @@ export type KpiFull = {
   series: { period: string; value: number; note?: string }[];
 };
 
+const S = (vals: (number | [number, string])[], from = 2026, q = 1) =>
+  vals.map((v, i) => {
+    const idx = (q - 1) + i, year = from + Math.floor(idx / 4), t = (idx % 4) + 1;
+    const period = `${year}-T${t}`;
+    return Array.isArray(v) ? { period, value: v[0], note: v[1] } : { period, value: v };
+  });
+
 export const KPI_CATALOG: KpiFull[] = [
   {
-    code: "AV-01", line: 1, cmi: "OE-10",
-    name: "Cursos con aula virtual activa",
-    definition: "Proporción de cursos del periodo con aula creada en el LMS y actividad docente y estudiantil registrada en las últimas 4 semanas.",
-    formula: "(cursos con aula activa / cursos ofertados del periodo) × 100",
-    unit: "%", frequency: "Trimestral", source: "LMS institucional", ownerId: "R01",
-    baseline: 22, target: 60, goodDirection: "up",
-    series: [
-      { period: "2025-T1", value: 17 },
-      { period: "2025-T2", value: 19 },
-      { period: "2025-T3", value: 22, note: "Línea base" },
-      { period: "2025-T4", value: 26 },
-      { period: "2026-T1", value: 32, note: "Inicio del estándar de aula" },
-      { period: "2026-T2", value: 38 },
-      { period: "2026-T3", value: 41 },
-      { period: "2026-T4", value: 45, note: "Despliegue a 3 facultades" },
-    ],
+    code: "DIR-01", line: 1, cmi: "OE-01", name: "Crecimiento de ventas frente al año anterior",
+    definition: "Variación porcentual de las ventas netas del trimestre frente al mismo trimestre del año anterior.",
+    formula: "(ventas del trimestre / ventas del mismo trimestre del año anterior − 1) × 100",
+    unit: "%", frequency: "Trimestral", source: "Sistema contable", ownerId: "R04",
+    baseline: 9, target: 25, goodDirection: "up",
+    series: S([7, 9, [9, "Línea base del diagnóstico"], 12, [14, "Primer trimestre con plan trimestral"]], 2026, 1),
   },
   {
-    code: "AV-02", line: 1, cmi: "OE-13",
-    name: "Docentes formados en educación digital",
-    definition: "Docentes de planta y catedráticos que completaron al menos un curso de la ruta institucional de formación digital (marco INTEF).",
-    formula: "conteo acumulado de docentes certificados en la vigencia",
-    unit: "docentes", frequency: "Semestral", source: "Registro de formación docente", ownerId: "R01",
-    baseline: 74, target: 300, goodDirection: "up",
-    series: [
-      { period: "2025-S1", value: 74, note: "Línea base" },
-      { period: "2025-S2", value: 96 },
-      { period: "2026-S1", value: 142, note: "Cohorte ampliada con Fase 4" },
-      { period: "2026-S2", value: 178 },
-    ],
+    code: "DIR-02", line: 1, cmi: "OE-02", name: "Margen de contribución por línea",
+    definition: "Margen de contribución promedio ponderado de las líneas de producto, con costos variables de compra, flete y comisión.",
+    formula: "(ingresos − costos variables) / ingresos × 100, ponderado por línea",
+    unit: "%", frequency: "Trimestral", source: "Sistema contable · costeo por línea", ownerId: "R04",
+    baseline: 23, target: 27, goodDirection: "up",
+    series: S([22, 23, [23, "Línea base"], 23, 24, 24], 2026, 1),
   },
   {
-    code: "AV-03", line: 1, cmi: "OE-07",
-    name: "Deserción en modalidad virtual",
-    definition: "Tasa de deserción por periodo de los estudiantes matriculados en cursos o programas con componente virtual.",
-    formula: "(desertores del periodo / matriculados del periodo) × 100",
-    unit: "%", frequency: "Semestral", source: "SPADIES · Registro académico", ownerId: "R06",
-    baseline: 18.4, target: 12, goodDirection: "down",
-    series: [
-      { period: "2025-S1", value: 18.4, note: "Línea base" },
-      { period: "2025-S2", value: 17.1 },
-      { period: "2026-S1", value: 16.2, note: "Efecto del modelo de servicio" },
-      { period: "2026-S2", value: 15.4 },
-    ],
+    code: "DIR-03", line: 1, cmi: "OE-05", name: "Recompra del segmento industrial",
+    definition: "Proporción de clientes industriales activos que compraron en el trimestre y también en el anterior.",
+    formula: "(clientes con compra en dos trimestres consecutivos / clientes activos) × 100",
+    unit: "%", frequency: "Trimestral", source: "CRM comercial", ownerId: "R02",
+    baseline: 54, target: 70, goodDirection: "up",
+    series: S([51, 53, [54, "Línea base"], 56, 58, 61], 2026, 1),
   },
   {
-    code: "AV-04", line: 1, cmi: "OE-12",
-    name: "Programas con componente virtual",
-    definition: "Programas del portafolio vigente con al menos 20 % de créditos desarrollados en modalidad virtual o híbrida.",
-    formula: "(programas con componente virtual / programas vigentes) × 100",
-    unit: "%", frequency: "Semestral", source: "SNIES · Registro académico", ownerId: "R01",
-    baseline: 11, target: 40, goodDirection: "up",
-    series: [
-      { period: "2025-S1", value: 11, note: "Línea base" },
-      { period: "2025-S2", value: 12 },
-      { period: "2026-S1", value: 15 },
-      { period: "2026-S2", value: 17, note: "Dos programas suman componente virtual" },
-    ],
+    code: "LID-01", line: 2, cmi: "OE-08", name: "Tiempo estratégico en la agenda del gerente",
+    definition: "Porcentaje de la agenda semanal del gerente general dedicado a trabajo estratégico y de alto impacto, según el análisis trimestral de agenda.",
+    formula: "horas estratégicas / horas totales de agenda × 100",
+    unit: "%", frequency: "Trimestral", source: "Análisis de agenda (F08)", ownerId: "R01",
+    baseline: 20, target: 45, goodDirection: "up",
+    series: S([[20, "Línea base"], 22, 28, [31, "Delegación de cinco decisiones recurrentes"]], 2026, 3),
   },
   {
-    code: "AV-05", line: 1, cmi: "OE-06",
-    name: "Cursos transversales digitalizados",
-    definition: "Cursos del componente básico institucional (alta matricialidad) con contenido virtualizado y disponibles en plataforma.",
-    formula: "conteo de cursos transversales digitalizados",
-    unit: "cursos", frequency: "Semestral", source: "Unidad de Educación Digital", ownerId: "R07",
-    baseline: 0, target: 12, goodDirection: "up",
-    series: [
-      { period: "2025-S2", value: 0, note: "Línea base" },
-      { period: "2026-S1", value: 3, note: "Primer paquete piloto" },
-      { period: "2026-S2", value: 4 },
-    ],
+    code: "LID-02", line: 2, cmi: "OE-08", name: "Decisiones que vuelven a la gerencia",
+    definition: "Número de decisiones delegadas por escrito que el gerente retomó o revirtió en el trimestre.",
+    formula: "conteo trimestral sobre el inventario de delegaciones",
+    unit: "decisiones", frequency: "Trimestral", source: "Inventario de delegaciones (F08)", ownerId: "R01",
+    baseline: 11, target: 3, goodDirection: "down",
+    series: S([[11, "Línea base"], 9, 7, 6], 2026, 3),
   },
   {
-    code: "IN-01", line: 2, cmi: "OE-02",
-    name: "Producción indexada por profesor",
-    definition: "Artículos en revistas indexadas (Scopus/WoS) publicados en la vigencia, normalizados por docente de tiempo completo equivalente.",
-    formula: "artículos indexados de la vigencia / docentes TCE",
-    unit: "razón", frequency: "Anual", source: "Scopus · WoS · CvLAC", ownerId: "R02",
-    baseline: 0.44, target: 0.7, goodDirection: "up",
-    series: [
-      { period: "2021", value: 0.38 },
-      { period: "2022", value: 0.42 },
-      { period: "2023", value: 0.44 },
-      { period: "2024", value: 0.46 },
-      { period: "2025", value: 0.41, note: "Caída por salida de dos investigadores" },
-      { period: "2026", value: 0.45, note: "Recuperación con semilleros digitales" },
-    ],
+    code: "LID-03", line: 2, cmi: "OE-09", name: "Cargos críticos con reemplazo preparado",
+    definition: "Proporción de los cargos críticos del mapa de talento que tienen un reemplazo identificado y en preparación con plan.",
+    formula: "(cargos críticos con reemplazo en plan / cargos críticos) × 100",
+    unit: "%", frequency: "Semestral", source: "Mapa de talento (F11)", ownerId: "R06",
+    baseline: 17, target: 80, goodDirection: "up",
+    series: [{ period: "2026-S2", value: 17, note: "Línea base: 1 de 6 cargos" }, { period: "2027-S1", value: 33 }],
   },
   {
-    code: "IN-02", line: 2, cmi: "OE-02",
-    name: "Producción en acceso abierto",
-    definition: "Proporción de la producción académica de la vigencia depositada en el repositorio institucional con licencia abierta.",
-    formula: "(productos en acceso abierto / producción total) × 100",
-    unit: "%", frequency: "Anual", source: "Repositorio institucional", ownerId: "R05",
-    baseline: 31, target: 55, goodDirection: "up",
-    series: [
-      { period: "2023", value: 31 },
-      { period: "2024", value: 34 },
-      { period: "2025", value: 39, note: "Política de autoarchivo en trámite" },
-      { period: "2026", value: 44, note: "Repositorio en producción" },
-    ],
+    code: "EJE-01", line: 3, cmi: "OE-04", name: "Entregas a tiempo y completas",
+    definition: "Proporción de pedidos entregados en la fecha prometida y con todas las referencias, sobre los pedidos del mes.",
+    formula: "(pedidos a tiempo y completos / pedidos entregados) × 100",
+    unit: "%", frequency: "Mensual", source: "Sistema de pedidos", ownerId: "R03",
+    baseline: 81, target: 95, goodDirection: "up",
+    series: S([79, 80, [81, "Línea base"], 82, 84, 86, 86, 88], 2025, 3),
   },
   {
-    code: "EX-01", line: 3, cmi: "OE-03",
-    name: "Convenios de extensión activos",
-    definition: "Convenios de extensión y proyección social con ejecución verificable en la vigencia (actividades o recursos reportados).",
-    formula: "conteo de convenios con ejecución en el periodo",
-    unit: "convenios", frequency: "Trimestral", source: "Oficina de Extensión", ownerId: "R08",
-    baseline: 48, target: 80, goodDirection: "up",
-    series: [
-      { period: "2025-T3", value: 48 }, { period: "2025-T4", value: 52 },
-      { period: "2026-T1", value: 55 }, { period: "2026-T2", value: 61 },
-    ],
+    code: "EJE-02", line: 3, cmi: "OE-04", name: "Reclamos por cada cien pedidos",
+    definition: "Reclamos formales de clientes registrados en servicio, por cada cien pedidos entregados en el mes.",
+    formula: "reclamos / pedidos entregados × 100",
+    unit: "por 100", frequency: "Mensual", source: "Registro de servicio", ownerId: "R05",
+    baseline: 6.1, target: 2.5, goodDirection: "down",
+    series: S([6.8, 6.4, [6.1, "Línea base"], 5.9, 5.2, 4.8, 4.9, 4.3], 2025, 3),
   },
   {
-    code: "EX-02", line: 3, cmi: "OE-08",
-    name: "Posición Sapiens Research",
-    definition: "Puesto de la UPC en el ranking U-Sapiens de instituciones de educación superior colombianas.",
-    formula: "posición publicada en la edición anual",
-    unit: "puesto", frequency: "Anual", source: "Sapiens Research", ownerId: "R03",
-    baseline: 78, target: 60, goodDirection: "down",
-    series: [
-      { period: "2024", value: 78 }, { period: "2025", value: 74 },
-      { period: "2026", value: 71, note: "Mejora por visibilidad de revistas" },
-    ],
+    code: "EJE-03", line: 3, cmi: "OE-06", name: "Compromisos semanales cumplidos",
+    definition: "Proporción de los compromisos registrados en la reunión semanal que se cerraron en la fecha acordada.",
+    formula: "(compromisos cerrados a tiempo / compromisos con fecha en la semana) × 100",
+    unit: "%", frequency: "Mensual", source: "Registro de compromisos (F05)", ownerId: "R03",
+    baseline: 41, target: 80, goodDirection: "up",
+    series: S([[41, "Línea base: registro recién instalado"], 48, 55, 58, 63, 67], 2026, 3),
   },
   {
-    code: "CO-01", line: 3, cmi: "OE-07",
-    name: "Satisfacción del estudiante",
-    definition: "Índice de satisfacción del estudiante con los servicios académicos y de apoyo (escala 1–100), medido por encuesta institucional.",
-    formula: "promedio ponderado de la encuesta semestral",
-    unit: "índice", frequency: "Semestral", source: "Bienestar Universitario", ownerId: "R06",
-    baseline: 64, target: 80, goodDirection: "up",
-    series: [
-      { period: "2024-S1", value: 61 }, { period: "2024-S2", value: 63 },
-      { period: "2025-S1", value: 64 }, { period: "2025-S2", value: 66 },
-      { period: "2026-S1", value: 69 }, { period: "2026-S2", value: 71, note: "Efecto de la mesa de ayuda" },
-    ],
+    code: "EJE-04", line: 3, cmi: "OE-03", name: "Precisión de la proyección de caja",
+    definition: "Desviación absoluta entre la caja proyectada a ocho semanas y la caja real al cierre, como porcentaje de la proyección.",
+    formula: "|caja real − caja proyectada| / caja proyectada × 100",
+    unit: "%", frequency: "Mensual", source: "Proyección de caja · tesorería", ownerId: "R04",
+    baseline: 28, target: 8, goodDirection: "down",
+    series: S([[28, "Línea base"], 24, 19, 17, 14, 12], 2026, 3),
   },
   {
-    code: "CO-02", line: 3, cmi: "OE-09",
-    name: "Tasa de empleabilidad de egresados",
-    definition: "Egresados con vinculación laboral formal a los 12 meses del grado, según OLE.",
-    formula: "(egresados vinculados a 12 meses / egresados del periodo) × 100",
-    unit: "%", frequency: "Anual", source: "Observatorio Laboral (OLE)", ownerId: "R08",
-    baseline: 61, target: 72, goodDirection: "up",
-    series: [
-      { period: "2023", value: 61 }, { period: "2024", value: 62 }, { period: "2025", value: 64 },
-      { period: "2026", value: 65 },
-    ],
+    code: "MUL-01", line: 4, cmi: "OE-07", name: "Procesos críticos documentados y en uso",
+    definition: "Proporción de los procesos críticos del inventario con ficha vigente, dueño y cumplimiento del estándar verificado en el trimestre.",
+    formula: "(procesos críticos con ficha y cumplimiento verificado / procesos críticos) × 100",
+    unit: "%", frequency: "Trimestral", source: "Inventario de procesos (F13)", ownerId: "R03",
+    baseline: 20, target: 100, goodDirection: "up",
+    series: S([[20, "Línea base: 3 de 15"], 27, 40, 47], 2026, 3),
   },
   {
-    code: "SO-01", line: 1, cmi: "OE-04",
-    name: "Ingresos por matrícula digital",
-    definition: "Ingresos de la vigencia por matrículas en programas o cursos con componente virtual, incluida educación continuada.",
-    formula: "suma de ingresos por matrícula digital (millones COP)",
-    unit: "M COP", frequency: "Semestral", source: "División Financiera", ownerId: "R03",
-    baseline: 320, target: 900, goodDirection: "up",
-    series: [
-      { period: "2025-S1", value: 320 }, { period: "2025-S2", value: 355 },
-      { period: "2026-S1", value: 410 },
-      { period: "2026-S2", value: 452 },
-    ],
+    code: "MUL-02", line: 4, cmi: "OE-10", name: "Horas semanales de recaptura manual de datos",
+    definition: "Horas por semana que el equipo administrativo y comercial dedica a pasar datos entre el sistema de pedidos, el contable y las hojas de cálculo.",
+    formula: "suma de horas reportadas en la semana de medición",
+    unit: "horas", frequency: "Trimestral", source: "Medición de carga (F14)", ownerId: "R07",
+    baseline: 34, target: 8, goodDirection: "down",
+    series: S([[34, "Línea base"], 31, 26, 22], 2026, 3),
   },
   {
-    code: "SO-02", line: 4, cmi: "OE-05",
-    name: "Programas por debajo del punto de equilibrio",
-    definition: "Programas del portafolio cuyo costo unitario de operación supera el ingreso por estudiante (modelo de costos por sede y jornada).",
-    formula: "conteo de programas con margen operacional negativo",
-    unit: "programas", frequency: "Anual", source: "Modelo de costos institucional", ownerId: "R03",
-    baseline: 14, target: 6, goodDirection: "down",
-    series: [
-      { period: "2024", value: 14, note: "Primera corrida del modelo" },
-      { period: "2025", value: 13 },
-      { period: "2026", value: 13, note: "Sin cierre de brecha aún" },
-    ],
-  },
-  {
-    code: "PR-01", line: 1, cmi: "OE-10",
-    name: "Resultados Saber Pro en programas con virtualidad",
-    definition: "Promedio institucional en Saber Pro de los programas con componente virtual, frente al promedio nacional.",
-    formula: "puntaje promedio (escala 0–300)",
-    unit: "puntos", frequency: "Anual", source: "ICFES", ownerId: "R09",
-    baseline: 138, target: 150, goodDirection: "up",
-    series: [
-      { period: "2024", value: 138 }, { period: "2025", value: 141 },
-      { period: "2026", value: 143 },
-    ],
-  },
-  {
-    code: "PR-02", line: 1, cmi: "OE-12",
-    name: "Programas nuevos en construcción",
-    definition: "Programas en diseño con documento maestro en elaboración o radicado ante el MEN (Decreto 1330 de 2019).",
-    formula: "conteo de programas en pipeline",
-    unit: "programas", frequency: "Semestral", source: "Vicerrectoría Académica", ownerId: "R01",
-    baseline: 1, target: 5, goodDirection: "up",
-    series: [
-      { period: "2025-S2", value: 1 }, { period: "2026-S1", value: 2, note: "Maestría virtual priorizada" },
-      { period: "2026-S2", value: 3 },
-    ],
-  },
-  {
-    code: "AR-01", line: 4, cmi: "OE-11",
-    name: "Procesos críticos documentados",
-    definition: "Procesos del mapa institucional clasificados como críticos con caracterización vigente en el sistema de gestión de calidad.",
-    formula: "(procesos críticos documentados / procesos críticos identificados) × 100",
-    unit: "%", frequency: "Trimestral", source: "Sistema de gestión de calidad", ownerId: "R03",
-    baseline: 12, target: 80, goodDirection: "up",
-    series: [
-      { period: "2025-T3", value: 12 }, { period: "2025-T4", value: 15 },
-      { period: "2026-T1", value: 21 }, { period: "2026-T2", value: 27 },
-    ],
-  },
-  {
-    code: "AR-02", line: 4, cmi: "OE-11",
-    name: "Sistemas integrados por interoperabilidad",
-    definition: "Sistemas de información institucionales que intercambian datos mediante servicios (no por archivos planos ni redigitación).",
-    formula: "conteo de sistemas con al menos una integración por servicios",
-    unit: "sistemas", frequency: "Semestral", source: "División de Recursos Tecnológicos", ownerId: "R04",
-    baseline: 2, target: 9, goodDirection: "up",
-    series: [
-      { period: "2025-S1", value: 2 }, { period: "2025-S2", value: 3 },
-      { period: "2026-S1", value: 4, note: "LMS ↔ registro académico" },
-      { period: "2026-S2", value: 5 },
-    ],
-  },
-  {
-    code: "AR-03", line: 4, cmi: "OE-14",
-    name: "Datos maestros con dueño asignado",
-    definition: "Entidades de datos maestros (estudiante, docente, programa, curso…) con dueño de dato formalmente designado y acta de responsabilidad.",
-    formula: "(entidades con dueño / entidades del catálogo) × 100",
-    unit: "%", frequency: "Trimestral", source: "Programa de gobierno de datos", ownerId: "R03",
+    code: "MUL-03", line: 4, cmi: "OE-01", name: "Margen de la réplica de Barranquilla",
+    definition: "Margen de contribución de la nueva sede frente al margen promedio de la empresa, una vez abierta.",
+    formula: "margen de contribución de la sede / margen promedio de la empresa × 100",
+    unit: "% del promedio", frequency: "Trimestral", source: "Sistema contable · centro de costos", ownerId: "R02",
     baseline: 0, target: 90, goodDirection: "up",
-    series: [
-      { period: "2025-T4", value: 0, note: "Catálogo definido" },
-      { period: "2026-T1", value: 10 },
-      { period: "2026-T2", value: 24, note: "Comité de datos operando" },
-      { period: "2026-T3", value: 33 },
-      { period: "2026-T4", value: 43, note: "9 de 21 entidades con dueño" },
-    ],
+    series: [{ period: "2027-T1", value: 0, note: "Sede aún no abierta: el indicador inicia con la apertura" }],
   },
 ];
 
-/* ═══ Evidencias tipificadas ═══ */
+/* ═══ Evidencias: una por práctica del mapa, con el estado de la verificación ═══ */
 
 export type EvidenceFull = {
   id: string;
   line: number;
-  dimension: string;
+  dimension: string;         // código de dimensión (DIR-1…)
+  practice: string;          // código de práctica (DIR-1.1…)
   title: string;
-  kind: "Documento" | "Acta" | "Normativa" | "Informe" | "Sistema" | "Encuesta";
+  kind: "Documento" | "Acta" | "Registro" | "Informe" | "Sistema" | "Encuesta";
   date: string;              // ISO
   status: "VERIFICADA" | "PENDIENTE";
   sourceId: string;          // responsable que la aporta
   note?: string;
 };
 
-export const EVIDENCE_CATALOG: EvidenceFull[] = [
-  { id: "EV-01", line: 1, dimension: "misional", title: "Modelo pedagógico institucional 2024", kind: "Documento", date: "2026-08-05", status: "VERIFICADA", sourceId: "R01", note: "Versión aprobada por Consejo Académico." },
-  { id: "EV-02", line: 1, dimension: "misional", title: "Lineamientos curriculares para modalidad virtual (borrador)", kind: "Documento", date: "2026-08-12", status: "PENDIENTE", sourceId: "R01", note: "En revisión de comités curriculares." },
-  { id: "EV-03", line: 1, dimension: "tecnologica", title: "Inventario de aulas con LMS activo 2026-1", kind: "Sistema", date: "2026-08-08", status: "VERIFICADA", sourceId: "R04", note: "Exportado del LMS institucional." },
-  { id: "EV-04", line: 1, dimension: "organizacional", title: "Acuerdo de creación de la línea de virtualidad", kind: "Normativa", date: "2026-08-15", status: "PENDIENTE", sourceId: "R01", note: "Pendiente sanción del Consejo Superior." },
-  { id: "EV-05", line: 1, dimension: "datos", title: "Reporte de completitud de registro académico", kind: "Informe", date: "2026-08-10", status: "VERIFICADA", sourceId: "R03" },
-  { id: "EV-06", line: 2, dimension: "tecnologica", title: "Plataforma de gestión de investigación en uso", kind: "Sistema", date: "2026-08-06", status: "VERIFICADA", sourceId: "R02" },
-  { id: "EV-07", line: 2, dimension: "datos", title: "Reporte de CvLAC/GrupLAC desactualizados", kind: "Informe", date: "2026-08-09", status: "VERIFICADA", sourceId: "R02", note: "43 % de hojas de vida sin actualizar." },
-  { id: "EV-08", line: 2, dimension: "organizacional", title: "Acta del comité de investigaciones · priorización CTeI", kind: "Acta", date: "2026-08-11", status: "VERIFICADA", sourceId: "R02" },
-  { id: "EV-09", line: 3, dimension: "organizacional", title: "Portafolio de convenios vigentes 2026", kind: "Documento", date: "2026-08-07", status: "VERIFICADA", sourceId: "R08" },
-  { id: "EV-10", line: 3, dimension: "datos", title: "Base de egresados: diagnóstico de calidad", kind: "Informe", date: "2026-08-14", status: "PENDIENTE", sourceId: "R08", note: "Cobertura de contacto del 38 %." },
-  { id: "EV-11", line: 3, dimension: "misional", title: "Encuesta de satisfacción estudiantil 2026-1", kind: "Encuesta", date: "2026-08-05", status: "VERIFICADA", sourceId: "R06" },
-  { id: "EV-12", line: 4, dimension: "datos", title: "Diagnóstico de calidad de datos SNIES", kind: "Informe", date: "2026-08-08", status: "VERIFICADA", sourceId: "R03", note: "12 inconsistencias críticas identificadas." },
-  { id: "EV-13", line: 4, dimension: "tecnologica", title: "Inventario de sistemas de información y sus integraciones", kind: "Sistema", date: "2026-08-12", status: "VERIFICADA", sourceId: "R04" },
-  { id: "EV-14", line: 4, dimension: "organizacional", title: "Acta de constitución del comité de gobierno de datos", kind: "Acta", date: "2026-08-13", status: "VERIFICADA", sourceId: "R03" },
-  { id: "EV-15", line: 4, dimension: "misional", title: "Mapa de procesos institucional (versión vigente)", kind: "Documento", date: "2026-08-06", status: "VERIFICADA", sourceId: "R03", note: "Sin caracterización de procesos de virtualidad." },
-  { id: "EV-16", line: 1, dimension: "organizacional", title: "Resolución de creación del comité de virtualidad", kind: "Normativa", date: "2026-09-02", status: "VERIFICADA", sourceId: "R01" },
-  { id: "EV-17", line: 1, dimension: "misional", title: "Plantilla institucional de aula virtual (Acta 014)", kind: "Acta", date: "2026-09-12", status: "VERIFICADA", sourceId: "R01" },
-  { id: "EV-18", line: 1, dimension: "tecnologica", title: "Reporte de disponibilidad del LMS 2026", kind: "Sistema", date: "2026-10-01", status: "VERIFICADA", sourceId: "R04", note: "99,1 % de disponibilidad semestral." },
-  { id: "EV-19", line: 1, dimension: "datos", title: "Tablero de actividad de aulas (corte piloto)", kind: "Sistema", date: "2026-11-03", status: "VERIFICADA", sourceId: "R07" },
-  { id: "EV-20", line: 1, dimension: "misional", title: "Ruta de formación docente por niveles (marco INTEF)", kind: "Documento", date: "2026-10-05", status: "VERIFICADA", sourceId: "R01" },
-  { id: "EV-21", line: 2, dimension: "misional", title: "Política de acceso abierto (borrador para Consejo)", kind: "Documento", date: "2027-01-20", status: "PENDIENTE", sourceId: "R05" },
-  { id: "EV-22", line: 2, dimension: "tecnologica", title: "Repositorio DSpace en producción", kind: "Sistema", date: "2026-11-28", status: "VERIFICADA", sourceId: "R05" },
-  { id: "EV-23", line: 2, dimension: "datos", title: "Validación de metadatos del acervo migrado", kind: "Informe", date: "2027-01-30", status: "VERIFICADA", sourceId: "R05", note: "92 % de registros válidos." },
-  { id: "EV-24", line: 2, dimension: "organizacional", title: "Líneas de investigación en educación digital aprobadas", kind: "Acta", date: "2026-12-15", status: "VERIFICADA", sourceId: "R02" },
-  { id: "EV-25", line: 3, dimension: "misional", title: "Mapa de experiencia del estudiante virtual", kind: "Documento", date: "2026-12-10", status: "VERIFICADA", sourceId: "R06" },
-  { id: "EV-26", line: 3, dimension: "tecnologica", title: "Piloto de mesa de ayuda: reporte de tickets", kind: "Sistema", date: "2027-02-01", status: "VERIFICADA", sourceId: "R06", note: "120 tickets, TMR 9 h." },
-  { id: "EV-27", line: 3, dimension: "datos", title: "Matriz indicador ↔ fuente para rankings", kind: "Documento", date: "2027-02-12", status: "PENDIENTE", sourceId: "R03" },
-  { id: "EV-28", line: 3, dimension: "organizacional", title: "Convenio marco con alcaldía de Aguachica", kind: "Documento", date: "2026-10-18", status: "VERIFICADA", sourceId: "R08" },
-  { id: "EV-29", line: 4, dimension: "organizacional", title: "Catálogo de datos maestros (21 entidades)", kind: "Documento", date: "2026-10-20", status: "VERIFICADA", sourceId: "R03" },
-  { id: "EV-30", line: 4, dimension: "tecnologica", title: "Integración LMS ↔ registro académico en pruebas", kind: "Sistema", date: "2027-01-25", status: "PENDIENTE", sourceId: "R04" },
-  { id: "EV-31", line: 4, dimension: "datos", title: "Actas de designación de dueños de dato (9)", kind: "Acta", date: "2027-02-08", status: "VERIFICADA", sourceId: "R03" },
-  { id: "EV-32", line: 4, dimension: "misional", title: "Caracterización de 8 procesos de virtualidad", kind: "Documento", date: "2027-01-12", status: "PENDIENTE", sourceId: "R03", note: "En revisión del sistema de calidad." },
-];
+const F3 = OD_RESPONSES.find((r) => r.tipo === "f3")!;
+const OWNER_BY_CAP: Record<number, string> = { 1: "R01", 2: "R01", 3: "R03", 4: "R04" };
+const kindOf = (text: string): EvidenceFull["kind"] => {
+  const t = text.toLowerCase();
+  if (/acta|memo/.test(t)) return "Acta";
+  if (/tablero|sistema|crm|reporte autom/.test(t)) return "Sistema";
+  if (/encuesta|medici[oó]n de clima/.test(t)) return "Encuesta";
+  if (/registro|inventario|calendario|matriz|mapa|lista/.test(t)) return "Registro";
+  if (/informe|an[aá]lisis|proyecci[oó]n/.test(t)) return "Informe";
+  return "Documento";
+};
+const firstSentence = (t: string) => { const m = t.match(/^[^.]+\./); return (m ? m[0] : t).replace(/\.$/, ""); };
 
-/* ═══ Iniciativas con acciones, metas de resultado y bitácora ═══ */
+export const EVIDENCE_CATALOG: EvidenceFull[] = PRACTICES.map((p, i) => {
+  const mark = F3.r[p.code];
+  const d = new Date(2026, 7, 4 + (i % 9)); // sesiones de verificación de agosto de 2026
+  return {
+    id: `EV-${String(i + 1).padStart(2, "0")}`,
+    line: p.line, dimension: p.dim, practice: p.code,
+    title: firstSentence(p.ev), kind: kindOf(p.ev),
+    date: d.toISOString().slice(0, 10),
+    status: mark === "V" ? "VERIFICADA" : "PENDIENTE",
+    sourceId: OWNER_BY_CAP[p.line],
+    note: mark === "P" ? "Verificación parcial: existe, pero incompleta, desactualizada o sin rastro de uso." : mark === "N" ? "No se mostró en la sesión de verificación." : undefined,
+  };
+});
+export const evidenceOfPractice = (code: string) => EVIDENCE_CATALOG.find((e) => e.practice === code)!;
+
+/* ═══ Iniciativas: cada una instala una dimensión con un framework ═══ */
 
 export type ActionStatus = "HECHA" | "EN_CURSO" | "PENDIENTE";
 
 export type InitiativeFull = {
   id: string;
   line: number;
-  subsistema: "Administrativo" | "Formación" | "Investigación" | "Proyección social" | "Bienestar";
+  subsistema: "Dirección" | "Comercial" | "Operación" | "Administración" | "Talento";
   cmi: string;                 // objetivo OE-xx
   name: string;
   objetivo: string;            // objetivo de la iniciativa
   horizon: "CORTO" | "MEDIANO";
   impact: number; feasibility: number;
-  urgency: number;     // 1–5: presión temporal (vencimientos, ventanas, riesgo de pérdida)
+  urgency: number;     // 1–5: presión temporal
   dependency: number;  // 1–5: cuántas otras iniciativas habilita
   status: "PLANEADA" | "EN_CURSO" | "EN_RIESGO" | "COMPLETADA";
   start: string; end: string;
@@ -405,7 +261,9 @@ export type InitiativeFull = {
   metaResultado: string;       // meta de resultado global
   budgetPlanned: number; budgetCommitted: number; budgetExecuted: number;
   progress: number;
-  capability: string; kpi: string;
+  capability: string;          // dimensión que instala (DIR-4…)
+  framework: string;           // framework que trabaja la empresa (F04…)
+  kpi: string;
   actions: { name: string; meta: string; status: ActionStatus; quarter: string }[];
   log: { date: string; type: "HITO" | "ALERTA" | "NOTA"; text: string }[];
   nextMilestone: { date: string; text: string };
@@ -414,345 +272,206 @@ export type InitiativeFull = {
 
 export const INITIATIVES_FULL: InitiativeFull[] = [
   {
-    id: "i1", line: 1, subsistema: "Formación", cmi: "OE-10",
-    name: "Aula virtual estándar institucional",
-    objetivo: "Estandarizar la experiencia del aula virtual en todos los cursos con componente digital, con plantilla institucional, criterios de calidad y seguimiento de actividad.",
-    horizon: "CORTO", impact: 5, feasibility: 4, urgency: 5, dependency: 4, status: "EN_CURSO",
-    start: "2026-T3", end: "2027-T2", ownerId: "R01",
-    metaResultado: "El 60 % de los cursos del periodo opera sobre el aula virtual estándar con actividad verificable.",
-    budgetPlanned: 180_000_000, budgetCommitted: 47_000_000, budgetExecuted: 79_000_000,
-    progress: 42, capability: "c1", kpi: "AV-01",
-    actions: [
-      { name: "Definir la plantilla institucional de aula con criterios de calidad", meta: "1 plantilla aprobada por Consejo Académico", status: "HECHA", quarter: "2026-T3" },
-      { name: "Pilotear la plantilla en los cursos del componente básico", meta: "8 cursos piloto operando", status: "HECHA", quarter: "2026-T4" },
-      { name: "Formar a los docentes de los cursos de alta matricialidad", meta: "120 docentes formados en el estándar", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Desplegar el estándar a todas las facultades", meta: "60 % de cursos sobre el estándar", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Tablero de actividad de aulas para decanaturas", meta: "1 tablero operando con corte semanal", status: "PENDIENTE", quarter: "2027-T2" },
-    ],
-    log: [
-      { date: "2026-09-12", type: "HITO", text: "Plantilla institucional aprobada por Consejo Académico (Acta 014)." },
-      { date: "2026-11-03", type: "HITO", text: "Piloto cerrado: 8 cursos, 612 estudiantes, satisfacción 4,2/5." },
-      { date: "2027-02-10", type: "ALERTA", text: "TI redujo dedicación al despliegue; factor en rojo por segunda revisión." },
-      { date: "2027-02-24", type: "NOTA", text: "Vicerrectoría negocia bolsa de horas con la División de Recursos Tecnológicos." },
-    ],
-    nextMilestone: { date: "2027-03-15", text: "Comité de seguimiento: plan de recuperación del despliegue con TI." },
-    factors: [
-      { name: "Patrocinio de Vicerrectoría Académica", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
-      { name: "Modelo pedagógico aprobado", state: "VERDE", history: ["AMBAR", "VERDE", "VERDE"] },
-      { name: "Adopción por parte de docentes", state: "AMBAR", history: ["VERDE", "AMBAR", "AMBAR"], note: "Facultades de Salud e Ingeniería por debajo del 30 % de adopción." },
-      { name: "Disponibilidad del equipo de TI", state: "ROJO", history: ["AMBAR", "ROJO", "ROJO"], note: "2 revisiones seguidas en rojo → escalado a comité." },
-      { name: "Conectividad en sedes", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
-    ],
-  },
-  {
-    id: "i2", line: 4, subsistema: "Administrativo", cmi: "OE-14",
-    name: "Programa de gobierno de datos",
-    objetivo: "Constituir el gobierno de datos institucional: comité, catálogo de datos maestros, dueños de dato y reglas de calidad sobre los sistemas fuente.",
-    horizon: "CORTO", impact: 5, feasibility: 3, urgency: 4, dependency: 5, status: "EN_CURSO",
-    start: "2026-T3", end: "2027-T1", ownerId: "R03",
-    metaResultado: "El 90 % de las entidades maestras tiene dueño designado y reglas de calidad en operación.",
-    budgetPlanned: 95_000_000, budgetCommitted: 17_000_000, budgetExecuted: 21_000_000,
-    progress: 25, capability: "c6", kpi: "AR-03",
-    actions: [
-      { name: "Constituir el comité de gobierno de datos", meta: "1 comité con acta de constitución y reglamento", status: "HECHA", quarter: "2026-T3" },
-      { name: "Levantar el catálogo de datos maestros", meta: "1 catálogo con 21 entidades priorizadas", status: "HECHA", quarter: "2026-T4" },
-      { name: "Designar dueños de dato con acta de responsabilidad", meta: "90 % de entidades con dueño", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Definir reglas de calidad para SNIES y registro académico", meta: "Reglas activas en los 2 sistemas críticos", status: "PENDIENTE", quarter: "2027-T1" },
-    ],
-    log: [
-      { date: "2026-08-13", type: "HITO", text: "Comité de datos constituido (Acta 001) con delegados de 6 dependencias." },
-      { date: "2026-10-20", type: "HITO", text: "Catálogo de datos maestros aprobado: 21 entidades." },
-      { date: "2027-01-15", type: "ALERTA", text: "Dueños de dato designados avanzan lento: 24 % contra 50 % esperado." },
-    ],
-    nextMilestone: { date: "2027-02-28", text: "Corte de designación de dueños: meta 50 % de entidades." },
-    factors: [
-      { name: "Comité de datos constituido", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
-      { name: "Dedicación de los dueños de dato", state: "AMBAR", history: ["AMBAR", "AMBAR", "AMBAR"], note: "Los dueños no tienen descarga horaria asignada." },
-      { name: "Acceso a sistemas fuente", state: "VERDE", history: ["ROJO", "AMBAR", "VERDE"] },
-    ],
-  },
-  {
-    id: "i3", line: 2, subsistema: "Investigación", cmi: "OE-02",
-    name: "Repositorio institucional y ciencia abierta",
-    objetivo: "Poner en operación el repositorio institucional con política de autoarchivo, y elevar la proporción de producción en acceso abierto.",
-    horizon: "CORTO", impact: 4, feasibility: 4, urgency: 3, dependency: 2, status: "EN_CURSO",
-    start: "2026-T4", end: "2027-T2", ownerId: "R05",
-    metaResultado: "55 % de la producción de la vigencia depositada en acceso abierto.",
-    budgetPlanned: 62_000_000, budgetCommitted: 15_000_000, budgetExecuted: 44_000_000,
-    progress: 71, capability: "c4", kpi: "IN-02",
-    actions: [
-      { name: "Instalar y parametrizar el repositorio (DSpace)", meta: "1 repositorio en producción", status: "HECHA", quarter: "2026-T4" },
-      { name: "Migrar el acervo digital existente", meta: "3.800 objetos migrados con metadatos", status: "HECHA", quarter: "2027-T1" },
-      { name: "Aprobar la política de acceso abierto y autoarchivo", meta: "1 acuerdo del Consejo Académico", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Integrar el repositorio con CvLAC y Google Scholar", meta: "Cosecha OAI-PMH activa", status: "PENDIENTE", quarter: "2027-T2" },
-    ],
-    log: [
-      { date: "2026-11-28", type: "HITO", text: "Repositorio en producción con el acervo de tesis migrado." },
-      { date: "2027-01-30", type: "HITO", text: "3.800 objetos migrados; validación de metadatos al 92 %." },
-    ],
-    nextMilestone: { date: "2027-03-10", text: "Presentación de la política de acceso abierto al Consejo Académico." },
-    factors: [
-      { name: "Política de acceso abierto aprobada", state: "VERDE", history: ["AMBAR", "VERDE", "VERDE"] },
-      { name: "Digitalización del acervo", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
-    ],
-  },
-  {
-    id: "i4", line: 1, subsistema: "Formación", cmi: "OE-13",
-    name: "Ruta de formación docente en educación digital",
-    objetivo: "Desplegar la ruta institucional de formación docente por niveles (según el marco INTEF), con certificación y reconocimiento en la carrera docente.",
-    horizon: "CORTO", impact: 4, feasibility: 5, urgency: 3, dependency: 3, status: "EN_CURSO",
-    start: "2026-T3", end: "2027-T4", ownerId: "R01",
-    metaResultado: "300 docentes certificados en al menos un nivel de la ruta.",
-    budgetPlanned: 48_000_000, budgetCommitted: 9_000_000, budgetExecuted: 18_000_000,
-    progress: 38, capability: "c1", kpi: "AV-02",
-    actions: [
-      { name: "Diseñar la ruta por niveles con el marco INTEF", meta: "1 ruta con 3 niveles y rúbricas", status: "HECHA", quarter: "2026-T3" },
-      { name: "Abrir la primera cohorte (nivel básico)", meta: "80 docentes inscritos", status: "HECHA", quarter: "2026-T4" },
-      { name: "Certificar la primera cohorte", meta: "60 docentes certificados", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Gestionar el reconocimiento en la carrera docente", meta: "1 acuerdo de reconocimiento", status: "PENDIENTE", quarter: "2027-T3" },
-    ],
-    log: [
-      { date: "2026-10-05", type: "HITO", text: "Ruta aprobada; primera cohorte con 84 inscritos (105 % de la meta)." },
-      { date: "2027-01-22", type: "NOTA", text: "Participación semanal cae al 61 %; se activa acompañamiento por facultad." },
-    ],
-    nextMilestone: { date: "2027-03-20", text: "Cierre de la primera cohorte y examen de certificación." },
-    factors: [
-      { name: "Oferta de cursos publicada", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
-      { name: "Participación docente", state: "AMBAR", history: ["VERDE", "AMBAR", "AMBAR"], note: "Caída de participación en semanas de parciales." },
-    ],
-  },
-  {
-    id: "i5", line: 4, subsistema: "Administrativo", cmi: "OE-11",
-    name: "Bus de interoperabilidad institucional",
-    objetivo: "Integrar los sistemas de información críticos (registro académico, LMS, financiero, investigación) mediante servicios, eliminando redigitación.",
-    horizon: "MEDIANO", impact: 5, feasibility: 2, urgency: 5, dependency: 5, status: "PLANEADA",
-    start: "2027-T1", end: "2028-T2", ownerId: "R04",
-    metaResultado: "9 sistemas intercambiando datos por servicios; cero redigitación en matrícula.",
-    budgetPlanned: 240_000_000, budgetCommitted: 0, budgetExecuted: 0,
-    progress: 0, capability: "c7", kpi: "AR-02",
-    actions: [
-      { name: "Definir la arquitectura de referencia de integración", meta: "1 documento de arquitectura aprobado", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Contratar la plataforma de integración", meta: "1 contrato adjudicado", status: "PENDIENTE", quarter: "2027-T2" },
-      { name: "Integrar registro académico ↔ LMS", meta: "Matrícula sincronizada sin redigitación", status: "PENDIENTE", quarter: "2027-T4" },
-      { name: "Integrar financiero e investigación", meta: "4 sistemas adicionales integrados", status: "PENDIENTE", quarter: "2028-T2" },
-    ],
-    log: [
-      { date: "2027-01-10", type: "NOTA", text: "Arquitectura de referencia en borrador; revisión con el comité TIC." },
-      { date: "2027-02-05", type: "ALERTA", text: "El presupuesto de la vigencia no incluyó la plataforma de integración." },
-    ],
-    nextMilestone: { date: "2027-04-01", text: "Decisión de vigencias futuras para la contratación de la plataforma." },
-    factors: [
-      { name: "Arquitectura de referencia definida", state: "AMBAR", history: ["AMBAR", "AMBAR"] },
-      { name: "Presupuesto de vigencia aprobado", state: "ROJO", history: ["ROJO", "ROJO"], note: "Sin partida en la vigencia actual; se tramitan vigencias futuras." },
-    ],
-  },
-  {
-    id: "i6", line: 3, subsistema: "Proyección social", cmi: "OE-08",
-    name: "Observatorio de rankings e indicadores",
-    objetivo: "Sistematizar la línea base y el seguimiento de los indicadores que alimentan Sapiens, Scimago, THE Impact y QS, con responsables por indicador.",
-    horizon: "MEDIANO", impact: 3, feasibility: 4, urgency: 2, dependency: 2, status: "PLANEADA",
-    start: "2027-T2", end: "2027-T4", ownerId: "R03",
-    metaResultado: "1 tablero de rankings operando con corte trimestral y responsables asignados.",
-    budgetPlanned: 55_000_000, budgetCommitted: 0, budgetExecuted: 0,
-    progress: 0, capability: "c5", kpi: "EX-02",
-    actions: [
-      { name: "Mapear los indicadores de cada ranking a fuentes internas", meta: "1 matriz indicador ↔ fuente ↔ responsable", status: "PENDIENTE", quarter: "2027-T2" },
-      { name: "Construir el tablero de línea base", meta: "1 tablero con 4 rankings", status: "PENDIENTE", quarter: "2027-T3" },
-      { name: "Instalar la rutina trimestral de seguimiento", meta: "4 cortes al año con acta", status: "PENDIENTE", quarter: "2027-T4" },
-    ],
-    log: [],
-    nextMilestone: { date: "2027-04-15", text: "Arranque: taller de mapeo de indicadores con Planeación." },
-    factors: [
-      { name: "Acceso a fuentes de datos externas", state: "VERDE", history: ["VERDE"] },
-    ],
-  },
-  {
-    id: "i7", line: 1, subsistema: "Formación", cmi: "OE-01",
-    name: "Programas virtuales para el sur del Cesar",
-    objetivo: "Diseñar y radicar ante el MEN dos programas en modalidad virtual dirigidos a la demanda del sur del departamento (Aguachica como nodo).",
-    horizon: "MEDIANO", impact: 5, feasibility: 3, urgency: 4, dependency: 2, status: "PLANEADA",
-    start: "2027-T3", end: "2028-T4", ownerId: "R01",
-    metaResultado: "2 programas virtuales con registro calificado y primera cohorte matriculada.",
-    budgetPlanned: 320_000_000, budgetCommitted: 0, budgetExecuted: 0,
-    progress: 0, capability: "c1", kpi: "AV-04",
-    actions: [
-      { name: "Estudio de demanda territorial (módulo M2)", meta: "1 estudio con priorización de programas", status: "HECHA", quarter: "2027-T3" },
-      { name: "Elaborar documentos maestros (Decreto 1330)", meta: "2 documentos maestros radicados", status: "PENDIENTE", quarter: "2028-T1" },
-      { name: "Producir los contenidos del primer año", meta: "16 cursos virtualizados", status: "PENDIENTE", quarter: "2028-T3" },
-      { name: "Abrir la primera cohorte", meta: "120 estudiantes matriculados", status: "PENDIENTE", quarter: "2028-T4" },
-    ],
-    log: [
-      { date: "2027-06-20", type: "HITO", text: "Estudio de demanda cerrado: administración y tecnologías agroindustriales priorizadas." },
-    ],
-    nextMilestone: { date: "2027-09-30", text: "Inicio de la elaboración de los documentos maestros." },
-    factors: [
-      { name: "Registros calificados en trámite", state: "AMBAR", history: ["AMBAR"], note: "Tiempos del MEN fuera del control institucional." },
-      { name: "Estudio de demanda territorial", state: "VERDE", history: ["VERDE"] },
-    ],
-  },
-  {
-    id: "i8", line: 3, subsistema: "Bienestar", cmi: "OE-07",
-    name: "Modelo de servicio al estudiante virtual",
-    objetivo: "Definir y sistematizar el modelo de atención al interesado y al estudiante virtual: momentos de contacto, tiempos de respuesta y canales.",
-    horizon: "CORTO", impact: 4, feasibility: 4, urgency: 4, dependency: 3, status: "EN_CURSO",
-    start: "2026-T4", end: "2027-T2", ownerId: "R06",
-    metaResultado: "1 modelo de servicio con indicadores, mesa de ayuda y base de conocimiento operando.",
-    budgetPlanned: 40_000_000, budgetCommitted: 8_000_000, budgetExecuted: 12_000_000,
-    progress: 35, capability: "c2", kpi: "CO-01",
-    actions: [
-      { name: "Mapear los momentos de contacto del estudiante virtual", meta: "1 mapa de experiencia con 14 momentos", status: "HECHA", quarter: "2026-T4" },
-      { name: "Definir acuerdos de nivel de servicio por canal", meta: "ANS publicados para 4 canales", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Habilitar la mesa de ayuda con base de conocimiento", meta: "1 mesa operando con 50 artículos", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Habilitar punto de atención virtual en Aguachica", meta: "1 punto de atención operando", status: "PENDIENTE", quarter: "2027-T2" },
-    ],
-    log: [
-      { date: "2026-12-10", type: "HITO", text: "Mapa de experiencia validado con estudiantes de tres facultades." },
-      { date: "2027-02-01", type: "NOTA", text: "Piloto de mesa de ayuda con 120 tickets; tiempo medio de respuesta 9 h." },
-    ],
-    nextMilestone: { date: "2027-03-05", text: "Publicación de los ANS y apertura oficial de la mesa de ayuda." },
-    factors: [
-      { name: "Canales de atención definidos", state: "VERDE", history: ["AMBAR", "VERDE"] },
-      { name: "Personal de la mesa de ayuda", state: "AMBAR", history: ["AMBAR", "AMBAR"], note: "1 de 2 posiciones cubiertas." },
-    ],
-  },
-  {
-    id: "i9", line: 1, subsistema: "Formación", cmi: "OE-06",
-    name: "Virtualización del componente básico institucional",
-    objetivo: "Virtualizar los 12 cursos transversales de alta matricialidad para liberar capacidad instalada y pilotear la oferta virtual.",
-    horizon: "CORTO", impact: 5, feasibility: 4, urgency: 4, dependency: 3, status: "EN_CURSO",
-    start: "2026-T4", end: "2027-T4", ownerId: "R07",
-    metaResultado: "12 cursos transversales virtualizados con estudiantes matriculados.",
-    budgetPlanned: 96_000_000, budgetCommitted: 22_000_000, budgetExecuted: 24_000_000,
-    progress: 25, capability: "c1", kpi: "AV-05",
-    actions: [
-      { name: "Priorizar los cursos por matricialidad", meta: "12 cursos priorizados por comité", status: "HECHA", quarter: "2026-T4" },
-      { name: "Rediseño microcurricular de los primeros 4", meta: "4 microdiseños aprobados", status: "HECHA", quarter: "2027-T1" },
-      { name: "Producción de contenidos del primer paquete", meta: "4 cursos en plataforma", status: "EN_CURSO", quarter: "2027-T2" },
-      { name: "Matrícula piloto y evaluación", meta: "600 estudiantes cursando", status: "PENDIENTE", quarter: "2027-T3" },
-    ],
-    log: [
-      { date: "2026-12-05", type: "HITO", text: "Comité curricular priorizó los 12 cursos (Acta 021)." },
-      { date: "2027-02-15", type: "NOTA", text: "Producción del primer paquete al 60 %; guion de video atrasado una semana." },
-    ],
-    nextMilestone: { date: "2027-04-30", text: "Primer paquete de 4 cursos publicado en plataforma." },
-    factors: [
-      { name: "Equipo de producción de contenidos", state: "AMBAR", history: ["VERDE", "AMBAR"], note: "Diseñador instruccional renunció; vacante en concurso." },
-      { name: "Aprobación de comités curriculares", state: "VERDE", history: ["VERDE", "VERDE"] },
-    ],
-  },
-  {
-    id: "i10", line: 1, subsistema: "Administrativo", cmi: "OE-12",
-    name: "Actualización de la normatividad interna para la virtualidad",
-    objetivo: "Reglamentar el desarrollo de asignaturas y programas virtuales: estatuto general, reglamento estudiantil, calendario y acuerdos de autoevaluación.",
-    horizon: "CORTO", impact: 4, feasibility: 3, urgency: 5, dependency: 4, status: "EN_CURSO",
-    start: "2026-T3", end: "2027-T2", ownerId: "R01",
-    metaResultado: "Normatividad habilitante sancionada para operar programas 100 % virtuales.",
-    budgetPlanned: 28_000_000, budgetCommitted: 4_000_000, budgetExecuted: 9_000_000,
-    progress: 40, capability: "c1", kpi: "AV-04",
-    actions: [
-      { name: "Inventario de normas que tocan la virtualidad", meta: "1 matriz normativa con 14 instrumentos", status: "HECHA", quarter: "2026-T3" },
-      { name: "Proyecto de acuerdo para el Consejo Superior", meta: "1 proyecto radicado", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Ajustes al reglamento estudiantil de posgrado", meta: "Apartado virtual sancionado", status: "PENDIENTE", quarter: "2027-T2" },
-    ],
-    log: [
-      { date: "2026-10-30", type: "HITO", text: "Matriz normativa cerrada: 14 instrumentos requieren ajuste." },
-      { date: "2027-01-28", type: "ALERTA", text: "Agenda del Consejo Superior desplazó el proyecto un mes." },
-    ],
-    nextMilestone: { date: "2027-03-25", text: "Primera discusión del acuerdo en Consejo Superior." },
-    factors: [
-      { name: "Agenda del Consejo Superior", state: "AMBAR", history: ["VERDE", "AMBAR"], note: "Coyuntura electoral interna reduce sesiones." },
-      { name: "Consenso jurídico interno", state: "VERDE", history: ["VERDE", "VERDE"] },
-    ],
-  },
-  {
-    id: "i11", line: 1, subsistema: "Formación", cmi: "OE-15",
-    name: "Unidad de Educación Digital",
-    objetivo: "Crear la unidad académico-administrativa que coordina la educación digital: célula de trabajo, gobierno y modelo de operación.",
-    horizon: "CORTO", impact: 5, feasibility: 3, urgency: 5, dependency: 5, status: "EN_CURSO",
-    start: "2026-T4", end: "2027-T3", ownerId: "R10",
-    metaResultado: "1 unidad operando con equipo base y presupuesto de vigencia.",
-    budgetPlanned: 130_000_000, budgetCommitted: 35_000_000, budgetExecuted: 30_000_000,
-    progress: 30, capability: "c1", kpi: "AV-01",
-    actions: [
-      { name: "Diseño de la estructura y perfiles", meta: "1 estudio técnico aprobado", status: "HECHA", quarter: "2026-T4" },
-      { name: "Acuerdo de creación en Consejo Superior", meta: "1 acuerdo sancionado", status: "EN_CURSO", quarter: "2027-T1" },
-      { name: "Vinculación del equipo base (4 posiciones)", meta: "4 profesionales vinculados", status: "PENDIENTE", quarter: "2027-T2" },
-    ],
-    log: [
-      { date: "2026-12-18", type: "HITO", text: "Estudio técnico aprobado por comité de planta." },
-    ],
-    nextMilestone: { date: "2027-03-25", text: "Acuerdo de creación en agenda del Consejo Superior." },
-    factors: [
-      { name: "Disponibilidad presupuestal de planta", state: "AMBAR", history: ["AMBAR", "AMBAR"], note: "Depende del cupo de vigencia 2027." },
-      { name: "Respaldo de Rectoría", state: "VERDE", history: ["VERDE", "VERDE"] },
-    ],
-  },
-  {
-    id: "i12", line: 4, subsistema: "Administrativo", cmi: "OE-05",
-    name: "Modelo de costos unitarios por programa, sede y jornada",
-    objetivo: "Determinar el punto de equilibrio operacional de cada programa para decidir dónde la virtualidad mejora la sostenibilidad.",
-    horizon: "CORTO", impact: 4, feasibility: 4, urgency: 3, dependency: 4, status: "EN_CURSO",
+    id: "i1", line: 3, subsistema: "Operación", cmi: "OE-06",
+    name: "Plan trimestral con responsables únicos y registro de compromisos",
+    objetivo: "Convertir las prioridades del trimestre en entregables con meta, fecha y un solo responsable, y sostenerlas con la reunión semanal y el registro de compromisos.",
+    horizon: "CORTO", impact: 5, feasibility: 4, urgency: 5, dependency: 5, status: "EN_CURSO",
     start: "2026-T4", end: "2027-T2", ownerId: "R03",
-    metaResultado: "1 modelo de costos operando con corte anual y escenarios de sensibilidad.",
-    budgetPlanned: 45_000_000, budgetCommitted: 6_000_000, budgetExecuted: 21_000_000,
-    progress: 55, capability: "c6", kpi: "SO-02",
+    metaResultado: "El 80 % de los compromisos semanales se cierra en la fecha acordada y las tres prioridades del trimestre tienen responsable único.",
+    budgetPlanned: 18_000_000, budgetCommitted: 4_000_000, budgetExecuted: 9_500_000,
+    progress: 55, capability: "EJE-2", framework: "F05", kpi: "EJE-03",
     actions: [
-      { name: "Inventario de costos por programa (docencia, operación, bienestar)", meta: "1 base de costos completa", status: "HECHA", quarter: "2026-T4" },
-      { name: "Primera corrida del modelo por sede y jornada", meta: "Modelo corrido para 33 programas", status: "HECHA", quarter: "2027-T1" },
-      { name: "Escenarios de sensibilidad con permanencia", meta: "3 escenarios documentados", status: "EN_CURSO", quarter: "2027-T2" },
+      { name: "Definir las tres prioridades del trimestre con la cascada", meta: "Plan trimestral aprobado por el comité", status: "HECHA", quarter: "2026-T4" },
+      { name: "Asignar responsable único por prioridad y entregable", meta: "0 prioridades con dos responsables", status: "HECHA", quarter: "2026-T4" },
+      { name: "Instalar la reunión semanal de 45 minutos con registro", meta: "12 reuniones consecutivas con acta", status: "EN_CURSO", quarter: "2027-T1" },
+      { name: "Acordar el protocolo de consecuencias por incumplimiento", meta: "Protocolo firmado por el comité", status: "PENDIENTE", quarter: "2027-T2" },
     ],
     log: [
-      { date: "2027-01-20", type: "HITO", text: "Primera corrida: 13 programas bajo el punto de equilibrio." },
-      { date: "2027-02-18", type: "NOTA", text: "Decanaturas piden desagregación por cohorte para el análisis." },
+      { date: "2026-10-14", type: "HITO", text: "Primer plan trimestral con tres prioridades y responsables únicos." },
+      { date: "2027-01-20", type: "NOTA", text: "La reunión semanal se sostiene; el registro de compromisos ya lleva ocho semanas." },
+      { date: "2027-02-26", type: "ALERTA", text: "Dos semanas seguidas con cumplimiento bajo 60 %: operaciones concentró urgencias de entrega." },
     ],
-    nextMilestone: { date: "2027-04-10", text: "Presentación de escenarios al comité financiero." },
+    nextMilestone: { date: "2027-03-24", text: "Cierre del primer trimestre completo con registro: meta 65 % de compromisos a tiempo." },
     factors: [
-      { name: "Calidad de la información financiera", state: "VERDE", history: ["AMBAR", "VERDE"] },
-      { name: "Apropiación por decanaturas", state: "AMBAR", history: ["AMBAR", "AMBAR"] },
+      { name: "Patrocinio del gerente general", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
+      { name: "Disciplina de la reunión semanal", state: "AMBAR", history: ["VERDE", "VERDE", "AMBAR"], note: "Se canceló una reunión por una urgencia de despacho." },
+      { name: "Capacidad de operaciones para ejecutar", state: "AMBAR", history: ["AMBAR", "AMBAR", "AMBAR"], note: "El jefe de operaciones lleva dos prioridades a la vez." },
     ],
   },
   {
-    id: "i13", line: 3, subsistema: "Bienestar", cmi: "OE-07",
-    name: "Gestión del ciclo de vida del estudiante (CRM y riesgo de abandono)",
-    objetivo: "Vista 360° del estudiante con modelo predictivo de riesgo de abandono y planes de acción por segmento.",
-    horizon: "MEDIANO", impact: 5, feasibility: 3, urgency: 3, dependency: 2, status: "PLANEADA",
-    start: "2027-T2", end: "2028-T2", ownerId: "R06",
-    metaResultado: "1 CRM operando con modelo de riesgo y reducción verificable del abandono.",
-    budgetPlanned: 150_000_000, budgetCommitted: 0, budgetExecuted: 0,
-    progress: 0, capability: "c2", kpi: "AV-03",
+    id: "i2", line: 2, subsistema: "Dirección", cmi: "OE-08",
+    name: "Delegación por escrito y agenda estratégica del gerente",
+    objetivo: "Sacar al gerente general del día a día: análisis trimestral de agenda, cinco decisiones recurrentes delegadas por escrito con marco de autoridad y rituales de perspectiva.",
+    horizon: "CORTO", impact: 5, feasibility: 3, urgency: 4, dependency: 5, status: "EN_CURSO",
+    start: "2026-T4", end: "2027-T3", ownerId: "R01",
+    metaResultado: "El 45 % de la agenda del gerente es estratégica y menos de tres decisiones delegadas vuelven a gerencia por trimestre.",
+    budgetPlanned: 12_000_000, budgetCommitted: 2_000_000, budgetExecuted: 5_000_000,
+    progress: 40, capability: "LID-1", framework: "F08", kpi: "LID-01",
     actions: [
-      { name: "Sistematizar estados del estudiante e integrar con registro", meta: "1 CRM implementado", status: "PENDIENTE", quarter: "2027-T3" },
-      { name: "Modelo de calificación de riesgo de abandono", meta: "1 modelo predictivo en producción", status: "PENDIENTE", quarter: "2027-T4" },
-      { name: "Planes de acción por segmento", meta: "Disminución del % de abandono", status: "PENDIENTE", quarter: "2028-T1" },
+      { name: "Análisis de la agenda por tipo de tiempo (línea base)", meta: "Reparto estratégico, relacional y operativo documentado", status: "HECHA", quarter: "2026-T4" },
+      { name: "Delegar por escrito cinco decisiones recurrentes", meta: "5 marcos de autoridad firmados", status: "HECHA", quarter: "2027-T1" },
+      { name: "Instalar el bloque semanal de pensamiento estratégico", meta: "12 bloques consecutivos cumplidos", status: "EN_CURSO", quarter: "2027-T1" },
+      { name: "Conformar el consejo externo trimestral", meta: "Primera sesión realizada", status: "PENDIENTE", quarter: "2027-T3" },
     ],
-    log: [],
-    nextMilestone: { date: "2027-05-15", text: "Levantamiento de requerimientos con Bienestar y Registro." },
+    log: [
+      { date: "2026-11-05", type: "HITO", text: "Análisis de agenda: 20 % estratégico, 25 % relacional, 55 % operativo." },
+      { date: "2027-01-28", type: "HITO", text: "Cinco decisiones delegadas por escrito: descuentos, compras hasta 20 millones, horarios, devoluciones y contratación operativa." },
+      { date: "2027-02-18", type: "ALERTA", text: "El gerente retomó dos decisiones de descuentos en febrero; se revisa el marco con comercial." },
+    ],
+    nextMilestone: { date: "2027-04-02", text: "Segundo análisis de agenda: meta 35 % estratégico." },
     factors: [
-      { name: "Integración con registro académico", state: "AMBAR", history: ["AMBAR"], note: "Depende del bus de interoperabilidad (i5)." },
+      { name: "Disposición del gerente a soltar", state: "AMBAR", history: ["AMBAR", "VERDE", "AMBAR"], note: "Retomó decisiones comerciales bajo presión de un cliente grande." },
+      { name: "Criterio de los líderes receptores", state: "AMBAR", history: ["ROJO", "AMBAR", "AMBAR"] },
+      { name: "Marcos de autoridad escritos", state: "VERDE", history: ["ROJO", "AMBAR", "VERDE"] },
     ],
   },
   {
-    id: "i14", line: 2, subsistema: "Investigación", cmi: "OE-08",
-    name: "Biblioteca digital y servicios CRAI",
-    objetivo: "Evolucionar la biblioteca a Centro de Recursos para el Aprendizaje y la Investigación: buscador centralizado y servicios de apoyo al investigador.",
-    horizon: "MEDIANO", impact: 3, feasibility: 4, urgency: 2, dependency: 2, status: "PLANEADA",
-    start: "2027-T3", end: "2028-T1", ownerId: "R05",
-    metaResultado: "1 motor de búsqueda centralizado y 4 servicios CRAI operando.",
+    id: "i3", line: 4, subsistema: "Operación", cmi: "OE-07",
+    name: "Estándar de los quince procesos críticos",
+    objetivo: "Inventariar los procesos críticos de venta, compra, recepción, despacho y facturación, asignar dueño y documentar el estándar mínimo no negociable de cada uno.",
+    horizon: "MEDIANO", impact: 4, feasibility: 4, urgency: 3, dependency: 4, status: "EN_CURSO",
+    start: "2027-T1", end: "2027-T4", ownerId: "R03",
+    metaResultado: "Los quince procesos críticos tienen ficha vigente, dueño y cumplimiento del estándar verificado.",
+    budgetPlanned: 24_000_000, budgetCommitted: 6_000_000, budgetExecuted: 3_500_000,
+    progress: 20, capability: "MUL-2", framework: "F13", kpi: "MUL-01",
+    actions: [
+      { name: "Inventario de procesos críticos con dueño", meta: "15 procesos con dueño nombrado", status: "HECHA", quarter: "2027-T1" },
+      { name: "Documentar el estándar de los cinco procesos de despacho", meta: "5 fichas en uso", status: "EN_CURSO", quarter: "2027-T2" },
+      { name: "Documentar los procesos comerciales y de compra", meta: "10 fichas en uso", status: "PENDIENTE", quarter: "2027-T3" },
+      { name: "Rutina mensual de captura de excepciones", meta: "Registro con revisión mensual", status: "PENDIENTE", quarter: "2027-T4" },
+    ],
+    log: [
+      { date: "2027-01-19", type: "HITO", text: "Inventario aprobado: 15 procesos críticos, 11 sin documentación." },
+      { date: "2027-03-02", type: "NOTA", text: "El estándar de recepción de mercancía ya opera en Bogotá; Medellín lo adopta en marzo." },
+    ],
+    nextMilestone: { date: "2027-04-15", text: "Cinco fichas de despacho verificadas en las tres sedes." },
+    factors: [
+      { name: "Tiempo de los dueños de proceso", state: "AMBAR", history: ["AMBAR", "AMBAR", "AMBAR"], note: "Documentan fuera del horario; sin descarga de carga operativa." },
+      { name: "Adopción en Medellín y Cali", state: "VERDE", history: ["AMBAR", "VERDE", "VERDE"] },
+    ],
+  },
+  {
+    id: "i4", line: 4, subsistema: "Administración", cmi: "OE-10",
+    name: "Integración de pedidos, inventario y contabilidad",
+    objetivo: "Eliminar la recaptura manual entre el sistema de pedidos, el inventario y el contable con integraciones priorizadas por impacto y esfuerzo.",
+    horizon: "MEDIANO", impact: 4, feasibility: 3, urgency: 3, dependency: 3, status: "PLANEADA",
+    start: "2027-T2", end: "2028-T1", ownerId: "R07",
+    metaResultado: "Menos de ocho horas semanales de recaptura y un catálogo de productos con fuente única.",
     budgetPlanned: 85_000_000, budgetCommitted: 0, budgetExecuted: 0,
-    progress: 0, capability: "c4", kpi: "IN-02",
+    progress: 5, capability: "MUL-3", framework: "F14", kpi: "MUL-02",
     actions: [
-      { name: "Buscador centralizado sobre colecciones y bases", meta: "1 motor de descubrimiento en producción", status: "PENDIENTE", quarter: "2027-T4" },
-      { name: "Servicios de apoyo al investigador (bibliometría, datos)", meta: "4 servicios publicados", status: "PENDIENTE", quarter: "2028-T1" },
+      { name: "Mapa de sistemas e integraciones actuales", meta: "1 mapa con fuentes maestras", status: "EN_CURSO", quarter: "2027-T2" },
+      { name: "Backlog de automatización priorizado", meta: "Matriz impacto × esfuerzo con 12 ítems", status: "PENDIENTE", quarter: "2027-T2" },
+      { name: "Integración pedidos → contabilidad", meta: "Facturas sin digitación doble", status: "PENDIENTE", quarter: "2027-T4" },
+      { name: "Catálogo único de productos", meta: "1 fuente maestra en los tres sistemas", status: "PENDIENTE", quarter: "2028-T1" },
     ],
-    log: [],
-    nextMilestone: { date: "2027-08-15", text: "Estudio de mercado de motores de descubrimiento." },
+    log: [
+      { date: "2027-02-10", type: "NOTA", text: "Medición de carga: 34 horas semanales de recaptura entre administración y comercial." },
+    ],
+    nextMilestone: { date: "2027-05-10", text: "Backlog priorizado aprobado por el comité." },
     factors: [
-      { name: "Renovación de suscripciones a bases", state: "VERDE", history: ["VERDE"] },
+      { name: "Presupuesto aprobado por la junta", state: "ROJO", history: ["AMBAR", "ROJO", "ROJO"], note: "La junta lo aplazó dos veces; sin partida no arranca la integración." },
+      { name: "Proveedor del sistema contable", state: "VERDE", history: ["VERDE", "VERDE"] },
+    ],
+  },
+  {
+    id: "i5", line: 1, subsistema: "Dirección", cmi: "OE-01",
+    name: "Estrategia en una página y criterios de decisión",
+    objetivo: "Fijar en una página la ambición, el cliente prioritario, las promesas y las renuncias, y convertirla en criterios explícitos para decidir qué negocios aceptar.",
+    horizon: "CORTO", impact: 5, feasibility: 5, urgency: 4, dependency: 5, status: "COMPLETADA",
+    start: "2026-T3", end: "2026-T4", ownerId: "R01",
+    metaResultado: "El comité decide con los criterios escritos y registra las oportunidades declinadas.",
+    budgetPlanned: 9_000_000, budgetCommitted: 0, budgetExecuted: 9_000_000,
+    progress: 100, capability: "DIR-2", framework: "F02", kpi: "DIR-03",
+    actions: [
+      { name: "Taller de estrategia en una página", meta: "Documento aprobado por la junta", status: "HECHA", quarter: "2026-T3" },
+      { name: "Criterios de calificación comercial", meta: "Matriz de criterios en uso", status: "HECHA", quarter: "2026-T4" },
+      { name: "Registro de oportunidades declinadas", meta: "Registro con motivo por caso", status: "HECHA", quarter: "2026-T4" },
+    ],
+    log: [
+      { date: "2026-09-18", type: "HITO", text: "Estrategia en una página aprobada por la junta de socios." },
+      { date: "2026-12-02", type: "HITO", text: "Primeras seis oportunidades declinadas con motivo registrado." },
+    ],
+    nextMilestone: { date: "2027-06-30", text: "Revisión semestral de la estrategia en una página." },
+    factors: [
+      { name: "Acuerdo de la junta sobre las renuncias", state: "VERDE", history: ["AMBAR", "VERDE", "VERDE"] },
+      { name: "Uso de los criterios por el equipo comercial", state: "VERDE", history: ["AMBAR", "AMBAR", "VERDE"] },
+    ],
+  },
+  {
+    id: "i6", line: 3, subsistema: "Administración", cmi: "OE-03",
+    name: "Proyección de caja a ocho semanas",
+    objetivo: "Mantener una proyección de caja actualizada semanalmente, comparada con la caja real, y actuar sobre cobros, pagos e inventarios cuando se desvía.",
+    horizon: "CORTO", impact: 4, feasibility: 5, urgency: 5, dependency: 2, status: "EN_CURSO",
+    start: "2026-T4", end: "2027-T2", ownerId: "R04",
+    metaResultado: "Desviación de la proyección menor al 8 % y decisiones de cobro y compra tomadas con ella.",
+    budgetPlanned: 6_000_000, budgetCommitted: 1_000_000, budgetExecuted: 3_000_000,
+    progress: 65, capability: "EJE-3", framework: "F06", kpi: "EJE-04",
+    actions: [
+      { name: "Modelo de proyección semanal a ocho semanas", meta: "Proyección publicada cada lunes", status: "HECHA", quarter: "2026-T4" },
+      { name: "Comparación proyectado contra real", meta: "Desviación medida cada mes", status: "HECHA", quarter: "2027-T1" },
+      { name: "Política de cobro y compras ligada a la proyección", meta: "Política aprobada y aplicada", status: "EN_CURSO", quarter: "2027-T2" },
+    ],
+    log: [
+      { date: "2026-11-24", type: "HITO", text: "Primera proyección a ocho semanas; desviación inicial del 28 %." },
+      { date: "2027-02-27", type: "HITO", text: "Desviación de febrero: 12 %." },
+    ],
+    nextMilestone: { date: "2027-04-30", text: "Política de cobro aprobada por el comité." },
+    factors: [
+      { name: "Calidad de los datos de cartera", state: "AMBAR", history: ["ROJO", "AMBAR", "AMBAR"] },
+      { name: "Disciplina semanal de tesorería", state: "VERDE", history: ["VERDE", "VERDE", "VERDE"] },
+    ],
+  },
+  {
+    id: "i7", line: 2, subsistema: "Talento", cmi: "OE-09",
+    name: "Mapa de talento y reemplazos de cargos críticos",
+    objetivo: "Identificar los seis cargos críticos, nombrar y preparar un reemplazo para cada uno con delegaciones progresivas.",
+    horizon: "MEDIANO", impact: 4, feasibility: 3, urgency: 3, dependency: 3, status: "EN_RIESGO",
+    start: "2027-T1", end: "2027-T4", ownerId: "R06",
+    metaResultado: "Cinco de los seis cargos críticos con reemplazo en preparación y una delegación real asumida.",
+    budgetPlanned: 15_000_000, budgetCommitted: 3_000_000, budgetExecuted: 2_000_000,
+    progress: 15, capability: "LID-4", framework: "F11", kpi: "LID-03",
+    actions: [
+      { name: "Mapa de talento de los cargos críticos", meta: "6 cargos con reemplazo identificado", status: "HECHA", quarter: "2027-T1" },
+      { name: "Plan de preparación por reemplazo", meta: "6 planes con delegaciones progresivas", status: "EN_CURSO", quarter: "2027-T2" },
+      { name: "Primera delegación real por cargo", meta: "6 delegaciones asumidas", status: "PENDIENTE", quarter: "2027-T4" },
+    ],
+    log: [
+      { date: "2027-01-30", type: "HITO", text: "Mapa de talento: seis cargos críticos, solo uno con reemplazo." },
+      { date: "2027-03-05", type: "ALERTA", text: "Renunció la persona identificada como reemplazo del jefe de operaciones." },
+    ],
+    nextMilestone: { date: "2027-04-20", text: "Seis planes de preparación aprobados." },
+    factors: [
+      { name: "Retención de los reemplazos identificados", state: "ROJO", history: ["AMBAR", "ROJO", "ROJO"], note: "Una renuncia y otra en riesgo; sin ruta de carrera visible." },
+      { name: "Tiempo de los jefes para preparar", state: "AMBAR", history: ["AMBAR", "AMBAR", "AMBAR"] },
+    ],
+  },
+  {
+    id: "i8", line: 4, subsistema: "Comercial", cmi: "OE-01",
+    name: "Réplica controlada: apertura de Barranquilla",
+    objetivo: "Reproducir el modelo de venta y entrega en una nueva sede con la ficha de unidad replicable, el método comercial y el checklist de apertura.",
+    horizon: "MEDIANO", impact: 5, feasibility: 2, urgency: 3, dependency: 1, status: "PLANEADA",
+    start: "2027-T3", end: "2028-T2", ownerId: "R02",
+    metaResultado: "La sede alcanza el 90 % del margen promedio de la empresa a los nueve meses de abierta.",
+    budgetPlanned: 320_000_000, budgetCommitted: 0, budgetExecuted: 0,
+    progress: 0, capability: "MUL-4", framework: "F15", kpi: "MUL-03",
+    actions: [
+      { name: "Ficha de la unidad replicable con economía unitaria", meta: "Ficha aprobada por la junta", status: "PENDIENTE", quarter: "2027-T3" },
+      { name: "Playbook comercial y checklist de apertura", meta: "Documentos en uso en Medellín como prueba", status: "PENDIENTE", quarter: "2027-T4" },
+      { name: "Apertura y estabilización", meta: "Sede operando con margen medido", status: "PENDIENTE", quarter: "2028-T2" },
+    ],
+    log: [
+      { date: "2027-02-12", type: "NOTA", text: "La junta condiciona la apertura a que los procesos críticos estén documentados (i3)." },
+    ],
+    nextMilestone: { date: "2027-08-15", text: "Ficha de unidad replicable presentada a la junta." },
+    factors: [
+      { name: "Procesos críticos documentados (i3)", state: "AMBAR", history: ["AMBAR", "AMBAR"] },
+      { name: "Financiación de la apertura", state: "AMBAR", history: ["AMBAR", "AMBAR"] },
     ],
   },
 ];
 
-/* ═══ Ciclo de medición: historial completo (48 celdas en 3 cortes) ═══ */
+/* ═══ Serie de mediciones del diagnóstico ═══ */
 
 export type CellScore = { value: number; target: number };
 export type AssessmentRecord = {
@@ -762,32 +481,36 @@ export type AssessmentRecord = {
   scores: Record<number, Record<string, CellScore>> | null; // null = en captura parcial
 };
 
-const T = (value: number, target: number): CellScore => ({ value, target });
+// La medición vigente (A2) ES la consolidación de las respuestas demo del
+// 4Shine-OD; la línea base (A1) queda ligeramente por debajo en las
+// dimensiones que las iniciativas ya movieron. Meta a 24 meses: cruzar el
+// umbral con margen y llegar a gestionada donde ya está instalada.
+export const CONSOLIDATED = consolidate(OD_RESPONSES);
+const MOVED: Record<string, number> = { "EJE-2": 0.4, "LID-1": 0.3, "DIR-2": 0.5, "EJE-3": 0.3, "MUL-2": 0.2, "DIR-4": 0.2 };
+const targetFor = (m: number) => Math.min(5, Math.round((m + 1.3) * 2) / 2);
+const scoresOf = (shift: (code: string) => number) => {
+  const s: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
+  for (const d of CONSOLIDATED.dims) {
+    const value = Math.max(1, Math.round(((d.m ?? 1) - shift(d.code)) * 10) / 10);
+    s[d.line][d.code] = { value, target: targetFor(d.m ?? 1) };
+  }
+  return s;
+};
 
 export const SCORES_HISTORY: AssessmentRecord[] = [
   {
-    id: "A1", label: "Línea base · Fase 0", period: "2026-08", status: "PUBLICADA",
-    note: "Primera aplicación del instrumento: 16 celdas, 15 evidencias.",
-    scores: {
-      1: { organizacional: T(2, 4), misional: T(2, 4), tecnologica: T(2, 4), datos: T(1, 3) },
-      2: { organizacional: T(1, 3), misional: T(2, 4), tecnologica: T(2, 4), datos: T(1, 3) },
-      3: { organizacional: T(2, 4), misional: T(2, 3), tecnologica: T(1, 3), datos: T(1, 3) },
-      4: { organizacional: T(1, 4), misional: T(1, 3), tecnologica: T(2, 4), datos: T(1, 3) },
-    },
+    id: "A1", label: "Línea base · Diagnóstico 4Shine-OD", period: "2026-08", status: "PUBLICADA",
+    note: "Primera aplicación completa: 5 autoevaluaciones, 9 respuestas de equipos y 68 evidencias verificadas por el advisor.",
+    scores: scoresOf((c) => MOVED[c] ?? 0.1),
   },
   {
     id: "A2", label: "Corte de seguimiento 1", period: "2027-02", status: "PUBLICADA",
-    note: "Re-medición semestral completa: sube datos (gobierno) y misional (aula estándar).",
-    scores: {
-      1: { organizacional: T(2, 4), misional: T(3, 4), tecnologica: T(2, 4), datos: T(2, 3) },
-      2: { organizacional: T(2, 3), misional: T(2, 4), tecnologica: T(3, 4), datos: T(1, 3) },
-      3: { organizacional: T(3, 4), misional: T(2, 3), tecnologica: T(2, 3), datos: T(1, 3) },
-      4: { organizacional: T(2, 4), misional: T(1, 3), tecnologica: T(2, 4), datos: T(1, 3) },
-    },
+    note: "Re-medición semestral: suben accountability y el liderazgo del CEO por el plan trimestral y la delegación por escrito.",
+    scores: scoresOf(() => 0),
   },
   {
     id: "A3", label: "Corte de seguimiento 2", period: "2027-08", status: "EN_CAPTURA",
-    note: "En captura: 6 de 16 celdas actualizadas por los responsables de línea.",
+    note: "En captura: los responsables actualizan la autoevaluación de sus capacidades.",
     scores: null,
   },
 ];
@@ -803,3 +526,7 @@ export const previousAssessment = () => {
   const pubs = SCORES_HISTORY.filter((a) => a.status === "PUBLICADA" && a.scores);
   return pubs.length > 1 ? pubs[pubs.length - 2] : null;
 };
+
+/** Framework que instala cada iniciativa, resuelto por el mapa. */
+export const frameworkOfInitiative = (i: InitiativeFull) =>
+  frameworkOfPractice(DIMS.find((d) => d.code === i.capability)!.prac[0].code);

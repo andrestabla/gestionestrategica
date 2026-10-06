@@ -4,7 +4,7 @@
 // glow sutil. Sin dependencias externas.
 
 import { useId } from "react";
-import { LINES, DIMENSIONS, SCORES, lineScore, lineTarget, type Muni } from "@/data/demo";
+import { LINES, DIMENSIONS, SCORES, lineScore, lineTarget } from "@/data/demo";
 import { CO_PATHS, CO_VIEW, CESAR_MARK, CESAR_PATH, CESAR_VIEW, projectCesar } from "@/data/geo";
 
 /** Mapa de puntajes línea → dimensión (el de la medición vigente por defecto). */
@@ -12,7 +12,7 @@ export type ScoresMap = Record<number, Record<string, { value: number; target: n
 
 const fmtLevel = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1).replace(".", ","));
 
-/* ─── Gauge institucional (semicírculo) ─────────────────────────────────── */
+/* ─── Gauge de la empresa (semicírculo) ─────────────────────────────────── */
 
 export function ScoreGauge({ value, max = 5, size = 210 }:
   { value: number; max?: number; size?: number }) {
@@ -29,7 +29,7 @@ export function ScoreGauge({ value, max = 5, size = 210 }:
   const len = Math.PI * r;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
-      aria-label={`Madurez institucional: ${value.toFixed(1)} de ${max}`}>
+      aria-label={`Madurez de la empresa: ${value.toFixed(1)} de ${max}`}>
       <defs>
         <linearGradient id={`${gid}-g`} x1="0" y1="1" x2="1" y2="0">
           <stop offset="0%" stopColor="var(--cyan-fill)" />
@@ -85,7 +85,7 @@ export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: 
 
   return (
     <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-auto" role="img"
-      aria-label="Radar de madurez institucional en cuatro líneas">
+      aria-label="Radar de madurez de las cuatro capacidades">
       <defs>
         <linearGradient id={`${gid}-stroke`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--cyan-fill)" />
@@ -231,57 +231,41 @@ export function MaturityHeatmap({ onCell, selected, scores }: {
   selected?: { line: number; dim: string } | null;
   scores?: ScoresMap;
 }) {
+  const sc = scores ?? SCORES;
   return (
-    <div className="overflow-x-auto">
-      <div className="grid min-w-[520px] items-center gap-x-2 gap-y-2.5"
-        style={{ gridTemplateColumns: "minmax(120px, auto) repeat(4, 1fr)" }}>
-        <div />
-        {DIMENSIONS.map((d) => (
-          <div key={d.key} className="label text-center leading-tight" style={{ fontSize: 8.8 }}>
-            {d.name}
-          </div>
-        ))}
-        {LINES.map((l) => (
-          <FragmentRow key={l.n} line={l.n} code={l.code} short={l.short}
-            onCell={onCell} selected={selected} scores={scores ?? SCORES} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FragmentRow({ line, code, short, onCell, selected, scores }: {
-  line: number; code: string; short: string;
-  onCell?: (line: number, dim: string) => void;
-  selected?: { line: number; dim: string } | null;
-  scores: ScoresMap;
-}) {
-  return (
-    <>
-      <div className="pr-2 text-[12.5px] font-bold text-ink whitespace-nowrap">
-        {code} <span className="font-semibold text-ink-soft">{short}</span>
-      </div>
-      {DIMENSIONS.map((d) => {
-        const s = scores[line][d.key];
-        const lvl = Math.max(1, Math.min(5, Math.round(s.value)));
-        const isSel = selected?.line === line && selected?.dim === d.key;
+    <div className="space-y-2.5">
+      {LINES.map((l) => {
+        const dims = DIMENSIONS.filter((d) => d.line === l.n);
         return (
-          <button key={d.key} onClick={() => onCell?.(line, d.key)}
-            className={`num relative w-full cursor-pointer rounded-xl py-2.5 text-[15px] font-extrabold text-white transition-all duration-150 hover:scale-[1.05] hover:shadow-lg ${
-              isSel ? "scale-[1.05] shadow-lg ring-2 ring-navy ring-offset-2" : ""}`}
-            style={{
-              background: `linear-gradient(160deg, color-mix(in srgb, ${LEVEL_BG[lvl]} 88%, white) 0%, ${LEVEL_BG[lvl]} 100%)`,
-              boxShadow: isSel ? undefined : `inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 3px color-mix(in srgb, ${LEVEL_BG[lvl]} 35%, transparent)`,
-            }}
-            title={`${code} · ${d.name}: nivel ${fmtLevel(s.value)} → meta ${s.target}`}>
-            {fmtLevel(s.value)}
-            <span className="absolute bottom-[3px] right-[7px] text-[8px] font-semibold opacity-70">
-              →{s.target}
-            </span>
-          </button>
+          <div key={l.n} className="grid items-center gap-x-2 gap-y-1"
+            style={{ gridTemplateColumns: "minmax(110px, 150px) repeat(5, minmax(0, 1fr))" }}>
+            <div className="pr-2 text-[12.5px] font-bold text-ink whitespace-nowrap">
+              {l.code} <span className="font-semibold text-ink-soft">{l.short}</span>
+            </div>
+            {dims.map((d) => {
+              const s = sc[l.n][d.key];
+              const lvl = Math.max(1, Math.min(5, Math.round(s.value)));
+              const isSel = selected?.line === l.n && selected?.dim === d.key;
+              return (
+                <button key={d.key} onClick={() => onCell?.(l.n, d.key)}
+                  className={`num relative w-full cursor-pointer rounded-xl px-1 py-2 text-left text-white transition-all duration-150 hover:scale-[1.04] hover:shadow-lg ${
+                    isSel ? "scale-[1.04] shadow-lg ring-2 ring-navy ring-offset-2" : ""}`}
+                  style={{
+                    background: `linear-gradient(160deg, color-mix(in srgb, ${LEVEL_BG[lvl]} 88%, white) 0%, ${LEVEL_BG[lvl]} 100%)`,
+                    boxShadow: isSel ? undefined : `inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 3px color-mix(in srgb, ${LEVEL_BG[lvl]} 35%, transparent)`,
+                  }}
+                  title={`${d.key} · ${d.name}: madurez ${fmtLevel(s.value)} → meta ${s.target}`}>
+                  <span className="block px-1.5 text-[8.5px] font-bold uppercase tracking-wider opacity-80">{d.key}</span>
+                  <span className="block px-1.5 text-[15px] font-extrabold leading-tight">{fmtLevel(s.value)}</span>
+                  <span className="absolute bottom-[4px] right-[7px] text-[8px] font-semibold opacity-70">→{s.target}</span>
+                </button>
+              );
+            })}
+            {dims.length < 5 && <div />}
+          </div>
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -493,68 +477,9 @@ export function ColombiaMap() {
   );
 }
 
-const COV_COLOR = { alta: "var(--cyan-deep)", media: "var(--cyan-fill)", baja: "var(--line-strong)" } as const;
-const COV_R = { 3: 7.5, 2: 5, 1: 3.4 } as const;
 
 /** Mapa del Cesar con tres lentes: cobertura (peso/cobertura del municipio) o
     un mapa de valores (producción, convenios) con radio ∝ √valor. */
-export function CesarMap({ munis, highlight, values, lensColor, lensDeep, unit }: {
-  munis: Muni[]; highlight?: string | null;
-  values?: Record<string, number>;
-  lensColor?: string; lensDeep?: string; unit?: string;
-}) {
-  const gid = useId();
-  const maxV = values ? Math.max(1, ...Object.values(values)) : 1;
-  const rOf = (v: number) => (v <= 0 ? 2.2 : 3 + Math.sqrt(v / maxV) * 10.5);
-  return (
-    <svg viewBox={`0 0 ${CESAR_VIEW.w} ${CESAR_VIEW.h}`} className="w-full h-auto" role="img"
-      aria-label="Mapa del departamento del Cesar con sus 25 municipios">
-      <defs>
-        <filter id={`${gid}-sh`} x="-15%" y="-15%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="var(--navy)" floodOpacity="0.13" />
-        </filter>
-      </defs>
-      <path d={CESAR_PATH} fill="var(--surface-2)" stroke="var(--gold)" strokeWidth="1.3"
-        filter={`url(#${gid}-sh)`} />
-      {munis.map((m) => {
-        const [x, y] = projectCesar(m.lon, m.lat);
-        const dim = highlight && m.subregion !== highlight;
-        const v = values?.[m.name] ?? 0;
-        const r = values ? rOf(v) : COV_R[m.weight];
-        const fill = values
-          ? (v <= 0 ? "var(--line-strong)" : v >= maxV * 0.4 ? (lensDeep ?? "var(--cyan-deep)") : (lensColor ?? "var(--cyan-fill)"))
-          : COV_COLOR[m.coverage];
-        return (
-          <g key={m.name} opacity={dim ? 0.18 : 1} style={{ transition: "opacity .25s" }}>
-            {m.name === "Valledupar" && !values && (
-              <circle cx={x} cy={y} r="13" fill="none" stroke="var(--cyan-deep)"
-                strokeWidth="1.4" className="pulse-ring" />
-            )}
-            <circle cx={x} cy={y} r={r} fill={fill} fillOpacity={values ? 0.88 : 1}
-              stroke="var(--surface)" strokeWidth="1.4">
-              <title>{values
-                ? `${m.name}: ${v} ${unit ?? ""}`.trim()
-                : `${m.name} · subregión ${m.subregion} · cobertura ${m.coverage}`}</title>
-            </circle>
-            {values && v > 0 && r >= 7 && (
-              <text x={x} y={y + 2.6} textAnchor="middle" fontSize="7.5" fontWeight={800} fill="#fff">
-                {v}
-              </text>
-            )}
-            {m.label && (
-              <text x={x + m.label.dx} y={y + m.label.dy} textAnchor={m.label.anchor}
-                fontSize="8.8" fontWeight={m.weight === 3 ? 800 : 500}
-                fill={m.weight === 3 ? (lensDeep ?? "var(--cyan-deep)") : "var(--ink-soft)"}>
-                {m.name}
-              </text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 /** Colombia con intensidad por departamento (coautorías / convenios). */
 export function ColombiaImpactMap({ values, selected, onSelect }: {
   values: Record<string, number>;
@@ -571,7 +496,7 @@ export function ColombiaImpactMap({ values, selected, onSelect }: {
   };
   return (
     <svg viewBox={`0 0 ${CO_VIEW.w} ${CO_VIEW.h}`} className="w-full h-auto" role="img"
-      aria-label="Mapa de Colombia con la intensidad de colaboración por departamento">
+      aria-label="Mapa de Colombia con la presencia comercial por departamento">
       {CO_PATHS.map((p) => {
         const v = values[p.name] ?? 0;
         const isSel = selected === p.name;
@@ -582,7 +507,7 @@ export function ColombiaImpactMap({ values, selected, onSelect }: {
             strokeWidth={isSel ? 1.8 : p.cesar ? 1.1 : 0.5}
             style={{ cursor: v > 0 && onSelect ? "pointer" : "default", transition: "fill .2s" }}
             onClick={() => v > 0 && onSelect?.(isSel ? null : p.name)}>
-            <title>{p.cesar ? "Cesar (UPC)" : `${p.name}: ${v} coautorías`}</title>
+            <title>{`${p.name}${v > 0 ? `: ${v}` : ""}`}</title>
           </path>
         );
       })}
@@ -600,16 +525,16 @@ export function PertinenceQuadrant({ points }:
   const mx = pad + (W - pad - 14) / 2, my = 18 + (H - pad - 18) / 2;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
-      aria-label="Cuadrantes de pertinencia territorial: oferta contra demanda">
+      aria-label="Posición sectorial: capacidad organizacional contra crecimiento">
       <rect x={pad} y={18} width={mx - pad} height={my - 18} rx={10} fill="#fbeaea" opacity=".75" />
       <rect x={mx} y={18} width={W - 14 - mx} height={my - 18} rx={10} fill="#eaf4ee" opacity=".85" />
       <rect x={pad} y={my} width={mx - pad} height={H - pad - my} rx={10} fill="var(--surface-2)" opacity=".55" />
       <rect x={mx} y={my} width={W - 14 - mx} height={H - pad - my} rx={10} fill="var(--gold-wash)" opacity=".75" />
       <g fontSize="9.5" fontWeight={550} fill="var(--muted)">
-        <text x={pad + 9} y={33}>Brecha: alta demanda, baja oferta</text>
-        <text x={mx + 9} y={33}>Dinámico</text>
-        <text x={pad + 9} y={my + 15}>Incipiente</text>
-        <text x={mx + 9} y={my + 15}>Posible saturación</text>
+        <text x={pad + 9} y={33}>Crece sin capacidad</text>
+        <text x={mx + 9} y={33}>Crece con capacidad</text>
+        <text x={pad + 9} y={my + 15}>Estancado</text>
+        <text x={mx + 9} y={my + 15}>Capacidad sin crecimiento</text>
       </g>
       {points.map((p) => (
         <g key={p.name}>
@@ -629,9 +554,9 @@ export function PertinenceQuadrant({ points }:
           )}
         </g>
       ))}
-      <text x={(W + pad) / 2} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--faint)">Oferta vigente →</text>
+      <text x={(W + pad) / 2} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--faint)">Capacidad organizacional →</text>
       <text x={10} y={(H - pad + 18) / 2} textAnchor="middle" fontSize="10" fill="var(--faint)"
-        transform={`rotate(-90 10 ${(H - pad + 18) / 2})`}>Índice de demanda →</text>
+        transform={`rotate(-90 10 ${(H - pad + 18) / 2})`}>Crecimiento →</text>
     </svg>
   );
 }

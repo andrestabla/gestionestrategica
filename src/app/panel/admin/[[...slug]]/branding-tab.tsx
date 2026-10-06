@@ -255,13 +255,13 @@ function IdentidadSection({ d, set }: {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <Card className="rise rise-1">
-        <CardHeader title="Identidad institucional"
+        <CardHeader title="Identidad de la empresa"
           sub="cómo se identifica la plataforma: nombres, logos, favicon y zona horaria" />
         <div className="space-y-3 px-5 pb-5">
           <TextWithToggle label="Nombre de la plataforma" value={d.platformName}
             show={d.showPlatformName}
             onValue={(v) => set("platformName", v)} onShow={(v) => set("showPlatformName", v)} />
-          <Field label="Nombre institucional">
+          <Field label="Nombre de la empresa">
             <input type="text" value={d.institutionName}
               onChange={(e) => set("institutionName", e.target.value)}
               className="input !py-1.5 text-[12px]" />

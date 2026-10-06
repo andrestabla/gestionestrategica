@@ -1,18 +1,9 @@
-// Marca Algoritmo T (SVG del referente de marca, inline).
+// Marca 4Shine (isotipo PNG del manual de marca).
 
+/* eslint-disable @next/next/no-img-element */
 export function AlgoritmoMark({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
-      <circle cx="256" cy="256" r="256" fill="#F1BA5B" />
-      <path
-        d="M332.03 500.52C435.067 468.517 510.202 373.177 511.949 260.029L371.625 119.705 161.673 131.077 140.375 177.705 249.246 288.75 223.805 392.295Z"
-        fill="#E9A52F"
-      />
-      <path
-        d="M371.625 119.705 371.625 177.705 281.805 177.705 281.805 392.295 223.805 392.295 223.805 177.705 140.375 177.705 140.375 119.705Z"
-        fill="#F8FFFB"
-      />
-      <path d="M371.62 119.7 371.62 177.7 281.8 177.7 281.8 392.3 256 392.3 256 119.7Z" fill="#D8D8D8" />
-    </svg>
+    <img src="/4shine-isotipo.png" alt="4Shine" width={size} height={size}
+      style={{ width: size, height: size, objectFit: "contain", display: "block" }} />
   );
 }

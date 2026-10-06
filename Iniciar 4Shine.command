@@ -1,6 +1,6 @@
 #!/bin/zsh
 # ──────────────────────────────────────────────────────────────────
-#  Plataforma de Gestión de la Transformación Digital · Algoritmo T
+#  4Shine Empresas · Plataforma de gestión estratégica
 #  Doble clic para encender el servidor local en http://localhost:3000
 #  Deja esta ventana abierta mientras uses la plataforma.
 #  Para apagarla: Ctrl+C en esta ventana (o simplemente ciérrala).
@@ -11,8 +11,8 @@ cd "$(dirname "$0")"
 URL="http://localhost:3000"
 
 echo ""
-echo "  ▄ ALGORITMO T · PGTD"
-echo "  Plataforma de Gestión de la Transformación Digital"
+echo "  ▄ 4SHINE EMPRESAS"
+echo "  Plataforma de gestión estratégica"
 echo ""
 
 # Si ya está encendida, solo abre el navegador

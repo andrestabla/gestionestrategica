@@ -114,16 +114,16 @@ export default function EjecutivoTab() {
     fetch("/api/td/summary").then((r) => (r.ok ? r.json() : null)).then(setS).catch(() => null);
     fetch("/api/td/tasks").then((r) => (r.ok ? r.json() : null)).then(setGp).catch(() => null);
     try {
-      const savedOn = localStorage.getItem("pgtd-informe-secciones");
+      const savedOn = localStorage.getItem("4shine-informe-secciones");
       if (savedOn) setOn((prev) => ({ ...prev, ...JSON.parse(savedOn) }));
-      setNota(localStorage.getItem("pgtd-informe-nota") ?? "");
+      setNota(localStorage.getItem("4shine-informe-nota") ?? "");
     } catch { /* sin persistencia */ }
   }, []);
   useEffect(() => {
-    try { localStorage.setItem("pgtd-informe-secciones", JSON.stringify(on)); } catch { /* noop */ }
+    try { localStorage.setItem("4shine-informe-secciones", JSON.stringify(on)); } catch { /* noop */ }
   }, [on]);
   useEffect(() => {
-    try { localStorage.setItem("pgtd-informe-nota", nota); } catch { /* noop */ }
+    try { localStorage.setItem("4shine-informe-nota", nota); } catch { /* noop */ }
   }, [nota]);
 
   const kpisSorted = useMemo(() => {
@@ -147,14 +147,12 @@ export default function EjecutivoTab() {
     return arr;
   }, [s, iniSort]);
 
-  // celdas línea × dimensión más rezagadas (brechas prioritarias)
+  // dimensiones más rezagadas (brechas prioritarias)
   const brechas = useMemo(() => {
     const cells: { n: number; dim: string; dimName: string; value: number; target: number }[] = [];
-    for (const line of LINES) {
-      for (const d of DIMENSIONS) {
-        const c = scores[line.n]?.[d.key];
-        if (c) cells.push({ n: line.n, dim: d.key, dimName: d.name, value: c.value, target: c.target });
-      }
+    for (const d of DIMENSIONS) {
+      const c = scores[d.line]?.[d.key];
+      if (c) cells.push({ n: d.line, dim: d.key, dimName: d.name, value: c.value, target: c.target });
     }
     return cells.sort((a, b) => a.value - b.value || (b.target - b.value) - (a.target - a.value)).slice(0, 5);
   }, [scores]);
@@ -271,7 +269,7 @@ export default function EjecutivoTab() {
           <div className="flex items-end gap-6">
             <div className="pb-1"><Sparkline points={s.maturity.history.map((h) => ({ period: h.period, value: h.institution }))} /></div>
             <div className="text-right">
-              <div className="label">Madurez institucional</div>
+              <div className="label">Madurez de la empresa</div>
               <div className="num text-[36px] font-extrabold leading-none text-ink">
                 {fmtNum(s.maturity.institution.value, 1)}
                 <span className="text-[14px] font-semibold text-faint"> / 5</span>
@@ -288,7 +286,7 @@ export default function EjecutivoTab() {
           <CardHeader title="Resumen ejecutivo" sub="lectura automática del corte — los enlaces llevan al detalle" />
           <ul className="grid gap-x-6 gap-y-1.5 px-5 pb-4 text-[12.5px] leading-relaxed text-ink-soft lg:grid-cols-2">
             <li>
-              La línea más avanzada es <b className="text-ink">{strongest.code} {strongest.name}</b> ({fmtNum(strongest.value, 1)}
+              La capacidad más avanzada es <b className="text-ink">{strongest.code} {strongest.name}</b> ({fmtNum(strongest.value, 1)}
               {delta(strongest) !== null && <> · {delta(strongest)! >= 0 ? "+" : ""}{fmtNum(delta(strongest)!, 1)} vs. medición anterior</>});
               la más rezagada, <b className="text-ink">{weakest.code} {weakest.name}</b> ({fmtNum(weakest.value, 1)}).
             </li>
@@ -319,7 +317,7 @@ export default function EjecutivoTab() {
       {on.madurez && (
         <div className="mb-5 grid gap-5 lg:grid-cols-2">
           <Card>
-            <CardHeader title="Avance por línea" sub="actual vs. meta a 24 meses — clic en una línea abre sus dimensiones" />
+            <CardHeader title="Avance por capacidad" sub="actual vs. meta a 24 meses — clic en una capacidad abre sus dimensiones" />
             <div className="space-y-3 px-5 pb-5">
               {s.maturity.lines.map((l) => {
                 const meta = LINES.find((x) => x.n === l.n)!;
@@ -345,7 +343,7 @@ export default function EjecutivoTab() {
                     </button>
                     {isOpen && (
                       <div className="no-print mt-2 space-y-1.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
-                        {DIMENSIONS.map((d) => {
+                        {DIMENSIONS.filter((d) => d.line === l.n).map((d) => {
                           const c = scores[l.n]?.[d.key];
                           if (!c) return null;
                           return (
@@ -360,8 +358,8 @@ export default function EjecutivoTab() {
                             </div>
                           );
                         })}
-                        <Link href="/panel/madurez/variables" className="inline-flex items-center gap-1 pt-1 text-[11px] font-bold text-cyan-deep hover:underline">
-                          Ver variables y evidencia <ExternalLink size={11} />
+                        <Link href={`/panel/diagnostico/capacidad/${l.n}`} className="inline-flex items-center gap-1 pt-1 text-[11px] font-bold text-cyan-deep hover:underline">
+                          Ver prácticas y evidencia <ExternalLink size={11} />
                         </Link>
                       </div>
                     )}
@@ -373,7 +371,7 @@ export default function EjecutivoTab() {
           </Card>
 
           <Card>
-            <CardHeader title="Mapa de calor línea × dimensión" sub="niveles de la medición vigente" />
+            <CardHeader title="Mapa de calor de las 17 dimensiones" sub="madurez de la medición vigente" />
             <div className="px-5 pb-5 pt-2"><MaturityHeatmap scores={scores} /></div>
             <div className="border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
               Alertas del motor: {s.alertCounts.critical} críticas · {s.alertCounts.warning} advertencias · {s.alertCounts.info} informativas.
@@ -386,12 +384,12 @@ export default function EjecutivoTab() {
       {/* brechas prioritarias */}
       {on.brechas && (
         <Card className="mb-5">
-          <CardHeader title="Brechas prioritarias" sub="las cinco celdas línea × dimensión con menor nivel — por donde empezar" />
+          <CardHeader title="Brechas prioritarias" sub="las cinco dimensiones con menor madurez — por donde empezar" />
           <div className="grid gap-x-6 gap-y-2 px-5 pb-4 lg:grid-cols-2">
             {brechas.map((b, idx) => {
               const line = LINES.find((l) => l.n === b.n)!;
               return (
-                <Link key={`${b.n}-${b.dim}`} href="/panel/madurez/variables"
+                <Link key={`${b.n}-${b.dim}`} href={`/panel/diagnostico/dimension/${b.dim}`}
                   className="group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-2/70">
                   <span className="num w-5 shrink-0 text-center text-[13px] font-extrabold text-faint">{idx + 1}</span>
                   <i className="h-8 w-1 shrink-0 rounded-full" style={{ background: line.color }} />
