@@ -156,6 +156,12 @@ el resto → último. La ficha muestra el sugerido y quien decide el tiempo
 (gerencia, advisor) puede mover la iniciativa con un clic. Los horizontes los
 define cada empresa (`Company.horizons`; por defecto corto y mediano).
 
+El administrador de la plataforma elige la empresa con la que opera en la
+pantalla `/empresas` (una tarjeta por empresa con su sector, ciudad, moneda,
+iniciativas, KPI y cuentas; alta de empresa en modal). Es la primera pantalla
+tras su login y a la que vuelve «Cambiar de empresa» desde el menú; los
+demás roles entran directo al panel de su empresa.
+
 En el editor de catálogo la iniciativa se califica con las mismas variables
 (D·E·M·L de 1 a 4 y tipo estratégico/táctico) y esa calificación se registra
 como la evaluación del usuario en la matriz. Todos los formularios de
