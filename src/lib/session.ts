@@ -8,11 +8,16 @@ const SECRET = process.env.AUTH_SECRET ?? "pgtd-dev-secret-cambiar-en-produccion
 const COOKIE = "pgtd_session";
 const MAX_AGE = 60 * 60 * 8; // 8 horas; el cierre por inactividad se renueva por request
 
+export type SessionCompany = { slug: string; name: string; shortName: string };
+
 export type SessionUser = {
   email: string;
   name: string;
   role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO";
   line?: number;
+  /** Empresa del usuario. El admin de plataforma no tiene empresa propia: aquí
+      va la que eligió como contexto activo (puede cambiarla). */
+  company?: SessionCompany;
 };
 
 const sign = (payload: string) =>
@@ -35,7 +40,10 @@ export function decodeSession(token: string | undefined): SessionUser | null {
   try {
     const data = JSON.parse(Buffer.from(body, "base64url").toString());
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
-    return { email: data.email, name: data.name, role: data.role, line: data.line };
+    const company = data.company && typeof data.company.slug === "string"
+      ? { slug: String(data.company.slug), name: String(data.company.name ?? ""), shortName: String(data.company.shortName ?? "") }
+      : undefined;
+    return { email: data.email, name: data.name, role: data.role, line: data.line, company };
   } catch {
     return null;
   }

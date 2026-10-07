@@ -9,17 +9,18 @@
 // Todas las mutaciones validan reglas de negocio y escriben auditoría.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { TASKS as TASKS_SEED, PEOPLE, type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
+import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
+import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
-  EVIDENCE_CATALOG, responsible, INITIATIVES_FULL, SCORES_HISTORY, KPI_CATALOG,
-  currentAssessment as staticCurrent, previousAssessment as staticPrevious,
-  type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull,
-} from "@/data/cmi";
+  ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
+  type Catalog, type CompanyInfo,
+} from "@/data/catalogo";
+import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_CRITERIA, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
-import { EVALUATIONS_SEED, DECISIONS_SEED, type DecisionRecord } from "@/data/priorizacion-demo";
+import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import type { Response as OdResponse } from "@/lib/od";
 
@@ -115,56 +116,118 @@ export type InitiativeOverride = {
   nextMilestone?: { date: string; text: string };
 };
 
-const g = globalThis as unknown as {
-  __pgtdTasks?: Task[];
-  __pgtdEvidence?: Map<string, EvidenceStatus>;
-  __pgtdAudit?: AuditEntry[];
-  __pgtdComments?: TaskComment[];
-  __pgtdUploads?: UploadedEvidence[];
-  __pgtdBaseline?: Map<string, { start: string; due: string }>;
-  __pgtdCapture?: Map<string, VariableCapture>;
-  __pgtdPublished?: AssessmentRecord | null;
-  __pgtdKpiReports?: Map<string, KpiReport[]>;
-  __pgtdTests?: Map<string, TestResponse>;
-  __pgtdF2?: F2Response[];
-  __pgtdTestNotes?: Map<string, TestNotes>;
-  __pgtdIniOverrides?: Map<string, InitiativeOverride>;
-  __pgtdEvals?: Map<string, Evaluation>;          // clave iniId|email
-  __pgtdDecisions?: Map<string, DecisionRecord>;  // clave iniId
-  __pgtdHydrated?: boolean;
+/* ═══ Estado por empresa (tenant) ═══
+   Cada empresa tiene su propio estado en memoria, creado desde su catálogo
+   (Andina: la plantilla demo; las demás: lo que haya en la base). El estado
+   activo lo decide el contexto de la petición (src/server/tenant.ts). */
+
+export type TenantState = {
+  slug: string;
+  dbId: string | null;                 // Company.id en la base (null sin base)
+  catalog: Catalog;
+  tasks: Task[];
+  archived: Task[];
+  evidence: Map<string, EvidenceStatus>;
+  audit: AuditEntry[];
+  comments: TaskComment[];
+  uploads: UploadedEvidence[];
+  baselines: Map<string, { start: string; due: string }>;
+  capture: Map<string, VariableCapture>;
+  published: AssessmentRecord | null;
+  kpiReports: Map<string, KpiReport[]>;
+  tests: Map<string, TestResponse>;
+  f2: F2Response[];
+  testNotes: Map<string, TestNotes>;
+  iniOverrides: Map<string, InitiativeOverride>;
+  evals: Map<string, Evaluation>;          // clave iniId|email
+  decisions: Map<string, DecisionRecord>;  // clave iniId
+  users: ManagedUser[];
+  integrations: Map<IntegrationKey, IntegrationConfig>;
+  branding?: Branding;
+  notifRead: Map<string, Set<string>>;
+  hydrated: boolean;
 };
 
-// memoria compartida entre requests (persistente durante la vida del proceso)
-if (!g.__pgtdTasks) g.__pgtdTasks = TASKS_SEED.map((t) => ({ ...t }));
-if (!g.__pgtdEvals) g.__pgtdEvals = new Map(EVALUATIONS_SEED.map((e) => [`${e.iniId}|${e.by}`, e]));
-if (!g.__pgtdDecisions) g.__pgtdDecisions = new Map(DECISIONS_SEED.map((d) => [d.iniId, d]));
-if (!g.__pgtdEvidence) {
-  g.__pgtdEvidence = new Map(EVIDENCE_CATALOG.map((e) => [e.id, e.status]));
-}
-if (!g.__pgtdAudit) g.__pgtdAudit = [];
-if (!g.__pgtdComments) g.__pgtdComments = [];
-if (!g.__pgtdUploads) g.__pgtdUploads = [];
-// línea base del cronograma: las fechas del plan aprobado (seed) se congelan;
-// las reprogramaciones mueven las vigentes y el deslizamiento se mide contra esta.
-if (!g.__pgtdBaseline) {
-  g.__pgtdBaseline = new Map(TASKS_SEED.map((t) => [t.id, { start: t.start, due: t.due }]));
+export type CompanyRecord = CompanyInfo & { dbId: string | null };
+
+type Registry = {
+  companies: Map<string, CompanyRecord>;   // por slug
+  tenants: Map<string, TenantState>;
+  platformUsers: ManagedUser[];            // admins de plataforma (sin empresa)
+  companiesHydrated: boolean;
+};
+
+const g = (() => {
+  const gg = globalThis as unknown as { __4shine?: Registry };
+  if (!gg.__4shine) {
+    gg.__4shine = {
+      companies: new Map([[DEFAULT_TENANT, { ...ANDINA_CATALOG.company, dbId: null }]]),
+      tenants: new Map(),
+      platformUsers: PLATFORM_USERS.map((u) => ({ email: u.email, name: u.name, role: u.role, active: true, seeded: true })),
+      companiesHydrated: false,
+    };
+  }
+  return gg.__4shine;
+})();
+
+function newState(slug: string, catalog: Catalog, dbId: string | null): TenantState {
+  return {
+    slug, dbId, catalog,
+    tasks: catalog.tasks.map((t) => ({ ...t })),
+    archived: [],
+    evidence: new Map(catalog.evidences.map((e) => [e.id, e.status])),
+    audit: [], comments: [], uploads: [],
+    // línea base del cronograma: las fechas del plan aprobado se congelan;
+    // las reprogramaciones mueven las vigentes y el deslizamiento se mide contra esta.
+    baselines: new Map(catalog.tasks.map((t) => [t.id, { start: t.start, due: t.due }])),
+    capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f2: [], testNotes: new Map(),
+    iniOverrides: new Map(),
+    evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
+    decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
+    users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, active: true, seeded: true })),
+    integrations: new Map(), notifRead: new Map(), hydrated: false,
+  };
 }
 
-if (!g.__pgtdCapture) g.__pgtdCapture = new Map();
-if (g.__pgtdPublished === undefined) g.__pgtdPublished = null;
-if (!g.__pgtdKpiReports) g.__pgtdKpiReports = new Map();
-if (!g.__pgtdTests) g.__pgtdTests = new Map();
-if (!g.__pgtdF2) g.__pgtdF2 = [];
-if (!g.__pgtdTestNotes) g.__pgtdTestNotes = new Map();
-if (!g.__pgtdIniOverrides) g.__pgtdIniOverrides = new Map();
+/** Estado de la empresa activa (se crea la primera vez que se usa). */
+function S(): TenantState {
+  const slug = currentTenant();
+  let t = g.tenants.get(slug);
+  if (!t) {
+    const c = g.companies.get(slug);
+    if (!c) throw new Error(`Empresa desconocida: ${slug}`);
+    t = newState(slug, slug === DEFAULT_TENANT ? ANDINA_CATALOG : emptyCatalog(c), c.dbId);
+    g.tenants.set(slug, t);
+  }
+  return t;
+}
 
-const tasks = () => g.__pgtdTasks!;
-const comments = () => g.__pgtdComments!;
-const uploads = () => g.__pgtdUploads!;
-const baselines = () => g.__pgtdBaseline!;
-const evidenceStatus = () => g.__pgtdEvidence!;
-const auditLog = () => g.__pgtdAudit!;
-const capture = () => g.__pgtdCapture!;
+/** Catálogo de la empresa activa. */
+export const catalog = (): Catalog => S().catalog;
+const cat = catalog;
+export const responsible = (id: string) => responsibleIn(cat(), id);
+
+/** Company.id de la empresa activa en la base (para el write-through). */
+const cid = (): string => {
+  const id = S().dbId ?? g.companies.get(S().slug)?.dbId;
+  if (!id) throw new Error(`la empresa ${S().slug} no está en la base`);
+  return id;
+};
+
+/** Última medición publicada del catálogo y la anterior. */
+const latestPublished = (list: AssessmentRecord[]) => [...list].reverse().find((a) => a.status === "PUBLICADA" && a.scores) ?? null;
+const previousPublished = (list: AssessmentRecord[]) => {
+  const pubs = list.filter((a) => a.status === "PUBLICADA" && a.scores);
+  return pubs.length > 1 ? pubs[pubs.length - 2] : null;
+};
+
+const tasks = () => S().tasks;
+const comments = () => S().comments;
+const uploads = () => S().uploads;
+const baselines = () => S().baselines;
+const evidenceStatus = () => S().evidence;
+const auditLog = () => S().audit;
+const capture = () => S().capture;
 
 /* ═══ Prisma opcional (write-through) ═══ */
 
@@ -200,21 +263,68 @@ async function prisma(): Promise<AnyPrisma> {
   return gp.__pgtdPrisma;
 }
 
-/** Hidrata la memoria desde Postgres (solo una vez por proceso, si hay DB). */
-export async function hydrateFromDb() {
-  if (!hasDb() || g.__pgtdHydrated) return;
+/* ═══ Empresas (tenants) ═══
+   El registro de empresas es global; el estado de cada una se hidrata la
+   primera vez que una petición la activa. */
+
+import { writeCatalog, readCatalog, companyRow } from "@/server/catalog-db";
+
+/** Carga las empresas y los admins de plataforma desde la base (una vez). */
+export async function hydrateCompanies() {
+  if (!hasDb() || g.companiesHydrated) return;
   try {
     const db = await prisma();
+    for (const c of await db.company.findMany()) {
+      const prev = g.companies.get(c.slug);
+      g.companies.set(c.slug, {
+        slug: c.slug, name: c.name, shortName: c.shortName, city: c.city, department: c.department,
+        sector: c.sector ?? "", size: c.size ?? "", sectorKey: c.sectorKey ?? prev?.sectorKey ?? "suministros-industriales",
+        ciiu: c.ciiu ?? "", active: c.active, template: (c.template as CompanyInfo["template"]) ?? "vacia",
+        createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
+      });
+      const t = g.tenants.get(c.slug);
+      if (t) t.dbId = c.id;
+    }
+    for (const u of await db.user.findMany({ where: { companyId: null } })) {
+      const existing = g.platformUsers.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
+      if (existing) { existing.name = u.name; existing.active = u.active; }
+      else g.platformUsers.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], active: u.active, seeded: false, at: u.createdAt.toISOString() });
+    }
+    g.companiesHydrated = true;
+  } catch (e) {
+    console.error("[4shine] hidratación de empresas falló:", (e as Error).message);
+  }
+}
+
+/** Hidrata la memoria de la empresa activa desde la base (una vez por proceso y empresa). */
+export async function hydrateFromDb() {
+  if (!hasDb()) return;
+  await hydrateCompanies();
+  const st = S();
+  if (st.hydrated) return;
+  try {
+    const db = await prisma();
+    const companyId = st.dbId ?? g.companies.get(st.slug)?.dbId;
+    if (!companyId) { st.hydrated = true; return; }   // empresa solo en memoria
+    st.dbId = companyId;
+    // catálogo: la demo nace del seed; las demás empresas, de la base
+    if (st.slug !== DEFAULT_TENANT) {
+      const fresh = await readCatalog(db, { ...st.catalog.company, dbId: companyId });
+      const next = newState(st.slug, fresh, companyId);
+      next.users = st.users;
+      Object.assign(st, next);
+    }
+    const W = { where: { companyId } };
     type DbTaskRow = {
       id: string; status: string; assigneeId: string; coAssigneeIds: unknown;
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
-    const rows = (await db.projectTask.findMany()) as (DbTaskRow & {
+    const rows = (await db.projectTask.findMany(W)) as (DbTaskRow & {
       iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
       baseStart: Date | null; baseDue: Date | null; archived: boolean;
     })[];
     if (rows.length) {
-      const seedIds = new Set(TASKS_SEED.map((t) => t.id));
+      const seedIds = new Set(cat().tasks.map((t) => t.id));
       for (const r of rows) {
         const day = (d: Date) => d.toISOString().slice(0, 10);
         let t = tasks().find((x) => x.id === r.id) ?? archived().find((x) => x.id === r.id);
@@ -239,25 +349,25 @@ export async function hydrateFromDb() {
     }
     // gestor: comentarios y archivos adjuntos
     if (comments().length === 0) {
-      for (const c of await db.taskComment.findMany({ orderBy: { id: "asc" } })) comments().push({ id: c.id, taskId: c.taskId, author: c.author, role: c.role, text: c.text, at: c.at.toISOString() });
+      for (const c of await db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } })) comments().push({ id: c.id, taskId: c.taskId, author: c.author, role: c.role, text: c.text, at: c.at.toISOString() });
     }
     if (uploads().length === 0) {
-      for (const u of await db.fileAsset.findMany({ orderBy: { at: "asc" } })) uploads().push({ id: u.id, taskId: u.taskId, title: u.title, kind: u.kind, fileName: u.fileName, filePath: u.filePath, size: u.size, mime: u.mime, uploadedBy: u.uploadedBy, date: u.at.toISOString().slice(0, 10), status: u.status as EvidenceStatus });
+      for (const u of await db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } })) uploads().push({ id: u.id, taskId: u.taskId, title: u.title, kind: u.kind, fileName: u.fileName, filePath: u.filePath, size: u.size, mime: u.mime, uploadedBy: u.uploadedBy, date: u.at.toISOString().slice(0, 10), status: u.status as EvidenceStatus });
     }
     // KPI e iniciativas
-    for (const r of await db.kpiReport.findMany({ orderBy: { at: "asc" } })) {
+    for (const r of await db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } })) {
       const list = kpiReports().get(r.code) ?? [];
       if (!list.some((x) => x.period === r.period)) list.push({ code: r.code, period: r.period, value: r.value, note: r.note ?? undefined, by: r.by, at: r.at.toISOString() });
       kpiReports().set(r.code, list);
     }
-    for (const o of await db.initiativeOverride.findMany()) iniOverrides().set(o.code, o.data as InitiativeOverride);
+    for (const o of await db.initiativeOverride.findMany(W)) iniOverrides().set(o.code, o.data as InitiativeOverride);
     // priorización: evaluaciones de la matriz y decisiones de tiempo
-    for (const e of await db.initiativeEvaluation.findMany()) evals().set(e.id, e.data as Evaluation);
-    for (const d of await db.initiativeDecision.findMany()) decisions().set(d.code, d.data as DecisionRecord);
-    // administración: usuarios, integraciones, branding y notificaciones leídas
-    const dbUsers = await db.user.findMany();
+    for (const e of await db.initiativeEvaluation.findMany(W)) evals().set(e.id, e.data as Evaluation);
+    for (const d of await db.initiativeDecision.findMany(W)) decisions().set(d.code, d.data as DecisionRecord);
+    // usuarios de la empresa, integraciones, branding y notificaciones leídas
+    const dbUsers = await db.user.findMany(W);
     if (dbUsers.length) {
-      const seedEmails = new Set(DEMO_USERS.map((u) => u.email));
+      const seedEmails = new Set(cat().seedUsers.map((u) => u.email));
       const list = users();
       for (const u of dbUsers) {
         const existing = list.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
@@ -265,41 +375,155 @@ export async function hydrateFromDb() {
         else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString() });
       }
     }
-    for (const i of await db.integration.findMany()) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
-    const br = await db.branding.findUnique({ where: { id: "default" } });
+    for (const i of await db.integration.findMany(W)) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
+    const br = await db.branding.findUnique({ where: { companyId } });
     if (br) Object.assign(branding(), br.data as Partial<Branding>);
-    for (const n of await db.notifRead.findMany()) notifRead().set(n.email, new Set(n.ids as string[]));
+    for (const n of await db.notifRead.findMany(W)) notifRead().set(n.email, new Set(n.ids as string[]));
     // diagnóstico: captura del corte en curso, corte publicado, respuestas y evidencias
-    for (const c of await db.practiceCapture.findMany({ where: { cut: "A3" } })) {
+    for (const c of await db.practiceCapture.findMany({ where: { companyId, cut: "A3" } })) {
       capture().set(c.practice, {
         perception: c.perception ?? undefined, evidence: (c.evidence as VariableCapture["evidence"]) ?? undefined,
         level: c.level ?? undefined, note: c.note ?? undefined, by: c.by, at: c.at.toISOString(),
       });
     }
-    const a3 = await db.assessment.findUnique({ where: { id: "A3" }, include: { scores: true } });
+    const a3 = await db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } });
     if (a3?.status === "PUBLICADA" && a3.scores.length) {
       const scores: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
       for (const sc of a3.scores) scores[sc.line][sc.dimension] = { value: sc.value, target: sc.target ?? 0 };
-      g.__pgtdPublished = { id: "A3", label: a3.label, period: a3.period, status: "PUBLICADA", note: a3.note ?? "", scores };
+      S().published = { id: "A3", label: a3.label, period: a3.period, status: "PUBLICADA", note: a3.note ?? "", scores };
     }
-    for (const t of await db.testResponse.findMany()) {
+    for (const t of await db.testResponse.findMany(W)) {
       testStore().set(t.email, { email: t.email, name: t.name, role: t.role, cargo: t.cargo ?? undefined, objetivo: t.objetivo ?? undefined, at: t.at.toISOString(), r: t.answers as TestResponse["r"] });
     }
-    for (const n of await db.testNote.findMany()) {
+    for (const n of await db.testNote.findMany(W)) {
       testNotes().set(n.participant, { restriccion: n.restriccion ?? undefined, evidencias: n.evidencias ?? undefined, accion: n.accion ?? undefined, noNecesita: n.noNecesita ?? undefined, by: n.by, at: n.at.toISOString() });
     }
     if (f2Store().length === 0) {
-      for (const f of await db.teamResponse.findMany({ orderBy: { at: "asc" } })) {
+      for (const f of await db.teamResponse.findMany({ where: { companyId }, orderBy: { at: "asc" } })) {
         f2Store().push({ id: f.id, at: f.at.toISOString(), area: f.area ?? undefined, r: f.answers as F2Response["r"], abierta: f.abierta ?? undefined });
       }
     }
-    for (const e of await db.evidence.findMany({ where: { status: "VERIFICADA" } })) evidenceStatus().set(e.id, "VERIFICADA");
-    g.__pgtdHydrated = true;
+    for (const e of await db.evidence.findMany({ where: { companyId, status: "VERIFICADA" } })) evidenceStatus().set(e.id, "VERIFICADA");
+    st.hydrated = true;
   } catch (e) {
     // sin conexión: se continúa en modo memoria
     console.error("[4shine] hidratación falló:", (e as Error).message);
   }
 }
+
+/* ── registro y administración de empresas (manage_companies) ── */
+
+export const listCompanies = (): CompanyRecord[] => [...g.companies.values()];
+export const companyBySlug = (slug: string): CompanyRecord | null => g.companies.get(slug) ?? null;
+
+const slugify = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+
+export type CompanyInput = {
+  name: string; shortName?: string; slug?: string; city?: string; department?: string; sector?: string; size?: string;
+  sectorKey?: string; ciiu?: string; template?: "demo" | "vacia";
+};
+
+/** Crea una empresa (vacía o desde la plantilla demo) y, con base, la persiste con su catálogo. */
+export async function createCompany(actor: SessionUser, input: CompanyInput): Promise<{ ok: true; company: CompanyRecord } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma crea empresas." };
+  const name = input.name?.trim() ?? "";
+  if (name.length < 3) return { ok: false, status: 422, error: "El nombre de la empresa debe tener al menos 3 caracteres." };
+  const slug = slugify(input.slug?.trim() || name);
+  if (!slug || slug.length < 2) return { ok: false, status: 422, error: "El identificador (slug) no es válido." };
+  if (g.companies.has(slug)) return { ok: false, status: 422, error: `Ya existe una empresa con el identificador «${slug}».` };
+  const template = input.template === "demo" ? "demo" : "vacia";
+  const info: CompanyInfo = {
+    slug, name, shortName: input.shortName?.trim() || name.split(" ")[0], city: input.city?.trim() ?? "", department: input.department?.trim() ?? "",
+    sector: input.sector?.trim() ?? "", size: input.size?.trim() ?? "", sectorKey: input.sectorKey?.trim() || "suministros-industriales",
+    ciiu: input.ciiu?.trim() ?? "", active: true, template, createdBy: actor.name, createdAt: new Date().toISOString(),
+  };
+  const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
+  const rec: CompanyRecord = { ...info, dbId: null };
+  if (hasDb()) {
+    try {
+      const db = await prisma();
+      const row = await db.company.create({ data: companyRow(info) });
+      rec.dbId = row.id;
+      await writeCatalog(db, row.id, catalog);
+    } catch (e) {
+      return { ok: false, status: 500, error: `No se pudo crear la empresa en la base: ${(e as Error).message}` };
+    }
+  }
+  g.companies.set(slug, rec);
+  const st = newState(slug, catalog, rec.dbId);
+  st.hydrated = true;
+  g.tenants.set(slug, st);
+  audit(actor, "task", `empresa:${slug}`, `empresa creada (${template})`);
+  return { ok: true, company: rec };
+}
+
+export async function updateCompany(actor: SessionUser, slug: string, patch: Partial<CompanyInput> & { active?: boolean }): Promise<{ ok: true; company: CompanyRecord } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma edita empresas." };
+  const c = g.companies.get(slug);
+  if (!c) return { ok: false, status: 404, error: "La empresa no existe." };
+  if (patch.name !== undefined && patch.name.trim().length < 3) return { ok: false, status: 422, error: "El nombre debe tener al menos 3 caracteres." };
+  if (patch.active === false && slug === DEFAULT_TENANT && [...g.companies.values()].filter((x) => x.active).length <= 1) {
+    return { ok: false, status: 422, error: "Debe quedar al menos una empresa activa." };
+  }
+  const fields = ["name", "shortName", "city", "department", "sector", "size", "sectorKey", "ciiu"] as const;
+  for (const f of fields) if (patch[f] !== undefined) (c as Record<string, unknown>)[f] = String(patch[f]).trim();
+  if (patch.active !== undefined) c.active = patch.active;
+  const t = g.tenants.get(slug);
+  if (t) t.catalog.company = { ...t.catalog.company, ...c };
+  if (hasDb() && c.dbId) {
+    const dbId = c.dbId;
+    void persist("empresa", (db) => db.company.update({ where: { id: dbId }, data: companyRow(c) }));
+  }
+  audit(actor, "task", `empresa:${slug}`, `empresa actualizada`);
+  return { ok: true, company: c };
+}
+
+/** Elimina una empresa con todos sus datos (en cascada). La demo no se elimina. */
+export async function deleteCompany(actor: SessionUser, slug: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma elimina empresas." };
+  const c = g.companies.get(slug);
+  if (!c) return { ok: false, status: 404, error: "La empresa no existe." };
+  if (slug === DEFAULT_TENANT) return { ok: false, status: 422, error: "La empresa de demostración no se elimina; puede desactivarse." };
+  if (hasDb() && c.dbId) {
+    try {
+      const db = await prisma();
+      await db.company.delete({ where: { id: c.dbId } });
+    } catch (e) {
+      return { ok: false, status: 500, error: `No se pudo eliminar en la base: ${(e as Error).message}` };
+    }
+  }
+  g.companies.delete(slug);
+  g.tenants.delete(slug);
+  audit(actor, "task", `empresa:${slug}`, `empresa eliminada`);
+  return { ok: true };
+}
+
+/** Busca un usuario en cualquier empresa (login): admins de plataforma, memoria y base. */
+export async function findUserForLogin(email: string): Promise<{ user: ManagedUser; company: CompanyRecord | null } | null> {
+  const e = email.trim().toLowerCase();
+  await hydrateCompanies();
+  const admin = g.platformUsers.find((u) => u.active && u.email.toLowerCase() === e);
+  if (admin) return { user: admin, company: null };
+  if (hasDb()) {
+    try {
+      const db = await prisma();
+      const u = await db.user.findUnique({ where: { email: e }, include: { company: true } });
+      if (u && u.active) {
+        const company = u.company ? g.companies.get(u.company.slug) ?? null : null;
+        if (u.companyId && !company) return null;
+        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, active: true, seeded: false }, company };
+      }
+    } catch (e2) { console.error("[4shine] búsqueda de usuario falló:", (e2 as Error).message); }
+  }
+  for (const [slug, c] of g.companies) {
+    const st = g.tenants.get(slug) ?? (slug === DEFAULT_TENANT ? (g.tenants.set(slug, newState(slug, ANDINA_CATALOG, c.dbId)), g.tenants.get(slug)!) : null);
+    const u = st?.users.find((x) => x.active && x.email.toLowerCase() === e);
+    if (u) return { user: u, company: c };
+  }
+  return null;
+}
+
+export const getPlatformUsers = (): ManagedUser[] => g.platformUsers;
 
 /** Escribe en la base si está configurada; la memoria sigue siendo la fuente. */
 // En un entorno serverless (Vercel) la función se congela al responder: una
@@ -387,7 +611,7 @@ export async function updateTask(
   if (!t) return { ok: false, status: 404, error: "La tarea no existe." };
 
   // permiso: edición total o de la línea de la iniciativa
-  const ini = INITIATIVES_FULL.find((i) => i.id === t.iniId)!;
+  const ini = cat().initiatives.find((i) => i.id === t.iniId)!;
   if (!can(user, "edit_tasks", ini.line)) {
     return {
       ok: false, status: 403,
@@ -429,7 +653,7 @@ export async function updateTask(
   if (patch.coAssigneeIds !== undefined) {
     // corresponsables: personas válidas, sin duplicados ni el principal
     if (!Array.isArray(patch.coAssigneeIds) ||
-        patch.coAssigneeIds.some((p) => typeof p !== "string" || !PEOPLE.some((x) => x.id === p))) {
+        patch.coAssigneeIds.some((p) => typeof p !== "string" || !cat().people.some((x) => x.id === p))) {
       return { ok: false, status: 422, error: "Corresponsables inválidos: deben ser personas del directorio." };
     }
     const clean = [...new Set(patch.coAssigneeIds)].filter((p) => p !== t.assigneeId);
@@ -497,7 +721,7 @@ export async function verifyEvidence(
       error: "Solo el equipo consultor puede verificar evidencia: es la garantía de independencia de la medición.",
     };
   }
-  const ev = EVIDENCE_CATALOG.find((e) => e.id === evidenceId);
+  const ev = cat().evidences.find((e) => e.id === evidenceId);
   if (!ev) return { ok: false, status: 404, error: "La evidencia no existe." };
   if (getEvidenceStatus(evidenceId) === "VERIFICADA") {
     return { ok: true, status: "VERIFICADA" };
@@ -537,7 +761,7 @@ export function addComment(
   };
   comments().push(comment);
   audit(user, "task", taskId, "comentario añadido");
-  void persist("comentario", (db) => db.taskComment.create({ data: { id: comment.id, taskId, author: comment.author, role: comment.role, text: comment.text, at: new Date(comment.at) } }));
+  void persist("comentario", (db) => db.taskComment.create({ data: { id: comment.id, companyId: cid(), taskId, author: comment.author, role: comment.role, text: comment.text, at: new Date(comment.at) } }));
   return { ok: true, comment };
 }
 
@@ -551,7 +775,7 @@ export function attachEvidence(
 ): { ok: true; evidence: UploadedEvidence } | { ok: false; status: number; error: string } {
   const t = getTask(taskId);
   if (!t) return { ok: false, status: 404, error: "La tarea no existe." };
-  const ini = INITIATIVES_FULL.find((i) => i.id === t.iniId)!;
+  const ini = cat().initiatives.find((i) => i.id === t.iniId)!;
   if (!can(user, "edit_tasks", ini.line)) {
     return { ok: false, status: 403, error: "Tu rol no puede adjuntar evidencia en esta tarea." };
   }
@@ -569,7 +793,7 @@ export function attachEvidence(
     status: "PENDIENTE",   // nace pendiente: la verifica el consultor
   };
   uploads().push(evidence);
-  void persist("archivo", (db) => db.fileAsset.create({ data: { id: evidence.id, taskId, title: evidence.title, kind: evidence.kind, fileName: evidence.fileName, filePath: evidence.filePath, size: evidence.size, mime: evidence.mime, uploadedBy: evidence.uploadedBy, status: evidence.status, at: new Date() } }));
+  void persist("archivo", (db) => db.fileAsset.create({ data: { id: evidence.id, companyId: cid(), taskId, title: evidence.title, kind: evidence.kind, fileName: evidence.fileName, filePath: evidence.filePath, size: evidence.size, mime: evidence.mime, uploadedBy: evidence.uploadedBy, status: evidence.status, at: new Date() } }));
   audit(user, "task", taskId, `evidencia adjuntada («${evidence.title}», ${evidence.fileName})`);
   return { ok: true, evidence };
 }
@@ -585,7 +809,7 @@ export function verifyUploadedEvidence(
   const ev = uploads().find((u) => u.id === evidenceId);
   if (!ev) return { ok: false, status: 404, error: "La evidencia no existe." };
   ev.status = "VERIFICADA";
-  void persist("archivo verificado", (db) => db.fileAsset.update({ where: { id: evidenceId }, data: { status: "VERIFICADA" } }));
+  void persist("archivo verificado", (db) => db.fileAsset.update({ where: { companyId_id: { companyId: cid(), id: evidenceId } }, data: { status: "VERIFICADA" } }));
   audit(user, "evidence", evidenceId, `evidencia subida verificada («${ev.title}»)`);
   return { ok: true };
 }
@@ -601,11 +825,7 @@ const addDays = (iso: string, days: number) => {
 const daysBetween = (a: string, b: string) =>
   Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
 
-const archived = () => {
-  const ga = g as unknown as { __pgtdArchived?: Task[] };
-  if (!ga.__pgtdArchived) ga.__pgtdArchived = [];
-  return ga.__pgtdArchived;
-};
+const archived = () => S().archived;
 
 export const getArchivedTasks = (): Task[] => archived();
 
@@ -617,7 +837,7 @@ export function createTask(
     dependsOn?: string[]; requiresEvidence?: boolean; note?: string;
   },
 ): MutationResult {
-  const ini = INITIATIVES_FULL.find((i) => i.id === input.iniId);
+  const ini = cat().initiatives.find((i) => i.id === input.iniId);
   if (!ini) return { ok: false, status: 422, error: "La iniciativa no existe." };
 
   if (!can(user, "edit_tasks", ini.line)) {
@@ -633,7 +853,7 @@ export function createTask(
   const desc = input.desc?.trim() ?? "";
   if (title.length < 8) return { ok: false, status: 422, error: "El título debe describir la actividad (mínimo 8 caracteres)." };
   if (desc.length < 20) return { ok: false, status: 422, error: "La descripción debe declarar qué se hace y qué produce (mínimo 20 caracteres)." };
-  if (!PEOPLE.some((p) => p.id === input.assigneeId)) {
+  if (!cat().people.some((p) => p.id === input.assigneeId)) {
     return { ok: false, status: 422, error: "El responsable principal debe ser una persona del directorio." };
   }
   if (!DATE_RE.test(input.start ?? "") || !DATE_RE.test(input.due ?? "")) {
@@ -659,7 +879,7 @@ export function createTask(
     id, iniId: input.iniId, title, desc,
     assigneeId: input.assigneeId,
     coAssigneeIds: [...new Set(input.coAssigneeIds ?? [])]
-      .filter((c) => c !== input.assigneeId && PEOPLE.some((p) => p.id === c)),
+      .filter((c) => c !== input.assigneeId && cat().people.some((p) => p.id === c)),
     start: input.start, due: input.due,
     status: "POR_HACER",
     requiresEvidence: Boolean(input.requiresEvidence),
@@ -669,7 +889,7 @@ export function createTask(
   tasks().push(task);
   baselines().set(id, { start: task.start, due: task.due });
   void persist("tarea nueva", (db) => db.projectTask.create({ data: {
-    id, iniCode: task.iniId, title: task.title, desc: task.desc, assigneeId: task.assigneeId, coAssigneeIds: task.coAssigneeIds ?? [],
+    id, companyId: cid(), iniCode: task.iniId, title: task.title, desc: task.desc, assigneeId: task.assigneeId, coAssigneeIds: task.coAssigneeIds ?? [],
     start: new Date(task.start), due: new Date(task.due), baseStart: new Date(task.start), baseDue: new Date(task.due),
     status: task.status, requiresEvidence: task.requiresEvidence ?? false, evidenceIds: [], dependsOn: task.dependsOn ?? [], note: task.note ?? null,
   } }));
@@ -680,7 +900,7 @@ export function createTask(
 export function archiveTask(user: SessionUser, id: string): MutationResult {
   const t = getTask(id);
   if (!t) return { ok: false, status: 404, error: "La tarea no existe." };
-  const ini = INITIATIVES_FULL.find((i) => i.id === t.iniId)!;
+  const ini = cat().initiatives.find((i) => i.id === t.iniId)!;
   if (!can(user, "edit_tasks", ini.line)) {
     return { ok: false, status: 403, error: "Tu rol no puede archivar tareas de esta línea." };
   }
@@ -694,7 +914,7 @@ export function archiveTask(user: SessionUser, id: string): MutationResult {
   const idx = tasks().findIndex((x) => x.id === id);
   archived().push(tasks()[idx]);
   tasks().splice(idx, 1);
-  void persist("tarea archivada", (db) => db.projectTask.update({ where: { id }, data: { archived: true } }));
+  void persist("tarea archivada", (db) => db.projectTask.update({ where: { companyId_id: { companyId: cid(), id } }, data: { archived: true } }));
   audit(user, "task", id, `tarea archivada («${t.title}»)`);
   return { ok: true, task: t };
 }
@@ -761,7 +981,7 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
   const allIds = [id, ...preview.shifts.map((s) => s.id)];
   for (const tid of allIds) {
     const t = getTask(tid)!;
-    const ini = INITIATIVES_FULL.find((i) => i.id === t.iniId)!;
+    const ini = cat().initiatives.find((i) => i.id === t.iniId)!;
     if (!can(user, "edit_tasks", ini.line)) {
       return {
         ok: false, status: 403,
@@ -779,7 +999,7 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
   void persist("cascada", async (db) => {
     for (const tid of allIds) {
       const t = getTask(tid)!;
-      await db.projectTask.update({ where: { id: tid }, data: { start: new Date(t.start), due: new Date(t.due) } });
+      await db.projectTask.update({ where: { companyId_id: { companyId: cid(), id: tid } }, data: { start: new Date(t.start), due: new Date(t.due) } });
     }
   });
   audit(user, "task", id,
@@ -824,7 +1044,7 @@ export function captureVariable(
 ): { ok: true; capture: VariableCapture } | { ok: false; status: number; error: string } {
   const v = PRACTICES.find((x) => x.code === varId);
   if (!v) return { ok: false, status: 404, error: "La práctica no existe en el mapa." };
-  if (g.__pgtdPublished) {
+  if (S().published) {
     return { ok: false, status: 422, error: "El corte A3 ya está publicado: la captura está cerrada." };
   }
   if (!can(user, "capture_maturity", v.line)) {
@@ -862,7 +1082,7 @@ export function captureVariable(
   const what = Object.keys(patch).filter((k2) => patch[k2 as keyof typeof patch] !== undefined).join(", ");
   audit(user, "task", varId, `captura A3: ${what}`);
   const row = { perception: next.perception ?? null, evidence: next.evidence ?? null, level: next.level ?? null, note: next.note ?? null, by: next.by, at: new Date(next.at) };
-  void persist("captura", (db) => db.practiceCapture.upsert({ where: { cut_practice: { cut: "A3", practice: varId } }, update: row, create: { cut: "A3", practice: varId, ...row } }));
+  void persist("captura", (db) => db.practiceCapture.upsert({ where: { companyId_cut_practice: { companyId: cid(), cut: "A3", practice: varId } }, update: row, create: { companyId: cid(), cut: "A3", practice: varId, ...row } }));
   return { ok: true, capture: next };
 }
 
@@ -873,8 +1093,9 @@ export function publishCapture(
   if (!can(user, "publish_maturity")) {
     return { ok: false, status: 403, error: "Solo el advisor publica mediciones." };
   }
-  if (g.__pgtdPublished) {
-    return { ok: true, assessment: g.__pgtdPublished };
+  const already = S().published;
+  if (already) {
+    return { ok: true, assessment: already };
   }
   const prog = captureProgress();
   if (prog.level < prog.total) {
@@ -884,7 +1105,7 @@ export function publishCapture(
     };
   }
   // dimensión = promedio simple de sus prácticas calificadas
-  const base = staticCurrent().scores!;
+  const base = latestPublished(cat().assessments)!.scores!;
   const scores: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
   for (const d of DIMS) {
     const avg = d.prac.reduce((a, x) => a + capture().get(x.code)!.level!, 0) / d.prac.length;
@@ -901,14 +1122,13 @@ export function publishCapture(
     note: `Publicada desde la plataforma por ${user.name}: 68 prácticas calificadas, autoevaluación ${prog.perception}/68, evidencia ${prog.dik}/68.`,
     scores,
   };
-  g.__pgtdPublished = assessment;
+  S().published = assessment;
   audit(user, "task", "A3", "medición A3 publicada (corte vigente)");
   void dimOf;
   void persist("publicación", async (db) => {
-    const company = await db.company.findFirst();
-    if (!company) return;
+    const company = { id: cid() };
     await db.assessment.upsert({
-      where: { id: "A3" },
+      where: { companyId_id: { companyId: company.id, id: "A3" } },
       update: { status: "PUBLICADA", note: assessment.note, publishedAt: new Date(), publishedBy: user.name },
       create: { id: "A3", companyId: company.id, label: assessment.label, period: assessment.period, status: "PUBLICADA", note: assessment.note, publishedAt: new Date(), publishedBy: user.name },
     });
@@ -925,7 +1145,7 @@ export function publishCapture(
    sola respuesta (la última reemplaza). El advisor y el líder ven todas;
    los demás solo la propia. */
 
-function testStore() { return g.__pgtdTests!; }
+function testStore() { return S().tests; }
 
 export const getTestResponses = (user: SessionUser): TestResponse[] => {
   const all = [...testStore().values()];
@@ -964,17 +1184,16 @@ export function saveTestResponse(
   testStore().set(user.email, response);
   audit(user, "task", `test:${user.email}`, `test de capacidad empresarial guardado (${answered} respuestas)`);
   void persist("test", async (db) => {
-    const company = await db.company.findFirst();
-    if (!company) return;
+    const company = { id: cid() };
     const data = { name: response.name, role: response.role, cargo: response.cargo ?? null, objetivo: response.objetivo ?? null, answers: response.r, at: new Date(response.at) };
-    await db.testResponse.upsert({ where: { email: response.email }, update: data, create: { email: response.email, companyId: company.id, ...data } });
+    await db.testResponse.upsert({ where: { companyId_email: { companyId: company.id, email: response.email } }, update: data, create: { email: response.email, companyId: company.id, ...data } });
   });
   return { ok: true, response };
 }
 
 /* ═══ Informe de una página del test: campos que completa el consultor ═══ */
 
-function testNotes() { return g.__pgtdTestNotes!; }
+function testNotes() { return S().testNotes; }
 export const getTestNotes = (): Record<string, TestNotes> => Object.fromEntries(testNotes());
 
 export function setTestNotes(
@@ -996,7 +1215,7 @@ export function setTestNotes(
   testNotes().set(id, notes);
   audit(user, "task", `test:${id}`, "informe del test actualizado");
   const data = { restriccion: notes.restriccion ?? null, evidencias: notes.evidencias ?? null, accion: notes.accion ?? null, noNecesita: notes.noNecesita ?? null, by: notes.by, at: new Date(notes.at) };
-  void persist("notas del test", (db) => db.testNote.upsert({ where: { participant: id }, update: data, create: { participant: id, ...data } }));
+  void persist("notas del test", (db) => db.testNote.upsert({ where: { companyId_participant: { companyId: cid(), participant: id } }, update: data, create: { companyId: cid(), participant: id, ...data } }));
   return { ok: true, notes };
 }
 
@@ -1005,7 +1224,7 @@ export function setTestNotes(
    quién responde ni desde dónde. El advisor y el líder ven el conteo y los
    agregados; nadie ve una respuesta individual con nombre. */
 
-function f2Store() { return g.__pgtdF2!; }
+function f2Store() { return S().f2; }
 const F2_CODES = new Set([...DIMS.flatMap((d) => d.f2.map((q) => q.code)), ...F2_GENERAL.map((q) => q.code)]);
 
 export const getF2Responses = (): F2Response[] => [...f2Store()];
@@ -1034,8 +1253,7 @@ export function saveF2Response(
   };
   f2Store().push(response);
   void persist("fuente 2", async (db) => {
-    const company = await db.company.findFirst();
-    if (!company) return;
+    const company = { id: cid() };
     await db.teamResponse.create({ data: { id: response.id, companyId: company.id, area: response.area ?? null, answers: response.r, abierta: response.abierta ?? null, at: new Date(response.at) } });
   });
   return { ok: true, response, total: f2Store().length };
@@ -1077,14 +1295,14 @@ export function platformResponses(): OdResponse[] {
    todos. El valor se suma a la serie del seed (overlay) y el motor —salud,
    proyección, alertas— lo lee como un punto más. */
 
-const kpiReports = () => g.__pgtdKpiReports!;
+const kpiReports = () => S().kpiReports;
 
 export const getKpiReports = (code?: string): KpiReport[] =>
   code ? (kpiReports().get(code) ?? []) : [...kpiReports().values()].flat();
 
 /** Serie efectiva: seed + valores reportados, ordenada por periodo. */
 export function effectiveKpiSeries(code: string): KpiFull["series"] {
-  const k = KPI_CATALOG.find((x) => x.code === code);
+  const k = cat().kpis.find((x) => x.code === code);
   if (!k) return [];
   const reported = (kpiReports().get(code) ?? []).map((r) => ({
     period: r.period, value: r.value, note: r.note ?? `Reportado por ${r.by}`,
@@ -1094,7 +1312,7 @@ export function effectiveKpiSeries(code: string): KpiFull["series"] {
 }
 
 export const effectiveKpis = (): KpiFull[] =>
-  KPI_CATALOG.map((k) => ({ ...k, series: effectiveKpiSeries(k.code) }));
+  cat().kpis.map((k) => ({ ...k, series: effectiveKpiSeries(k.code) }));
 
 export function reportKpi(
   user: SessionUser,
@@ -1103,7 +1321,7 @@ export function reportKpi(
   value: number,
   note?: string,
 ): { ok: true; report: KpiReport; series: KpiFull["series"] } | { ok: false; status: number; error: string } {
-  const k = KPI_CATALOG.find((x) => x.code === code);
+  const k = cat().kpis.find((x) => x.code === code);
   if (!k) return { ok: false, status: 404, error: "El indicador no existe en el catálogo." };
 
   if (!can(user, "report_kpi", k.line)) {
@@ -1140,7 +1358,7 @@ export function reportKpi(
 
   audit(user, "task", code, `KPI ${code}: ${period} = ${value} ${k.unit}${existing >= 0 ? " (corrección)" : ""}`);
   const row = { value: report.value, note: report.note ?? null, by: report.by, at: new Date(report.at) };
-  void persist("kpi", (db) => db.kpiReport.upsert({ where: { code_period: { code, period } }, update: row, create: { code, period, ...row } }));
+  void persist("kpi", (db) => db.kpiReport.upsert({ where: { companyId_code_period: { companyId: cid(), code, period } }, update: row, create: { companyId: cid(), code, period, ...row } }));
   return { ok: true, report, series: effectiveKpiSeries(code) };
 }
 
@@ -1148,14 +1366,14 @@ export function reportKpi(
    Avance, estado, factores de éxito (con historial de revisiones), bitácora
    y próximo hito. El responsable de línea edita SU línea. */
 
-const iniOverrides = () => g.__pgtdIniOverrides!;
+const iniOverrides = () => S().iniOverrides;
 
 export const getInitiativeOverrides = (): Record<string, InitiativeOverride> =>
   Object.fromEntries(iniOverrides());
 
 /** Iniciativas efectivas: seed + cambios hechos desde la plataforma. */
 export function effectiveInitiatives(): InitiativeFull[] {
-  return INITIATIVES_FULL.map((i) => {
+  return cat().initiatives.map((i) => {
     const o = iniOverrides().get(i.id);
     if (!o) return i;
     return {
@@ -1186,7 +1404,7 @@ export function updateInitiative(
     nextMilestone?: { date: string; text: string };
   },
 ): { ok: true; initiative: InitiativeFull } | { ok: false; status: number; error: string } {
-  const base = INITIATIVES_FULL.find((i) => i.id === id);
+  const base = cat().initiatives.find((i) => i.id === id);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
 
   if (!can(user, "edit_initiatives", base.line)) {
@@ -1259,7 +1477,7 @@ export function updateInitiative(
 
   iniOverrides().set(id, o);
   audit(user, "task", id, `iniciativa: ${changes.join(" · ")}`);
-  void persist("iniciativa", (db) => db.initiativeOverride.upsert({ where: { code: id }, update: { data: o }, create: { code: id, data: o } }));
+  void persist("iniciativa", (db) => db.initiativeOverride.upsert({ where: { companyId_code: { companyId: cid(), code: id } }, update: { data: o }, create: { companyId: cid(), code: id, data: o } }));
   return { ok: true, initiative: effectiveInitiatives().find((i) => i.id === id)! };
 }
 
@@ -1269,8 +1487,8 @@ export function updateInitiative(
    decisión de tiempo (implementar, preparar, backlog, renunciar) la toma la
    gerencia o el advisor y debe ser admisible con el consolidado. */
 
-const evals = () => g.__pgtdEvals!;
-const decisions = () => g.__pgtdDecisions!;
+const evals = () => S().evals;
+const decisions = () => S().decisions;
 
 export const getEvaluations = (iniId?: string): Evaluation[] =>
   [...evals().values()].filter((e) => !iniId || e.iniId === iniId);
@@ -1285,7 +1503,7 @@ export function evaluateInitiative(
   iniId: string,
   input: { scores: Record<string, unknown>; type: Record<string, unknown>; notes?: Record<string, unknown> },
 ): { ok: true; evaluation: Evaluation; consolidated: Consolidated } | { ok: false; status: number; error: string } {
-  const base = INITIATIVES_FULL.find((i) => i.id === iniId);
+  const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
   if (!can(user, "evaluate_initiatives", base.line)) {
     return {
@@ -1323,7 +1541,7 @@ export function evaluateInitiative(
   evals().set(key, evaluation);
   audit(user, "task", iniId, `priorización: D${scores.D} E${scores.E} M${scores.M} L${scores.L}`);
   void persist("evaluación", (db) => db.initiativeEvaluation.upsert({
-    where: { id: key }, update: { data: evaluation }, create: { id: key, iniCode: iniId, by: evaluation.by, data: evaluation },
+    where: { companyId_id: { companyId: cid(), id: key } }, update: { data: evaluation }, create: { companyId: cid(), id: key, iniCode: iniId, by: evaluation.by, data: evaluation },
   }));
   return { ok: true, evaluation, consolidated: consolidatedOf(iniId) };
 }
@@ -1333,7 +1551,7 @@ export function decideInitiative(
   iniId: string,
   input: { decision: unknown; rationale?: unknown },
 ): { ok: true; decision: DecisionRecord } | { ok: false; status: number; error: string } {
-  const base = INITIATIVES_FULL.find((i) => i.id === iniId);
+  const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
   if (!can(user, "decide_initiatives")) {
     return { ok: false, status: 403, error: "La decisión de tiempo la toma la gerencia o el advisor; tu rol evalúa o consulta." };
@@ -1348,24 +1566,24 @@ export function decideInitiative(
   const rec: DecisionRecord = { iniId, decision: d, rationale: rationale || undefined, by: user.email.toLowerCase(), name: user.name, at: new Date().toISOString() };
   decisions().set(iniId, rec);
   audit(user, "task", iniId, `decisión de tiempo → ${d}`);
-  void persist("decisión", (db) => db.initiativeDecision.upsert({ where: { code: iniId }, update: { data: rec }, create: { code: iniId, data: rec } }));
+  void persist("decisión", (db) => db.initiativeDecision.upsert({ where: { companyId_code: { companyId: cid(), code: iniId } }, update: { data: rec }, create: { companyId: cid(), code: iniId, data: rec } }));
   return { ok: true, decision: rec };
 }
 
 /* ── medición efectiva: la publicada en el store manda sobre el seed ── */
 
-export const publishedAssessment = (): AssessmentRecord | null => g.__pgtdPublished ?? null;
+export const publishedAssessment = (): AssessmentRecord | null => S().published ?? null;
 
 export const effectiveCurrent = (): AssessmentRecord =>
-  g.__pgtdPublished ?? staticCurrent();
+  S().published ?? latestPublished(cat().assessments)!;
 
 export const effectivePrevious = (): AssessmentRecord | null =>
-  g.__pgtdPublished ? staticCurrent() : staticPrevious();
+  S().published ? latestPublished(cat().assessments)! : previousPublished(cat().assessments);
 
 export const effectiveAssessments = () =>
-  SCORES_HISTORY.map((a) =>
-    a.id === "A3" && g.__pgtdPublished
-      ? { id: a.id, label: a.label, period: g.__pgtdPublished!.period, status: "PUBLICADA" as const, note: g.__pgtdPublished!.note }
+  cat().assessments.map((a) =>
+    a.id === "A3" && S().published
+      ? { id: a.id, label: a.label, period: S().published!.period, status: "PUBLICADA" as const, note: S().published!.note }
       : { id: a.id, label: a.label, period: a.period, status: a.status, note: a.note });
 
 /* ═══ Administración de usuarios (manage_users) ═══
@@ -1384,26 +1602,16 @@ export type ManagedUser = {
   at?: string;
 };
 
-import { DEMO_USERS } from "@/data/demo";
 
-const users = () => {
-  const gu = g as unknown as { __pgtdUsers?: ManagedUser[] };
-  if (!gu.__pgtdUsers) {
-    gu.__pgtdUsers = DEMO_USERS.map((u) => ({
-      email: u.email, name: u.name, role: u.role as SessionUser["role"],
-      line: "line" in u ? (u as { line?: number }).line : undefined,
-      active: true, seeded: true,
-    }));
-  }
-  return gu.__pgtdUsers;
-};
+/** Usuarios de la empresa activa (los admins de plataforma viven aparte). */
+const users = () => S().users;
 
 export const getUsers = (): ManagedUser[] => users();
 
 export const findActiveUser = (email: string): ManagedUser | null =>
   users().find((u) => u.active && u.email.toLowerCase() === email.toLowerCase()) ?? null;
 
-const VALID_ROLES: SessionUser["role"][] = ["ADMIN", "CONSULTOR", "LIDER", "RESPONSABLE", "DIRECTIVO"];
+const VALID_ROLES: SessionUser["role"][] = ["CONSULTOR", "LIDER", "RESPONSABLE", "DIRECTIVO"];   // los roles de empresa; ADMIN es de plataforma
 
 export function createUser(
   actor: SessionUser,
@@ -1423,7 +1631,10 @@ export function createUser(
     return { ok: false, status: 422, error: "El nombre debe ser completo (mínimo 5 caracteres)." };
   }
   if (!VALID_ROLES.includes(input.role)) {
-    return { ok: false, status: 422, error: "Rol inválido." };
+    return { ok: false, status: 422, error: input.role === "ADMIN" ? "El rol de administrador es de la plataforma, no de una empresa." : "Rol inválido." };
+  }
+  if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) {
+    return { ok: false, status: 422, error: "Ese correo es de un administrador de la plataforma." };
   }
   if (input.role === "RESPONSABLE" && ![1, 2, 3, 4].includes(input.line ?? 0)) {
     return { ok: false, status: 422, error: "El responsable de línea exige una línea (4.1–4.4)." };
@@ -1436,12 +1647,34 @@ export function createUser(
   };
   users().push(user);
   void persist("usuario", async (db) => {
-    const company = await db.company.findFirst();
-    if (!company) return;
-    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, active: true }, create: { email, name: user.name, role: user.role, line: user.line ?? null, passwordHash: "", companyId: company.id } });
+    const companyId = cid();
+    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, active: true, companyId }, create: { email, name: user.name, role: user.role, line: user.line ?? null, passwordHash: "", companyId } });
   });
   audit(actor, "task", email, `usuario creado (${input.role}${user.line ? ` · ${capName(user.line)}` : ""})`);
   return { ok: true, user };
+}
+
+/** Reasigna un usuario de la empresa activa a otra empresa (solo admin de plataforma). */
+export async function moveUser(actor: SessionUser, email: string, toSlug: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma reasigna usuarios entre empresas." };
+  const u = users().find((x) => x.email.toLowerCase() === email.toLowerCase());
+  if (!u) return { ok: false, status: 404, error: "El usuario no existe en esta empresa." };
+  const target = g.companies.get(toSlug);
+  if (!target) return { ok: false, status: 404, error: "La empresa destino no existe." };
+  if (toSlug === currentTenant()) return { ok: false, status: 422, error: "El usuario ya está en esa empresa." };
+  users().splice(users().indexOf(u), 1);
+  let dest = g.tenants.get(toSlug);
+  if (!dest) {
+    dest = newState(toSlug, toSlug === DEFAULT_TENANT ? ANDINA_CATALOG : emptyCatalog(target), target.dbId);
+    g.tenants.set(toSlug, dest);
+  }
+  dest.users.push({ ...u, seeded: false });
+  if (hasDb() && target.dbId) {
+    const companyId = target.dbId;
+    await persist("usuario", (db) => db.user.updateMany({ where: { email: u.email.toLowerCase() }, data: { companyId } }));
+  }
+  audit(actor, "task", u.email, `usuario reasignado a la empresa ${target.name}`);
+  return { ok: true };
 }
 
 /** Contraseña real contra la base (bcrypt). Devuelve null cuando no hay base
@@ -1472,11 +1705,10 @@ export async function setUserPassword(
   const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
   const hash = await (bcrypt.default ?? bcrypt).hash(password, 10);
   const db = await prisma();
-  const company = await db.company.findFirst();
   await db.user.upsert({
     where: { email: target.email.toLowerCase() },
     update: { passwordHash: hash },
-    create: { email: target.email.toLowerCase(), name: target.name, role: target.role, line: target.line ?? null, passwordHash: hash, companyId: company?.id ?? "" },
+    create: { email: target.email.toLowerCase(), name: target.name, role: target.role, line: target.line ?? null, passwordHash: hash, companyId: target.role === "ADMIN" ? null : cid() },
   });
   audit(actor, "task", target.email, "contraseña fijada");
   return { ok: true };
@@ -1499,10 +1731,6 @@ export function updateUser(
     if (!patch.active && u.email.toLowerCase() === actor.email.toLowerCase()) {
       return { ok: false, status: 422, error: "No puedes desactivar tu propia cuenta." };
     }
-    if (!patch.active && u.role === "ADMIN" &&
-        users().filter((x) => x.active && x.role === "ADMIN").length <= 1) {
-      return { ok: false, status: 422, error: "Debe quedar al menos un administrador activo." };
-    }
     u.active = patch.active;
     changes.push(patch.active ? "reactivado" : "desactivado");
   }
@@ -1511,9 +1739,8 @@ export function updateUser(
     if (!VALID_ROLES.includes(patch.role)) {
       return { ok: false, status: 422, error: "Rol inválido." };
     }
-    if (u.role === "ADMIN" && patch.role !== "ADMIN" &&
-        users().filter((x) => x.active && x.role === "ADMIN").length <= 1) {
-      return { ok: false, status: 422, error: "Debe quedar al menos un administrador activo." };
+    if (patch.role === "ADMIN") {
+      return { ok: false, status: 422, error: "El rol de administrador es de la plataforma, no de una empresa." };
     }
     changes.push(`rol ${u.role} → ${patch.role}`);
     u.role = patch.role;
@@ -1608,11 +1835,7 @@ export const INTEGRATION_SPECS: Record<IntegrationKey, IntegrationSpec> = {
   },
 };
 
-const integrations = () => {
-  const gi = g as unknown as { __pgtdIntegrations?: Map<IntegrationKey, IntegrationConfig> };
-  if (!gi.__pgtdIntegrations) gi.__pgtdIntegrations = new Map();
-  return gi.__pgtdIntegrations;
-};
+const integrations = () => S().integrations;
 
 const maskSecret = (v: string) => (v.length <= 4 ? "••••" : "•".repeat(Math.min(12, v.length - 4)) + v.slice(-4));
 
@@ -1671,7 +1894,7 @@ export function setIntegration(
   cfg.updatedBy = user.name;
   cfg.at = new Date().toISOString();
   integrations().set(key, cfg);
-  void persist("integración", (db) => db.integration.upsert({ where: { key }, update: { enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null }, create: { key, enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null } }));
+  void persist("integración", (db) => db.integration.upsert({ where: { companyId_key: { companyId: cid(), key } }, update: { enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null }, create: { companyId: cid(), key, enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null } }));
   audit(user, "task", `int-${key}`, `integración ${spec.name} ${patch.enabled !== undefined ? (patch.enabled ? "activada" : "desactivada") : "configurada"}`);
   return { ok: true };
 }
@@ -1749,16 +1972,20 @@ export const BRANDING_TIMEZONES = [
 const MAX_WIDTHS = ["1100px", "1220px", "1260px", "1440px", "1600px", "100%"];
 
 const branding = () => {
-  const gb = g as unknown as { __pgtdBranding?: Branding };
-  if (!gb.__pgtdBranding) gb.__pgtdBranding = structuredClone(DEFAULT_BRANDING);
+  const gb = S();
+  if (!gb.branding) {
+    gb.branding = structuredClone(DEFAULT_BRANDING);
+    gb.branding.institutionName = cat().company.name;
+    gb.branding.shortName = cat().company.shortName;
+  }
   // migración defensiva: si el objeto en memoria viene de una versión
   // anterior del modelo, se completan las claves faltantes con el default
   for (const [k, v] of Object.entries(DEFAULT_BRANDING)) {
-    if ((gb.__pgtdBranding as Record<string, unknown>)[k] === undefined) {
-      (gb.__pgtdBranding as Record<string, unknown>)[k] = structuredClone(v);
+    if ((gb.branding as Record<string, unknown>)[k] === undefined) {
+      (gb.branding as Record<string, unknown>)[k] = structuredClone(v);
     }
   }
-  return gb.__pgtdBranding;
+  return gb.branding;
 };
 
 export const getBranding = (): Branding => ({ ...branding() });
@@ -1877,7 +2104,7 @@ export function setBranding(
 
   if (changes.length === 0) return err("Nada que actualizar.");
   audit(user, "branding", "branding", `branding: ${changes.join(" · ")}`);
-  void persist("branding", (db) => db.branding.upsert({ where: { id: "default" }, update: { data: { ...b } }, create: { id: "default", data: { ...b } } }));
+  void persist("branding", (db) => db.branding.upsert({ where: { companyId: cid() }, update: { data: { ...b } }, create: { companyId: cid(), data: { ...b } } }));
   return { ok: true, branding: { ...b } };
 }
 
@@ -1887,11 +2114,7 @@ export const getBrandingHistory = () =>
 
 /* ═══ Notificaciones: estado de lectura por usuario ═══ */
 
-const notifRead = () => {
-  const gn = g as unknown as { __pgtdNotifRead?: Map<string, Set<string>> };
-  if (!gn.__pgtdNotifRead) gn.__pgtdNotifRead = new Map();
-  return gn.__pgtdNotifRead;
-};
+const notifRead = () => S().notifRead;
 
 export const getNotifRead = (email: string): Set<string> =>
   notifRead().get(email) ?? new Set();
@@ -1900,32 +2123,18 @@ export function markNotifRead(email: string, ids: string[]) {
   const set = notifRead().get(email) ?? new Set<string>();
   for (const id of ids) set.add(id);
   notifRead().set(email, set);
-  void persist("notificaciones", (db) => db.notifRead.upsert({ where: { email }, update: { ids: [...set] }, create: { email, ids: [...set] } }));
+  void persist("notificaciones", (db) => db.notifRead.upsert({ where: { companyId_email: { companyId: cid(), email } }, update: { ids: [...set] }, create: { companyId: cid(), email, ids: [...set] } }));
 }
 
 /* ═══ Utilidad para la demo ═══ */
 
 export function resetStore() {
-  g.__pgtdTasks = TASKS_SEED.map((t) => ({ ...t }));
-  g.__pgtdEvidence = new Map(EVIDENCE_CATALOG.map((e) => [e.id, e.status]));
-  g.__pgtdAudit = [];
-  g.__pgtdComments = [];
-  g.__pgtdUploads = [];
-  g.__pgtdBaseline = new Map(TASKS_SEED.map((t) => [t.id, { start: t.start, due: t.due }]));
-  g.__pgtdCapture = new Map();
-  g.__pgtdPublished = null;
-  g.__pgtdKpiReports = new Map();
-  g.__pgtdTests = new Map();
-  g.__pgtdF2 = [];
-  g.__pgtdTestNotes = new Map();
-  g.__pgtdIniOverrides = new Map();
-  g.__pgtdEvals = new Map(EVALUATIONS_SEED.map((e) => [`${e.iniId}|${e.by}`, e]));
-  g.__pgtdDecisions = new Map(DECISIONS_SEED.map((d) => [d.iniId, d]));
-  (g as unknown as { __pgtdArchived?: Task[] }).__pgtdArchived = [];
-  (g as unknown as { __pgtdNotifRead?: Map<string, Set<string>> }).__pgtdNotifRead = new Map();
-  (g as unknown as { __pgtdUsers?: ManagedUser[] }).__pgtdUsers = undefined;
-  (g as unknown as { __pgtdIntegrations?: Map<string, unknown> }).__pgtdIntegrations = new Map();
-  (g as unknown as { __pgtdBranding?: Branding }).__pgtdBranding = undefined;
+  // la empresa activa vuelve a su catálogo; las demás empresas no se tocan
+  const slug = currentTenant();
+  const c = g.companies.get(slug);
+  if (!c) return;
+  g.tenants.set(slug, newState(slug, slug === DEFAULT_TENANT ? ANDINA_CATALOG : (g.tenants.get(slug)?.catalog ?? emptyCatalog(c)), c.dbId));
 }
 
-export { DEMO_TODAY, responsible };
+export { DEMO_TODAY };
+

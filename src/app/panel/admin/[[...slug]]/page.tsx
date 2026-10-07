@@ -1,7 +1,8 @@
 "use client";
 
 // Módulo de administración (manage_users, solo consultor):
-//   /panel/admin/usuarios       → cuentas, roles y estado
+//   /panel/admin/empresas       → empresas (tenants): crear, editar, desactivar, eliminar
+//   /panel/admin/usuarios       → cuentas, roles y estado de la empresa activa
 //   /panel/admin/permisos       → la matriz RBAC documentada
 //   /panel/admin/integraciones  → OpenAI · Cloudflare R2 · AWS SES
 //   /panel/admin/branding       → identidad de la plataforma (aplicada en vivo)
@@ -15,13 +16,14 @@ import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "
 import { BrandingTab } from "./branding-tab";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save,
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft,
 } from "lucide-react";
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "usuarios" | "permisos" | "integraciones" | "branding";
+type Tab = "empresas" | "usuarios" | "permisos" | "integraciones" | "branding";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
+  { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
   { id: "permisos", label: "Permisos de acceso", icon: KeyRound },
   { id: "integraciones", label: "Integraciones", icon: Plug },
@@ -32,12 +34,13 @@ export default function AdminPage() {
   const me = useUser();
   const canUsers = useCan("manage_users");
   const canPlatform = useCan("manage_platform");
+  const canCompanies = useCan("manage_companies");
   const router = useRouter();
   const params = useParams<{ slug?: string[] }>();
 
   // el consultor solo administra usuarios y roles; el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "usuarios" ? canUsers : canPlatform);
+    t.id === "usuarios" ? canUsers : t.id === "empresas" ? canCompanies : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
@@ -70,7 +73,8 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {tab === "usuarios" && <UsersTab />}
+      {tab === "empresas" && <EmpresasTab />}
+      {tab === "usuarios" && <UsersTab canCompanies={canCompanies} />}
       {tab === "permisos" && <PermisosTab />}
       {tab === "integraciones" && <IntegracionesTab />}
       {tab === "branding" && <BrandingTab />}
@@ -93,7 +97,134 @@ const ROLE_LABEL: Record<ManagedUser["role"], string> = {
   DIRECTIVO: "Directivo",
 };
 
-function UsersTab() {
+type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string };
+
+function EmpresasTab() {
+  const me = useUser();
+  const [companies, setCompanies] = useState<CompanyLite[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<CompanyLite | null>(null);
+  const refetch = useCallback(async () => {
+    const res = await fetch("/api/td/empresas");
+    if (res.ok) setCompanies((await res.json()).companies);
+  }, []);
+  useEffect(() => { refetch(); }, [refetch]);
+  const call = async (method: string, body?: Record<string, unknown>, query = "") => {
+    setSaving(true); setError(null);
+    const res = await fetch(`/api/td/empresas${query}`, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+    const ok = res.ok;
+    if (!ok) setError((await res.json().catch(() => null))?.error ?? `Error ${res.status}`);
+    else await refetch();
+    setSaving(false);
+    return ok;
+  };
+  const activate = async (slug: string) => {
+    const res = await fetch("/api/auth/empresa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
+    if (res.ok) window.location.href = "/panel";
+  };
+  return (
+    <>
+      {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <Card className="rise rise-1 overflow-hidden">
+          <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios" />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-[12.5px]">
+              <thead>
+                <tr className="border-b border-line-strong bg-surface-2/60">
+                  {["Empresa", "Sector · ciudad", "Origen", "Estado", ""].map((h) => (
+                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {companies.map((c) => (
+                  <tr key={c.slug} className={`border-b border-line last:border-0 ${c.active ? "" : "opacity-50"} ${me.company?.slug === c.slug ? "bg-cyan-wash/40" : ""}`}>
+                    <td className="px-4 py-2.5">
+                      <div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[9.5px]">activa</span>}</div>
+                      <div className="num text-[10px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div>
+                    </td>
+                    <td className="px-4 py-2.5 text-muted">{c.sector || "—"}<div className="text-[10.5px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}</div></td>
+                    <td className="px-4 py-2.5"><span className="chip">{c.template === "demo" ? "Plantilla demo" : "Vacía"}</span></td>
+                    <td className="px-4 py-2.5"><span className={`chip ${c.active ? "chip-ok" : "chip-bad"}`}>{c.active ? "Activa" : "Desactivada"}</span></td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                      {me.company?.slug !== c.slug && c.active && (
+                        <button disabled={saving} onClick={() => activate(c.slug)} title="Operar esta empresa" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><ArrowRightLeft size={14} /></button>
+                      )}
+                      <button disabled={saving} onClick={() => setEditing(c)} title="Editar" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
+                      <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
+                      {c.slug !== "andina" && (
+                        <button disabled={saving} title="Eliminar con todos sus datos"
+                          onClick={() => { if (window.confirm(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
+                          className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <CompanyForm key={editing?.slug ?? "nueva"} saving={saving} initial={editing}
+          onCancel={() => setEditing(null)}
+          onSubmit={async (input) => { const ok = await call(editing ? "PATCH" : "POST", editing ? { slug: editing.slug, ...input } : input); if (ok) setEditing(null); return ok; }} />
+      </div>
+      <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
+        <ShieldCheck size={12} className="mt-0.5 shrink-0" />
+        Los roles (advisor, líder, responsable, junta) valen solo dentro de su empresa. Como admin de la plataforma operas la empresa activa que elijas en el menú lateral; la demo (Andina) no se elimina, solo se desactiva.
+      </p>
+    </>
+  );
+}
+
+function CompanyForm({ saving, initial, onSubmit, onCancel }: {
+  saving: boolean; initial: CompanyLite | null;
+  onSubmit: (input: Record<string, unknown>) => Promise<boolean>; onCancel: () => void;
+}) {
+  const [f, setF] = useState({
+    name: initial?.name ?? "", shortName: initial?.shortName ?? "", city: initial?.city ?? "", department: initial?.department ?? "",
+    sector: initial?.sector ?? "", size: initial?.size ?? "", ciiu: initial?.ciiu ?? "", sectorKey: initial?.sectorKey ?? "suministros-industriales", template: "vacia",
+  });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
+  return (
+    <Card className="rise rise-2 self-start">
+      <CardHeader title={initial ? `Editar · ${initial.name}` : "Nueva empresa"} sub={initial ? "identidad y sector" : "nace activa; elige si parte vacía o de la plantilla demo"} />
+      <div className="space-y-2.5 px-5 pb-5">
+        <input value={f.name} onChange={set("name")} placeholder="Nombre de la empresa" className="input !py-2 text-[12px]" />
+        <div className="grid grid-cols-2 gap-2">
+          <input value={f.shortName} onChange={set("shortName")} placeholder="Nombre corto" className="input !py-2 text-[12px]" />
+          <input value={f.ciiu} onChange={set("ciiu")} placeholder="CIIU (G4659)" className="input !py-2 text-[12px]" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input value={f.city} onChange={set("city")} placeholder="Ciudad" className="input !py-2 text-[12px]" />
+          <input value={f.department} onChange={set("department")} placeholder="Departamento" className="input !py-2 text-[12px]" />
+        </div>
+        <input value={f.sector} onChange={set("sector")} placeholder="Sector (p. ej. Distribución de suministros)" className="input !py-2 text-[12px]" />
+        <input value={f.size} onChange={set("size")} placeholder="Tamaño (p. ej. 85 colaboradores · 3 sedes)" className="input !py-2 text-[12px]" />
+        {!initial && (
+          <select value={f.template} onChange={set("template")} className="input !py-2 text-[12px]">
+            <option value="vacia">Empezar vacía (solo el mapa 4Shine)</option>
+            <option value="demo">Copiar la plantilla demo (objetivos, KPI, iniciativas, personas y tareas de ejemplo)</option>
+          </select>
+        )}
+        <div className="flex gap-2">
+          <button onClick={async () => { if (await onSubmit(f) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "" }); }}
+            disabled={saving || f.name.trim().length < 3}
+            className="btn-primary flex-1 !py-2 text-[12.5px] disabled:opacity-40">
+            {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Building2 size={13} />}
+            {initial ? "Guardar cambios" : "Crear empresa"}
+          </button>
+          {initial && <button onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function UsersTab({ canCompanies }: { canCompanies: boolean }) {
+  const me = useUser();
+  const [companies, setCompanies] = useState<CompanyLite[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +232,11 @@ function UsersTab() {
   const refetch = useCallback(async () => {
     const res = await fetch("/api/td/users");
     if (res.ok) setUsers((await res.json()).users);
-  }, []);
+    if (canCompanies) {
+      const rc = await fetch("/api/td/empresas");
+      if (rc.ok) setCompanies((await rc.json()).companies);
+    }
+  }, [canCompanies]);
   useEffect(() => { refetch(); }, [refetch]);
 
   const mutate = async (method: "POST" | "PATCH", body: Record<string, unknown>) => {
@@ -122,13 +257,13 @@ function UsersTab() {
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <Card className="rise rise-1 overflow-hidden">
-          <CardHeader title={`Cuentas (${users.length})`}
-            sub="los usuarios del seed no se eliminan: se desactivan" />
+          <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
+            sub="roles válidos solo en esta empresa · los usuarios iniciales no se eliminan: se desactivan" />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-line-strong bg-surface-2/60">
-                  {["Usuario", "Rol", "Capacidad", "Estado", ""].map((h) => (
+                  {["Usuario", "Rol", "Capacidad", "Estado", canCompanies ? "Empresa" : ""].map((h) => (
                     <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>
                   ))}
                 </tr>
@@ -144,7 +279,7 @@ function UsersTab() {
                       <select value={u.role} disabled={saving}
                         onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })}
                         className="input w-auto !py-1 pr-7 !text-[11.5px]">
-                        {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).map((r) => (
+                        {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => (
                           <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                         ))}
                       </select>
@@ -166,6 +301,13 @@ function UsersTab() {
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                      {canCompanies && companies.length > 1 && (
+                        <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa"
+                          onChange={(e) => { if (e.target.value && e.target.value !== me.company?.slug && window.confirm(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
+                          className="input mr-1 w-auto !py-1 pr-6 !text-[11px]">
+                          {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
+                        </select>
+                      )}
                       <button disabled={saving}
                         onClick={() => mutate("PATCH", { email: u.email, active: !u.active })}
                         title={u.active ? "Desactivar" : "Reactivar"}
@@ -212,7 +354,7 @@ function NewUserCard({ saving, onCreate }: {
           placeholder="correo@empresa.com" className="input !py-2 text-[12px]" />
         <select value={role} onChange={(e) => setRole(e.target.value as ManagedUser["role"])}
           className="input !py-2 text-[12px]">
-          {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).map((r) => (
+          {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => (
             <option key={r} value={r}>{ROLE_LABEL[r]}</option>
           ))}
         </select>
@@ -250,7 +392,8 @@ const ACTION_DESC: Record<Action, string> = {
   capture_maturity: "Capturar la medición en curso (percepción de su ámbito)",
   publish_maturity: "Calificar D/I/K y nivel, y publicar mediciones",
   verify_evidence: "Verificar evidencia — la garantía de independencia",
-  manage_users: "Administrar usuarios y roles",
+  manage_users: "Administrar usuarios y roles de la empresa",
+  manage_companies: "Crear, editar, desactivar y eliminar empresas",
   manage_platform: "Integraciones, branding y configuración de la plataforma",
 };
 

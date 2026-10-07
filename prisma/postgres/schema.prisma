@@ -1,6 +1,7 @@
 // 4Shine Empresas · Plataforma de gestión estratégica — Algoritmo T
 // Variante PostgreSQL del esquema (producción). Se mantiene idéntica a
-// prisma/schema.prisma salvo el proveedor; una prueba lo verifica.
+// prisma/schema.prisma salvo el proveedor; una prueba lo verifica. Sin servicios
+// externos; el mismo esquema migra a PostgreSQL cambiando el datasource.
 // El mapa (capacidades, dimensiones, prácticas, evidencias) no se persiste:
 // es la definición del sistema (src/data/4shine.json). Aquí viven los datos
 // de cada empresa: usuarios, mediciones, respuestas, gestión y proyectos.
@@ -16,205 +17,263 @@ datasource db {
 // ─── Identidad ───────────────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  passwordHash  String
-  role          String    @default("DIRECTIVO")   // ADMIN | CONSULTOR | LIDER | RESPONSABLE | DIRECTIVO
-  line          Int?      // 1..4 (capacidad) si es RESPONSABLE
-  companyId     String
-  company       Company   @relation(fields: [companyId], references: [id])
-  active        Boolean   @default(true)
-  failedLogins  Int       @default(0)
-  lockedUntil   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    @default("DIRECTIVO") // ADMIN | CONSULTOR | LIDER | RESPONSABLE | DIRECTIVO
+  line         Int? // 1..4 (capacidad) si es RESPONSABLE
+  companyId    String? // null = admin de plataforma
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  active       Boolean   @default(true)
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 // ─── Empresa ─────────────────────────────────────────────────────────────────
 
 model Company {
-  id         String  @id @default(cuid())
-  slug       String  @unique
-  name       String
-  shortName  String
-  city       String
-  department String
-  sector     String?
-  size       String?
-  logoUrl    String?
-  active     Boolean @default(true)
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  shortName   String
+  city        String
+  department  String
+  sector      String?
+  size        String?
+  sectorKey   String? // referencia sectorial (src/data/sector/<key>.json)
+  ciiu        String?
+  financials  Json? // estados financieros de cierre (COP millones)
+  territories Json? // presencia por departamento
+  template    String  @default("vacia") // demo | vacia
+  logoUrl     String?
+  active      Boolean @default(true)
+  createdBy   String?
 
-  users         User[]
-  assessments   Assessment[]
-  kpis          Kpi[]
-  initiatives   Initiative[]
-  testResponses TestResponse[]
-  teamResponses TeamResponse[]
-  createdAt     DateTime @default(now())
+  users           User[]
+  assessments     Assessment[]
+  kpis            Kpi[]
+  initiatives     Initiative[]
+  testResponses   TestResponse[]
+  teamResponses   TeamResponse[]
+  responsibles    Responsible[]
+  objectives      CmiObjective[]
+  people          Person[]
+  tasks           ProjectTask[]
+  comments        TaskComment[]
+  files           FileAsset[]
+  kpiReports      KpiReport[]
+  iniOverrides    InitiativeOverride[]
+  evaluations     InitiativeEvaluation[]
+  decisions       InitiativeDecision[]
+  integrations    Integration[]
+  branding        Branding?
+  notifReads      NotifRead[]
+  captures        PracticeCapture[]
+  evidences       Evidence[]
+  testNotes       TestNote[]
+  dimensionScores DimensionScore[]
+  createdAt       DateTime               @default(now())
 }
 
 // ─── Gobierno del modelo: responsables y cuadro de mando ─────────────────────
 
 model Responsible {
-  id            String @id            // R01…
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id            String // R01…
   cargo         String
   dependencia   String
-  rolPlataforma String               // LIDER | RESPONSABLE | APORTA | CONSULTA
+  rolPlataforma String // LIDER | RESPONSABLE | APORTA | CONSULTA
+
+  @@id([companyId, id])
 }
 
 model CmiObjective {
-  id          String @id             // OE-01…
-  perspective String                 // financiera | clientes | procesos | aprendizaje
+  companyId   String
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id          String // OE-01…
+  perspective String // financiera | clientes | procesos | aprendizaje
   name        String
-  kpis        Json                   // códigos de KPI (resultados clave)
-  line        Int?                   // capacidad dominante
+  kpis        Json // códigos de KPI (resultados clave)
+  line        Int? // capacidad dominante
+
+  @@id([companyId, id])
 }
 
 // ─── Diagnóstico 4Shine-OD: mediciones, captura y respuestas ─────────────────
 
 model Assessment {
-  id          String   @id             // A1, A2, A3…
   companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id          String // A1, A2, A3…
   label       String
-  period      String                   // "2027-02"
-  status      String   @default("EN_CAPTURA")   // EN_CAPTURA | PUBLICADA
+  period      String // "2027-02"
+  status      String           @default("EN_CAPTURA") // EN_CAPTURA | PUBLICADA
   note        String?
   publishedAt DateTime?
   publishedBy String?
   scores      DimensionScore[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime         @default(now())
 
+  @@id([companyId, id])
   @@index([companyId, publishedAt(sort: Desc)])
 }
 
 model DimensionScore {
-  id           String  @id @default(cuid())
+  id           String     @id @default(cuid())
+  companyId    String
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   assessmentId String
-  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  line         Int     // capacidad 1..4
-  dimension    String  // DIR-1 … MUL-5
-  value        Float   // madurez 1..5
-  target       Float?  // meta a 24 meses
+  assessment   Assessment @relation(fields: [companyId, assessmentId], references: [companyId, id], onDelete: Cascade)
+  line         Int // capacidad 1..4
+  dimension    String // DIR-1 … MUL-5
+  value        Float // madurez 1..5
+  target       Float? // meta a 24 meses
 
-  @@unique([assessmentId, dimension])
+  @@unique([companyId, assessmentId, dimension])
 }
 
 /// Captura del corte en curso, una fila por práctica: autoevaluación del
 /// responsable, marca de evidencia y nivel del advisor.
 model PracticeCapture {
   id         String   @id @default(cuid())
-  cut        String   @default("A3")   // corte al que pertenece
-  practice   String                    // DIR-1.1 … MUL-5.4
-  perception Int?                      // 1–5
-  evidence   String?                   // V | P | N
-  level      Int?                      // 1–5
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cut        String   @default("A3") // corte al que pertenece
+  practice   String // DIR-1.1 … MUL-5.4
+  perception Int? // 1–5
+  evidence   String? // V | P | N
+  level      Int? // 1–5
   note       String?
   by         String
   at         DateTime @default(now())
 
-  @@unique([cut, practice])
+  @@unique([companyId, cut, practice])
 }
 
 /// Estado de verificación de la evidencia de cada práctica del mapa.
 model Evidence {
-  id         String   @id              // EV-01…
-  practice   String   @unique          // código de práctica
-  status     String   @default("PENDIENTE")   // VERIFICADA | PENDIENTE
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id         String // EV-01…
+  practice   String // código de práctica
+  status     String    @default("PENDIENTE") // VERIFICADA | PENDIENTE
   note       String?
   fileUrl    String?
   verifiedBy String?
   verifiedAt DateTime?
+
+  @@id([companyId, id])
+  @@unique([companyId, practice])
 }
 
 model TestResponse {
-  email     String   @id
   companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email     String
   name      String
   role      String
   cargo     String?
   objetivo  String?
-  answers   Json                      // {1..24: 1–5 | "NI", 25: A–E}
+  answers   Json // {1..24: 1–5 | "NI", 25: A–E}
   at        DateTime @default(now())
+
+  @@id([companyId, email])
 }
 
 /// Campos del informe de una página que completa el consultor. El participante
 /// puede ser un correo de la plataforma o un participante de la demo (demo:<i>),
 /// por eso no lleva relación.
 model TestNote {
-  participant String   @id            // email o demo:<i>
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  participant String // email o demo:<i>
   restriccion String?
   evidencias  String?
   accion      String?
   noNecesita  String?
   by          String
   at          DateTime @default(now())
+
+  @@id([companyId, participant])
 }
 
 /// Respuesta anónima de la Fuente 2: sin usuario, sin correo, sin origen.
 model TeamResponse {
-  id        String   @id              // F2-0001…
   companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String // F2-0001…
   area      String?
-  answers   Json                      // F2-DIR1.a … F2-G6 → 1–5
+  answers   Json // F2-DIR1.a … F2-G6 → 1–5
   abierta   String?
   at        DateTime @default(now())
 
+  @@id([companyId, id])
   @@index([companyId, at])
 }
 
 // ─── Gestor de proyectos ─────────────────────────────────────────────────────
 
 model Person {
-  id            String @id            // P01…
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id            String // P01…
   name          String
   cargo         String
   dependencia   String
-  email         String @unique
-  responsibleId String                // enlaza con Responsible
-  tasks         ProjectTask[]
+  email         String
+  responsibleId String // enlaza con Responsible
+
+  @@id([companyId, id])
+  @@unique([companyId, email])
 }
 
 model ProjectTask {
-  id               String   @id       // T-i1-01…
-  initiativeId     String?            // Initiative.id (cuid) — se resuelve en seed
-  iniCode          String             // i1… (código estable del catálogo)
+  companyId        String
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id               String // T-i1-01…
+  initiativeId     String? // Initiative.id (cuid) — se resuelve en seed
+  iniCode          String // i1… (código estable del catálogo)
   title            String
   desc             String?
   assigneeId       String
   coAssigneeIds    Json?
-  assignee         Person   @relation(fields: [assigneeId], references: [id])
   start            DateTime
   due              DateTime
-  status           String   // POR_HACER | EN_CURSO | EN_REVISION | HECHA | BLOQUEADA
-  requiresEvidence Boolean  @default(false)
+  status           String // POR_HACER | EN_CURSO | EN_REVISION | HECHA | BLOQUEADA
+  requiresEvidence Boolean   @default(false)
   evidenceIds      Json?
   dependsOn        Json?
   note             String?
-  baseStart        DateTime?          // línea base del plan aprobado (se congela)
+  baseStart        DateTime? // línea base del plan aprobado (se congela)
   baseDue          DateTime?
-  archived         Boolean  @default(false)
+  archived         Boolean   @default(false)
 
-  @@index([iniCode, status])
-  @@index([assigneeId, due])
+  @@id([companyId, id])
+  @@index([companyId, iniCode, status])
+  @@index([companyId, assigneeId, due])
 }
 
 model TaskComment {
-  id       Int      @id @default(autoincrement())
-  taskId   String
-  author   String
-  role     String
-  text     String
-  at       DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taskId    String
+  author    String
+  role      String
+  text      String
+  at        DateTime @default(now())
 
-  @@index([taskId, at])
+  @@index([companyId, taskId, at])
 }
 
 model FileAsset {
-  id         String   @id            // EV-U01…
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id         String // EV-U01…
   taskId     String
   title      String
   kind       String
@@ -226,75 +285,98 @@ model FileAsset {
   status     String   @default("PENDIENTE")
   at         DateTime @default(now())
 
-  @@index([taskId])
+  @@id([companyId, id])
+  @@index([companyId, taskId])
 }
 
 /// Valor de KPI reportado desde la plataforma (se suma a la serie del seed).
 model KpiReport {
-  id     String   @id @default(cuid())
-  code   String
-  period String
-  value  Float
-  note   String?
-  by     String
-  at     DateTime @default(now())
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code      String
+  period    String
+  value     Float
+  note      String?
+  by        String
+  at        DateTime @default(now())
 
-  @@unique([code, period])
+  @@unique([companyId, code, period])
 }
 
 /// Cambios de una iniciativa hechos desde la plataforma (sobre el catálogo del seed).
 model InitiativeOverride {
-  code String @id             // i1…
-  data Json
-  at   DateTime @updatedAt
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code      String // i1…
+  data      Json
+  at        DateTime @updatedAt
+
+  @@id([companyId, code])
 }
 
 /// Matriz 4Shine de priorización: una evaluación por evaluador e iniciativa.
 model InitiativeEvaluation {
-  id      String   @id            // "<iniCode>|<email>"
-  iniCode String
-  by      String
-  data    Json
-  at      DateTime @updatedAt
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String // "<iniCode>|<email>"
+  iniCode   String
+  by        String
+  data      Json
+  at        DateTime @updatedAt
 
-  @@index([iniCode])
+  @@id([companyId, id])
+  @@index([companyId, iniCode])
 }
 
 /// Decisión de tiempo por iniciativa (implementar, preparar, backlog, renunciar).
 model InitiativeDecision {
-  code String   @id             // i1…
-  data Json
-  at   DateTime @updatedAt
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code      String // i1…
+  data      Json
+  at        DateTime @updatedAt
+
+  @@id([companyId, code])
 }
 
 /// Configuración de integraciones (claves en texto plano: solo para la base local).
 model Integration {
-  key       String   @id       // openai | r2 | ses
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String // openai | r2 | ses
   enabled   Boolean  @default(false)
   fields    Json
   updatedBy String?
   at        DateTime @updatedAt
+
+  @@id([companyId, key])
 }
 
-/// Branding de la plataforma (una fila).
+/// Branding de cada empresa (una fila por empresa).
 model Branding {
-  id   String   @id @default("default")
-  data Json
-  at   DateTime @updatedAt
+  companyId String   @id
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  data      Json
+  at        DateTime @updatedAt
 }
 
 /// Notificaciones leídas por usuario.
 model NotifRead {
-  email String @id
-  ids   Json
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email     String
+  ids       Json
+
+  @@id([companyId, email])
 }
 
 // ─── Indicadores ─────────────────────────────────────────────────────────────
 
 model Kpi {
-  id            String  @id @default(cuid())
+  id            String       @id @default(cuid())
   companyId     String
-  company       Company @relation(fields: [companyId], references: [id])
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   line          Int
   code          String
   name          String
@@ -304,10 +386,10 @@ model Kpi {
   unit          String
   source        String?
   ownerRole     String?
-  frequency     String   @default("TRIMESTRAL")
+  frequency     String       @default("TRIMESTRAL")
   baseline      Float?
   target        Float?
-  goodDirection String  @default("up")
+  goodDirection String       @default("up")
   values        KpiValue[]
   initiatives   Initiative[]
 
@@ -319,7 +401,7 @@ model KpiValue {
   id        String   @id @default(cuid())
   kpiId     String
   kpi       Kpi      @relation(fields: [kpiId], references: [id], onDelete: Cascade)
-  period    String   // "2026-T1"
+  period    String // "2026-T1"
   value     Float
   note      String?
   createdAt DateTime @default(now())
@@ -330,49 +412,49 @@ model KpiValue {
 // ─── Ruta e iniciativas ──────────────────────────────────────────────────────
 
 model Initiative {
-  id             String   @id @default(cuid())
-  companyId      String
-  company        Company  @relation(fields: [companyId], references: [id])
-  code           String                            // i1…
-  line           Int
-  name           String
-  description    String?
-  subsistema     String?
-  cmiObjective   String?
-  dimension      String?                           // dimensión que instala (DIR-4…)
-  framework      String?                           // framework que trabaja (F04…)
-  metaResultado  String?
-  actions        Json?
-  log            Json?
-  nextMilestone  Json?
-  horizon        String                            // CORTO | MEDIANO
-  impact         Int
-  feasibility    Int
-  urgency        Int      @default(3)
-  dependency     Int      @default(3)
-  status         String   @default("PLANEADA")
-  ownerRole      String?
-  startQuarter   String?
-  endQuarter     String?
-  budgetPlanned   Float   @default(0)
-  budgetCommitted Float   @default(0)
-  budgetExecuted  Float   @default(0)
-  progress       Int      @default(0)
-  kpiId          String?
-  kpi            Kpi?     @relation(fields: [kpiId], references: [id])
-  successFactors SuccessFactor[]
+  id              String          @id @default(cuid())
+  companyId       String
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code            String // i1…
+  line            Int
+  name            String
+  description     String?
+  subsistema      String?
+  cmiObjective    String?
+  dimension       String? // dimensión que instala (DIR-4…)
+  framework       String? // framework que trabaja (F04…)
+  metaResultado   String?
+  actions         Json?
+  log             Json?
+  nextMilestone   Json?
+  horizon         String // CORTO | MEDIANO
+  impact          Int
+  feasibility     Int
+  urgency         Int             @default(3)
+  dependency      Int             @default(3)
+  status          String          @default("PLANEADA")
+  ownerRole       String?
+  startQuarter    String?
+  endQuarter      String?
+  budgetPlanned   Float           @default(0)
+  budgetCommitted Float           @default(0)
+  budgetExecuted  Float           @default(0)
+  progress        Int             @default(0)
+  kpiId           String?
+  kpi             Kpi?            @relation(fields: [kpiId], references: [id])
+  successFactors  SuccessFactor[]
 
   @@unique([companyId, code])
   @@index([companyId, horizon])
 }
 
 model SuccessFactor {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   initiativeId String
   initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
   name         String
-  state        String   @default("VERDE")
+  state        String     @default("VERDE")
   history      Json?
   note         String?
-  reviewedAt   DateTime @default(now())
+  reviewedAt   DateTime   @default(now())
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { withTenant } from "../td/_helpers";
 import { hydrateFromDb } from "@/server/store";
-import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { putObject } from "@/server/storage";
 
@@ -10,10 +10,7 @@ import { putObject } from "@/server/storage";
 const MAX = 8 * 1024 * 1024;
 const OK_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif", "image/x-icon"];
 
-export async function POST(req: Request) {
-  await hydrateFromDb();
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (!can(user, "manage_platform")) {
     return NextResponse.json({ error: "Solo el administrador de la plataforma sube recursos de marca." }, { status: 403 });
   }
@@ -30,4 +27,4 @@ export async function POST(req: Request) {
   const name = `${Date.now().toString(36)}-${safe}`;
   await putObject("branding", name, Buffer.from(await file.arrayBuffer()), file.type);
   return NextResponse.json({ url: `/api/branding-asset/${name}` }, { status: 201 });
-}
+});

@@ -4,9 +4,10 @@
 
 import { notFound } from "next/navigation";
 import { verifyPublicToken } from "@/lib/public-token";
-import { INSTITUTION, LINES, fmtCOP, fmtNum } from "@/data/demo";
+import { LINES, fmtCOP, fmtNum } from "@/data/demo";
 import { executiveSummary } from "@/lib/logic";
-import { hydrateFromDb } from "@/server/store";
+import { hydrateCompanies, companyBySlug } from "@/server/store";
+import { inTenant } from "@/app/api/td/_helpers";
 import { AlgoritmoMark } from "@/components/logo";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
 import { ShieldAlert, AlertTriangle, Eye } from "lucide-react";
@@ -25,12 +26,14 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function PublicView(
   { params }: { params: Promise<{ token: string }> },
 ) {
-  await hydrateFromDb();
   const { token } = await params;
   const [slug, ...rest] = token.split("-");
-  if (slug !== INSTITUTION.slug || !verifyPublicToken(slug, rest.join("-"))) notFound();
+  await hydrateCompanies();
+  const company = companyBySlug(slug);
+  if (!company?.active || !verifyPublicToken(slug, rest.join("-"))) notFound();
+  const INSTITUTION = company;
 
-  const s = executiveSummary();
+  const s = await inTenant(slug, async () => executiveSummary());
   const criticals = s.alerts.filter((a) => a.severity === 1);
   const inisSorted = [...s.initiatives].sort((a, b) => b.risk.score - a.risk.score);
 

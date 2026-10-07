@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { withTenant } from "../_helpers";
 import { PEOPLE } from "@/data/proyectos";
 import {
-  getTasks, getAudit, getEvidenceStatus, hydrateFromDb,
+  getTasks, getAudit, getEvidenceStatus,
   getComments, getUploads, deviationDays, portfolioSlippage, getBaseline,
 } from "@/server/store";
 import { taskAlerts, workload, portfolioTaskStats } from "@/lib/proyectos";
 import { can } from "@/lib/permissions";
 import { INITIATIVES_FULL, EVIDENCE_CATALOG } from "@/data/cmi";
 
-export async function GET() {
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  await hydrateFromDb();
+export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   // por tarea, si ESTE usuario puede editarla (la UI refleja lo que el servidor exige)
   const editable = Object.fromEntries(
     getTasks().map((t) => {
@@ -36,15 +33,12 @@ export async function GET() {
     deviations: Object.fromEntries(getTasks().map((t) => [t.id, deviationDays(t)])),
     baselines: Object.fromEntries(getTasks().map((t) => [t.id, getBaseline(t.id)])),
   });
-}
+});
 
 // POST /api/td/tasks — crea una tarea en una iniciativa. El store exige el
 // permiso edit_tasks por línea (403) y valida título, descripción,
 // responsable, fechas y dependencias (422 con explicación).
-export async function POST(req: Request) {
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  await hydrateFromDb();
+export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
@@ -55,4 +49,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   return NextResponse.json({ task: result.task }, { status: 201 });
-}
+});

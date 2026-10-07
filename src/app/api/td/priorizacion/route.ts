@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { guard } from "../_helpers";
-import { getSession } from "@/lib/session";
+import { withTenant } from "../_helpers";
 import { INITIATIVES_FULL } from "@/data/cmi";
 import { rank } from "@/lib/priorizacion";
-import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, hydrateFromDb } from "@/server/store";
+import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz 4Shine, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
-export async function GET(req: Request) {
-  await hydrateFromDb();
-  const denied = await guard();
-  if (denied) return denied;
-  const user = await getSession();
+export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const id = new URL(req.url).searchParams.get("id");
   const ranking = rank(INITIATIVES_FULL.map((i) => ({ id: i.id, horizon: i.horizon, line: i.line, name: i.name })), consolidatedOf);
   return NextResponse.json({
@@ -20,15 +15,12 @@ export async function GET(req: Request) {
     decisions: getDecisions(),
     ranking,
   });
-}
+});
 
 // POST /api/td/priorizacion — { id, evaluation: { scores, type, notes } } para
 // calificar, o { id, decision, rationale } para decidir el tiempo. El store
 // exige permisos (403) y las reglas de la matriz (422) con explicación.
-export async function POST(req: Request) {
-  await hydrateFromDb();
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "Cuerpo inválido: falta id" }, { status: 400 });
   const id = String(body.id).toLowerCase();
@@ -43,4 +35,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ decision: r.decision, consolidated: consolidatedOf(id) });
   }
   return NextResponse.json({ error: "Nada que registrar: envía evaluation o decision." }, { status: 400 });
-}
+});

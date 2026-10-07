@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { hydrateFromDb } from "@/server/store";
-import { guard } from "../_helpers";
+import { withTenant } from "../_helpers";
 import { publicToken } from "@/lib/public-token";
-import { INSTITUTION } from "@/data/demo";
+import { catalog } from "@/server/store";
 
 // Devuelve la URL pública de solo lectura (solo para usuarios autenticados).
-export async function GET(req: Request) {
-  await hydrateFromDb();
-  const denied = await guard();
-  if (denied) return denied;
+export const GET = withTenant(async (req: Request, _ctx: unknown, _user) => {
   const origin = new URL(req.url).origin;
   return NextResponse.json({
-    url: `${origin}/p/${INSTITUTION.slug}-${publicToken(INSTITUTION.slug)}`,
+    url: `${origin}/p/${catalog().company.slug}-${publicToken(catalog().company.slug)}`,
   });
-}
+});

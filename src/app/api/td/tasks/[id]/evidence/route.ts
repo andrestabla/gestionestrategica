@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { withTenant } from "../../../_helpers";
 import { randomBytes } from "crypto";
-import { getSession } from "@/lib/session";
-import { attachEvidence, hydrateFromDb } from "@/server/store";
+import { attachEvidence } from "@/server/store";
 import { putObject } from "@/server/storage";
 
 // POST /api/td/tasks/:id/evidence — multipart: adjunta el archivo del
@@ -10,13 +10,8 @@ import { putObject } from "@/server/storage";
 const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
 const ALLOWED = /\.(pdf|docx?|xlsx?|pptx?|png|jpe?g|zip|csv)$/i;
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  await hydrateFromDb();
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const POST = withTenant(async (req: Request,
+  { params }: { params: Promise<{ id: string }> }, user) => {
   const { id } = await params;
 
   const form = await req.formData().catch(() => null);
@@ -45,4 +40,4 @@ export async function POST(
 
   await putObject("uploads", key, Buffer.from(await file.arrayBuffer()), file.type || "application/octet-stream");
   return NextResponse.json({ evidence: result.evidence });
-}
+});

@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { guard } from "../_helpers";
-import { getSession } from "@/lib/session";
+import { withTenant } from "../_helpers";
 import { responsible } from "@/data/cmi";
 import { initiativeRisk } from "@/lib/logic";
-import { effectiveInitiatives, updateInitiative, hydrateFromDb } from "@/server/store";
+import { effectiveInitiatives, updateInitiative } from "@/server/store";
 
 // GET /api/td/initiatives — iniciativas EFECTIVAS (seed + cambios de la
 // plataforma) con responsable y riesgo recalculado.
-export async function GET() {
-  await hydrateFromDb();
-  const denied = await guard();
-  if (denied) return denied;
+export const GET = withTenant(async (_req: Request, _ctx: unknown, _user) => {
   return NextResponse.json({
     initiatives: effectiveInitiatives().map((i) => ({
       ...i,
@@ -18,15 +14,12 @@ export async function GET() {
       risk: initiativeRisk(i),
     })),
   });
-}
+});
 
 // POST /api/td/initiatives — actualiza una iniciativa: avance, estado,
 // revisión de un factor, entrada de bitácora o próximo hito. El store exige
 // permisos por línea (403) y reglas (422) con explicación.
-export async function POST(req: Request) {
-  await hydrateFromDb();
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
 
   const body = await req.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "Cuerpo inválido: falta id" }, { status: 400 });
@@ -39,4 +32,4 @@ export async function POST(req: Request) {
   return NextResponse.json({
     initiative: { ...result.initiative, risk: initiativeRisk(result.initiative) },
   });
-}
+});

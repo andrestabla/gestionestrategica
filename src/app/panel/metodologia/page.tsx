@@ -27,7 +27,8 @@ const ACTION_LABEL: Record<Action, string> = {
   capture_maturity: "Capturar la autoevaluación de un corte",
   publish_maturity: "Verificar evidencia, calificar y publicar mediciones",
   verify_evidence: "Verificar evidencia de tareas",
-  manage_users: "Administrar usuarios y roles",
+  manage_users: "Administrar usuarios y roles de la empresa",
+  manage_companies: "Crear, editar, desactivar y eliminar empresas",
   manage_platform: "Integraciones, branding y configuración",
 };
 const ROLES: { key: Role; label: string }[] = [

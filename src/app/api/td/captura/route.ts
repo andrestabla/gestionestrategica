@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
-import { captureVariable, captureProgress, hydrateFromDb } from "@/server/store";
+import { withTenant } from "../_helpers";
+import { captureVariable, captureProgress } from "@/server/store";
 
 // POST /api/td/captura — registra la captura de una práctica del corte A3:
 // autoevaluación (responsable de la capacidad o advisor), evidencia y nivel
 // (solo advisor). El store exige permisos (403) y rangos (422) con explicación.
-export async function POST(req: Request) {
-  await hydrateFromDb();
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
 
   const body = await req.json().catch(() => null);
   if (!body?.varId) return NextResponse.json({ error: "Cuerpo inválido: falta varId" }, { status: 400 });
@@ -19,4 +16,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   return NextResponse.json({ capture: result.capture, progress: captureProgress() });
-}
+});

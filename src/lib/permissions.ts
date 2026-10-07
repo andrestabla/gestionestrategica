@@ -5,8 +5,9 @@
 // UI la REFLEJA (controles ocultos o deshabilitados + chip de acceso).
 //
 // Roles:
-//  ADMIN       — administrador de la plataforma: usuarios, permisos,
-//                integraciones y branding. No opera la medición.
+//  ADMIN       — administrador de la plataforma (sin empresa propia): crea y
+//                administra empresas, usuarios, integraciones y branding. No
+//                opera la medición. Los demás roles valen solo dentro de su empresa.
 //  CONSULTOR   — advisor 4Shine: configura el diagnóstico, verifica
 //                evidencia y publica mediciones. Edición completa.
 //  LIDER       — líder de la empresa: administra iniciativas, tareas y KPI
@@ -32,7 +33,8 @@ export type Action =
   | "capture_maturity"  // capturar celdas de una medición en curso
   | "publish_maturity"  // publicar mediciones / configurar el instrumento
   | "verify_evidence"   // marcar evidencia como VERIFICADA
-  | "manage_users"      // administrar usuarios y roles
+  | "manage_users"      // administrar usuarios y roles de la empresa
+  | "manage_companies"  // crear, editar, desactivar y eliminar empresas (tenants)
   | "manage_platform";  // integraciones, branding y configuración de la plataforma
 
 export type Role = SessionUser["role"];
@@ -54,6 +56,7 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
   publish_maturity: { ADMIN: false, CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   verify_evidence:  { ADMIN: false, CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   manage_users:     { ADMIN: true,  CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
+  manage_companies: { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   manage_platform:  { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
 };
 
@@ -81,7 +84,7 @@ export const MODULE_ACTIONS: Record<ModuleKey, Action[]> = {
   proyectos:    ["view", "edit_tasks", "verify_evidence"],
   bi:           ["view"],
   metodologia:  ["view"],
-  admin:        ["view", "manage_users", "manage_platform"],
+  admin:        ["view", "manage_users", "manage_platform", "manage_companies"],
 };
 
 /** Descripción del acceso del usuario a un módulo, para mostrar en la UI. */

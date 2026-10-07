@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { hydrateFromDb } from "@/server/store";
-import { guard } from "../_helpers";
+import { withTenant } from "../_helpers";
 import { executiveSummary } from "@/lib/logic";
 
-export async function GET() {
-  await hydrateFromDb();
-  const denied = await guard();
-  if (denied) return denied;
+export const GET = withTenant(async (_req: Request, _ctx: unknown, _user) => {
   return NextResponse.json(executiveSummary());
-}
+});

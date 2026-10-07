@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
-import { verifyEvidence, verifyUploadedEvidence, getUploadById, hydrateFromDb } from "@/server/store";
+import { withTenant } from "../../_helpers";
+import { verifyEvidence, verifyUploadedEvidence, getUploadById } from "@/server/store";
 
 // PATCH /api/td/evidence/:id — verificación (solo CONSULTOR).
-export async function PATCH(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  await hydrateFromDb();
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const PATCH = withTenant(async (_req: Request,
+  { params }: { params: Promise<{ id: string }> }, user) => {
   const { id } = await params;
   if (getUploadById(id)) {
     const r = verifyUploadedEvidence(user, id);
@@ -21,4 +16,4 @@ export async function PATCH(
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   return NextResponse.json({ status: result.status });
-}
+});

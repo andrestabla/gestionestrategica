@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { withTenant } from "../_helpers";
 import { buildAlerts } from "@/lib/logic";
-import { getComments, getTask, getNotifRead, markNotifRead, hydrateFromDb } from "@/server/store";
+import { getComments, getTask, getNotifRead, markNotifRead } from "@/server/store";
 import { INITIATIVES_FULL } from "@/data/cmi";
 
 // GET /api/td/notifications — el buzón del usuario: alertas del motor
@@ -19,10 +19,7 @@ export type Notification = {
   mention?: boolean;
 };
 
-export async function GET() {
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  await hydrateFromDb();
+export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
 
   const read = getNotifRead(user.email);
   const items: Notification[] = [];
@@ -70,11 +67,9 @@ export async function GET() {
     items,
     unread: items.filter((i) => !i.read).length,
   });
-}
+});
 
-export async function POST(req: Request) {
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
 
   const body = await req.json().catch(() => null);
   if (!Array.isArray(body?.ids)) {
@@ -82,4 +77,4 @@ export async function POST(req: Request) {
   }
   markNotifRead(user.email, body.ids);
   return NextResponse.json({ ok: true });
-}
+});

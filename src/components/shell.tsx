@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { AlgoritmoMark } from "@/components/logo";
 import { CommandPalette, SearchButton } from "@/components/command-palette";
-import { INSTITUTION } from "@/data/demo";
+import type { SessionUser } from "@/lib/session";
 import { applyTheme } from "@/lib/branding";
 
 function PublicLinkButton() {
@@ -185,12 +185,21 @@ const ROLE_LABEL: Record<string, string> = {
 const RAIL_W = 232;
 const RAIL_W_MIN = 76;
 
-export function AppShell({ children, user }: {
+export function AppShell({ children, user, companies = [] }: {
   children: ReactNode;
-  user: { name: string; role: string };
+  user: SessionUser;
+  companies?: { slug: string; name: string; shortName: string; active: boolean }[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const company = user.company;
+  const [switching, setSwitching] = useState(false);
+  const switchCompany = async (slug: string) => {
+    setSwitching(true);
+    const res = await fetch("/api/auth/empresa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
+    setSwitching(false);
+    if (res.ok) { router.push("/panel"); router.refresh(); }
+  };
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -293,8 +302,22 @@ export function AppShell({ children, user }: {
             <div className="mb-3 overflow-hidden rounded-xl bg-white/[0.05] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
               <div className="spine h-[2.5px]" />
               <div className="px-4 py-3">
-                <div className="text-[12.5px] font-bold text-white">{brand?.shortName ?? INSTITUTION.shortName}</div>
-                <div className="mt-0.5 text-[10.5px] leading-snug text-white/40">{brand?.institutionName ?? INSTITUTION.name}</div>
+                {user.role === "ADMIN" && companies.length > 0 ? (
+                  <>
+                    <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Empresa activa</div>
+                    <select value={company?.slug ?? ""} disabled={switching}
+                      onChange={(e) => switchCompany(e.target.value)}
+                      className="mt-1 w-full rounded-lg bg-white/[0.08] px-2 py-1.5 text-[12px] font-bold text-white outline-none">
+                      {!company && <option value="">Elige una empresa…</option>}
+                      {companies.map((c) => <option key={c.slug} value={c.slug} className="text-ink">{c.name}{c.active ? "" : " (inactiva)"}</option>)}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[12.5px] font-bold text-white">{brand?.shortName ?? company?.shortName ?? "Empresa"}</div>
+                    <div className="mt-0.5 text-[10.5px] leading-snug text-white/40">{brand?.institutionName ?? company?.name ?? "Sin empresa asignada"}</div>
+                  </>
+                )}
               </div>
             </div>
           )}
