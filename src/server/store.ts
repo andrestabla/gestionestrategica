@@ -15,7 +15,7 @@ import {
   currentAssessment as staticCurrent, previousAssessment as staticPrevious,
   type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull,
 } from "@/data/cmi";
-import { PRACTICES, DIMS, dimOf } from "@/data/mapa";
+import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -78,6 +78,15 @@ export type TestResponse = {
   r: Record<string, number | string>;   // 1..24 → 1–5 | "NI" · 25 → A–E
 };
 
+/** Respuesta anónima de la Fuente 2 (percepción de equipos) desde el enlace de la empresa. */
+export type F2Response = {
+  id: string;                   // F2-0001…
+  at: string;                   // ISO
+  area?: string;                // corte opcional; solo se reporta con 5 o más respuestas
+  r: Record<string, number>;    // F2-DIR1.a … F2-G6 → 1–5
+  abierta?: string;
+};
+
 /** Valor de KPI reportado desde la plataforma (se suma a la serie del seed). */
 export type KpiReport = {
   code: string;
@@ -108,6 +117,7 @@ const g = globalThis as unknown as {
   __pgtdPublished?: AssessmentRecord | null;
   __pgtdKpiReports?: Map<string, KpiReport[]>;
   __pgtdTests?: Map<string, TestResponse>;
+  __pgtdF2?: F2Response[];
   __pgtdIniOverrides?: Map<string, InitiativeOverride>;
   __pgtdHydrated?: boolean;
 };
@@ -130,6 +140,7 @@ if (!g.__pgtdCapture) g.__pgtdCapture = new Map();
 if (g.__pgtdPublished === undefined) g.__pgtdPublished = null;
 if (!g.__pgtdKpiReports) g.__pgtdKpiReports = new Map();
 if (!g.__pgtdTests) g.__pgtdTests = new Map();
+if (!g.__pgtdF2) g.__pgtdF2 = [];
 if (!g.__pgtdIniOverrides) g.__pgtdIniOverrides = new Map();
 
 const tasks = () => g.__pgtdTasks!;
@@ -813,6 +824,42 @@ export function saveTestResponse(
   testStore().set(user.email, response);
   audit(user, "task", `test:${user.email}`, `test de capacidad empresarial guardado (${answered} respuestas)`);
   return { ok: true, response };
+}
+
+/* ═══ Fuente 2 · percepción de equipos (anónima) ═══
+   Llega por el enlace de la empresa, sin sesión ni identidad: no se guarda
+   quién responde ni desde dónde. El advisor y el líder ven el conteo y los
+   agregados; nadie ve una respuesta individual con nombre. */
+
+const f2Store = () => g.__pgtdF2!;
+const F2_CODES = new Set([...DIMS.flatMap((d) => d.f2.map((q) => q.code)), ...F2_GENERAL.map((q) => q.code)]);
+
+export const getF2Responses = (): F2Response[] => [...f2Store()];
+
+export function saveF2Response(
+  input: { r: Record<string, unknown>; area?: string; abierta?: string },
+): { ok: true; response: F2Response; total: number } | { ok: false; status: number; error: string } {
+  const r: Record<string, number> = {};
+  for (const code of F2_CODES) {
+    const v = input.r?.[code];
+    if (v === undefined || v === null || v === "") continue;
+    const n = typeof v === "string" ? Number(v) : v;
+    if (!inRange(n, 1, 5)) return { ok: false, status: 422, error: `La afirmación ${code} admite 1 a 5.` };
+    r[code] = n as number;
+  }
+  const answered = Object.keys(r).length;
+  if (answered < 30) {
+    return { ok: false, status: 422, error: `Responde al menos 30 de las 40 afirmaciones (llevas ${answered}).` };
+  }
+  const abierta = (input.abierta ?? "").trim().slice(0, 600);
+  const response: F2Response = {
+    id: `F2-${String(f2Store().length + 1).padStart(4, "0")}`,
+    at: new Date().toISOString(),
+    area: (input.area ?? "").trim().slice(0, 60) || undefined,
+    r, abierta: abierta || undefined,
+  };
+  f2Store().push(response);
+  return { ok: true, response, total: f2Store().length };
 }
 
 /* ═══ Reporte de valores de KPI ═══
@@ -1520,6 +1567,7 @@ export function resetStore() {
   g.__pgtdPublished = null;
   g.__pgtdKpiReports = new Map();
   g.__pgtdTests = new Map();
+  g.__pgtdF2 = [];
   g.__pgtdIniOverrides = new Map();
   (g as unknown as { __pgtdArchived?: Task[] }).__pgtdArchived = [];
   (g as unknown as { __pgtdNotifRead?: Map<string, Set<string>> }).__pgtdNotifRead = new Map();

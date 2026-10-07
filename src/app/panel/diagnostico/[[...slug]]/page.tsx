@@ -27,7 +27,7 @@ import type { VariableCapture, TestResponse } from "@/server/store";
 import type { Response } from "@/lib/od";
 import {
   Radar, Layers, ClipboardList, Flame, PenLine, ArrowLeft, CheckCircle2,
-  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send,
+  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users,
 } from "lucide-react";
 
 type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura";
@@ -553,6 +553,46 @@ function Brechas() {
   );
 }
 
+/* ═══ Fuente 2 · enlace anónimo y respuestas recibidas ═══ */
+
+type F2Api = { url: string | null; total: number; byArea: Record<string, number>; latest: string | null; open: string[] };
+
+function F2Card() {
+  const [d, setD] = useState<F2Api | null>(null);
+  const [copied, setCopied] = useState(false);
+  const load = useCallback(async () => { const r = await fetch("/api/td/f2"); if (r.ok) setD(await r.json()); }, []);
+  useEffect(() => { load(); }, [load]);
+  const copy = async () => { if (!d?.url) return; await navigator.clipboard.writeText(d.url); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const ok = (d?.total ?? 0) >= 8;
+  return (
+    <Card className="rise rise-2 mb-5">
+      <CardHeader title="Fuente 2 · Percepción de equipos" sub="encuesta anónima por enlace: sin cuenta, sin nombre, sin registro de origen · mínimo 8 respuestas o el 20 % de los mandos medios" />
+      <div className="grid gap-4 px-5 pb-5 lg:grid-cols-[1fr_280px]">
+        <div>
+          {d?.url ? (
+            <>
+              <div className="label mb-1">Enlace de la empresa</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="num min-w-0 flex-1 truncate rounded-lg bg-surface-2 px-3 py-2 text-[11.5px] text-ink-soft">{d.url}</code>
+                <button onClick={copy} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Link2 size={13} /> {copied ? "Copiado" : "Copiar enlace"}</button>
+                <a href={d.url} target="_blank" rel="noreferrer" className="chip">Abrir</a>
+              </div>
+              <p className="mt-2 text-[12px] leading-relaxed text-muted">Compártelo con los mandos medios y colaboradores en la ventana acordada en el kickoff. Las respuestas de percepción se recogen antes de mostrar cualquier resultado. Rotar el secreto del servidor invalida el enlace.</p>
+            </>
+          ) : <p className="text-[12.5px] text-muted">El enlace lo genera y comparte el advisor o el líder de la empresa.</p>}
+          {d && d.open.length > 0 && <div className="mt-3"><div className="label mb-1">Respuestas abiertas recibidas</div><ul className="space-y-1 text-[12px] text-ink-soft">{d.open.map((t, i) => <li key={i}>«{t}»</li>)}</ul></div>}
+        </div>
+        <div className="rounded-xl bg-surface-2 px-4 py-3">
+          <div className="flex items-center gap-2"><Users size={14} className="text-cyan-deep" /><span className="num text-[26px] font-extrabold text-ink">{d?.total ?? 0}</span><span className="text-[12px] text-muted">respuestas recibidas</span></div>
+          <div className="mt-1 text-[11.5px] text-muted">{ok ? "Muestra suficiente para reportar." : `Faltan ${8 - (d?.total ?? 0)} para la muestra mínima; con menos de cinco la Fuente 2 no se reporta y la madurez se calcula 55/45.`}</div>
+          {d && Object.keys(d.byArea).length > 0 && <div className="mt-2 space-y-0.5 text-[11.5px]">{Object.entries(d.byArea).map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-ink-soft">{k}</span><span className="num text-muted">{v}{v < 5 ? " · no se reporta por separado" : ""}</span></div>)}</div>}
+          {d?.latest && <div className="mt-2 text-[10.5px] text-faint">Última: {new Date(d.latest).toLocaleString("es-CO")}</div>}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 /* ═══ Captura A3 ═══ */
 
 type CaptureApi = { capture: { vars: Record<string, VariableCapture>; progress: { total: number; perception: number; dik: number; level: number } }; published: boolean };
@@ -601,6 +641,7 @@ function Captura() {
         )}
       </div>
       {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>{msg}</div>}
+      <F2Card />
       {!canCapture && <div className="mb-4 rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] text-muted">Tu rol consulta la captura; la registran los responsables de cada capacidad y el advisor.</div>}
       <div className="space-y-5">
         {dimsOf(cap).map((d) => (

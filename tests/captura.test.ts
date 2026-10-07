@@ -5,7 +5,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   captureVariable, captureProgress, publishCapture, effectiveCurrent, resetStore,
+  saveF2Response, getF2Responses, saveTestResponse, getTestResponses,
 } from "../src/server/store";
+import { F2_GENERAL } from "../src/data/mapa";
 import { maturityRollup } from "../src/lib/logic";
 import { PRACTICES, DIMS } from "../src/data/mapa";
 import type { SessionUser } from "../src/lib/session";
@@ -51,5 +53,28 @@ test("publicar exige las 68 prácticas calificadas; la dimensión es el promedio
   assert.equal(roll.cells.length, DIMS.length);
   const closed = captureVariable(consultor, "EJE-2.1", { level: 4 });
   assert.ok(!closed.ok && closed.status === 422);
+  resetStore();
+});
+
+test("fuente 2 anónima: valida códigos y mínimo de 30, no guarda identidad; el test guarda una respuesta por persona", () => {
+  resetStore();
+  const codes = [...DIMS.flatMap((d) => d.f2.map((q) => q.code)), ...F2_GENERAL.map((q) => q.code)];
+  const pocas = saveF2Response({ r: { "F2-DIR1.a": 3 } });
+  assert.ok(!pocas.ok && pocas.status === 422);
+  const mal = saveF2Response({ r: Object.fromEntries(codes.map((c) => [c, 7])) });
+  assert.ok(!mal.ok && mal.status === 422);
+  const ok = saveF2Response({ r: Object.fromEntries(codes.map((c) => [c, 4])), area: "Operaciones", abierta: "Que se cumpla lo acordado." });
+  assert.ok(ok.ok && ok.total === 1);
+  const saved = getF2Responses()[0];
+  assert.equal(Object.keys(saved).sort().join(","), "abierta,area,at,id,r");
+  assert.equal(Object.keys(saved.r).length, 40);
+  const t1 = saveTestResponse(resp3, { r: Object.fromEntries(Array.from({ length: 24 }, (_, i) => [String(i + 1), 3])) , cargo: "Operaciones" });
+  assert.ok(t1.ok);
+  const t2 = saveTestResponse(resp3, { r: { ...Object.fromEntries(Array.from({ length: 24 }, (_, i) => [String(i + 1), 2])), "25": "B" } });
+  assert.ok(t2.ok);
+  assert.equal(getTestResponses(consultor).length, 1);
+  assert.equal(getTestResponses(consultor)[0].r[1], 2);
+  assert.equal(getTestResponses(directivo).length, 0);
+  assert.ok(!(saveTestResponse(resp3, { r: { "1": 9 } }) as { ok: boolean }).ok);
   resetStore();
 });
