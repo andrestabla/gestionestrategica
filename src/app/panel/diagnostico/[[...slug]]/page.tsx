@@ -24,14 +24,14 @@ import { EVIDENCE_CATALOG, ASSESSMENTS, responsible } from "@/data/cmi";
 import { OD_RESPONSES } from "@/data/od-demo";
 import { consolidate, readTest, recommend, testContrast, avg, rangeText, type DimResult, type Consolidated } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
-import type { VariableCapture, TestResponse } from "@/server/store";
+import type { VariableCapture, TestResponse, TestNotes } from "@/server/store";
 import type { Response } from "@/lib/od";
 import {
   Radar, Layers, ClipboardList, Flame, PenLine, ArrowLeft, CheckCircle2,
-  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users,
+  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText,
 } from "lucide-react";
 
-type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura";
+type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura" | "informe";
 
 /* ═══ Corte que se lee: el publicado (demo A2) o el que se captura en la plataforma ═══ */
 
@@ -52,6 +52,7 @@ const TABS: { id: Tab; label: string; icon: typeof Radar; href: string }[] = [
   { id: "test", label: "Test", icon: ClipboardList, href: "/panel/diagnostico/test" },
   { id: "brechas", label: "Brechas", icon: Flame, href: "/panel/diagnostico/brechas" },
   { id: "captura", label: "Captura A3", icon: PenLine, href: "/panel/diagnostico/captura" },
+  { id: "informe", label: "Informe", icon: FileText, href: "/panel/diagnostico/informe" },
 ];
 
 const f1 = (x: number | null | undefined, d = 1) => (x == null ? "—" : fmtNum(x, d));
@@ -61,8 +62,9 @@ export default function DiagnosticoPage() {
   const params = useParams<{ slug?: string[] }>();
   const slug = params.slug ?? [];
   const seg = (slug[0] ?? "resumen").toLowerCase();
-  const tab: Tab = (["capacidad", "dimension", "test", "brechas", "captura"].includes(seg) ? seg : "resumen") as Tab;
+  const tab: Tab = (["capacidad", "dimension", "test", "brechas", "captura", "informe"].includes(seg) ? seg : "resumen") as Tab;
   const arg = slug[1] ? decodeURIComponent(slug[1]).toUpperCase() : null;
+  const arg2 = slug[2] ? decodeURIComponent(slug[2]) : null;
   const router = useRouter();
   const [od, setOd] = useState<OdApi | null>(null);
   const [src, setSrc] = useState<"vigente" | "curso" | null>(null);
@@ -79,6 +81,7 @@ export default function DiagnosticoPage() {
 
   return (
     <CutCtx.Provider value={cut}>
+      <div className="no-print">
       <PageHeader kicker="M1 · Diagnóstico 4Shine-OD" title="Capacidad organizacional de la empresa"
         desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico completo de tres fuentes sobre las 68 prácticas del mapa. Madurez = 0,40 × evidencia + 0,30 × dirección + 0,30 × equipos, con techo de evidencia."
         actions={<AccessChip module="madurez" />} />
@@ -100,15 +103,17 @@ export default function DiagnosticoPage() {
           </div>
         )}
       </div>
+      </div>
       {cut.src === "curso" && (
-        <div className="mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>
+        <div className="no-print mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>
           <b>{cut.label}.</b> {cut.C.f1n} autoevaluaciones, {cut.C.f2n} respuestas de equipos y evidencia {cut.C.hasF3 ? "registrada" : "pendiente"}; las dimensiones sin dato quedan en blanco. {od?.published ? "Es la medición vigente." : "No es la medición vigente hasta que el advisor publique el corte."}
         </div>
       )}
       {tab === "resumen" && <Resumen />}
       {tab === "capacidad" && <Capacidad n={Number(arg ?? 1)} />}
       {tab === "dimension" && arg && <Dimension code={arg} />}
-      {tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : <TestTab />)}
+      {tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : arg === "INFORME" && arg2 ? <InformeTest id={arg2} /> : <TestTab />)}
+      {tab === "informe" && <InformeDiagnostico />}
       {tab === "brechas" && <Brechas />}
       {tab === "captura" && <Captura />}
     </CutCtx.Provider>
@@ -390,7 +395,7 @@ function TestTab() {
               <tbody>
                 {tests.map((t, i) => (
                   <tr key={i} className="border-t border-line">
-                    <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[10.5px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""}</div></td>
+                    <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[10.5px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""} · <Link href={`/panel/diagnostico/test/informe/${i < demo.length ? `demo:${i}` : encodeURIComponent(stored[i - demo.length].email)}`} className="font-bold text-cyan-deep hover:underline">informe</Link></div></td>
                     {reads[i].caps.map((c) => <td key={c.n} className={`num px-2 py-2 text-center ${c.avg != null && c.avg < THRESHOLD ? "font-bold" : ""}`} style={c.avg != null && c.avg < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(c.avg, 2)}<div className="text-[9.5px] font-normal text-faint">{c.cov}/6</div></td>)}
                     <td className="px-3 py-2 font-semibold text-ink">{reads[i].stage}{reads[i].provisional ? " (provisional)" : ""}</td>
                     <td className="px-3 py-2 text-muted">{reads[i].hypothesis ?? "—"}</td>
@@ -551,6 +556,172 @@ function ResponderTest() {
       <div className="flex items-center justify-between gap-3">
         <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
         <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
+      </div>
+    </>
+  );
+}
+
+/* ═══ Informe de una página del test ═══ */
+
+function PrintField({ label, value, id, field, canEdit, onSave, placeholder }: {
+  label: string; value: string; id: string; field: keyof TestNotes; canEdit: boolean;
+  onSave: (id: string, field: keyof TestNotes, v: string) => Promise<void>; placeholder: string;
+}) {
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  return (
+    <div>
+      <div className="label mb-1">{label}</div>
+      {canEdit && <textarea className="input no-print min-h-[64px] text-[12.5px]" value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={() => { if (v !== value) onSave(id, field, v); }} />}
+      <p className={`${canEdit ? "only-print hidden" : ""} whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink-soft`}>{value || <span className="italic text-faint">Por completar en la devolución.</span>}</p>
+    </div>
+  );
+}
+
+function InformeTest({ id }: { id: string }) {
+  const { stored } = useTestResponses();
+  const canPublish = useCan("publish_maturity"), canLead = useCan("edit_initiatives");
+  const canEdit = canPublish || canLead;
+  const [notes, setNotes] = useState<Record<string, TestNotes>>({});
+  const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => { fetch("/api/td/test/informe").then((r) => (r.ok ? r.json() : null)).then((j) => j && setNotes(j.notes)).catch(() => null); }, []);
+  const demo = OD_RESPONSES.filter((x) => x.tipo === "test");
+  const resp: Response | null = id.startsWith("demo:") ? (demo[Number(id.slice(5))] ?? null) : (() => { const t = stored.find((x) => x.email === id); return t ? { ...toResponse(t), meta: { ...toResponse(t).meta, objetivo: t.objetivo, at: t.at } } : null; })();
+  if (!resp) return <div className="text-muted">{stored.length ? "No encontramos ese participante." : "Cargando el participante…"}</div>;
+  const T = readTest(resp.r);
+  const stage = STAGES.find((s) => s.name === T.stage)!;
+  const n = notes[id] ?? ({} as TestNotes);
+  const save = async (pid: string, field: keyof TestNotes, v: string) => {
+    const r = await fetch("/api/td/test/informe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: pid, [field]: v }) });
+    const j = await r.json();
+    if (!r.ok) setMsg(j.error ?? "No se pudo guardar."); else { setNotes((p) => ({ ...p, [pid]: j.notes })); setMsg("Guardado."); setTimeout(() => setMsg(null), 1500); }
+  };
+  const fecha = resp.meta.at ? new Date(String(resp.meta.at)) : new Date();
+  const main = T.patterns[0], support = T.patterns.slice(1, 3);
+  return (
+    <>
+      <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link>
+        <div className="flex items-center gap-2">{msg && <span className="text-[11.5px] text-muted">{msg}</span>}<button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button></div>
+      </div>
+      <div className="panel px-7 py-6">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
+          <div>
+            <div className="kicker">Test de capacidad empresarial · Informe de una página</div>
+            <h2 className="text-[20px] font-extrabold tracking-tight text-ink">{String(resp.meta.nombre)}</h2>
+            <div className="text-[12px] text-muted">{String(resp.meta.cargo ?? "")} · {fecha.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}</div>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
+        </div>
+
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          <div>
+            <div className="label mb-1">Etapa predominante</div>
+            <div className="grid grid-cols-5 gap-1">{STAGES.map((s) => <div key={s.name} className={`rounded-md px-1 py-1.5 text-center text-[10px] font-bold ${s.name === T.stage ? "text-white" : s.name === T.hypothesis ? "bg-cyan-wash text-cyan-deep" : "bg-surface-2 text-muted"}`} style={s.name === T.stage ? { background: "var(--navy)" } : undefined}>{s.name}</div>)}</div>
+            <p className="mt-2 text-[12.5px] text-ink"><b>{stage.name}{T.provisional ? " (provisional)" : ""}.</b> {stage.cond}{T.hypothesis && T.hypothesis !== T.stage ? ` En la pregunta 25 señaló un desafío propio de ${T.hypothesis}: ambas quedan como hipótesis.` : ""}</p>
+            <div className="label mb-1 mt-3">Objetivo de crecimiento a doce meses</div>
+            <p className="text-[12.5px] text-ink-soft">{String(resp.meta.objetivo ?? "") || <span className="italic text-faint">No registrado.</span>}</p>
+          </div>
+          <div>
+            <div className="label mb-1">Perfil de capacidades y cobertura de verificación</div>
+            {T.caps.map((c, i) => (
+              <div key={c.n} className="mb-1.5 text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{c.name}</b><span className="num text-muted">{f1(c.avg, 2)} · {c.cov}/6</span></div><div className="relative h-[6px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.avg ?? 0) / 5) * 100}%`, background: c.avg != null && c.avg < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div></div>
+            ))}
+            <p className="mt-1 text-[10.5px] text-faint">Umbral 3,0. Un promedio superior no elimina las debilidades de preguntas individuales.</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <PrintField label="Principal restricción" id={id} field="restriccion" canEdit={canEdit} onSave={save} placeholder="Práctica concreta que limita el objetivo" value={n.restriccion ?? ""} />
+          <PrintField label="Evidencias que la sostienen" id={id} field="evidencias" canEdit={canEdit} onSave={save} placeholder="Dos o tres hechos" value={n.evidencias ?? ""} />
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <div>
+            <div className="label mb-1">Prioridad principal</div>
+            {main ? <p className="text-[12.5px] text-ink"><b>{main.accion}</b> {main.hip} <span className="text-faint">(preguntas {main.qs.join(", ")})</span></p> : <p className="text-[12.5px] italic text-faint">Sin patrón dominante; la conversación se concentra en verificar las prácticas más altas.</p>}
+          </div>
+          <div>
+            <div className="label mb-1">Prioridades de soporte</div>
+            {support.length ? support.map((p) => <p key={p.hip} className="text-[12.5px] text-ink-soft"><b className="text-ink">{p.accion}</b> {p.hip}</p>) : <p className="text-[12.5px] italic text-faint">Máximo dos; ninguna adicional.</p>}
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <PrintField label="Acción a 90 días" id={id} field="accion" canEdit={canEdit} onSave={save} placeholder="Cambio específico, responsable, indicador y meta acordada" value={n.accion ?? ""} />
+          <PrintField label="Qué no necesita ahora" id={id} field="noNecesita" canEdit={canEdit} onSave={save} placeholder="Iniciativas que conviene posponer para proteger el foco" value={n.noNecesita ?? ""} />
+        </div>
+
+        <div className="mt-5 border-t border-line pt-3 text-[11.5px] text-muted">
+          <b className="text-ink">Pendientes de verificación:</b> {T.pending.length ? `preguntas ${T.pending.join(", ")}` : "ninguna"}. Una práctica declarada y no demostrada queda como máximo en nivel 2; la etapa y la prioridad se confirman con evidencia.
+          {n.by && <span className="block text-faint">Notas del consultor: {n.by}, {new Date(n.at).toLocaleDateString("es-CO")}.</span>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ═══ Informe del diagnóstico completo (cinco salidas, imprimible) ═══ */
+
+function InformeDiagnostico() {
+  const { C, label, scores: cutScores } = useCut();
+  const { scores: pubScores } = useMaturity();
+  const scores = cutScores ?? pubScores;
+  const R = recommend(C);
+  const flagged = C.dims.filter((d) => d.flags.length);
+  const strongest = [...C.caps].filter((c) => c.m != null).sort((a, b) => (b.m ?? 0) - (a.m ?? 0))[0];
+  const gap = C.caps.filter((c) => (c.m ?? 5) < THRESHOLD);
+  const head = (n: number, t: string, sub: string) => <div className="mb-3 flex items-baseline gap-3 border-b border-line pb-2"><span className="num text-[22px] font-extrabold text-cyan-deep">{n}</span><div><div className="text-[15px] font-extrabold text-ink">{t}</div><div className="text-[11.5px] text-muted">{sub}</div></div></div>;
+  return (
+    <>
+      <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[12.5px] text-muted">Las cinco salidas del diagnóstico completo sobre <b className="text-ink">{label}</b>, listas para la devolución de 90 minutos. El navegador las guarda en PDF.</p>
+        <button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button>
+      </div>
+      <div className="panel mb-5 px-7 py-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><div className="kicker">Diagnóstico 4Shine-OD · {label}</div><h2 className="text-[20px] font-extrabold tracking-tight text-ink">Andina Suministros</h2><div className="text-[12px] text-muted">{C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}</div></div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
+        </div>
+        {head(1, "Radar de las cuatro capacidades", "lectura ejecutiva con el umbral de brecha y el titular del patrón")}
+        <div className="grid gap-5 md:grid-cols-[300px_1fr] md:items-center">
+          <MaturityRadar size={300} scores={scores} />
+          <div>
+            <p className="text-[13.5px] leading-relaxed text-ink">{gap.length ? <>{gap.length === 1 ? "Una capacidad" : `${gap.length} capacidades`} por debajo del umbral: <b>{gap.map((c) => c.name).join(", ")}</b>. {gap.length >= 2 ? "Dos o más capacidades en brecha indican una falla de arquitectura, no un problema de esfuerzo." : "Las demás están suficientemente instaladas."}</> : "Ninguna capacidad está por debajo del umbral."}{strongest ? ` La capacidad más avanzada es ${strongest.name} (${f1(strongest.m)}).` : ""}</p>
+            <table className="mt-3 w-full text-[12px]"><thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="py-1">Capacidad</th><th className="num py-1 text-center">F1</th><th className="num py-1 text-center">F2</th><th className="num py-1 text-center">F3</th><th className="num py-1 text-center">Madurez</th></tr></thead><tbody>{C.caps.map((c) => <tr key={c.n} className="border-t border-line"><td className="py-1 font-bold text-ink">{c.name}</td><td className="num py-1 text-center">{f1(c.f1)}</td><td className="num py-1 text-center">{f1(c.f2)}</td><td className="num py-1 text-center">{f1(c.f3)}</td><td className="num py-1 text-center font-extrabold" style={{ color: (c.m ?? 5) < THRESHOLD ? "var(--bad)" : "var(--ink)" }}>{f1(c.m)}</td></tr>)}</tbody></table>
+          </div>
+        </div>
+      </div>
+      <div className="panel print-break mb-5 px-7 py-6">
+        {head(2, "Mapa de calor por dimensión", "las 17 dimensiones con sus tres fuentes, la madurez triangulada, el nivel y las marcas")}
+        <MaturityHeatmap scores={scores} />
+        <table className="mt-4 w-full text-[11.5px]"><thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="py-1">Dimensión</th><th className="num py-1 text-center">F1</th><th className="num py-1 text-center">F2</th><th className="num py-1 text-center">F3</th><th className="num py-1 text-center">Madurez</th><th className="py-1">Nivel</th><th className="py-1">Marcas</th></tr></thead><tbody>{C.dims.map((d) => <tr key={d.code} className="border-t border-line"><td className="py-1"><b className="num text-cyan-deep">{d.code}</b> {d.name}</td><td className="num py-1 text-center">{f1(d.f1)}</td><td className="num py-1 text-center">{f1(d.f2raw)}</td><td className="num py-1 text-center">{f1(d.f3)}</td><td className="num py-1 text-center font-extrabold">{f1(d.m)}</td><td className="py-1">{d.m != null ? levelName(d.m) : "—"}</td><td className="py-1 text-muted">{d.flags.map((f) => f.key).join(" · ")}</td></tr>)}</tbody></table>
+      </div>
+      <div className="panel print-break mb-5 px-7 py-6">
+        {head(3, "Brechas priorizadas", "máximo cinco, ordenadas por profundidad y efecto de arrastre, con la metodología y el framework que las instalan")}
+        {C.priorities.length === 0 && <p className="text-[12.5px] text-muted">Ninguna dimensión está por debajo de 3,0.</p>}
+        {C.priorities.slice(0, 5).map((d, i) => { const dim = dimOf(d.code); return (
+          <div key={d.code} className="mb-3 border-l-[3px] pl-3" style={{ borderColor: i === 0 ? "var(--bad)" : "var(--gold)" }}>
+            <div className="text-[10.5px] font-bold uppercase tracking-wider text-faint">{i === 0 ? "Cuello de botella" : `Brecha ${i + 1}`} · madurez {f1(d.m)} · arrastre {fmtNum(DRAG_WEIGHT(d.code), 1)} · prioridad {fmtNum(d.priority, 2)}</div>
+            <div className="text-[13.5px] font-extrabold text-ink">{d.code} · {d.name}</div>
+            <p className="text-[12px] text-ink-soft"><b>Hallazgo.</b> {dim.defn} F1 {f1(d.f1)} · F2 {f1(d.f2raw)} · F3 {f1(d.f3)}{d.flags.length ? ` · ${d.flags.map((f) => f.key).join(", ")}` : ""}.</p>
+            <p className="text-[12px] text-ink-soft"><b>Efecto cruzado.</b> {DRAG_WEIGHT(d.code) > 1 ? `Arrastra otras dimensiones (peso ${fmtNum(DRAG_WEIGHT(d.code), 1)}): no se resuelve de forma aislada.` : "Efecto acotado a su propia dimensión."}</p>
+            <p className="text-[12px] text-ink-soft"><b>Intervención.</b> {dim.mets.map((m) => methodologyOf(m).name).join(", ")}; se trabaja con {dim.fws.map((f) => `${f} · ${frameworkOf(f).name}`).join(" y ")}.</p>
+          </div>
+        ); })}
+      </div>
+      <div className="panel print-break mb-5 px-7 py-6">
+        {head(4, "Comparativo de fuentes", "dirección, equipos y evidencia lado a lado: así nos vemos frente a así operamos")}
+        {flagged.length === 0 ? <p className="text-[12.5px] text-muted">No hay divergencias marcadas entre las fuentes.</p> : <ul className="space-y-1.5 text-[12px]">{flagged.map((d) => <li key={d.code}><b className="text-ink">{d.code} · {d.name}.</b> {d.flags.map((f) => FLAG_TEXT[f.key] ?? f.key).join(" ")} <span className="num text-muted">(F1 {f1(d.f1)} · F2 {f1(d.f2raw)} · F3 {f1(d.f3)})</span></li>)}</ul>}
+        {C.f2n > 0 && <table className="mt-4 w-full text-[11.5px]"><thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="py-1">Ítems de contraste general (equipos)</th><th className="num py-1 text-right">Promedio</th></tr></thead><tbody>{C.general.map((q) => <tr key={q.code} className="border-t border-line"><td className="py-1 text-ink-soft">{q.text}</td><td className="num py-1 text-right font-bold">{f1(q.avg)}</td></tr>)}</tbody></table>}
+        {C.openAnswers.length > 0 && <div className="mt-3"><div className="label mb-1">Respuestas abiertas (anónimas)</div><ul className="text-[12px] text-ink-soft">{C.openAnswers.map((t, i) => <li key={i}>«{t}»</li>)}</ul></div>}
+      </div>
+      <div className="panel mb-5 px-7 py-6">
+        {head(5, "Recomendación de nivel", "nivel de acompañamiento, composición propuesta y lo que no se necesita hoy")}
+        <div className="rounded-xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Nivel recomendado</div><div className="text-[22px] font-extrabold">{R.level}</div><p className="mt-1 text-[12.5px] text-white/85">{R.text}</p>{R.notNeeded && <p className="mt-2 text-[12px] text-white/75">{R.notNeeded}</p>}</div>
+        <p className="mt-3 text-[11px] text-muted">Los puntajes son madurez evaluada con reglas de evidencia, no una medición psicométrica; no son comparables entre empresas mientras no existan baremos. La recomendación la confirma el advisor con las entrevistas y el contexto de la empresa.</p>
       </div>
     </>
   );

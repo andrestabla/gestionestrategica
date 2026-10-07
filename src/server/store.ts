@@ -88,6 +88,12 @@ export type F2Response = {
   abierta?: string;
 };
 
+/** Notas del consultor sobre el informe de una página de un test (por participante). */
+export type TestNotes = {
+  restriccion?: string; evidencias?: string; accion?: string; noNecesita?: string;
+  by: string; at: string;
+};
+
 /** Valor de KPI reportado desde la plataforma (se suma a la serie del seed). */
 export type KpiReport = {
   code: string;
@@ -119,6 +125,7 @@ const g = globalThis as unknown as {
   __pgtdKpiReports?: Map<string, KpiReport[]>;
   __pgtdTests?: Map<string, TestResponse>;
   __pgtdF2?: F2Response[];
+  __pgtdTestNotes?: Map<string, TestNotes>;
   __pgtdIniOverrides?: Map<string, InitiativeOverride>;
   __pgtdHydrated?: boolean;
 };
@@ -142,6 +149,7 @@ if (g.__pgtdPublished === undefined) g.__pgtdPublished = null;
 if (!g.__pgtdKpiReports) g.__pgtdKpiReports = new Map();
 if (!g.__pgtdTests) g.__pgtdTests = new Map();
 if (!g.__pgtdF2) g.__pgtdF2 = [];
+if (!g.__pgtdTestNotes) g.__pgtdTestNotes = new Map();
 if (!g.__pgtdIniOverrides) g.__pgtdIniOverrides = new Map();
 
 const tasks = () => g.__pgtdTasks!;
@@ -825,6 +833,32 @@ export function saveTestResponse(
   testStore().set(user.email, response);
   audit(user, "task", `test:${user.email}`, `test de capacidad empresarial guardado (${answered} respuestas)`);
   return { ok: true, response };
+}
+
+/* ═══ Informe de una página del test: campos que completa el consultor ═══ */
+
+const testNotes = () => g.__pgtdTestNotes!;
+export const getTestNotes = (): Record<string, TestNotes> => Object.fromEntries(testNotes());
+
+export function setTestNotes(
+  user: SessionUser,
+  id: string,
+  patch: Partial<Pick<TestNotes, "restriccion" | "evidencias" | "accion" | "noNecesita">>,
+): { ok: true; notes: TestNotes } | { ok: false; status: number; error: string } {
+  if (!["CONSULTOR", "LIDER"].includes(user.role)) {
+    return { ok: false, status: 403, error: "El informe del test lo completa el advisor o el líder de la empresa." };
+  }
+  if (!id || id.length > 120) return { ok: false, status: 422, error: "Participante inválido." };
+  const clean = (v: unknown) => (typeof v === "string" ? v.trim().slice(0, 800) : undefined);
+  const prev = testNotes().get(id);
+  const notes: TestNotes = {
+    ...prev,
+    ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, clean(v)]).filter(([, v]) => v !== undefined)),
+    by: user.name, at: new Date().toISOString(),
+  };
+  testNotes().set(id, notes);
+  audit(user, "task", `test:${id}`, "informe del test actualizado");
+  return { ok: true, notes };
 }
 
 /* ═══ Fuente 2 · percepción de equipos (anónima) ═══
@@ -1600,6 +1634,7 @@ export function resetStore() {
   g.__pgtdKpiReports = new Map();
   g.__pgtdTests = new Map();
   g.__pgtdF2 = [];
+  g.__pgtdTestNotes = new Map();
   g.__pgtdIniOverrides = new Map();
   (g as unknown as { __pgtdArchived?: Task[] }).__pgtdArchived = [];
   (g as unknown as { __pgtdNotifRead?: Map<string, Set<string>> }).__pgtdNotifRead = new Map();
