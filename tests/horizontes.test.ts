@@ -65,3 +65,36 @@ test("empresa: los horizontes se guardan y las iniciativas solo toman uno de ell
   });
   resetStore();
 });
+
+test("sugerencia de horizonte: elegible con capacidad y ≥ 65 → primero; capacidad pendiente o 50–64 → siguiente; resto → último", async () => {
+  const { suggestHorizon, consolidate } = await import("../src/lib/priorizacion");
+  const H = ["H1", "H2", "H3"];
+  const ev = (D: 1 | 2 | 3 | 4, E: 1 | 2 | 3 | 4, M: 1 | 2 | 3 | 4, L: 1 | 2 | 3 | 4) =>
+    ({ iniId: "x", by: "a@a.co", name: "A", role: "LIDER" as const, scores: { D, E, M, L }, type: { contribucion: "ESTRATEGICO", profundidad: "ESTRATEGICO", alcance: "TACTICO", permanencia: "ESTRATEGICO" } as Record<string, "ESTRATEGICO" | "TACTICO">, at: "2026-10-07" });
+  assert.equal(suggestHorizon(consolidate([]), H), null, "sin evaluación no hay sugerencia");
+  assert.equal(suggestHorizon(consolidate([ev(4, 3, 3, 3)]), H), "H1");          // 85 pts, elegible, capacidad
+  assert.equal(suggestHorizon(consolidate([ev(4, 3, 3, 2)]), H), "H2", "capacidad primero → siguiente");
+  assert.equal(suggestHorizon(consolidate([ev(3, 2, 2, 3)]), H), "H2", "62,5 pts → siguiente");
+  assert.equal(suggestHorizon(consolidate([ev(2, 4, 4, 4)]), H), "H3", "no elegible → último");
+  assert.equal(suggestHorizon(consolidate([ev(3, 1, 1, 1)]), H), "H3", "45 pts → último");
+  assert.equal(suggestHorizon(consolidate([ev(4, 3, 3, 2)]), ["CORTO", "MEDIANO"]), "MEDIANO");
+  assert.equal(suggestHorizon(consolidate([ev(4, 3, 3, 2)]), ["UNICO"]), "UNICO", "con un solo horizonte, ese");
+});
+
+test("mover de horizonte: solo quien decide, solo a un horizonte de la empresa", async () => {
+  const { setInitiativeHorizon, catalog: cat, resetStore: reset } = await import("../src/server/store");
+  reset();
+  const ini = cat().initiatives[0];
+  const other = cat().initiatives[0].horizon === "CORTO" ? "MEDIANO" : "CORTO";
+  const resp: SessionUser = { email: "r@a.co", name: "Resp", role: "RESPONSABLE", line: ini.line };
+  const lider: SessionUser = { email: "g@a.co", name: "Gerencia", role: "LIDER" };
+  const denied = setInitiativeHorizon(resp, ini.id, other);
+  assert.ok(!denied.ok && denied.status === 403);
+  const bad = setInitiativeHorizon(lider, ini.id, "H9");
+  assert.ok(!bad.ok && bad.status === 422);
+  const same = setInitiativeHorizon(lider, ini.id, ini.horizon);
+  assert.ok(!same.ok && same.status === 422);
+  const ok = setInitiativeHorizon(lider, ini.id, other);
+  assert.ok(ok.ok && cat().initiatives[0].horizon === other);
+  reset();
+});

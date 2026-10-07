@@ -21,7 +21,7 @@ import { horizonsOf, horizonTitle } from "@/data/catalogo";
 import { initiativesOf, responsible, type InitiativeView } from "@/lib/vista";
 import { initiativeRisk } from "@/lib/logic";
 import { initiativeTaskStats } from "@/lib/proyectos";
-import { MatrizPanel, PrioChip, usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
+import { MatrizPanel, PrioChip, HorizonHint, usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
 import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
 import {
   ChevronRight, CircleCheck, CircleDashed, Circle, Flag, AlertTriangle,
@@ -491,7 +491,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
         <button onClick={onBack} className="btn-ghost" title="Volver al listado (Esc)"><ArrowLeft size={13} /> Iniciativas</button>
       </div>
       <PageHeader kicker="M6 · Priorización" title="Portafolio priorizado con la matriz 4Shine"
-        desc="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. El puntaje ordena alternativas dentro de cada horizonte; para competir como prioridad crítica D debe ser 3 o 4, y con L en 1 o 2 se resuelve primero la capacidad. La aprobación exige impacto estratégico, capacidad y recursos disponibles."
+        desc="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. El puntaje ordena las alternativas dentro de cada horizonte y sugiere el horizonte: elegible, con capacidad y 65 o más puntos, el primero; elegible con capacidad por resolver o entre 50 y 64, el siguiente; el resto, el último. Para competir como prioridad crítica D debe ser 3 o 4. La decisión de tiempo la registra la gerencia."
         actions={<AccessChip module="iniciativas" />} />
 
       <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
@@ -514,7 +514,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
                 <tr className="text-left text-[9.5px] uppercase tracking-wider text-faint">
                   <th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th>
                   {CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center" title={`${c.name} · ${c.weight} %`}>{c.key}</th>)}
-                  <th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Tipo</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Decisión</th>
+                  <th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Tipo</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Horizonte</th><th className="px-2 py-2">Decisión</th>
                 </tr>
               </thead>
               <tbody>
@@ -543,6 +543,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
                           {r.c.n > 0 && r.c.eligible && !r.c.capacityFirst && !r.c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
                         </span>
                       </td>
+                      <td className="px-2 py-2.5"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={pv.catalog.company} /></td>
                       <td className="px-2 py-2.5">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );

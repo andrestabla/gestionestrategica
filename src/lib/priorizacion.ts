@@ -5,6 +5,10 @@
 //   Con L = 1 o 2, se resuelve primero la capacidad de la siguiente etapa.
 //   El puntaje ordena alternativas dentro de cada horizonte; la aprobación
 //   exige impacto estratégico, capacidad y recursos disponibles.
+//   El puntaje consolidado también sugiere el horizonte (suggestHorizon):
+//   elegible, con capacidad y ≥ 65 puntos → primer horizonte; elegible pero
+//   con capacidad por resolver o entre 50 y 64 → siguiente horizonte; no
+//   elegible o < 50 → último horizonte. La gerencia confirma o mueve.
 // Reglas puras: sin estado, sin permisos (los exige el store).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -169,15 +173,29 @@ export function decisionCheck(decision: Decision, c: Consolidated, rationale?: s
   return { ok: true };
 }
 
+/** Umbrales del puntaje consolidado para la sugerencia de horizonte. */
+export const HORIZON_THRESHOLDS = { now: 65, next: 50 } as const;
+
+/** Horizonte que sugiere el puntaje consolidado, entre los de la empresa
+    (en orden del más cercano al más lejano). Sin evaluación no hay sugerencia. */
+export function suggestHorizon(c: Consolidated, horizons: string[]): string | null {
+  if (c.n === 0 || horizons.length === 0) return null;
+  const last = horizons[horizons.length - 1];
+  const next = horizons[1] ?? last;
+  if (c.eligible && !c.capacityFirst && c.score >= HORIZON_THRESHOLDS.now) return horizons[0];
+  if (c.eligible && c.score >= HORIZON_THRESHOLDS.next) return next;
+  return last;
+}
+
 /** Orden del portafolio: dentro de cada horizonte, por puntaje consolidado;
-    las no evaluadas al final. */
+    las no evaluadas al final. Cada fila trae el horizonte sugerido. */
 export function rank<T extends { id: string; horizon: string }>(
   items: T[], consolidatedOf: (id: string) => Consolidated, horizons: string[] = ["CORTO", "MEDIANO"],
-): (T & { c: Consolidated; position: number })[] {
-  const out: (T & { c: Consolidated; position: number })[] = [];
+): (T & { c: Consolidated; position: number; suggested: string | null })[] {
+  const out: (T & { c: Consolidated; position: number; suggested: string | null })[] = [];
   const extra = [...new Set(items.map((i) => i.horizon))].filter((h) => !horizons.includes(h));
   for (const h of [...horizons, ...extra]) {
-    const group = items.filter((i) => i.horizon === h).map((i) => ({ ...i, c: consolidatedOf(i.id), position: 0 }))
+    const group = items.filter((i) => i.horizon === h).map((i) => { const c = consolidatedOf(i.id); return { ...i, c, position: 0, suggested: suggestHorizon(c, horizons) }; })
       .sort((a, b) => (b.c.n === 0 ? -1 : b.c.score) - (a.c.n === 0 ? -1 : a.c.score));
     group.forEach((g, i) => { g.position = i + 1; });
     out.push(...group);

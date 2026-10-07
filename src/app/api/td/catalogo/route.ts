@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import {
   tenantView, upsertResponsible, removeResponsible, upsertPerson, removePerson, upsertObjective, removeObjective,
-  upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories,
+  upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, evaluateInitiative,
 } from "@/server/store";
 
 // GET /api/td/catalogo — la vista completa de la empresa activa: catálogo
@@ -30,7 +30,15 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     case "objective:delete": r = removeObjective(user, String(data.id ?? "")); break;
     case "kpi:upsert": r = upsertKpi(user, data); break;
     case "kpi:delete": r = removeKpi(user, String(data.code ?? data.id ?? "").toUpperCase()); break;
-    case "initiative:upsert": r = upsertInitiative(user, data); break;
+    case "initiative:upsert": {
+      r = upsertInitiative(user, data);
+      // la calificación D·E·M·L del formulario es la evaluación del usuario con la matriz
+      if (r.ok && data.evaluation && "id" in r && r.id) {
+        const ev = evaluateInitiative(user, String(r.id), { scores: data.evaluation.scores ?? {}, type: data.evaluation.type ?? {}, notes: data.evaluation.notes });
+        if (!ev.ok) return NextResponse.json({ error: `La iniciativa se guardó, pero la calificación no: ${ev.error}`, view: tenantView() }, { status: ev.status });
+      }
+      break;
+    }
     case "initiative:delete": r = removeInitiative(user, String(data.id ?? "")); break;
     case "financials:upsert": r = setFinancials(user, data === null ? null : data); break;
     case "territories:upsert": r = setTerritories(user, data); break;

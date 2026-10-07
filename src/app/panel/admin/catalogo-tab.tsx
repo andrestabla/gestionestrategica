@@ -8,8 +8,11 @@
 // la definición del sistema y es igual para todas las empresas.
 
 import { useState, type ReactNode } from "react";
-import { Card, CardHeader, EmptyNote } from "@/components/ui";
+import { Card, CardHeader, EmptyNote, Modal } from "@/components/ui";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
+import { useCan, useUser } from "@/components/user-context";
+import { usePriorizacion } from "@/components/priorizacion";
+import { CRITERIA, TYPE_CRITERIA, LEVEL_NAMES, score as matrixScore, typeOf, type CriterionKey, type Level, type TypeMarks, type Evaluation } from "@/lib/priorizacion";
 import { horizonsOf, horizonLabel } from "@/data/catalogo";
 import type { TenantView } from "@/lib/vista";
 import type { Financials } from "@/data/catalogo";
@@ -20,6 +23,7 @@ import type { Person } from "@/data/proyectos";
 import { LINES, type Territory } from "@/data/demo";
 import { DIMS, frameworkOfPractice } from "@/data/mapa";
 import { CO_PATHS } from "@/data/geo";
+import { EC_PATHS } from "@/data/geo-ec";
 import {
   Briefcase, Users, Target, Gauge, Rocket, Landmark, Pencil, Trash2, Plus, Loader2, Save,
   AlertTriangle, X, ListOrdered, Minus,
@@ -164,7 +168,8 @@ const ROL_PLATAFORMA: Record<Responsible["rolPlataforma"], string> = {
 };
 
 function ResponsablesSection({ v, saving, mutate }: SectionProps) {
-  const [editing, setEditing] = useState<Responsible | null>(null);
+  const [open, setOpen] = useState<Responsible | "new" | null>(null);
+  const editing = open === "new" ? null : open;
   const list = v.catalog.responsibles;
   const usage = (id: string) => ({
     kpis: v.catalog.kpis.filter((k) => k.ownerId === id).length,
@@ -172,9 +177,9 @@ function ResponsablesSection({ v, saving, mutate }: SectionProps) {
     people: v.catalog.people.filter((p) => p.responsibleId === id).length,
   });
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+    <div className="space-y-5">
       <Card className="rise rise-1 overflow-hidden">
-        <CardHeader title={`Responsables (${list.length})`} sub="cargos, no personas: a ellos se asignan los KPI y las iniciativas" />
+        <CardHeader title={`Responsables (${list.length})`} sub="cargos, no personas: a ellos se asignan los KPI y las iniciativas" right={<NewBtn label="Nuevo responsable" onClick={() => setOpen("new")} />} />
         {list.length === 0 ? (
           <div className="px-5 pb-5"><EmptyNote>Esta empresa aún no tiene responsables. Empieza por los cargos; luego personas, objetivos, KPI e iniciativas.</EmptyNote></div>
         ) : (
@@ -188,7 +193,7 @@ function ResponsablesSection({ v, saving, mutate }: SectionProps) {
                   <td className="px-4 py-2.5 text-muted">{r.dependencia}</td>
                   <td className="px-4 py-2.5"><span className="chip">{ROL_PLATAFORMA[r.rolPlataforma]}</span></td>
                   <td className="num whitespace-nowrap px-4 py-2.5 text-[11px] text-muted">{u.kpis} KPI · {u.inis} inic. · {u.people} pers.</td>
-                  <RowActions saving={saving} onEdit={() => setEditing(r)}
+                  <RowActions saving={saving} onEdit={() => setOpen(r)}
                     onDelete={() => { if (window.confirm(`¿Eliminar el cargo «${r.cargo}» (${r.id})?`)) mutate("responsible", "delete", { id: r.id }); }} />
                 </tr>
               );
@@ -196,9 +201,11 @@ function ResponsablesSection({ v, saving, mutate }: SectionProps) {
           </Table>
         )}
       </Card>
+      {open !== null && (
       <ResponsableForm key={editing?.id ?? "nuevo"} saving={saving} initial={editing}
-        onCancel={() => setEditing(null)}
-        onSubmit={async (d) => { const ok = await mutate("responsible", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setEditing(null); return ok; }} />
+        onCancel={() => setOpen(null)}
+        onSubmit={async (d) => { const ok = await mutate("responsible", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setOpen(null); return ok; }} />
+      )}
     </div>
   );
 }
@@ -229,14 +236,15 @@ function ResponsableForm({ saving, initial, onSubmit, onCancel }: {
 /* ═══ Personas ═══ */
 
 function PersonasSection({ v, saving, mutate }: SectionProps) {
-  const [editing, setEditing] = useState<Person | null>(null);
+  const [open, setOpen] = useState<Person | "new" | null>(null);
+  const editing = open === "new" ? null : open;
   const list = v.catalog.people;
   const respName = (id: string) => v.catalog.responsibles.find((r) => r.id === id)?.cargo ?? "—";
   const tasksOf = (id: string) => v.catalog.tasks.filter((t) => t.assigneeId === id || t.coAssigneeIds?.includes(id)).length;
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+    <div className="space-y-5">
       <Card className="rise rise-1 overflow-hidden">
-        <CardHeader title={`Personas (${list.length})`} sub="nombres propios: a ellas se asignan las tareas del plan" />
+        <CardHeader title={`Personas (${list.length})`} sub="nombres propios: a ellas se asignan las tareas del plan" right={<NewBtn label="Nueva persona" onClick={() => setOpen("new")} />} />
         {list.length === 0 ? (
           <div className="px-5 pb-5"><EmptyNote>
             {v.catalog.responsibles.length === 0
@@ -253,16 +261,18 @@ function PersonasSection({ v, saving, mutate }: SectionProps) {
                 <td className="num px-4 py-2.5 text-[11px] text-muted">{p.email || "—"}</td>
                 <td className="px-4 py-2.5 text-muted">{respName(p.responsibleId)}</td>
                 <td className="num px-4 py-2.5 text-[11px] text-muted">{tasksOf(p.id)}</td>
-                <RowActions saving={saving} onEdit={() => setEditing(p)}
+                <RowActions saving={saving} onEdit={() => setOpen(p)}
                   onDelete={() => { if (window.confirm(`¿Eliminar a «${p.name}» (${p.id})?`)) mutate("person", "delete", { id: p.id }); }} />
               </tr>
             ))}
           </Table>
         )}
       </Card>
+      {open !== null && (
       <PersonaForm key={editing?.id ?? "nueva"} v={v} saving={saving} initial={editing}
-        onCancel={() => setEditing(null)}
-        onSubmit={async (d) => { const ok = await mutate("person", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setEditing(null); return ok; }} />
+        onCancel={() => setOpen(null)}
+        onSubmit={async (d) => { const ok = await mutate("person", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setOpen(null); return ok; }} />
+      )}
     </div>
   );
 }
@@ -307,14 +317,15 @@ function PersonaForm({ v, saving, initial, onSubmit, onCancel }: {
 /* ═══ Objetivos del cuadro de mando ═══ */
 
 function ObjetivosSection({ v, saving, mutate }: SectionProps) {
-  const [editing, setEditing] = useState<CmiObjective | null>(null);
+  const [open, setOpen] = useState<CmiObjective | "new" | null>(null);
+  const editing = open === "new" ? null : open;
   const list = v.catalog.objectives;
   const persp = (id: string) => PERSPECTIVES.find((p) => p.id === id)?.name ?? id;
   const inisOf = (id: string) => v.catalog.initiatives.filter((i) => i.cmi === id).length;
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+    <div className="space-y-5">
       <Card className="rise rise-1 overflow-hidden">
-        <CardHeader title={`Objetivos (${list.length})`} sub="cuadro de mando: un objetivo por perspectiva con sus resultados clave (KPI)" />
+        <CardHeader title={`Objetivos (${list.length})`} sub="cuadro de mando: un objetivo por perspectiva con sus resultados clave (KPI)" right={<NewBtn label="Nuevo objetivo" onClick={() => setOpen("new")} />} />
         {list.length === 0 ? (
           <div className="px-5 pb-5"><EmptyNote>Esta empresa aún no tiene objetivos. Crea los objetivos del cuadro de mando por perspectiva; después los KPI se enlazan a ellos.</EmptyNote></div>
         ) : (
@@ -331,16 +342,18 @@ function ObjetivosSection({ v, saving, mutate }: SectionProps) {
                   </div>
                 </td>
                 <td className="num px-4 py-2.5 text-[11px] text-muted">{inisOf(o.id)}</td>
-                <RowActions saving={saving} onEdit={() => setEditing(o)}
+                <RowActions saving={saving} onEdit={() => setOpen(o)}
                   onDelete={() => { if (window.confirm(`¿Eliminar el objetivo «${o.name}» (${o.id})?`)) mutate("objective", "delete", { id: o.id }); }} />
               </tr>
             ))}
           </Table>
         )}
       </Card>
+      {open !== null && (
       <ObjetivoForm key={editing?.id ?? "nuevo"} v={v} saving={saving} initial={editing}
-        onCancel={() => setEditing(null)}
-        onSubmit={async (d) => { const ok = await mutate("objective", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setEditing(null); return ok; }} />
+        onCancel={() => setOpen(null)}
+        onSubmit={async (d) => { const ok = await mutate("objective", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setOpen(null); return ok; }} />
+      )}
     </div>
   );
 }
@@ -401,14 +414,15 @@ function ObjetivoForm({ v, saving, initial, onSubmit, onCancel }: {
 const FREQUENCIES: KpiFull["frequency"][] = ["Mensual", "Trimestral", "Semestral", "Anual"];
 
 function KpiSection({ v, saving, mutate }: SectionProps) {
-  const [editing, setEditing] = useState<KpiFull | null>(null);
+  const [open, setOpen] = useState<KpiFull | "new" | null>(null);
+  const editing = open === "new" ? null : open;
   const list = v.catalog.kpis;
   const objName = (id: string) => v.catalog.objectives.find((o) => o.id === id)?.name ?? id;
   const owner = (id: string) => v.catalog.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+    <div className="space-y-5">
       <Card className="rise rise-1 overflow-hidden">
-        <CardHeader title={`KPI (${list.length})`} sub="indicadores con definición operativa, meta, responsable del dato y serie" />
+        <CardHeader title={`KPI (${list.length})`} sub="indicadores con definición operativa, meta, responsable del dato y serie" right={<NewBtn label="Nuevo KPI" onClick={() => setOpen("new")} />} />
         {list.length === 0 ? (
           <div className="px-5 pb-5"><EmptyNote>
             {v.catalog.objectives.length === 0 || v.catalog.responsibles.length === 0
@@ -426,16 +440,18 @@ function KpiSection({ v, saving, mutate }: SectionProps) {
                 <td className="px-4 py-2.5 text-muted">{k.unit} · {k.frequency}</td>
                 <td className="num whitespace-nowrap px-4 py-2.5 text-muted">{k.baseline} → <b className="text-ink">{k.target}</b> <span className="text-faint">{k.goodDirection === "up" ? "↑" : "↓"}</span></td>
                 <td className="num px-4 py-2.5 text-[11px] text-muted">{k.series.length} pts</td>
-                <RowActions saving={saving} onEdit={() => setEditing(k)}
+                <RowActions saving={saving} onEdit={() => setOpen(k)}
                   onDelete={() => { if (window.confirm(`¿Eliminar el KPI «${k.name}» (${k.code})?`)) mutate("kpi", "delete", { code: k.code }); }} />
               </tr>
             ))}
           </Table>
         )}
       </Card>
+      {open !== null && (
       <KpiForm key={editing?.code ?? "nuevo"} v={v} saving={saving} initial={editing}
-        onCancel={() => setEditing(null)}
-        onSubmit={async (d) => { const ok = await mutate("kpi", "upsert", d); if (ok) setEditing(null); return ok; }} />
+        onCancel={() => setOpen(null)}
+        onSubmit={async (d) => { const ok = await mutate("kpi", "upsert", d); if (ok) setOpen(null); return ok; }} />
+      )}
     </div>
   );
 }
@@ -562,7 +578,12 @@ type FactorState = InitiativeFull["factors"][number]["state"];
 const FACTOR_STATES: FactorState[] = ["VERDE", "AMBAR", "ROJO"];
 
 function IniciativasSection({ v, saving, mutate }: SectionProps) {
-  const [editing, setEditing] = useState<InitiativeFull | null>(null);
+  const [open, setOpen] = useState<InitiativeFull | "new" | null>(null);
+  const editing = open === "new" ? null : open;
+  const user = useUser();
+  const canEval = useCan("evaluate_initiatives", editing ?? undefined);
+  const { data: prio, refetch: refetchPrio } = usePriorizacion();
+  const mine = editing ? prio?.evaluations.find((e) => e.iniId === editing.id && e.by === user.email.toLowerCase()) : undefined;
   const list = v.catalog.initiatives;
   const owner = (id: string) => v.catalog.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   const dimName = (code: string) => DIMS.find((d) => d.code === code)?.name ?? code;
@@ -571,7 +592,7 @@ function IniciativasSection({ v, saving, mutate }: SectionProps) {
   return (
     <div className="space-y-5">
       <Card className="rise rise-1 overflow-hidden">
-        <CardHeader title={`Iniciativas (${list.length})`} sub="el portafolio: cada iniciativa instala una dimensión del mapa y mueve un KPI" />
+        <CardHeader title={`Iniciativas (${list.length})`} sub="el portafolio: cada iniciativa instala una dimensión del mapa y mueve un KPI" right={<NewBtn label="Nueva iniciativa" onClick={() => setOpen("new")} />} />
         {list.length === 0 ? (
           <div className="px-5 pb-5"><EmptyNote>
             {ready
@@ -590,16 +611,18 @@ function IniciativasSection({ v, saving, mutate }: SectionProps) {
                 <td className="px-4 py-2.5"><span className={`chip ${i.status === "EN_RIESGO" ? "chip-bad" : i.status === "COMPLETADA" ? "chip-ok" : i.status === "EN_CURSO" ? "chip-cyan" : ""}`}>{INI_STATUS[i.status]}</span></td>
                 <td className="num px-4 py-2.5 text-muted">{i.progress} %</td>
                 <td className="num px-4 py-2.5 text-[11px] text-muted">{tasksOf(i.id)}</td>
-                <RowActions saving={saving} onEdit={() => setEditing(i)}
+                <RowActions saving={saving} onEdit={() => setOpen(i)}
                   onDelete={() => { if (window.confirm(`¿Eliminar la iniciativa «${i.name}» (${i.id})?`)) mutate("initiative", "delete", { id: i.id }); }} />
               </tr>
             ))}
           </Table>
         )}
       </Card>
-      <IniciativaForm key={editing?.id ?? "nueva"} v={v} saving={saving} initial={editing}
-        onCancel={() => setEditing(null)}
-        onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setEditing(null); return ok; }} />
+      {open !== null && (
+      <IniciativaForm key={editing?.id ?? "nueva"} v={v} saving={saving} initial={editing} mine={mine} canEval={canEval}
+        onCancel={() => setOpen(null)}
+        onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) { setOpen(null); void refetchPrio(); } return ok; }} />
+      )}
     </div>
   );
 }
@@ -608,16 +631,16 @@ type ActionDraft = { name: string; meta: string; status: ActionStatus; quarter: 
 type FactorDraft = { name: string; state: FactorState; note: string; history: string[] };
 type IniDraft = {
   name: string; objetivo: string; line: string; subsistema: InitiativeFull["subsistema"]; cmi: string;
-  horizon: InitiativeFull["horizon"]; impact: string; feasibility: string; urgency: string; dependency: string;
+  horizon: InitiativeFull["horizon"]; scores: Partial<Record<CriterionKey, Level>>; type: TypeMarks;
   status: InitiativeFull["status"]; start: string; end: string; ownerId: string; metaResultado: string;
   budgetPlanned: string; budgetCommitted: string; budgetExecuted: string; progress: string;
   capability: string; kpi: string; actions: ActionDraft[]; factors: FactorDraft[];
   milestoneDate: string; milestoneText: string;
 };
-type IniPayload = Omit<InitiativeFull, "id">;
+type IniPayload = Omit<InitiativeFull, "id"> & { evaluation?: { scores: Record<CriterionKey, Level>; type: TypeMarks } };
 
-function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
-  v: TenantView; saving: boolean; initial: InitiativeFull | null;
+function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel }: {
+  v: TenantView; saving: boolean; initial: InitiativeFull | null; mine?: Evaluation; canEval: boolean;
   onSubmit: (d: IniPayload) => Promise<boolean>; onCancel: () => void;
 }) {
   const objs = v.catalog.objectives;
@@ -625,15 +648,15 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
   const kpis = v.catalog.kpis;
   const empty = (): IniDraft => ({
     name: "", objetivo: "", line: String(DIMS[0]?.line ?? 1), subsistema: "Dirección", cmi: objs[0]?.id ?? "",
-    horizon: horizonsOf(v.catalog.company)[0].id, impact: "3", feasibility: "3", urgency: "3", dependency: "3", status: "PLANEADA",
+    horizon: horizonsOf(v.catalog.company)[0].id, scores: {}, type: {}, status: "PLANEADA",
     start: currentQuarter(), end: currentQuarter(1), ownerId: resps[0]?.id ?? "", metaResultado: "",
     budgetPlanned: "0", budgetCommitted: "0", budgetExecuted: "0", progress: "0",
     capability: DIMS[0]?.code ?? "", kpi: kpis[0]?.code ?? "", actions: [], factors: [], milestoneDate: "", milestoneText: "",
   });
   const [f, setF] = useState<IniDraft>(initial ? {
     name: initial.name, objetivo: initial.objetivo, line: String(initial.line), subsistema: initial.subsistema, cmi: initial.cmi,
-    horizon: initial.horizon, impact: String(initial.impact), feasibility: String(initial.feasibility), urgency: String(initial.urgency),
-    dependency: String(initial.dependency), status: initial.status, start: initial.start, end: initial.end, ownerId: initial.ownerId,
+    horizon: initial.horizon, scores: { ...(mine?.scores ?? {}) }, type: { ...(mine?.type ?? {}) },
+    status: initial.status, start: initial.start, end: initial.end, ownerId: initial.ownerId,
     metaResultado: initial.metaResultado, budgetPlanned: String(initial.budgetPlanned), budgetCommitted: String(initial.budgetCommitted),
     budgetExecuted: String(initial.budgetExecuted), progress: String(initial.progress), capability: initial.capability, kpi: initial.kpi,
     actions: initial.actions.map((a) => ({ ...a })),
@@ -650,11 +673,16 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
 
   const fw = frameworkOfCapability(f.capability);
   const datesOk = QUARTER_RE.test(f.start.trim().toUpperCase()) && QUARTER_RE.test(f.end.trim().toUpperCase());
-  const canSave = f.name.trim().length > 0 && f.capability.length > 0 && f.cmi.length > 0 && datesOk;
+  const evalComplete = CRITERIA.every((c) => f.scores[c.key]) && TYPE_CRITERIA.every((t) => f.type[t.key]);
+  const evalStarted = CRITERIA.some((c) => f.scores[c.key]) || TYPE_CRITERIA.some((t) => f.type[t.key]);
+  const preview = evalComplete ? matrixScore(f.scores as Record<CriterionKey, Level>) : null;
+  const canSave = f.name.trim().length > 0 && f.capability.length > 0 && f.cmi.length > 0 && datesOk && (!evalStarted || evalComplete);
 
   const payload = (): IniPayload => ({
     line: num(f.line), subsistema: f.subsistema, cmi: f.cmi, name: f.name.trim(), objetivo: f.objetivo.trim(), horizon: f.horizon,
-    impact: num(f.impact), feasibility: num(f.feasibility), urgency: num(f.urgency), dependency: num(f.dependency), status: f.status,
+    // los cuatro campos heredados del prototipo (impacto, factibilidad, urgencia, dependencia) ya no se editan:
+    // la calificación es la matriz 4Shine (D·E·M·L) y se registra como evaluación del usuario
+    impact: initial?.impact ?? 3, feasibility: initial?.feasibility ?? 3, urgency: initial?.urgency ?? 3, dependency: initial?.dependency ?? 3, status: f.status,
     start: f.start.trim().toUpperCase(), end: f.end.trim().toUpperCase(), ownerId: f.ownerId, metaResultado: f.metaResultado.trim(),
     budgetPlanned: num(f.budgetPlanned), budgetCommitted: num(f.budgetCommitted), budgetExecuted: num(f.budgetExecuted),
     progress: Math.max(0, Math.min(100, num(f.progress))), capability: f.capability, framework: fw?.id ?? "", kpi: f.kpi,
@@ -662,15 +690,8 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
     log: initial?.log ?? [],                                   // la bitácora no se edita aquí: se conserva
     nextMilestone: { date: f.milestoneDate.trim(), text: f.milestoneText.trim() },
     factors: f.factors.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), state: x.state, history: x.history, ...(x.note.trim() ? { note: x.note.trim() } : {}) })),
+    ...(canEval && evalComplete ? { evaluation: { scores: f.scores as Record<CriterionKey, Level>, type: f.type } } : {}),
   });
-
-  const scale = (k: "impact" | "feasibility" | "urgency" | "dependency", label: string) => (
-    <Field label={label}>
-      <select value={f[k]} onChange={set(k)} className={INPUT}>
-        {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
-      </select>
-    </Field>
-  );
 
   return (
     <FormCard title={initial ? `Editar · ${initial.id}` : "Nueva iniciativa"}
@@ -737,11 +758,48 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
 
         {/* columna 2: priorización, plan y presupuesto */}
         <div className="space-y-2.5">
-          <div className="grid grid-cols-4 gap-2">
-            {scale("impact", "Impacto")}
-            {scale("feasibility", "Factibilidad")}
-            {scale("urgency", "Urgencia")}
-            {scale("dependency", "Dependencia")}
+          <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="text-[12px] font-bold text-ink">Matriz 4Shine · {mine ? "tu calificación" : "calificación"}</div>
+              <div className="num text-[11px] text-muted">
+                {preview !== null
+                  ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
+                  : "D · E · M · L de 1 a 4, y el tipo"}
+              </div>
+            </div>
+            {canEval ? (
+              <>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {CRITERIA.map((cr) => (
+                    <Field key={cr.key} label={`${cr.key} · ${cr.short} · ${cr.weight} %`}>
+                      <select value={f.scores[cr.key] ?? ""} title={cr.question} className={INPUT}
+                        onChange={(e) => setF({ ...f, scores: { ...f.scores, [cr.key]: e.target.value ? (Number(e.target.value) as Level) : undefined } })}>
+                        <option value="">—</option>
+                        {([1, 2, 3, 4] as Level[]).map((lv) => <option key={lv} value={lv} title={cr.levels[lv]}>{lv} · {LEVEL_NAMES[lv]}</option>)}
+                      </select>
+                    </Field>
+                  ))}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {TYPE_CRITERIA.map((t) => (
+                    <Field key={t.key} label={t.name}>
+                      <select value={f.type[t.key] ?? ""} className={INPUT} title={`Estratégico: ${t.strategic} · Táctico: ${t.tactical}`}
+                        onChange={(e) => setF({ ...f, type: { ...f.type, [t.key]: (e.target.value || undefined) as TypeMarks[keyof TypeMarks] } })}>
+                        <option value="">—</option>
+                        <option value="ESTRATEGICO">Estratégico</option>
+                        <option value="TACTICO">Táctico</option>
+                      </select>
+                    </Field>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[10px] leading-snug text-faint">
+                  Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Se registra como tu evaluación en la matriz; el consolidado del comité ordena el portafolio y sugiere el horizonte.
+                  {evalStarted && !evalComplete && <b className="text-warn"> Completa los cuatro criterios y el tipo, o déjalos vacíos.</b>}
+                </p>
+              </>
+            ) : (
+              <p className="mt-1.5 text-[11px] leading-snug text-muted">Tu rol no evalúa con la matriz: la califican el advisor, la gerencia, la junta y los responsables desde la ficha de la iniciativa.</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Horizonte">
@@ -818,20 +876,63 @@ const FIN_FIELDS: { key: keyof Financials; label: string }[] = [
 ];
 type FinDraft = Record<keyof Financials, string>;
 const DEPARTAMENTOS = Array.from(new Set(CO_PATHS.map((p) => p.name)));
+const PROVINCIAS_EC = Array.from(new Set(EC_PATHS.map((p) => p.name)));
 const PRESENCE: Record<Territory["presence"], string> = { sede: "Sede", cobertura: "Cobertura", oportunidad: "Oportunidad" };
 
 function FinanzasSection({ v, saving, mutate }: SectionProps) {
+  const [open, setOpen] = useState<"fin" | "ter" | null>(null);
+  const fin = v.catalog.financials;
+  const ter = v.catalog.territories;
+  const cur = v.catalog.company.currency === "USD" ? "USD" : "COP";
+  const unit = v.catalog.company.country === "EC" ? "provincias" : "departamentos";
   return (
-    <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-      <FinanzasForm key={v.catalog.financials ? `fin-${v.catalog.financials.year}` : "fin-vacia"} initial={v.catalog.financials} saving={saving}
-        onSubmit={(d) => mutate("financials", "upsert", d)} />
-      <TerritorioForm key={`ter-${v.catalog.territories.length}`} initial={v.catalog.territories} saving={saving}
-        onSubmit={(d) => mutate("territories", "upsert", d)} />
+    <div className="grid gap-5 lg:grid-cols-2">
+      <Card className="rise rise-1 self-start">
+        <CardHeader title={fin ? `Finanzas · ${fin.year}` : "Finanzas"} sub={`cifras del último cierre, en ${cur} millones`}
+          right={<NewBtn label={fin ? "Editar" : "Registrar"} edit={!!fin} onClick={() => setOpen("fin")} />} />
+        <div className="px-5 pb-5">
+          {!fin ? (
+            <EmptyNote>Esta empresa aún no tiene cifras financieras. Registra el último cierre: ingresos, utilidades y balance.</EmptyNote>
+          ) : (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+              {FIN_FIELDS.map((x) => (
+                <div key={x.key}><dt className="label !text-[8.5px]">{x.label}</dt><dd className="num text-[13.5px] font-bold text-ink">{fmtCop(fin[x.key])}</dd></div>
+              ))}
+            </dl>
+          )}
+        </div>
+      </Card>
+      <Card className="rise rise-2 self-start">
+        <CardHeader title={`Territorio (${ter.length})`} sub={`${unit} con sede, cobertura u oportunidad, con su peso comercial`}
+          right={<NewBtn label={ter.length ? "Editar" : "Añadir"} edit={ter.length > 0} onClick={() => setOpen("ter")} />} />
+        <div className="px-5 pb-5">
+          {ter.length === 0 ? (
+            <EmptyNote>Esta empresa aún no tiene territorio. Añade los {unit} con sede, los de cobertura y las oportunidades.</EmptyNote>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {ter.map((t) => (
+                <span key={t.name} title={t.reading || undefined}
+                  className={`chip ${t.presence === "sede" ? "chip-cyan" : t.presence === "oportunidad" ? "chip-gold" : ""}`}>
+                  {t.name} · {PRESENCE[t.presence]} · peso {t.weight}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
+      {open === "fin" && (
+        <FinanzasForm initial={fin} saving={saving} onCancel={() => setOpen(null)}
+          onSubmit={async (d) => { const ok = await mutate("financials", "upsert", d); if (ok) setOpen(null); return ok; }} />
+      )}
+      {open === "ter" && (
+        <TerritorioForm initial={ter} saving={saving} onCancel={() => setOpen(null)}
+          onSubmit={async (d) => { const ok = await mutate("territories", "upsert", d); if (ok) setOpen(null); return ok; }} />
+      )}
     </div>
   );
 }
 
-function FinanzasForm({ initial, saving, onSubmit }: { initial: Financials | null; saving: boolean; onSubmit: (d: Financials) => Promise<boolean> }) {
+function FinanzasForm({ initial, saving, onSubmit, onCancel }: { initial: Financials | null; saving: boolean; onSubmit: (d: Financials) => Promise<boolean>; onCancel: () => void }) {
   const v = useCatalog();
   const [f, setF] = useState<FinDraft>({
     year: String(initial?.year ?? new Date().getFullYear()),
@@ -847,97 +948,92 @@ function FinanzasForm({ initial, saving, onSubmit }: { initial: Financials | nul
     operatingProfit: num(f.operatingProfit), netProfit: num(f.netProfit), assets: num(f.assets), liabilities: num(f.liabilities), equity: num(f.equity),
   });
   return (
-    <Card className="rise rise-1 self-start">
-      <CardHeader title={initial ? `Finanzas · ${initial.year}` : "Finanzas"} sub={`cifras del último cierre, en ${v.catalog.company.currency === "USD" ? "USD" : "COP"} millones`} />
-      <div className="space-y-2.5 px-5 pb-5">
-        {!initial && <EmptyNote>Esta empresa aún no tiene cifras financieras. Registra el último cierre: ingresos, utilidades y balance.</EmptyNote>}
-        <Field label="Año del cierre"><input type="number" value={f.year} onChange={set("year")} placeholder="2025" className={`${INPUT} num ${f.year && !yearOk ? "!border-[var(--bad)]" : ""}`} /></Field>
-        <div className="grid grid-cols-2 gap-2">
-          {FIN_FIELDS.map((x) => (
-            <Field key={x.key} label={x.label}><input type="number" step="any" value={f[x.key]} onChange={set(x.key)} placeholder="0" className={`${INPUT} num`} /></Field>
-          ))}
-        </div>
-        <button onClick={() => onSubmit(payload())} disabled={saving || !yearOk || !dirty}
-          className="btn-primary w-full !py-2 text-[12.5px] disabled:opacity-40">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-          {initial ? "Guardar finanzas" : "Registrar finanzas"}
-        </button>
+    <FormCard title={initial ? `Finanzas · ${initial.year}` : "Registrar finanzas"} sub={`cifras del último cierre, en ${v.catalog.company.currency === "USD" ? "USD" : "COP"} millones`}
+      saving={saving} isEdit={!!initial} canSave={yearOk && dirty} onCancel={onCancel} saveLabel="Registrar finanzas"
+      onSave={() => onSubmit(payload())}>
+      <Field label="Año del cierre"><input type="number" value={f.year} onChange={set("year")} placeholder="2025" className={`${INPUT} num ${f.year && !yearOk ? "!border-[var(--bad)]" : ""}`} /></Field>
+      <div className="grid grid-cols-2 gap-2">
+        {FIN_FIELDS.map((x) => (
+          <Field key={x.key} label={x.label}><input type="number" step="any" value={f[x.key]} onChange={set(x.key)} placeholder="0" className={`${INPUT} num`} /></Field>
+        ))}
       </div>
-    </Card>
+    </FormCard>
   );
 }
 
-function TerritorioForm({ initial, saving, onSubmit }: { initial: Territory[]; saving: boolean; onSubmit: (d: Territory[]) => Promise<boolean> }) {
+function TerritorioForm({ initial, saving, onSubmit, onCancel }: { initial: Territory[]; saving: boolean; onSubmit: (d: Territory[]) => Promise<boolean>; onCancel: () => void }) {
+  const v = useCatalog();
+  const NAMES = v.catalog.company.country === "EC" ? PROVINCIAS_EC : DEPARTAMENTOS;
+  const unit = v.catalog.company.country === "EC" ? "provincia" : "departamento";
   const [rows, setRows] = useState<Territory[]>(initial.map((t) => ({ ...t })));
   const setRow = (i: number, patch: Partial<Territory>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const used = new Set(rows.map((r) => r.name));
   const dup = rows.length !== used.size;
   const dirty = JSON.stringify(rows) !== JSON.stringify(initial);
   const add = () => {
-    const free = DEPARTAMENTOS.find((d) => !used.has(d)) ?? DEPARTAMENTOS[0] ?? "";
+    const free = NAMES.find((d) => !used.has(d)) ?? NAMES[0] ?? "";
     setRows([...rows, { name: free, weight: 1, presence: "cobertura", reading: "" }]);
   };
   return (
-    <Card className="rise rise-2 self-start overflow-hidden">
-      <CardHeader title={`Territorio (${rows.length})`} sub="departamentos donde la empresa tiene sede, cobertura u oportunidad, con su peso comercial" />
-      <div className="space-y-2.5 px-5 pb-5">
-        {rows.length === 0 && <EmptyNote>Esta empresa aún no tiene territorio. Añade los departamentos con sede, los de cobertura y las oportunidades.</EmptyNote>}
-        {rows.length > 0 && (
-          <div className="grid grid-cols-[1fr_72px_112px_1.4fr_26px] gap-1.5 px-0.5">
-            {["Departamento", "Peso", "Presencia", "Lectura", ""].map((h, i) => <span key={i} className="label !text-[8.5px]">{h}</span>)}
-          </div>
-        )}
-        {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-[1fr_72px_112px_1.4fr_26px] items-center gap-1.5">
-            <select value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} className={`input !py-1.5 !text-[11px] ${rows.filter((x) => x.name === r.name).length > 1 ? "!border-[var(--bad)]" : ""}`}>
-              {DEPARTAMENTOS.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <select value={r.weight} onChange={(e) => setRow(i, { weight: num(e.target.value) as Territory["weight"] })} className="input num !py-1.5 pr-6 !text-[11px]">
-              {[1, 2, 3].map((w) => <option key={w} value={w}>{w}</option>)}
-            </select>
-            <select value={r.presence} onChange={(e) => setRow(i, { presence: e.target.value as Territory["presence"] })} className="input !py-1.5 pr-6 !text-[11px]">
-              {(Object.keys(PRESENCE) as Territory["presence"][]).map((p) => <option key={p} value={p}>{PRESENCE[p]}</option>)}
-            </select>
-            <input value={r.reading} onChange={(e) => setRow(i, { reading: e.target.value })} placeholder="qué pasa allí" className="input !py-1.5 !text-[11px]" />
-            <RemoveBtn onClick={() => setRows(rows.filter((_, j) => j !== i))} />
-          </div>
-        ))}
-        {dup && <p className="text-[10.5px]" style={{ color: "var(--bad)" }}>Hay departamentos repetidos: cada uno va una sola vez.</p>}
-        <div className="flex items-center gap-2 pt-1">
-          <AddBtn label="añadir departamento" onClick={add} />
-          <button onClick={() => onSubmit(rows.map((r) => ({ ...r, reading: r.reading.trim() })))} disabled={saving || dup || !dirty}
-            className="btn-primary ml-auto !py-2 text-[12.5px] disabled:opacity-40">
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-            Guardar territorio
-          </button>
+    <FormCard title={`Territorio (${rows.length})`} sub={`${unit}s donde la empresa tiene sede, cobertura u oportunidad, con su peso comercial`}
+      saving={saving} isEdit={initial.length > 0} canSave={!dup && dirty} onCancel={onCancel} wide saveLabel="Guardar territorio"
+      onSave={() => onSubmit(rows.map((r) => ({ ...r, reading: r.reading.trim() })))}>
+      {rows.length === 0 && <EmptyNote>Aún no hay territorio. Añade los {unit}s con sede, los de cobertura y las oportunidades.</EmptyNote>}
+      {rows.length > 0 && (
+        <div className="grid grid-cols-[1fr_72px_112px_1.4fr_26px] gap-1.5 px-0.5">
+          {[unit[0].toUpperCase() + unit.slice(1), "Peso", "Presencia", "Lectura", ""].map((h, i) => <span key={i} className="label !text-[8.5px]">{h}</span>)}
         </div>
-        <p className="text-[10px] text-faint">Peso comercial 1 a 3 (3 = concentra ventas). Se guarda la lista completa: quitar una fila la elimina al guardar.</p>
+      )}
+      {rows.map((r, i) => (
+        <div key={i} className="grid grid-cols-[1fr_72px_112px_1.4fr_26px] items-center gap-1.5">
+          <select value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} className={`input !py-1.5 !text-[11px] ${rows.filter((x) => x.name === r.name).length > 1 ? "!border-[var(--bad)]" : ""}`}>
+            {!NAMES.includes(r.name) && <option value={r.name}>{r.name}</option>}
+            {NAMES.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={r.weight} onChange={(e) => setRow(i, { weight: num(e.target.value) as Territory["weight"] })} className="input num !py-1.5 pr-6 !text-[11px]">
+            {[1, 2, 3].map((w) => <option key={w} value={w}>{w}</option>)}
+          </select>
+          <select value={r.presence} onChange={(e) => setRow(i, { presence: e.target.value as Territory["presence"] })} className="input !py-1.5 pr-6 !text-[11px]">
+            {(Object.keys(PRESENCE) as Territory["presence"][]).map((p) => <option key={p} value={p}>{PRESENCE[p]}</option>)}
+          </select>
+          <input value={r.reading} onChange={(e) => setRow(i, { reading: e.target.value })} placeholder="qué pasa allí" className="input !py-1.5 !text-[11px]" />
+          <RemoveBtn onClick={() => setRows(rows.filter((_, j) => j !== i))} />
+        </div>
+      ))}
+      {dup && <p className="text-[10.5px]" style={{ color: "var(--bad)" }}>Hay {unit}s repetidos: cada uno va una sola vez.</p>}
+      <div className="flex items-center gap-2 pt-1">
+        <AddBtn label={`añadir ${unit}`} onClick={add} />
       </div>
-    </Card>
+      <p className="text-[10px] text-faint">Peso comercial 1 a 3 (3 = concentra ventas). Se guarda la lista completa: quitar una fila la elimina al guardar.</p>
+    </FormCard>
   );
 }
 
 /* ═══ piezas compartidas ═══ */
 
-function FormCard({ title, sub, saving, isEdit, canSave, onSave, onCancel, children, wide = false }: {
+function FormCard({ title, sub, saving, isEdit, canSave, onSave, onCancel, children, wide = false, saveLabel }: {
   title: string; sub?: string; saving: boolean; isEdit: boolean; canSave: boolean;
-  onSave: () => void | Promise<void>; onCancel: () => void; children: ReactNode; wide?: boolean;
+  onSave: () => unknown; onCancel: () => void; children: ReactNode; wide?: boolean; saveLabel?: string;
 }) {
   return (
-    <Card className="rise rise-2 self-start">
-      <CardHeader title={title} sub={sub} />
-      <div className="space-y-2.5 px-5 pb-5">
-        {children}
-        <div className="flex gap-2 pt-1">
-          <button onClick={onSave} disabled={saving || !canSave}
-            className={`btn-primary !py-2 text-[12.5px] disabled:opacity-40 ${wide ? "" : "flex-1"}`}>
-            {saving ? <Loader2 size={13} className="animate-spin" /> : isEdit ? <Save size={13} /> : <Plus size={13} />}
-            {isEdit ? "Guardar cambios" : "Crear"}
-          </button>
-          {isEdit && <button onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>}
-        </div>
-      </div>
-    </Card>
+    <Modal title={title} sub={sub} onClose={onCancel} wide={wide}
+      footer={<>
+        <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" onClick={onSave} disabled={saving || !canSave} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
+          {saving ? <Loader2 size={13} className="animate-spin" /> : isEdit ? <Save size={13} /> : <Plus size={13} />}
+          {isEdit ? "Guardar cambios" : saveLabel ?? "Crear"}
+        </button>
+      </>}>
+      <div className="space-y-2.5">{children}</div>
+    </Modal>
+  );
+}
+
+function NewBtn({ label, onClick, edit = false }: { label: string; onClick: () => void; edit?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} className="btn-primary !py-1.5 text-[11.5px]">
+      {edit ? <Pencil size={12} /> : <Plus size={12} />} {label}
+    </button>
   );
 }
 

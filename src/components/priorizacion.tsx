@@ -23,8 +23,21 @@ export type PriorizacionData = {
   me: string;
   evaluations: Evaluation[];
   decisions: Record<string, DecisionRecord>;
-  ranking: { id: string; horizon: string; line: number; name: string; c: Consolidated; position: number }[];
+  ranking: { id: string; horizon: string; line: number; name: string; c: Consolidated; position: number; suggested: string | null }[];
 };
+
+/** Chip del horizonte sugerido por el puntaje frente al actual. */
+export function HorizonHint({ current, suggested, company, compact = false }: {
+  current: string; suggested: string | null; company: Parameters<typeof horizonLabel>[0]; compact?: boolean;
+}) {
+  if (!suggested) return compact ? null : <span className="chip" title="Sin evaluación no hay horizonte sugerido">Horizonte: {horizonLabel(company, current)}</span>;
+  if (suggested === current) return <span className="chip chip-ok !py-0 text-[9.5px]" title="El puntaje consolidado confirma el horizonte actual">✓ {horizonLabel(company, current)}</span>;
+  return (
+    <span className="chip chip-gold !py-0 text-[9.5px]" title={`El puntaje sugiere ${horizonLabel(company, suggested)}; hoy está en ${horizonLabel(company, current)}`}>
+      → {horizonLabel(company, suggested)}
+    </span>
+  );
+}
 
 export function usePriorizacion(iniId?: string) {
   const [data, setData] = useState<PriorizacionData | null>(null);
@@ -93,12 +106,26 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         <Scale size={16} className="text-cyan-deep" />
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-extrabold tracking-tight text-ink">Matriz 4Shine de priorización</div>
-          <div className="text-[11.5px] text-muted">Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 · ordena dentro del horizonte · la aprobación exige impacto, capacidad y recursos</div>
+          <div className="text-[11.5px] text-muted">Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 · ordena dentro del horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia</div>
         </div>
         {c && c.n > 0 && row && (
           <span className="chip chip-cyan" title="Posición por puntaje entre las iniciativas del mismo horizonte">
             {row.position}.º de {sameHorizon} · {horizonLabel(cv.catalog.company, horizon).toLowerCase()}
           </span>
+        )}
+        {row && row.suggested && row.suggested !== horizon && (
+          <span className="flex items-center gap-1.5">
+            <span className="chip chip-gold" title="Según el puntaje consolidado y las reglas de la matriz">Sugerido: {horizonLabel(cv.catalog.company, row.suggested)}</span>
+            {canDecide && (
+              <button type="button" disabled={saving} onClick={() => post({ horizon: row.suggested })}
+                className="btn-ghost !py-1 text-[10.5px]" title="Mover la iniciativa al horizonte sugerido (decisión de tiempo)">
+                Mover a {horizonLabel(cv.catalog.company, row.suggested)}
+              </button>
+            )}
+          </span>
+        )}
+        {row && row.suggested && row.suggested === horizon && (
+          <span className="chip chip-ok" title="El puntaje consolidado confirma el horizonte actual">Horizonte confirmado</span>
         )}
         {decision && <span className={DECISION_CLS[decision.decision]}>{decisionLabel(decision.decision)}</span>}
       </div>

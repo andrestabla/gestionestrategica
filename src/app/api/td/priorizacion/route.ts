@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
-import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, catalog } from "@/server/store";
+import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, catalog } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz 4Shine, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
@@ -18,8 +18,9 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
 });
 
 // POST /api/td/priorizacion — { id, evaluation: { scores, type, notes } } para
-// calificar, o { id, decision, rationale } para decidir el tiempo. El store
-// exige permisos (403) y las reglas de la matriz (422) con explicación.
+// calificar, { id, decision, rationale } para decidir el tiempo, o
+// { id, horizon } para mover la iniciativa al horizonte (p. ej. el sugerido).
+// El store exige permisos (403) y las reglas de la matriz (422) con explicación.
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "Cuerpo inválido: falta id" }, { status: 400 });
@@ -34,5 +35,10 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
     return NextResponse.json({ decision: r.decision, consolidated: consolidatedOf(id) });
   }
-  return NextResponse.json({ error: "Nada que registrar: envía evaluation o decision." }, { status: 400 });
+  if (body.horizon) {
+    const r = setInitiativeHorizon(user, id, String(body.horizon));
+    if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+    return NextResponse.json({ horizon: r.horizon });
+  }
+  return NextResponse.json({ error: "Nada que registrar: envía evaluation, decision u horizon." }, { status: 400 });
 });

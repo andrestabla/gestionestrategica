@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, Card, CardHeader } from "@/components/ui";
+import { PageHeader, Card, CardHeader, Modal } from "@/components/ui";
 import { AccessChip, useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { LINES } from "@/data/demo";
@@ -163,7 +163,8 @@ function EmpresasTab() {
   const [companies, setCompanies] = useState<CompanyLite[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<CompanyLite | null>(null);
+  const [open, setOpen] = useState<CompanyLite | "new" | null>(null);
+  const editing = open === "new" ? null : open;
   const refetch = useCallback(async () => {
     const res = await fetch("/api/td/empresas");
     if (res.ok) setCompanies((await res.json()).companies);
@@ -185,9 +186,10 @@ function EmpresasTab() {
   return (
     <>
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
-          <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios" />
+          <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
+            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary !py-1.5 text-[11.5px]"><Building2 size={12} /> Nueva empresa</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-[12.5px]">
               <thead>
@@ -211,7 +213,7 @@ function EmpresasTab() {
                       {me.company?.slug !== c.slug && c.active && (
                         <button disabled={saving} onClick={() => activate(c.slug)} title="Operar esta empresa" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><ArrowRightLeft size={14} /></button>
                       )}
-                      <button disabled={saving} onClick={() => setEditing(c)} title="Editar" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
+                      <button disabled={saving} onClick={() => setOpen(c)} title="Editar" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
                       <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                       {c.slug !== "andina" && (
                         <button disabled={saving} title="Eliminar con todos sus datos"
@@ -225,9 +227,11 @@ function EmpresasTab() {
             </table>
           </div>
         </Card>
-        <CompanyForm key={editing?.slug ?? "nueva"} saving={saving} initial={editing}
-          onCancel={() => setEditing(null)}
-          onSubmit={async (input) => { const ok = await call(editing ? "PATCH" : "POST", editing ? { slug: editing.slug, ...input } : input); if (ok) setEditing(null); return ok; }} />
+        {open !== null && (
+          <CompanyForm key={editing?.slug ?? "nueva"} saving={saving} initial={editing}
+            onCancel={() => setOpen(null)}
+            onSubmit={async (input) => { const ok = await call(editing ? "PATCH" : "POST", editing ? { slug: editing.slug, ...input } : input); if (ok) setOpen(null); return ok; }} />
+        )}
       </div>
       <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
         <ShieldCheck size={12} className="mt-0.5 shrink-0" />
@@ -249,9 +253,17 @@ function CompanyForm({ saving, initial, onSubmit, onCancel }: {
   const [horizons, setHorizons] = useState<HorizonLite[]>(initial?.horizons?.length ? initial.horizons : DEFAULT_HZ);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   return (
-    <Card className="rise rise-2 self-start">
-      <CardHeader title={initial ? `Editar · ${initial.name}` : "Nueva empresa"} sub={initial ? "identidad y sector" : "nace activa; elige si parte vacía o de la plantilla demo"} />
-      <div className="space-y-2.5 px-5 pb-5">
+    <Modal title={initial ? `Editar · ${initial.name}` : "Nueva empresa"} sub={initial ? "identidad, sector y horizontes de planeación" : "nace activa; elige si parte vacía o de la plantilla demo"} onClose={onCancel}
+      footer={<>
+        <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" onClick={async () => { if (await onSubmit({ ...f, horizons }) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "" }); }}
+          disabled={saving || f.name.trim().length < 3}
+          className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
+          {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Building2 size={13} />}
+          {initial ? "Guardar cambios" : "Crear empresa"}
+        </button>
+      </>}>
+      <div className="space-y-2.5">
         <input value={f.name} onChange={set("name")} placeholder="Nombre de la empresa" className="input !py-2 text-[12px]" />
         <div className="grid grid-cols-2 gap-2">
           <input value={f.shortName} onChange={set("shortName")} placeholder="Nombre corto" className="input !py-2 text-[12px]" />
@@ -280,23 +292,15 @@ function CompanyForm({ saving, initial, onSubmit, onCancel }: {
             <option value="demo">Copiar la plantilla demo (objetivos, KPI, iniciativas, personas y tareas de ejemplo)</option>
           </select>
         )}
-        <div className="flex gap-2">
-          <button onClick={async () => { if (await onSubmit({ ...f, horizons }) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "" }); }}
-            disabled={saving || f.name.trim().length < 3}
-            className="btn-primary flex-1 !py-2 text-[12.5px] disabled:opacity-40">
-            {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Building2 size={13} />}
-            {initial ? "Guardar cambios" : "Crear empresa"}
-          </button>
-          {initial && <button onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>}
-        </div>
       </div>
-    </Card>
+    </Modal>
   );
 }
 
 function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   const me = useUser();
   const responsibles = useCatalog().catalog.responsibles;
+  const [newOpen, setNewOpen] = useState(false);
   const [companies, setCompanies] = useState<CompanyLite[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [saving, setSaving] = useState(false);
@@ -328,10 +332,11 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   return (
     <>
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
-            sub="roles válidos solo en esta empresa · los usuarios iniciales no se eliminan: se desactivan" />
+            sub="roles válidos solo en esta empresa · los usuarios iniciales no se eliminan: se desactivan"
+            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary !py-1.5 text-[11.5px]"><UserPlus size={12} /> Nueva cuenta</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-[12.5px]">
               <thead>
@@ -392,7 +397,10 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
           </div>
         </Card>
 
-        <NewUserCard saving={saving} responsibles={responsibles} onCreate={(input) => mutate("POST", input)} />
+        {newOpen && (
+          <NewUserCard saving={saving} responsibles={responsibles} onClose={() => setNewOpen(false)}
+            onCreate={async (input) => { const ok = await mutate("POST", input); if (ok) setNewOpen(false); return ok; }} />
+        )}
       </div>
 
       <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
@@ -405,10 +413,11 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   );
 }
 
-function NewUserCard({ saving, responsibles, onCreate }: {
+function NewUserCard({ saving, responsibles, onCreate, onClose }: {
   saving: boolean;
   responsibles: ResponsibleLite[];
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
+  onClose: () => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -416,10 +425,23 @@ function NewUserCard({ saving, responsibles, onCreate }: {
   const [line, setLine] = useState<number | undefined>(1);
   const [responsibleId, setResponsibleId] = useState<string | undefined>(undefined);
 
+  const submit = async () => {
+    if (await onCreate({ name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined })) {
+      setName(""); setEmail("");
+    }
+  };
   return (
-    <Card className="rise rise-2 self-start">
-      <CardHeader title="Nueva cuenta" sub="nace activa, con la contraseña demo" />
-      <div className="space-y-2.5 px-5 pb-5">
+    <Modal title="Nueva cuenta" sub="nace activa; fija su contraseña desde esta misma pestaña" onClose={onClose}
+      footer={<>
+        <button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" onClick={submit}
+          disabled={saving || !name.trim() || !email.trim() || (role === "RESPONSABLE" && !line && !responsibleId)}
+          className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
+          Crear cuenta
+        </button>
+      </>}>
+      <div className="space-y-2.5">
         <input type="text" value={name} onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo" className="input !py-2 text-[12px]" />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
@@ -439,19 +461,8 @@ function NewUserCard({ saving, responsibles, onCreate }: {
             </p>
           </>
         )}
-        <button
-          onClick={async () => {
-            if (await onCreate({ name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined })) {
-              setName(""); setEmail("");
-            }
-          }}
-          disabled={saving || !name.trim() || !email.trim() || (role === "RESPONSABLE" && !line && !responsibleId)}
-          className="btn-primary w-full !py-2 text-[12.5px] disabled:opacity-40">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
-          Crear cuenta
-        </button>
       </div>
-    </Card>
+    </Modal>
   );
 }
 

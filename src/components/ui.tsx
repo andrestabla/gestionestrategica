@@ -4,8 +4,9 @@
 // microcopy sobrio.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, X } from "lucide-react";
 
 /* ─── count-up para métricas ─── */
 
@@ -78,6 +79,46 @@ export function CardHeader({ title, sub, right }:
       </div>
       {right}
     </div>
+  );
+}
+
+/* ─── modal ─── */
+
+/** Diálogo modal para crear y editar: cierra con Escape, con la X o
+    pulsando el fondo; el cuerpo hace scroll si no cabe. `footer` recibe los
+    botones de acción. */
+export function Modal({ title, sub, onClose, children, footer, wide = false }: {
+  title: string; sub?: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // portal sobre el body: así la capa cubre la ventana aunque un ancestro tenga transform (animaciones .rise)
+    setMounted(true);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+  if (!mounted) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+      style={{ background: "color-mix(in srgb, var(--ink) 45%, transparent)" }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={title}
+        className={`panel rise my-auto flex w-full flex-col ${wide ? "max-w-[1080px]" : "max-w-[600px]"}`}>
+        <div className="flex items-start gap-3 border-b border-line px-6 py-4">
+          <div className="min-w-0 flex-1">
+            <div className="p-title">{title}</div>
+            {sub && <div className="p-sub">{sub}</div>}
+          </div>
+          <button type="button" onClick={onClose} title="Cerrar (Esc)" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+        {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-3.5">{footer}</div>}
+      </div>
+    </div>,
+    document.body,
   );
 }
 

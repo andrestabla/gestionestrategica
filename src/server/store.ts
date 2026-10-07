@@ -1554,6 +1554,23 @@ export const getDecisions = (): Record<string, DecisionRecord> => Object.fromEnt
 
 export const consolidatedOf = (iniId: string): Consolidated => consolidate(getEvaluations(iniId));
 
+/** Ubica una iniciativa en otro horizonte de la empresa (p. ej. el que sugiere
+    el puntaje). Es parte de la decisión de tiempo: la registra quien decide. */
+export function setInitiativeHorizon(user: SessionUser, iniId: string, horizon: string): { ok: true; horizon: string } | { ok: false; status: number; error: string } {
+  const c = cat();
+  const base = c.initiatives.find((i) => i.id === iniId);
+  if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!can(user, "decide_initiatives")) return { ok: false, status: 403, error: "Mover una iniciativa de horizonte es parte de la decisión de tiempo: la registra la gerencia o el advisor." };
+  const hz = horizonsOf(c.company).find((h) => h.id === String(horizon).toUpperCase());
+  if (!hz) return { ok: false, status: 422, error: "El horizonte no es de esta empresa." };
+  if (base.horizon === hz.id) return { ok: false, status: 422, error: `La iniciativa ya está en ${hz.label}.` };
+  const from = base.horizon;
+  base.horizon = hz.id;
+  audit(user, "task", iniId, `horizonte ${from} → ${hz.id}`);
+  void persist("catálogo", (db) => writeInitiative(db, cid(), base));
+  return { ok: true, horizon: hz.id };
+}
+
 export function evaluateInitiative(
   user: SessionUser,
   iniId: string,

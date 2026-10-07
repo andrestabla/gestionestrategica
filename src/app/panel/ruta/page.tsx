@@ -12,7 +12,7 @@ import { LINES, fmtCOP } from "@/data/demo";
 import { useCatalog } from "@/components/catalog-context";
 import { horizonsOf, horizonColor, horizonTitle } from "@/data/catalogo";
 import { initiativesOf } from "@/lib/vista";
-import { usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
+import { usePriorizacion, DECISION_CLS, HorizonHint } from "@/components/priorizacion";
 import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
 
 const SCORE_COLOR = (s: number) => s >= 80 ? "var(--ok)" : s >= 65 ? "var(--cyan-deep)" : s >= 50 ? "var(--warn)" : "var(--bad)";
@@ -75,7 +75,7 @@ export default function RutaPage() {
       {/* orden del portafolio con la matriz 4Shine */}
       <Card className="rise rise-2 mb-5">
         <CardHeader title="Orden del portafolio"
-          sub="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 · ordena dentro de cada horizonte · la decisión de tiempo la registra la gerencia" />
+          sub="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 · ordena dentro de cada horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia" />
         <div className="overflow-x-auto px-3 pb-4">
           <table className="w-full min-w-[760px] text-[12px]">
             <thead>
@@ -85,12 +85,13 @@ export default function RutaPage() {
                 {CRITERIA.map((c) => <th key={c.key} className="label px-2 pb-2 text-center !text-[8.5px]" title={`${c.name} · ${c.weight} %`}>{c.key} · {c.weight} %</th>)}
                 <th className="label px-3 pb-2 text-right !text-[8.5px]">Puntaje</th>
                 <th className="label px-3 pb-2 text-left !text-[8.5px]">Tipo</th>
+                <th className="label px-3 pb-2 text-left !text-[8.5px]">Sugerido</th>
                 <th className="label px-3 pb-2 text-left !text-[8.5px]">Decisión</th>
               </tr>
             </thead>
             <tbody>
               {horizons.map((hz) => hz.id).flatMap((h) => [
-                <tr key={`h-${h}`}><td colSpan={9} className="px-3 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-wider text-faint">{horizonTitle(horizons.find((x) => x.id === h)!)}</td></tr>,
+                <tr key={`h-${h}`}><td colSpan={10} className="px-3 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-wider text-faint">{horizonTitle(horizons.find((x) => x.id === h)!)}</td></tr>,
                 ...rows.filter((r) => r.horizon === h).map((r) => {
                   const d = prio?.decisions[r.id];
                   return (
@@ -107,6 +108,7 @@ export default function RutaPage() {
                       ))}
                       <td className="num px-3 py-2 text-right text-[14px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
                       <td className="px-3 py-2 text-[11px] text-ink-soft">{r.c.type ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—"}</td>
+                      <td className="px-3 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={v.catalog.company} /></td>
                       <td className="px-3 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
