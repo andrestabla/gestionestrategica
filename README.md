@@ -167,6 +167,15 @@ de la empresa: población cubierta, en oportunidad y sin presencia, ingresos
 del sector por habitante) y la competencia en cada territorio donde opera o
 planea abrir (`src/lib/demanda.ts`).
 
+**Rutas únicas por empresa.** Cada empresa vive bajo su identificador en la
+URL: `/<empresa>/login` es el acceso que se comparte a sus usuarios y
+`/<empresa>/panel/…` su panel. El proxy (`src/proxy.ts`) reescribe esas rutas
+a las internas con la cabecera `x-tenant` y redirige una ruta sin prefijo a la
+canónica de la empresa de la sesión. Una cuenta solo entra por la ruta de su
+empresa (401 en otra) y una ruta ajena la devuelve a la suya; el admin entra
+por `/login`, y al abrir `/<empresa>/…` esa empresa queda activa en su
+sesión. El identificador se edita en el formulario de la empresa.
+
 El administrador de la plataforma elige la empresa con la que opera en la
 pantalla `/empresas` (una tarjeta por empresa con su sector, ciudad, moneda,
 iniciativas, KPI y cuentas; alta de empresa en modal). Es la primera pantalla
