@@ -58,7 +58,10 @@ personas, tareas), priorización, archivos, branding e integraciones.
   iniciativa con tareas…). API: `POST /api/td/catalogo` con
   `{ entity, op, data }`. Una empresa vacía nace con las 68 evidencias del
   mapa por verificar y se construye en este orden: cargos → personas →
-  objetivos → KPI → iniciativas → tareas (Proyectos).
+  objetivos → KPI → iniciativas → tareas (Proyectos). Para cargar un
+  catálogo completo desde un JSON con esa misma forma:
+  `npx tsx scripts/importar-catalogo.ts <ruta.json> [--slug <slug>] [--crear]`
+  (idempotente; con `DATABASE_URL` vacía valida en memoria sin escribir).
 
 ## Fuente única de las definiciones
 
