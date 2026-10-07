@@ -47,3 +47,8 @@ var/*.db
 
 # plantilla de variables (sí se versiona)
 !.env.example
+
+# recursos instalados por integraciones de Vercel (no son del proyecto)
+.agents/
+.claude/skills/
+skills-lock.json

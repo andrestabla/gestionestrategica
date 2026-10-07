@@ -7,5 +7,7 @@ import { defineConfig } from "prisma/config";
 export default defineConfig({
   schema: "prisma/postgres/schema.prisma",
   migrations: { path: "prisma/postgres/migrations" },
-  datasource: { url: process.env["DATABASE_URL"] },
+  // Las migraciones usan la conexión directa (sin pooler) cuando existe,
+  // como recomienda Prisma con Neon; el runtime usa DATABASE_URL (pooled).
+  datasource: { url: process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"] },
 });
