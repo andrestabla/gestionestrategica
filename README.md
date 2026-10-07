@@ -144,9 +144,22 @@ consolidado la permite, y renunciar exige motivo.
 | Decidir el tiempo | ✅ | ✅ | — | — | — |
 
 Motor en `src/lib/priorizacion.ts`; store `evaluateInitiative` /
-`decideInitiative` (una evaluación por evaluador e iniciativa, persistidas en
-`InitiativeEvaluation` e `InitiativeDecision`); API `/api/td/priorizacion`;
-vista `/panel/iniciativas/priorizacion` y panel en cada ficha.
+`decideInitiative` / `setInitiativeHorizon` (una evaluación por evaluador e
+iniciativa, persistidas en `InitiativeEvaluation` e `InitiativeDecision`);
+API `/api/td/priorizacion`; vista `/panel/iniciativas/priorizacion` y panel
+en cada ficha.
+
+El puntaje consolidado también **sugiere el horizonte** (`suggestHorizon`):
+elegible (D ≥ 3), con capacidad (L ≥ 3) y 65 o más puntos → primer horizonte
+de la empresa; elegible con capacidad pendiente o entre 50 y 64 → siguiente;
+el resto → último. La ficha muestra el sugerido y quien decide el tiempo
+(gerencia, advisor) puede mover la iniciativa con un clic. Los horizontes los
+define cada empresa (`Company.horizons`; por defecto corto y mediano).
+
+En el editor de catálogo la iniciativa se califica con las mismas variables
+(D·E·M·L de 1 a 4 y tipo estratégico/táctico) y esa calificación se registra
+como la evaluación del usuario en la matriz. Todos los formularios de
+administración se abren en modales (`Modal` en `src/components/ui.tsx`).
 
 ## Despliegue con PostgreSQL (Vercel)
 
