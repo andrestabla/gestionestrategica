@@ -152,7 +152,7 @@ function EmpresasTab() {
   };
   const activate = async (slug: string) => {
     const res = await fetch("/api/auth/empresa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
-    if (res.ok) window.location.href = "/panel";
+    if (res.ok) window.location.href = `/${slug}/panel`;
   };
   return (
     <>

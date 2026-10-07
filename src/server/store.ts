@@ -21,6 +21,7 @@ import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_CRITERIA, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
+import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 
 /* ═══ Estado ═══ */
@@ -435,6 +436,7 @@ export type CompanyInput = {
   name: string; shortName?: string; slug?: string; city?: string; department?: string; sector?: string; size?: string;
   sectorKey?: string; ciiu?: string; template?: "demo" | "vacia"; country?: "CO" | "EC"; currency?: "COP" | "USD";
   horizons?: unknown;   // [{id, label, months}] · lista vacía o nula = corto/mediano
+  newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
 
 /** Valida los horizontes de una empresa: 1–6, id corto y único, etiqueta y meses crecientes. */
@@ -466,6 +468,7 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const slug = slugify(input.slug?.trim() || name);
   if (!slug || slug.length < 2) return { ok: false, status: 422, error: "El identificador (slug) no es válido." };
   if (g.companies.has(slug)) return { ok: false, status: 422, error: `Ya existe una empresa con el identificador «${slug}».` };
+  if (RESERVED.has(slug)) return { ok: false, status: 422, error: `El identificador «${slug}» está reservado por la plataforma.` };
   const template = input.template === "demo" ? "demo" : "vacia";
   const info: CompanyInfo = {
     slug, name, shortName: input.shortName?.trim() || name.split(" ")[0], city: input.city?.trim() ?? "", department: input.department?.trim() ?? "",
@@ -504,6 +507,19 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
   if (patch.active === false && slug === DEFAULT_TENANT && [...g.companies.values()].filter((x) => x.active).length <= 1) {
     return { ok: false, status: 422, error: "Debe quedar al menos una empresa activa." };
   }
+  if (patch.newSlug !== undefined) {
+    const ns = slugify(String(patch.newSlug));
+    if (!ns || ns.length < 2) return { ok: false, status: 422, error: "El identificador (URL) no es válido: letras minúsculas, números y guiones." };
+    if (ns !== slug) {
+      if (slug === DEFAULT_TENANT) return { ok: false, status: 422, error: "La empresa demo conserva su identificador." };
+      if (g.companies.has(ns)) return { ok: false, status: 422, error: `Ya existe una empresa con el identificador «${ns}».` };
+      if (RESERVED.has(ns)) return { ok: false, status: 422, error: `El identificador «${ns}» está reservado por la plataforma.` };
+      g.companies.delete(slug); c.slug = ns; g.companies.set(ns, c);
+      const t0 = g.tenants.get(slug);
+      if (t0) { g.tenants.delete(slug); t0.catalog.company.slug = ns; g.tenants.set(ns, t0); }
+      audit(actor, "task", `empresa:${ns}`, `identificador ${slug} → ${ns}: las sesiones abiertas de sus usuarios deben volver a entrar por /${ns}/login`);
+    }
+  }
   const fields = ["name", "shortName", "city", "department", "sector", "size", "sectorKey", "ciiu"] as const;
   for (const f of fields) if (patch[f] !== undefined) (c as Record<string, unknown>)[f] = String(patch[f]).trim();
   if (patch.country !== undefined) c.country = patch.country === "EC" ? "EC" : "CO";
@@ -514,13 +530,13 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     c.horizons = hz.horizons;
   }
   if (patch.active !== undefined) c.active = patch.active;
-  const t = g.tenants.get(slug);
+  const t = g.tenants.get(c.slug);
   if (t) t.catalog.company = { ...t.catalog.company, ...c };
   if (hasDb() && c.dbId) {
     const dbId = c.dbId;
     void persist("empresa", (db) => db.company.update({ where: { id: dbId }, data: companyRow(c) }));
   }
-  audit(actor, "task", `empresa:${slug}`, `empresa actualizada`);
+  audit(actor, "task", `empresa:${c.slug}`, `empresa actualizada`);
   return { ok: true, company: c };
 }
 

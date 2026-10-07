@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
+import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
@@ -14,6 +15,17 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   const user = await getSession();
   if (!user) redirect("/login");
   await hydrateCompanies();
+  // la empresa la fija la URL (/empresa/panel/…): cada usuario solo en la suya;
+  // el admin activa en su sesión la empresa de la URL si aún no coincide
+  const fromUrl = await urlTenant();
+  if (fromUrl) {
+    if (!companyBySlug(fromUrl)) notFound();
+    if (user.role !== "ADMIN" && user.company?.slug !== fromUrl) redirect(user.company ? `/${user.company.slug}/panel` : "/login");
+    if (user.role === "ADMIN" && user.company?.slug !== fromUrl) {
+      const back = (await urlTenantPath()) ?? `/${fromUrl}/panel`;
+      redirect(`/api/auth/empresa?slug=${encodeURIComponent(fromUrl)}&next=${encodeURIComponent(back)}`);
+    }
+  }
   const company = user.company ? companyBySlug(user.company.slug) : null;
   const companies = user.role === "ADMIN" ? listCompanies().map((c) => ({ slug: c.slug, name: c.name, shortName: c.shortName, active: c.active })) : [];
   // el admin sin empresa activa elige una por pantalla (si existe alguna)

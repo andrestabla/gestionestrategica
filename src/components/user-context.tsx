@@ -20,6 +20,12 @@ export function useUser(): SessionUser {
   return u;
 }
 
+/** Prefijo de las rutas de la empresa activa («/cresio»); vacío sin empresa. */
+export function useBase(): string {
+  const u = useContext(Ctx);
+  return u?.company ? `/${u.company.slug}` : "";
+}
+
 export function useCan(action: Action, target?: number | Scope): boolean {
   return can(useContext(Ctx), action, target);
 }

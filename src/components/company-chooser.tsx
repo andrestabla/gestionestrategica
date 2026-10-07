@@ -32,7 +32,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
   const choose = async (slug: string) => {
     setBusy(slug); setError(null);
     const res = await fetch("/api/auth/empresa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
-    if (res.ok) { router.push("/panel"); router.refresh(); return; }
+    if (res.ok) { router.push(`/${slug}/panel`); router.refresh(); return; }
     setError((await res.json().catch(() => null))?.error ?? "No se pudo activar la empresa.");
     setBusy(null);
   };

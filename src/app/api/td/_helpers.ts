@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { urlTenant } from "@/server/request-tenant";
 import { getSession, type SessionUser } from "@/lib/session";
 import { hydrateFromDb, hydrateCompanies, companyBySlug } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
@@ -16,7 +17,11 @@ export async function guard() {
 /** Resuelve la empresa activa de la sesión: la del usuario, o la elegida por el admin. */
 export async function tenantOf(user: SessionUser): Promise<{ slug: string } | NextResponse> {
   await hydrateCompanies();
-  const slug = user.company?.slug;
+  const fromUrl = await urlTenant();
+  if (fromUrl && user.role !== "ADMIN" && user.company?.slug !== fromUrl) {
+    return NextResponse.json({ error: "Esta ruta es de otra empresa. Entra por el enlace de la tuya." }, { status: 403 });
+  }
+  const slug = fromUrl ?? user.company?.slug;
   if (!slug) {
     return NextResponse.json({ error: user.role === "ADMIN" ? "Elige una empresa para operar." : "Tu cuenta no tiene empresa asignada." }, { status: 409 });
   }

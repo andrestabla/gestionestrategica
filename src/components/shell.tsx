@@ -193,6 +193,9 @@ export function AppShell({ children, user, companies = [] }: {
   const pathname = usePathname();
   const router = useRouter();
   const company = user.company;
+  const base = company ? `/${company.slug}` : "";
+  // la ruta interna, sin el prefijo de empresa, para resaltar el módulo activo
+  const path = base && pathname.startsWith(base) ? (pathname.slice(base.length) || "/panel") : pathname;
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -219,7 +222,7 @@ export function AppShell({ children, user, companies = [] }: {
 
   const current = [...NAV, { href: "/panel/admin", label: "Administración", code: undefined }]
     .slice().reverse().find((n) =>
-      n.href === "/panel" ? pathname === "/panel" : pathname.startsWith(n.href));
+      n.href === "/panel" ? path === "/panel" : path.startsWith(n.href));
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -251,10 +254,10 @@ export function AppShell({ children, user, companies = [] }: {
       {!mini && <div className="label mb-1 px-3 !text-white/30">Módulos</div>}
       {navList.map((item) => {
         const active = item.href === "/panel"
-          ? pathname === "/panel"
-          : pathname.startsWith(item.href);
+          ? path === "/panel"
+          : path.startsWith(item.href);
         return (
-          <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
+          <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
             title={mini ? item.label : undefined}
             className={`group relative flex items-center rounded-xl text-[13px] font-medium transition-all duration-150 ${
               mini ? "justify-center px-0 py-[10px]" : "gap-3 px-3 py-[9px]"

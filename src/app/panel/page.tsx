@@ -7,6 +7,7 @@ import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
+import { useBase } from "@/components/user-context";
 import { LINES, fmtCOP } from "@/data/demo";
 import { prevScores } from "@/lib/vista";
 import { buildAlerts, executiveSummary } from "@/lib/logic";
@@ -20,6 +21,7 @@ const SEV_META = {
 } as const;
 
 export default function Panel() {
+  const base = useBase();
   const v = useCatalog();
   // medición vigente efectiva (si A3 se publicó desde la plataforma, manda A3)
   const { data: matData, scores: effScores, lineScoreOf, prevLineScoreOf, institution } = useMaturity();
@@ -69,7 +71,7 @@ export default function Panel() {
               const now = lineScoreOf(l.n);
               const before = prevLineScoreOf(l.n) ?? prevByLine[l.n] ?? 0;
               return (
-                <Link key={l.n} href={`/panel/diagnostico/capacidad/${l.n}`} className="group block">
+                <Link key={l.n} href={`${base}/panel/diagnostico/capacidad/${l.n}`} className="group block">
                   <div className="mb-1.5 flex items-baseline justify-between">
                     <span className="text-[13px] font-bold text-ink transition-colors group-hover:text-cyan-deep">
                       {l.code} <span className="font-semibold text-ink-soft">{l.name}</span>
@@ -155,22 +157,22 @@ export default function Panel() {
       <div className="rise rise-4">
         <div className="kicker mb-4">Módulos de la plataforma</div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ModuleCard href="/panel/diagnostico" code="M1" title="Diagnóstico 4Shine-OD"
+          <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico 4Shine-OD"
             desc="Radar de capacidades, mapa de calor de las 17 dimensiones, evidencia por práctica y serie de mediciones."
             tags={["17 dimensiones", "68 evidencias"]} />
-          <ModuleCard href="/panel/benchmark" code="M2" title="Benchmark"
+          <ModuleCard href={`${base}/panel/benchmark`} code="M2" title="Benchmark"
             desc="Posición sectorial frente a pares comparables y presencia territorial por departamento."
             tags={["Sector", "Territorio"]} />
-          <ModuleCard href="/panel/estrategia" code="M3" title="Estrategia · cuadro de mando y OKR"
+          <ModuleCard href={`${base}/panel/estrategia`} code="M3" title="Estrategia · cuadro de mando y OKR"
             desc="Objetivo, resultados clave, dimensión que instala e iniciativa: la trazabilidad completa, navegable."
             tags={["4 perspectivas", "10 objetivos"]} />
-          <ModuleCard href="/panel/kpi" code="M4" title="Indicadores"
+          <ModuleCard href={`${base}/panel/kpi`} code="M4" title="Indicadores"
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
             tags={[`${v.kpis.length} indicadores`]} />
-          <ModuleCard href="/panel/ruta" code="M5" title="Mapa de ruta"
+          <ModuleCard href={`${base}/panel/ruta`} code="M5" title="Mapa de ruta"
             desc="Roadmap por horizontes con Gantt y la matriz 4Shine de priorización (D·E·M·L)."
             tags={["2026–2028"]} />
-          <ModuleCard href="/panel/iniciativas" code="M6" title="Seguimiento de iniciativas"
+          <ModuleCard href={`${base}/panel/iniciativas`} code="M6" title="Seguimiento de iniciativas"
             desc="Avance, presupuesto en tres estados y factores críticos de éxito en semáforo."
             tags={[fmtCOP(budget.planned)]} />
         </div>

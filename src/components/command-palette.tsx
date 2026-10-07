@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PRACTICES, DIMS, FRAMEWORKS } from "@/data/mapa";
 import { useCatalog } from "@/components/catalog-context";
+import { useBase } from "@/components/user-context";
 import type { TenantView } from "@/lib/vista";
 import { Search, CornerDownLeft } from "lucide-react";
 
@@ -104,6 +105,7 @@ function buildIndex(v: TenantView): Entry[] {
 }
 
 export function CommandPalette() {
+  const base = useBase();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -140,7 +142,7 @@ export function CommandPalette() {
 
   const go = useCallback((e: Entry) => {
     setOpen(false);
-    router.push(e.href);
+    router.push(base + e.href);
   }, [router]);
 
   if (!open) return null;

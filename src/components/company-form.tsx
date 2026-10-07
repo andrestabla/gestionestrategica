@@ -46,6 +46,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
     name: initial?.name ?? "", shortName: initial?.shortName ?? "", city: initial?.city ?? "", department: initial?.department ?? "",
     sector: initial?.sector ?? "", size: initial?.size ?? "", ciiu: initial?.ciiu ?? "", sectorKey: initial?.sectorKey ?? "suministros-industriales", template: "vacia",
     country: initial?.country ?? "CO", currency: initial?.currency ?? "COP",
+    slug: initial?.slug ?? "",
   });
   const [horizons, setHorizons] = useState<HorizonLite[]>(initial?.horizons?.length ? initial.horizons : DEFAULT_HZ);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
@@ -53,7 +54,11 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
     <Modal title={initial ? `Editar · ${initial.name}` : "Nueva empresa"} sub={initial ? "identidad, sector y horizontes de planeación" : "nace activa; elige si parte vacía o de la plantilla demo"} onClose={onCancel}
       footer={<>
         <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
-        <button type="button" onClick={async () => { if (await onSubmit({ ...f, horizons }) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "" }); }}
+        <button type="button" onClick={async () => {
+            const { slug: slugField, ...rest } = f;
+            const input = initial ? { ...rest, horizons, newSlug: slugField } : { ...rest, horizons, slug: slugField || undefined };
+            if (await onSubmit(input) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "", slug: "" });
+          }}
           disabled={saving || f.name.trim().length < 3}
           className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Building2 size={13} />}
@@ -62,6 +67,10 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
       </>}>
       <div className="space-y-2.5">
         <input value={f.name} onChange={set("name")} placeholder="Nombre de la empresa" className="input !py-2 text-[12px]" />
+        <div>
+          <input value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder={initial ? "identificador" : "Identificador en la URL (opcional: se toma del nombre)"} className="input num !py-2 text-[12px]" title="Identificador único de la empresa en la URL" />
+          <p className="num mt-1 text-[10px] text-faint">Rutas de la empresa: /{f.slug || "empresa"}/login · /{f.slug || "empresa"}/panel{initial && f.slug !== initial.slug ? " · al cambiarlo, sus usuarios vuelven a entrar por la nueva ruta" : ""}</p>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <input value={f.shortName} onChange={set("shortName")} placeholder="Nombre corto" className="input !py-2 text-[12px]" />
           <input value={f.ciiu} onChange={set("ciiu")} placeholder="CIIU (G4659)" className="input !py-2 text-[12px]" />
