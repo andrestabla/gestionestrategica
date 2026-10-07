@@ -5,7 +5,8 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { SessionUser } from "@/lib/session";
-import { describeAccess, can, type ModuleKey, type Action } from "@/lib/permissions";
+import { describeAccess, can, type ModuleKey, type Action, type Scope } from "@/lib/permissions";
+import { useScopeName } from "@/components/catalog-context";
 
 const Ctx = createContext<SessionUser | null>(null);
 
@@ -19,14 +20,15 @@ export function useUser(): SessionUser {
   return u;
 }
 
-export function useCan(action: Action, line?: number): boolean {
-  return can(useContext(Ctx), action, line);
+export function useCan(action: Action, target?: number | Scope): boolean {
+  return can(useContext(Ctx), action, target);
 }
 
 /** Chip de acceso del módulo: qué puede hacer el rol del usuario aquí. */
 export function AccessChip({ module }: { module: ModuleKey }) {
   const user = useContext(Ctx);
-  const acc = describeAccess(user, module);
+  const scopeName = useScopeName(user?.responsibleId);
+  const acc = describeAccess(user, module, scopeName);
   const cls = acc.level === "full" ? "chip chip-ok"
     : acc.level === "line" || acc.level === "partial" ? "chip chip-cyan"
     : "chip";

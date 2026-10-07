@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     name: found.user.name,
     role: found.user.role,
     line: found.user.line,
+    responsibleId: found.user.responsibleId,
     company: company ? { slug: company.slug, name: company.name, shortName: company.shortName } : undefined,
   };
   await setSession(session);

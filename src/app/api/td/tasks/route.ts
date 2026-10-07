@@ -11,7 +11,7 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   const editable = Object.fromEntries(
     getTasks().map((t) => {
       const ini = catalog().initiatives.find((i) => i.id === t.iniId);
-      return [t.id, can(user, "edit_tasks", ini?.line)];
+      return [t.id, can(user, "edit_tasks", ini ?? undefined)];
     }),
   );
   return NextResponse.json({

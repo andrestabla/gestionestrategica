@@ -30,8 +30,8 @@ async function main() {
   for (const u of ANDINA_CATALOG.seedUsers) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: { companyId: company.id, role: u.role, line: u.line ?? null },
-      create: { email: u.email, name: u.name, role: u.role, line: u.line ?? null, passwordHash: hash, companyId: company.id },
+      update: { companyId: company.id, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null },
+      create: { email: u.email, name: u.name, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, passwordHash: hash, companyId: company.id },
     });
   }
 

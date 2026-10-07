@@ -140,7 +140,7 @@ consolidado la permite, y renunciar exige motivo.
 
 | Acción | Consultor | Líder | Responsable | Directivo | Admin |
 |---|:--:|:--:|:--:|:--:|:--:|
-| Evaluar con la matriz | ✅ | ✅ | solo su capacidad | ✅ | — |
+| Evaluar con la matriz | ✅ | ✅ | solo su ámbito | ✅ | — |
 | Decidir el tiempo | ✅ | ✅ | — | — | — |
 
 Motor en `src/lib/priorizacion.ts`; store `evaluateInitiative` /

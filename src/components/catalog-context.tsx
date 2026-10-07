@@ -28,6 +28,15 @@ export function useCatalog(): TenantView {
   return c.view;
 }
 
+/** Nombre del responsable del catálogo que delimita un ámbito (p. ej. la
+    tribu de un usuario). Fuera del provider devuelve undefined. */
+export function useScopeName(responsibleId?: string): string | undefined {
+  const c = useContext(CatalogCtx);
+  if (!c || !responsibleId) return undefined;
+  const r = c.view.catalog.responsibles.find((x) => x.id === responsibleId);
+  return r ? (r.dependencia || r.cargo) : undefined;
+}
+
 export function useCatalogRefetch(): () => Promise<void> {
   const c = useContext(CatalogCtx);
   if (!c) throw new Error("useCatalogRefetch fuera de CatalogProvider");

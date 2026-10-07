@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
 import { AccessChip, useCan, useUser } from "@/components/user-context";
+import { useCatalog } from "@/components/catalog-context";
 import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
@@ -92,14 +93,38 @@ export default function AdminPage() {
 
 type ManagedUser = {
   email: string; name: string; role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO";
-  line?: number; active: boolean; seeded: boolean; createdBy?: string; at?: string;
+  line?: number; responsibleId?: string; active: boolean; seeded: boolean; createdBy?: string; at?: string;
 };
+
+type ResponsibleLite = { id: string; cargo: string; dependencia: string };
+
+/** Ámbito de un responsable: capacidad 4.1–4.4 y/o responsable del catálogo (tribu, área). Al menos uno. */
+function ScopeSelects({ line, responsibleId, responsibles, disabled, compact, onChange }: {
+  line?: number; responsibleId?: string; responsibles: ResponsibleLite[]; disabled?: boolean; compact?: boolean;
+  onChange: (patch: { line?: number | null; responsibleId?: string | null }) => void;
+}) {
+  const cls = compact ? "input w-auto !py-1 pr-7 !text-[11.5px]" : "input !py-2 text-[12px]";
+  return (
+    <div className={compact ? "flex flex-wrap gap-1.5" : "space-y-2"}>
+      <select value={line ?? ""} disabled={disabled} title="Capacidad (rige las prácticas del diagnóstico y lo que no tiene responsable)"
+        onChange={(e) => onChange({ line: e.target.value ? Number(e.target.value) : null })} className={cls}>
+        <option value="">Sin capacidad</option>
+        {LINES.map((l) => <option key={l.n} value={l.n}>{l.code}{compact ? "" : ` · ${l.name}`}</option>)}
+      </select>
+      <select value={responsibleId ?? ""} disabled={disabled} title="Responsable del catálogo (rige iniciativas, KPI y tareas con dueño)"
+        onChange={(e) => onChange({ responsibleId: e.target.value || null })} className={cls}>
+        <option value="">Sin responsable</option>
+        {responsibles.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}
+      </select>
+    </div>
+  );
+}
 
 const ROLE_LABEL: Record<ManagedUser["role"], string> = {
   ADMIN: "Admin de la plataforma",
   CONSULTOR: "Consultor Algoritmo T",
   LIDER: "Líder de la empresa",
-  RESPONSABLE: "Responsable de capacidad",
+  RESPONSABLE: "Responsable de ámbito",
   DIRECTIVO: "Directivo",
 };
 
@@ -241,6 +266,7 @@ function CompanyForm({ saving, initial, onSubmit, onCancel }: {
 
 function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   const me = useUser();
+  const responsibles = useCatalog().catalog.responsibles;
   const [companies, setCompanies] = useState<CompanyLite[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [saving, setSaving] = useState(false);
@@ -280,7 +306,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
             <table className="w-full min-w-[560px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-line-strong bg-surface-2/60">
-                  {["Usuario", "Rol", "Capacidad", "Estado", canCompanies ? "Empresa" : ""].map((h) => (
+                  {["Usuario", "Rol", "Ámbito", "Estado", canCompanies ? "Empresa" : ""].map((h) => (
                     <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>
                   ))}
                 </tr>
@@ -303,11 +329,8 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5">
                       {u.role === "RESPONSABLE" ? (
-                        <select value={u.line ?? 1} disabled={saving}
-                          onChange={(e) => mutate("PATCH", { email: u.email, line: Number(e.target.value) })}
-                          className="input w-auto !py-1 pr-7 !text-[11.5px]">
-                          {LINES.map((l) => <option key={l.n} value={l.n}>{l.code}</option>)}
-                        </select>
+                        <ScopeSelects compact line={u.line} responsibleId={u.responsibleId} responsibles={responsibles} disabled={saving}
+                          onChange={(patch) => mutate("PATCH", { email: u.email, ...patch })} />
                       ) : (
                         <span className="text-faint">—</span>
                       )}
@@ -339,7 +362,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
           </div>
         </Card>
 
-        <NewUserCard saving={saving} onCreate={(input) => mutate("POST", input)} />
+        <NewUserCard saving={saving} responsibles={responsibles} onCreate={(input) => mutate("POST", input)} />
       </div>
 
       <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
@@ -352,14 +375,16 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   );
 }
 
-function NewUserCard({ saving, onCreate }: {
+function NewUserCard({ saving, responsibles, onCreate }: {
   saving: boolean;
+  responsibles: ResponsibleLite[];
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<ManagedUser["role"]>("RESPONSABLE");
-  const [line, setLine] = useState(1);
+  const [line, setLine] = useState<number | undefined>(1);
+  const [responsibleId, setResponsibleId] = useState<string | undefined>(undefined);
 
   return (
     <Card className="rise rise-2 self-start">
@@ -376,18 +401,21 @@ function NewUserCard({ saving, onCreate }: {
           ))}
         </select>
         {role === "RESPONSABLE" && (
-          <select value={line} onChange={(e) => setLine(Number(e.target.value))}
-            className="input !py-2 text-[12px]">
-            {LINES.map((l) => <option key={l.n} value={l.n}>{l.code} · {l.name}</option>)}
-          </select>
+          <>
+            <ScopeSelects line={line} responsibleId={responsibleId} responsibles={responsibles}
+              onChange={(p) => { if (p.line !== undefined) setLine(p.line ?? undefined); if (p.responsibleId !== undefined) setResponsibleId(p.responsibleId ?? undefined); }} />
+            <p className="text-[10.5px] leading-snug text-faint">
+              Con responsable (tribu, área), edita y evalúa solo lo que tiene ese dueño; la capacidad rige las prácticas del diagnóstico. Hace falta al menos uno.
+            </p>
+          </>
         )}
         <button
           onClick={async () => {
-            if (await onCreate({ name, email, role, line: role === "RESPONSABLE" ? line : undefined })) {
+            if (await onCreate({ name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined })) {
               setName(""); setEmail("");
             }
           }}
-          disabled={saving || !name.trim() || !email.trim()}
+          disabled={saving || !name.trim() || !email.trim() || (role === "RESPONSABLE" && !line && !responsibleId)}
           className="btn-primary w-full !py-2 text-[12.5px] disabled:opacity-40">
           {saving ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
           Crear cuenta
@@ -447,7 +475,7 @@ function PermisosTab() {
                         {grant === true ? (
                           <Check size={15} className="inline" style={{ color: "var(--ok)" }} />
                         ) : grant === "line" ? (
-                          <span className="chip chip-cyan !py-0 !text-[8.5px]">su capacidad</span>
+                          <span className="chip chip-cyan !py-0 !text-[8.5px]">su ámbito</span>
                         ) : (
                           <Minus size={14} className="inline text-faint" />
                         )}

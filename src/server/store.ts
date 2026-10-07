@@ -187,7 +187,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
-    users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, active: true, seeded: true })),
+    users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, responsibleId: u.responsibleId, active: true, seeded: true })),
     integrations: new Map(), notifRead: new Map(), hydrated: false,
   };
 }
@@ -384,8 +384,8 @@ export async function hydrateFromDb() {
       const list = users();
       for (const u of dbUsers) {
         const existing = list.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
-        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.active = u.active; }
-        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString() });
+        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; }
+        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString() });
       }
     }
     for (const i of await db.integration.findMany(W)) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
@@ -527,7 +527,7 @@ export async function findUserForLogin(email: string): Promise<{ user: ManagedUs
       if (u && u.active) {
         const company = u.company ? g.companies.get(u.company.slug) ?? null : null;
         if (u.companyId && !company) return null;
-        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, active: true, seeded: false }, company };
+        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: true, seeded: false }, company };
       }
     } catch (e2) { console.error("[4shine] búsqueda de usuario falló:", (e2 as Error).message); }
   }
@@ -626,14 +626,14 @@ export async function updateTask(
   const t = getTask(id);
   if (!t) return { ok: false, status: 404, error: "La tarea no existe." };
 
-  // permiso: edición total o de la línea de la iniciativa
+  // permiso: edición total o del ámbito de la iniciativa (capacidad o responsable)
   const ini = cat().initiatives.find((i) => i.id === t.iniId)!;
-  if (!can(user, "edit_tasks", ini.line)) {
+  if (!can(user, "edit_tasks", ini)) {
     return {
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no puede editar tareas."
-        : `No puedes editar tareas de la capacidad ${capName(ini.line)}: tu ámbito es ${capName(user.line)}.`,
+        : `No puedes editar tareas de ${resName(user, ini)}: tu ámbito es ${scopeName(user)}.`,
     };
   }
 
@@ -856,12 +856,12 @@ export function createTask(
   const ini = cat().initiatives.find((i) => i.id === input.iniId);
   if (!ini) return { ok: false, status: 422, error: "La iniciativa no existe." };
 
-  if (!can(user, "edit_tasks", ini.line)) {
+  if (!can(user, "edit_tasks", ini)) {
     return {
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no crea tareas."
-        : `No puedes crear tareas en la capacidad ${capName(ini.line)}: tu ámbito es ${capName(user.line)}.`,
+        : `No puedes crear tareas en ${resName(user, ini)}: tu ámbito es ${scopeName(user)}.`,
     };
   }
 
@@ -998,10 +998,10 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
   for (const tid of allIds) {
     const t = getTask(tid)!;
     const ini = cat().initiatives.find((i) => i.id === t.iniId)!;
-    if (!can(user, "edit_tasks", ini.line)) {
+    if (!can(user, "edit_tasks", ini)) {
       return {
         ok: false, status: 403,
-        error: `El corrimiento toca la capacidad ${capName(ini.line)} (${tid}) y tu ámbito es ${capName(user.line)}.`,
+        error: `El corrimiento toca ${resName(user, ini)} (${tid}) y tu ámbito es ${scopeName(user)}.`,
       };
     }
   }
@@ -1030,6 +1030,16 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
    independencia). Publicar exige las 68 prácticas calificadas y conmuta la
    medición vigente de toda la lógica del servidor. */
 
+/** Ámbito de un responsable, para los mensajes: su tribu/área si la tiene, si no su capacidad. */
+const scopeName = (u: SessionUser) => {
+  const r = u.responsibleId ? cat().responsibles.find((x) => x.id === u.responsibleId) : undefined;
+  if (r) return `${r.dependencia || r.cargo}${u.line ? ` (y la capacidad ${capName(u.line)} en el diagnóstico)` : ""}`;
+  return `la capacidad ${capName(u.line)}`;
+};
+const ownerName = (id?: string) => cat().responsibles.find((x) => x.id === id)?.dependencia;
+/** Cómo nombrar el recurso en el mensaje: por su dueño si eso decidió, si no por su capacidad. */
+const resName = (u: SessionUser, r: { line?: number; ownerId?: string }) =>
+  (u.responsibleId && r.ownerId && ownerName(r.ownerId)) || `la capacidad ${capName(r.line)}`;
 const capName = (n?: number) => DIMS.find((d) => d.line === n)
   ? ["", "Dirección", "Liderazgo", "Ejecución", "Multiplicación"][n!] : "sin capacidad";
 
@@ -1067,7 +1077,7 @@ export function captureVariable(
     return {
       ok: false, status: 403,
       error: user.role === "RESPONSABLE"
-        ? `No puedes capturar prácticas de ${capName(v.line)}: tu ámbito es ${capName(user.line)}.`
+        ? (user.line ? `No puedes capturar prácticas de ${capName(v.line)}: tu capacidad es ${capName(user.line)}.` : "Tu cuenta tiene ámbito por responsable sin capacidad asignada: la captura del diagnóstico va por capacidad.")
         : "Tu rol no participa en la captura del diagnóstico.",
     };
   }
@@ -1340,12 +1350,12 @@ export function reportKpi(
   const k = cat().kpis.find((x) => x.code === code);
   if (!k) return { ok: false, status: 404, error: "El indicador no existe en el catálogo." };
 
-  if (!can(user, "report_kpi", k.line)) {
+  if (!can(user, "report_kpi", k)) {
     return {
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no reporta valores de KPI."
-        : `No puedes reportar KPI de la capacidad ${capName(k.line)}: tu ámbito es ${capName(user.line)}.`,
+        : `No puedes reportar KPI de ${resName(user, k)}: tu ámbito es ${scopeName(user)}.`,
     };
   }
 
@@ -1423,12 +1433,12 @@ export function updateInitiative(
   const base = cat().initiatives.find((i) => i.id === id);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
 
-  if (!can(user, "edit_initiatives", base.line)) {
+  if (!can(user, "edit_initiatives", base)) {
     return {
       ok: false, status: 403,
       error: user.role === "DIRECTIVO"
         ? "Tu rol es de consulta: no edita iniciativas."
-        : `No puedes editar iniciativas de la capacidad ${capName(base.line)}: tu ámbito es ${capName(user.line)}.`,
+        : `No puedes editar iniciativas de ${resName(user, base)}: tu ámbito es ${scopeName(user)}.`,
     };
   }
 
@@ -1521,13 +1531,13 @@ export function evaluateInitiative(
 ): { ok: true; evaluation: Evaluation; consolidated: Consolidated } | { ok: false; status: number; error: string } {
   const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
-  if (!can(user, "evaluate_initiatives", base.line)) {
+  if (!can(user, "evaluate_initiatives", base)) {
     return {
       ok: false, status: 403,
       error: user.role === "ADMIN"
         ? "El administrador de la plataforma no evalúa iniciativas."
         : user.role === "RESPONSABLE"
-          ? `Evalúas las iniciativas de tu capacidad (${capName(user.line)}); esta es de ${capName(base.line)}.`
+          ? `Evalúas las iniciativas de tu ámbito (${scopeName(user)}); esta es de ${resName(user, base)}.`
           : "Tu rol no evalúa la priorización.",
     };
   }
@@ -1649,6 +1659,7 @@ export function removeResponsible(user: SessionUser, id: string): CatResult {
     ...c.kpis.filter((k) => k.ownerId === id).map((k) => `KPI ${k.code}`),
     ...c.initiatives.filter((i) => i.ownerId === id).map((i) => `iniciativa ${i.id}`),
     ...c.people.filter((p) => p.responsibleId === id).map((p) => `persona ${p.name}`),
+    ...users().filter((u) => u.responsibleId === id).map((u) => `cuenta ${u.email}`),
   ];
   if (refs.length) return fail(422, `No se puede eliminar: lo referencian ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}. Reasigna primero.`);
   c.responsibles = c.responsibles.filter((r) => r.id !== id);
@@ -1907,6 +1918,7 @@ export type ManagedUser = {
   name: string;
   role: SessionUser["role"];
   line?: number;
+  responsibleId?: string;      // ámbito por responsable del catálogo (tribu, área)
   active: boolean;
   seeded: boolean;             // vino del seed (no se elimina, solo se desactiva)
   createdBy?: string;
@@ -1924,9 +1936,20 @@ export const findActiveUser = (email: string): ManagedUser | null =>
 
 const VALID_ROLES: SessionUser["role"][] = ["CONSULTOR", "LIDER", "RESPONSABLE", "DIRECTIVO"];   // los roles de empresa; ADMIN es de plataforma
 
+/** Ámbito de un RESPONSABLE: capacidad 4.1–4.4, responsable del catálogo, o ambos; al menos uno. */
+function resolveScope(line: unknown, responsibleId: unknown):
+  { ok: true; line?: number; responsibleId?: string } | { ok: false; error: string } {
+  const l = line === undefined || line === null || line === "" ? undefined : Number(line);
+  if (l !== undefined && ![1, 2, 3, 4].includes(l)) return { ok: false, error: "Capacidad inválida (4.1–4.4)." };
+  const r = typeof responsibleId === "string" && responsibleId.trim() ? responsibleId.trim() : undefined;
+  if (r && !cat().responsibles.some((x) => x.id === r)) return { ok: false, error: "El responsable del ámbito no existe en el catálogo de la empresa." };
+  if (l === undefined && !r) return { ok: false, error: "El responsable exige un ámbito: una capacidad (4.1–4.4), un responsable del catálogo (tribu, área) o ambos." };
+  return { ok: true, line: l, responsibleId: r };
+}
+
 export function createUser(
   actor: SessionUser,
-  input: { email: string; name: string; role: SessionUser["role"]; line?: number },
+  input: { email: string; name: string; role: SessionUser["role"]; line?: number; responsibleId?: string | null },
 ): { ok: true; user: ManagedUser } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_users")) {
     return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
@@ -1947,21 +1970,20 @@ export function createUser(
   if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) {
     return { ok: false, status: 422, error: "Ese correo es de un administrador de la plataforma." };
   }
-  if (input.role === "RESPONSABLE" && ![1, 2, 3, 4].includes(input.line ?? 0)) {
-    return { ok: false, status: 422, error: "El responsable de línea exige una línea (4.1–4.4)." };
-  }
+  const scope = input.role === "RESPONSABLE" ? resolveScope(input.line, input.responsibleId) : { ok: true as const, line: undefined, responsibleId: undefined };
+  if (!scope.ok) return { ok: false, status: 422, error: scope.error };
   const user: ManagedUser = {
     email, name: input.name.trim(), role: input.role,
-    line: input.role === "RESPONSABLE" ? input.line : undefined,
+    line: scope.line, responsibleId: scope.responsibleId,
     active: true, seeded: false,
     createdBy: actor.name, at: new Date().toISOString(),
   };
   users().push(user);
   void persist("usuario", async (db) => {
     const companyId = cid();
-    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, active: true, companyId }, create: { email, name: user.name, role: user.role, line: user.line ?? null, passwordHash: "", companyId } });
+    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, active: true, companyId }, create: { email, name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, passwordHash: "", companyId } });
   });
-  audit(actor, "task", email, `usuario creado (${input.role}${user.line ? ` · ${capName(user.line)}` : ""})`);
+  audit(actor, "task", email, `usuario creado (${input.role}${user.role === "RESPONSABLE" ? ` · ${scopeName(user)}` : ""})`);
   return { ok: true, user };
 }
 
@@ -2028,7 +2050,7 @@ export async function setUserPassword(
 export function updateUser(
   actor: SessionUser,
   email: string,
-  patch: { role?: SessionUser["role"]; line?: number; active?: boolean },
+  patch: { role?: SessionUser["role"]; line?: number | null; responsibleId?: string | null; active?: boolean },
 ): { ok: true; user: ManagedUser } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_users")) {
     return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
@@ -2055,23 +2077,23 @@ export function updateUser(
     }
     changes.push(`rol ${u.role} → ${patch.role}`);
     u.role = patch.role;
-    if (patch.role !== "RESPONSABLE") u.line = undefined;
+    if (patch.role !== "RESPONSABLE") { u.line = undefined; u.responsibleId = undefined; }
   }
 
-  if (patch.line !== undefined && patch.line !== u.line) {
+  if ((patch.line !== undefined && patch.line !== u.line) || (patch.responsibleId !== undefined && (patch.responsibleId || undefined) !== u.responsibleId)) {
     if (u.role !== "RESPONSABLE") {
-      return { ok: false, status: 422, error: "La línea solo aplica al responsable de línea." };
+      return { ok: false, status: 422, error: "El ámbito (capacidad o responsable) solo aplica al rol Responsable." };
     }
-    if (![1, 2, 3, 4].includes(patch.line)) {
-      return { ok: false, status: 422, error: "Línea inválida (1–4)." };
-    }
-    changes.push(`línea → 4.${patch.line}`);
-    u.line = patch.line;
+    const scope = resolveScope(patch.line === undefined ? u.line : patch.line, patch.responsibleId === undefined ? u.responsibleId : patch.responsibleId);
+    if (!scope.ok) return { ok: false, status: 422, error: scope.error };
+    if (scope.line !== u.line) changes.push(scope.line ? `capacidad → 4.${scope.line}` : "sin capacidad");
+    if (scope.responsibleId !== u.responsibleId) changes.push(scope.responsibleId ? `ámbito → ${ownerName(scope.responsibleId) ?? scope.responsibleId}` : "sin responsable");
+    u.line = scope.line; u.responsibleId = scope.responsibleId;
   }
 
   if (changes.length === 0) return { ok: false, status: 422, error: "Nada que actualizar." };
   audit(actor, "task", u.email, `usuario: ${changes.join(" · ")}`);
-  void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, active: u.active } }));
+  void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active } }));
   return { ok: true, user: u };
 }
 

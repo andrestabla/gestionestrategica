@@ -178,7 +178,7 @@ const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin de la plataforma",
   CONSULTOR: "Advisor 4Shine",
   LIDER: "Líder de la empresa",
-  RESPONSABLE: "Responsable de capacidad",
+  RESPONSABLE: "Responsable de ámbito",
   DIRECTIVO: "Junta o directivo",
 };
 

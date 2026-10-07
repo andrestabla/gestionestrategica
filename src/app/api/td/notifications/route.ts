@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
+import { inScope } from "@/lib/permissions";
 import { buildAlerts } from "@/lib/logic";
 import { getComments, getTask, getNotifRead, markNotifRead, tenantView, catalog } from "@/server/store";
 
@@ -27,7 +28,7 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   for (const a of buildAlerts(tenantView())) {
     const mine =
       user.role === "ADMIN" || user.role === "CONSULTOR" || user.role === "LIDER" ? true
-      : user.role === "RESPONSABLE" ? a.line === user.line
+      : user.role === "RESPONSABLE" ? inScope(user, { line: a.line })
       : a.severity <= 2;                       // directivo: lo estratégico
     if (!mine) continue;
     items.push({
@@ -42,13 +43,13 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   for (const c of getComments()) {
     if (c.author === user.name) continue;
     const t = getTask(c.taskId);
-    const line = t ? catalog().initiatives.find((i) => i.id === t.iniId)?.line : undefined;
+    const ini = t ? catalog().initiatives.find((i) => i.id === t.iniId) : undefined;
     const mention = c.text.includes("@") && c.text.toLowerCase().includes(firstName);
-    const inScope =
+    const mine =
       user.role === "ADMIN" || user.role === "CONSULTOR" || user.role === "LIDER" ? true
-      : user.role === "RESPONSABLE" ? line === user.line
+      : user.role === "RESPONSABLE" ? (ini ? inScope(user, ini) : false)
       : false;
-    if (!inScope && !mention) continue;
+    if (!mine && !mention) continue;
     const id = `comment-${c.id}`;
     items.push({
       id, kind: mention ? "MENCION" : "COMENTARIO",

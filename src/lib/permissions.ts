@@ -12,8 +12,12 @@
 //                evidencia y publica mediciones. Edición completa.
 //  LIDER       — líder de la empresa: administra iniciativas, tareas y KPI
 //                de todas las capacidades. No configura el diagnóstico.
-//  RESPONSABLE — responsable de capacidad: edita lo de SU capacidad (tareas
-//                de sus iniciativas, avance, evidencia propia) y reporta KPI suyos.
+//  RESPONSABLE — responsable de un ámbito: edita lo de SU ámbito (tareas de
+//                sus iniciativas, avance, evidencia propia) y reporta KPI suyos.
+//                El ámbito es una capacidad 4.1–4.4 (`line`), un responsable
+//                del catálogo —tribu, área, dependencia— (`responsibleId`), o
+//                ambos: lo que tiene dueño se decide por el responsable; lo
+//                que no (las prácticas del diagnóstico), por la capacidad.
 //  DIRECTIVO   — junta o directivo: lectura de todo, edición de nada.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -40,8 +44,19 @@ export type Action =
 
 export type Role = SessionUser["role"];
 
-// nivel de acceso: false = no · true = total · "line" = solo su línea
+// nivel de acceso: false = no · true = total · "line" = solo su ámbito
 type Grant = boolean | "line";
+
+/** Recurso con ámbito: capacidad (línea) y, si tiene dueño, responsable del catálogo. */
+export type Scope = { line?: number; ownerId?: string };
+
+/** ¿Cae el recurso en el ámbito del usuario? Con responsable asignado, los
+    recursos con dueño (iniciativas, KPI, tareas de esas iniciativas) se
+    deciden por el dueño; los que no tienen (prácticas) por la capacidad. */
+export function inScope(user: SessionUser, target: Scope): boolean {
+  if (user.responsibleId && target.ownerId) return target.ownerId === user.responsibleId;
+  return user.line !== undefined && target.line === user.line;
+}
 
 const MATRIX: Record<Action, Record<Role, Grant>> = {
   view:             { ADMIN: true,  CONSULTOR: true, LIDER: true, RESPONSABLE: true, DIRECTIVO: true },
@@ -62,14 +77,15 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
   manage_platform:  { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
 };
 
-/** ¿Puede el usuario ejecutar la acción? `line` restringe al ámbito de su línea. */
-export function can(user: SessionUser | null, action: Action, line?: number): boolean {
+/** ¿Puede el usuario ejecutar la acción? `target` (línea o recurso con
+    dueño) restringe al ámbito del responsable. */
+export function can(user: SessionUser | null, action: Action, target?: number | Scope): boolean {
   if (!user) return false;
   const grant = MATRIX[action][user.role];
   if (grant === true) return true;
   if (grant === "line") {
-    if (line === undefined) return true;        // capacidad general (la UI muestra el control)
-    return user.line === line;                   // recurso concreto: debe ser su línea
+    if (target === undefined) return true;      // capacidad general (la UI muestra el control)
+    return inScope(user, typeof target === "number" ? { line: target } : target);
   }
   return false;
 }
@@ -90,7 +106,7 @@ export const MODULE_ACTIONS: Record<ModuleKey, Action[]> = {
 };
 
 /** Descripción del acceso del usuario a un módulo, para mostrar en la UI. */
-export function describeAccess(user: SessionUser | null, module: ModuleKey): {
+export function describeAccess(user: SessionUser | null, module: ModuleKey, scopeName?: string): {
   level: "none" | "read" | "line" | "partial" | "full";
   label: string;
 } {
@@ -109,8 +125,8 @@ export function describeAccess(user: SessionUser | null, module: ModuleKey): {
     return { level: "full", label: "Edición completa" };
   }
   if (grants.some((g) => g === true)) return { level: "full", label: "Edición completa" };
-  const lineName = user.line ? `la capacidad ${["", "Dirección", "Liderazgo", "Ejecución", "Multiplicación"][user.line]}` : "tu capacidad";
-  return { level: "line", label: `Edición de ${lineName}` };
+  const lineName = user.line ? `la capacidad ${["", "Dirección", "Liderazgo", "Ejecución", "Multiplicación"][user.line]}` : "tu ámbito";
+  return { level: "line", label: `Edición de ${user.responsibleId ? (scopeName ?? "tu ámbito") : lineName}` };
 }
 
 /** Resumen de la matriz para documentación/pruebas. */

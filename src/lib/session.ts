@@ -15,6 +15,8 @@ export type SessionUser = {
   name: string;
   role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO";
   line?: number;
+  /** Responsable del catálogo (tribu, área) que delimita el ámbito de un RESPONSABLE. */
+  responsibleId?: string;
   /** Empresa del usuario. El admin de plataforma no tiene empresa propia: aquí
       va la que eligió como contexto activo (puede cambiarla). */
   company?: SessionCompany;
@@ -43,7 +45,7 @@ export function decodeSession(token: string | undefined): SessionUser | null {
     const company = data.company && typeof data.company.slug === "string"
       ? { slug: String(data.company.slug), name: String(data.company.name ?? ""), shortName: String(data.company.shortName ?? "") }
       : undefined;
-    return { email: data.email, name: data.name, role: data.role, line: data.line, company };
+    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, company };
   } catch {
     return null;
   }

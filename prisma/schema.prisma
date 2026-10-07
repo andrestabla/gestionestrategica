@@ -23,6 +23,7 @@ model User {
   passwordHash String
   role         String    @default("DIRECTIVO") // ADMIN | CONSULTOR | LIDER | RESPONSABLE | DIRECTIVO
   line         Int? // 1..4 (capacidad) si es RESPONSABLE
+  responsibleId String? // responsable del catálogo (tribu, área) que delimita el ámbito del RESPONSABLE
   companyId    String? // null = admin de plataforma
   company      Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   active       Boolean   @default(true)

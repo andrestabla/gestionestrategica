@@ -38,7 +38,7 @@ export type CompanyInfo = {
 
 export type Financials = typeof FINANCIALS;
 
-export type SeedUser = { email: string; name: string; role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO"; line?: number };
+export type SeedUser = { email: string; name: string; role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO"; line?: number; responsibleId?: string };
 
 export type Catalog = {
   company: CompanyInfo;
