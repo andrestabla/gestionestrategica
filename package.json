@@ -15,7 +15,7 @@
     "postinstall": "prisma generate",
     "db:pg:generate": "prisma generate --config prisma.config.postgres.ts",
     "db:pg:deploy": "prisma migrate deploy --config prisma.config.postgres.ts",
-    "db:pg:seed": "tsx prisma/seed.ts",
+    "db:pg:seed": "prisma generate --config prisma.config.postgres.ts && tsx prisma/seed.ts && prisma generate",
     "build:vercel": "prisma generate --config prisma.config.postgres.ts && prisma migrate deploy --config prisma.config.postgres.ts && next build"
   },
   "dependencies": {
