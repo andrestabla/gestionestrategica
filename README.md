@@ -116,6 +116,23 @@ local salvo el proveedor; una prueba lo verifica) con su migración en
    reales con `POST /api/td/users/password` `{ email, password }` (rol con
    `manage_users`); el login valida con bcrypt contra `User.passwordHash`.
 
+Dos detalles que el despliegue exige y que ya están resueltos:
+
+- El store carga Prisma con una importación opaca (para no entrar al bundle
+  del navegador), y eso la oculta al rastreador de archivos de Next. Por eso
+  `src/instrumentation.ts` importa `src/server/db.ts` (Prisma, adaptadores y
+  bcrypt de forma estática) y `next.config.ts` los declara en
+  `outputFileTracingIncludes` y `serverExternalPackages`. Si falta, en
+  producción aparece «Cannot find package '@prisma/client'» en los logs y la
+  plataforma corre solo en memoria.
+- Las escrituras a la base se registran con `after()` de Next dentro de
+  `persist()`, para que Vercel no congele la función antes de completarlas.
+
+Archivos: con `R2_*` definidas, evidencias y recursos de marca van al bucket
+de Cloudflare R2 (`src/server/storage.ts`); el bucket se crea con
+`wrangler r2 bucket create <nombre>` y las claves S3 se emiten en el panel de
+Cloudflare (R2 → Manage API tokens, Object Read & Write).
+
 Para cambiar el esquema: editar `prisma/schema.prisma`, correr
 `npm run db:migrate` (SQLite), copiar el cambio a `prisma/postgres/schema.prisma`
 y generar la migración PostgreSQL sin base con
