@@ -18,6 +18,8 @@ import {
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
+import { consolidate, decisionCheck, isLevel, TYPE_CRITERIA, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
+import { EVALUATIONS_SEED, DECISIONS_SEED, type DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import type { Response as OdResponse } from "@/lib/od";
 
@@ -127,11 +129,15 @@ const g = globalThis as unknown as {
   __pgtdF2?: F2Response[];
   __pgtdTestNotes?: Map<string, TestNotes>;
   __pgtdIniOverrides?: Map<string, InitiativeOverride>;
+  __pgtdEvals?: Map<string, Evaluation>;          // clave iniId|email
+  __pgtdDecisions?: Map<string, DecisionRecord>;  // clave iniId
   __pgtdHydrated?: boolean;
 };
 
 // memoria compartida entre requests (persistente durante la vida del proceso)
 if (!g.__pgtdTasks) g.__pgtdTasks = TASKS_SEED.map((t) => ({ ...t }));
+if (!g.__pgtdEvals) g.__pgtdEvals = new Map(EVALUATIONS_SEED.map((e) => [`${e.iniId}|${e.by}`, e]));
+if (!g.__pgtdDecisions) g.__pgtdDecisions = new Map(DECISIONS_SEED.map((d) => [d.iniId, d]));
 if (!g.__pgtdEvidence) {
   g.__pgtdEvidence = new Map(EVIDENCE_CATALOG.map((e) => [e.id, e.status]));
 }
@@ -238,6 +244,9 @@ export async function hydrateFromDb() {
       kpiReports().set(r.code, list);
     }
     for (const o of await db.initiativeOverride.findMany()) iniOverrides().set(o.code, o.data as InitiativeOverride);
+    // priorización: evaluaciones de la matriz y decisiones de tiempo
+    for (const e of await db.initiativeEvaluation.findMany()) evals().set(e.id, e.data as Evaluation);
+    for (const d of await db.initiativeDecision.findMany()) decisions().set(d.code, d.data as DecisionRecord);
     // administración: usuarios, integraciones, branding y notificaciones leídas
     const dbUsers = await db.user.findMany();
     if (dbUsers.length) {
@@ -1236,6 +1245,95 @@ export function updateInitiative(
   return { ok: true, initiative: effectiveInitiatives().find((i) => i.id === id)! };
 }
 
+/* ═══ Matriz 4Shine de priorización ═══
+   Cada evaluador califica D·E·M·L (1–4) y marca estratégico/táctico; la
+   plataforma consolida por promedio y aplica las reglas de la matriz. La
+   decisión de tiempo (implementar, preparar, backlog, renunciar) la toma la
+   gerencia o el advisor y debe ser admisible con el consolidado. */
+
+const evals = () => g.__pgtdEvals!;
+const decisions = () => g.__pgtdDecisions!;
+
+export const getEvaluations = (iniId?: string): Evaluation[] =>
+  [...evals().values()].filter((e) => !iniId || e.iniId === iniId);
+
+export const getDecision = (iniId: string): DecisionRecord | null => decisions().get(iniId) ?? null;
+export const getDecisions = (): Record<string, DecisionRecord> => Object.fromEntries(decisions());
+
+export const consolidatedOf = (iniId: string): Consolidated => consolidate(getEvaluations(iniId));
+
+export function evaluateInitiative(
+  user: SessionUser,
+  iniId: string,
+  input: { scores: Record<string, unknown>; type: Record<string, unknown>; notes?: Record<string, unknown> },
+): { ok: true; evaluation: Evaluation; consolidated: Consolidated } | { ok: false; status: number; error: string } {
+  const base = INITIATIVES_FULL.find((i) => i.id === iniId);
+  if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!can(user, "evaluate_initiatives", base.line)) {
+    return {
+      ok: false, status: 403,
+      error: user.role === "ADMIN"
+        ? "El administrador de la plataforma no evalúa iniciativas."
+        : user.role === "RESPONSABLE"
+          ? `Evalúas las iniciativas de tu capacidad (${capName(user.line)}); esta es de ${capName(base.line)}.`
+          : "Tu rol no evalúa la priorización.",
+    };
+  }
+  const scores = {} as Record<CriterionKey, 1 | 2 | 3 | 4>;
+  for (const k of ["D", "E", "M", "L"] as CriterionKey[]) {
+    const v = Number(input.scores?.[k]);
+    if (!isLevel(v)) return { ok: false, status: 422, error: `El criterio ${k} se califica de 1 (débil) a 4 (decisivo).` };
+    scores[k] = v;
+  }
+  const type: Record<string, "ESTRATEGICO" | "TACTICO"> = {};
+  for (const c of TYPE_CRITERIA) {
+    const v = input.type?.[c.key];
+    if (v !== "ESTRATEGICO" && v !== "TACTICO") return { ok: false, status: 422, error: `Marca «${c.name}» como estratégico o táctico.` };
+    type[c.key] = v;
+  }
+  const notes: Partial<Record<CriterionKey, string>> = {};
+  for (const k of ["D", "E", "M", "L"] as CriterionKey[]) {
+    const t = typeof input.notes?.[k] === "string" ? (input.notes![k] as string).trim() : "";
+    if (t.length > 600) return { ok: false, status: 422, error: "Cada nota admite hasta 600 caracteres." };
+    if (t) notes[k] = t;
+  }
+  const key = `${iniId}|${user.email.toLowerCase()}`;
+  const evaluation: Evaluation = {
+    iniId, by: user.email.toLowerCase(), name: user.name, role: user.role, scores, type,
+    notes: Object.keys(notes).length ? notes : undefined, at: new Date().toISOString(),
+  };
+  evals().set(key, evaluation);
+  audit(user, "task", iniId, `priorización: D${scores.D} E${scores.E} M${scores.M} L${scores.L}`);
+  void persist("evaluación", (db) => db.initiativeEvaluation.upsert({
+    where: { id: key }, update: { data: evaluation }, create: { id: key, iniCode: iniId, by: evaluation.by, data: evaluation },
+  }));
+  return { ok: true, evaluation, consolidated: consolidatedOf(iniId) };
+}
+
+export function decideInitiative(
+  user: SessionUser,
+  iniId: string,
+  input: { decision: unknown; rationale?: unknown },
+): { ok: true; decision: DecisionRecord } | { ok: false; status: number; error: string } {
+  const base = INITIATIVES_FULL.find((i) => i.id === iniId);
+  if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!can(user, "decide_initiatives")) {
+    return { ok: false, status: 403, error: "La decisión de tiempo la toma la gerencia o el advisor; tu rol evalúa o consulta." };
+  }
+  const d = input.decision as Decision;
+  if (!["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR"].includes(d)) {
+    return { ok: false, status: 422, error: "Decisión inválida: implementar, preparar, backlog o renunciar." };
+  }
+  const rationale = typeof input.rationale === "string" ? input.rationale.trim() : "";
+  const check = decisionCheck(d, consolidatedOf(iniId), rationale);
+  if (!check.ok) return { ok: false, status: 422, error: check.reason };
+  const rec: DecisionRecord = { iniId, decision: d, rationale: rationale || undefined, by: user.email.toLowerCase(), name: user.name, at: new Date().toISOString() };
+  decisions().set(iniId, rec);
+  audit(user, "task", iniId, `decisión de tiempo → ${d}`);
+  void persist("decisión", (db) => db.initiativeDecision.upsert({ where: { code: iniId }, update: { data: rec }, create: { code: iniId, data: rec } }));
+  return { ok: true, decision: rec };
+}
+
 /* ── medición efectiva: la publicada en el store manda sobre el seed ── */
 
 export const publishedAssessment = (): AssessmentRecord | null => g.__pgtdPublished ?? null;
@@ -1765,6 +1863,8 @@ export function resetStore() {
   g.__pgtdF2 = [];
   g.__pgtdTestNotes = new Map();
   g.__pgtdIniOverrides = new Map();
+  g.__pgtdEvals = new Map(EVALUATIONS_SEED.map((e) => [`${e.iniId}|${e.by}`, e]));
+  g.__pgtdDecisions = new Map(DECISIONS_SEED.map((d) => [d.iniId, d]));
   (g as unknown as { __pgtdArchived?: Task[] }).__pgtdArchived = [];
   (g as unknown as { __pgtdNotifRead?: Map<string, Set<string>> }).__pgtdNotifRead = new Map();
   (g as unknown as { __pgtdUsers?: ManagedUser[] }).__pgtdUsers = undefined;

@@ -21,6 +21,8 @@ const ACTION_LABEL: Record<Action, string> = {
   view: "Ver los módulos",
   edit_tasks: "Crear y editar tareas del gestor",
   edit_initiatives: "Editar iniciativas (avance, factores, bitácora)",
+  evaluate_initiatives: "Evaluar con la matriz 4Shine de priorización",
+  decide_initiatives: "Decidir el tiempo: implementar, preparar, backlog o renunciar",
   report_kpi: "Registrar valores de KPI",
   capture_maturity: "Capturar la autoevaluación de un corte",
   publish_maturity: "Verificar evidencia, calificar y publicar mediciones",

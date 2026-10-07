@@ -28,7 +28,7 @@ export function AccessChip({ module }: { module: ModuleKey }) {
   const user = useContext(Ctx);
   const acc = describeAccess(user, module);
   const cls = acc.level === "full" ? "chip chip-ok"
-    : acc.level === "line" ? "chip chip-cyan"
+    : acc.level === "line" || acc.level === "partial" ? "chip chip-cyan"
     : "chip";
   return (
     <span className={cls}

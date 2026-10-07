@@ -310,24 +310,25 @@ export function Sparkline({ values, good = true, w = 150, h = 38 }:
 
 /* ─── Benchmark de pares ────────────────────────────────────────────────── */
 
-export function PeerBars({ peers, nationalAvg }:
-  { peers: { name: string; value: number; self?: boolean }[]; nationalAvg: number }) {
-  const max = Math.max(...peers.map((p) => p.value), nationalAvg) * 1.15;
+export function PeerBars({ peers, nationalAvg, refLabel = "media nacional" }:
+  { peers: { name: string; value: number; self?: boolean }[]; nationalAvg: number; refLabel?: string }) {
+  const max = Math.max(...peers.map((p) => p.value), nationalAvg, 1) * 1.15;
+  const w = (v: number) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
   return (
     <div className="space-y-3">
       {peers.map((p) => (
         <div key={p.name} className="flex items-center gap-3">
-          <span className={`w-14 shrink-0 text-[12px] ${p.self ? "font-extrabold text-cyan-deep" : "font-medium text-muted"}`}>
+          <span className={`w-36 shrink-0 truncate text-[12px] ${p.self ? "font-extrabold text-cyan-deep" : "font-medium text-muted"}`} title={p.name}>
             {p.name}
           </span>
           <div className="relative h-[20px] flex-1 overflow-hidden rounded-lg bg-surface-2">
             <div className="h-full rounded-lg transition-all duration-700"
               style={{
-                width: `${(p.value / max) * 100}%`,
+                width: w(p.value),
                 background: p.self ? "var(--grad-brand)" : "var(--line-strong)",
               }} />
             <div className="absolute top-0 h-full border-l-[1.5px] border-dashed"
-              style={{ left: `${(nationalAvg / max) * 100}%`, borderColor: "var(--gold)" }} />
+              style={{ left: w(nationalAvg), borderColor: "var(--gold)" }} />
           </div>
           <span className={`num w-11 shrink-0 text-right text-[12px] ${p.self ? "font-extrabold text-cyan-deep" : "font-semibold text-muted"}`}>
             {p.value} %
@@ -336,7 +337,7 @@ export function PeerBars({ peers, nationalAvg }:
       ))}
       <div className="flex items-center gap-2 pt-1 text-[11px] font-medium" style={{ color: "var(--gold)" }}>
         <span className="inline-block h-0 w-5 border-t-[1.5px] border-dashed" style={{ borderColor: "var(--gold)" }} />
-        media nacional {nationalAvg} %
+        {refLabel} {nationalAvg} %
       </div>
     </div>
   );
@@ -491,14 +492,16 @@ export function ColombiaMap() {
 /** Mapa del Cesar con tres lentes: cobertura (peso/cobertura del municipio) o
     un mapa de valores (producción, convenios) con radio ∝ √valor. */
 /** Colombia con intensidad por departamento (coautorías / convenios). */
-export function ColombiaImpactMap({ values, selected, onSelect }: {
+export function ColombiaImpactMap({ values, selected, onSelect, home = [], unit = "" }: {
   values: Record<string, number>;
   selected?: string | null;
   onSelect?: (dept: string | null) => void;
+  /** departamentos con sede de la empresa: se marcan con borde propio */
+  home?: string[];
+  unit?: string;
 }) {
   const maxV = Math.max(1, ...Object.values(values));
-  const fillOf = (name: string, cesar: boolean) => {
-    if (cesar) return "var(--navy)";
+  const fillOf = (name: string) => {
     const v = values[name] ?? 0;
     if (v <= 0) return "var(--surface-3)";
     const t = Math.sqrt(v / maxV);
@@ -506,18 +509,19 @@ export function ColombiaImpactMap({ values, selected, onSelect }: {
   };
   return (
     <svg viewBox={`0 0 ${CO_VIEW.w} ${CO_VIEW.h}`} className="w-full h-auto" role="img"
-      aria-label="Mapa de Colombia con la presencia comercial por departamento">
+      aria-label="Mapa de Colombia con la intensidad del sector por departamento">
       {CO_PATHS.map((p) => {
         const v = values[p.name] ?? 0;
         const isSel = selected === p.name;
+        const isHome = home.includes(p.name);
         return (
           <path key={p.name} d={p.d}
-            fill={fillOf(p.name, p.cesar)}
-            stroke={isSel ? "var(--gold)" : p.cesar ? "var(--navy-deep)" : "var(--line-strong)"}
-            strokeWidth={isSel ? 1.8 : p.cesar ? 1.1 : 0.5}
+            fill={fillOf(p.name)}
+            stroke={isSel ? "var(--gold)" : isHome ? "var(--navy)" : "var(--line-strong)"}
+            strokeWidth={isSel ? 1.8 : isHome ? 1.3 : 0.5}
             style={{ cursor: v > 0 && onSelect ? "pointer" : "default", transition: "fill .2s" }}
             onClick={() => v > 0 && onSelect?.(isSel ? null : p.name)}>
-            <title>{`${p.name}${v > 0 ? `: ${v}` : ""}`}</title>
+            <title>{`${p.name}${v > 0 ? `: ${v}${unit}` : ""}`}</title>
           </path>
         );
       })}
@@ -527,24 +531,30 @@ export function ColombiaImpactMap({ values, selected, onSelect }: {
 
 /* ─── Cuadrante de pertinencia ──────────────────────────────────────────── */
 
-export function PertinenceQuadrant({ points }:
-  { points: { name: string; x: number; y: number; self?: boolean }[] }) {
+export function PertinenceQuadrant({ points, labels, axes }: {
+  points: { name: string; x: number; y: number; self?: boolean }[];
+  /** nombres de los cuatro cuadrantes: arriba-izquierda, arriba-derecha, abajo-izquierda, abajo-derecha */
+  labels?: [string, string, string, string];
+  axes?: [string, string];
+}) {
+  const L = labels ?? ["Crece sin capacidad", "Crece con capacidad", "Estancado", "Capacidad sin crecimiento"];
+  const AX = axes ?? ["Capacidad organizacional →", "Crecimiento →"];
   const W = 420, H = 250, pad = 30;
   const px = (x: number) => pad + x * (W - pad - 14);
   const py = (y: number) => H - pad - y * (H - pad - 18);
   const mx = pad + (W - pad - 14) / 2, my = 18 + (H - pad - 18) / 2;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
-      aria-label="Posición sectorial: capacidad organizacional contra crecimiento">
+      aria-label={`Posición sectorial: ${AX[0]} contra ${AX[1]}`}>
       <rect x={pad} y={18} width={mx - pad} height={my - 18} rx={10} fill="#fbeaea" opacity=".75" />
       <rect x={mx} y={18} width={W - 14 - mx} height={my - 18} rx={10} fill="#eaf4ee" opacity=".85" />
       <rect x={pad} y={my} width={mx - pad} height={H - pad - my} rx={10} fill="var(--surface-2)" opacity=".55" />
       <rect x={mx} y={my} width={W - 14 - mx} height={H - pad - my} rx={10} fill="var(--gold-wash)" opacity=".75" />
       <g fontSize="9.5" fontWeight={550} fill="var(--muted)">
-        <text x={pad + 9} y={33}>Crece sin capacidad</text>
-        <text x={mx + 9} y={33}>Crece con capacidad</text>
-        <text x={pad + 9} y={my + 15}>Estancado</text>
-        <text x={mx + 9} y={my + 15}>Capacidad sin crecimiento</text>
+        <text x={pad + 9} y={33}>{L[0]}</text>
+        <text x={mx + 9} y={33}>{L[1]}</text>
+        <text x={pad + 9} y={my + 15}>{L[2]}</text>
+        <text x={mx + 9} y={my + 15}>{L[3]}</text>
       </g>
       {points.map((p) => (
         <g key={p.name}>
@@ -564,9 +574,9 @@ export function PertinenceQuadrant({ points }:
           )}
         </g>
       ))}
-      <text x={(W + pad) / 2} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--faint)">Capacidad organizacional →</text>
+      <text x={(W + pad) / 2} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--faint)">{AX[0]}</text>
       <text x={10} y={(H - pad + 18) / 2} textAnchor="middle" fontSize="10" fill="var(--faint)"
-        transform={`rotate(-90 10 ${(H - pad + 18) / 2})`}>Crecimiento →</text>
+        transform={`rotate(-90 10 ${(H - pad + 18) / 2})`}>{AX[1]}</text>
     </svg>
   );
 }

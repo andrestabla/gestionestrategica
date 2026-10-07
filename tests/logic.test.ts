@@ -304,7 +304,7 @@ test("permisos: la matriz cubre todos los módulos y todos los roles", () => {
     assert.ok(MODULE_ACTIONS[m].includes("view"), m);
     for (const u of Object.values(U)) {
       const acc = describeAccess(u, m);
-      assert.ok(["read", "line", "full"].includes(acc.level), `${m}/${u.role}`);
+      assert.ok(["read", "line", "partial", "full"].includes(acc.level), `${m}/${u.role}`);
     }
   }
   // toda acción define los 5 roles
@@ -319,6 +319,8 @@ test("permisos: reglas clave de la matriz", () => {
   assert.ok(!can(U.lider, "verify_evidence"), "verificar evidencia es del consultor");
   assert.ok(can(U.resp1, "edit_tasks", 1) && !can(U.resp1, "edit_tasks", 4), "ámbito de línea");
   assert.ok(!can(U.directivo, "edit_tasks") && can(U.directivo, "view"), "directivo solo lee");
+  assert.ok(can(U.directivo, "evaluate_initiatives") && !can(U.directivo, "decide_initiatives"), "la junta evalúa la priorización, no decide el tiempo");
+  assert.equal(describeAccess(U.directivo, "iniciativas").level, "partial");
   assert.ok(!can(null, "view"), "sin sesión no hay acceso");
 });
 

@@ -16,6 +16,20 @@ export const INSTITUTION = {
   department: "Cundinamarca",
   sector: "Distribución de suministros industriales",
   size: "85 colaboradores · 3 sedes",
+  // sector de referencia para M2 y M7 (src/data/sector/<sectorKey>.json) y
+  // actividad principal CIIU rev. 4 A.C. con la que reporta a Supersociedades
+  sectorKey: "suministros-industriales",
+  ciiu: "G4659",
+};
+
+/** Estados financieros de cierre de la empresa (COP millones), con la misma
+    estructura que reportan las sociedades a Supersociedades: permiten ubicar a
+    Andina en la distribución real del sector. Valores ilustrativos. */
+export const FINANCIALS = {
+  year: 2025,
+  revenue: 38_400, revenuePrev: 33_900,
+  grossProfit: 10_560, operatingProfit: 1_997, netProfit: 1_190,
+  assets: 21_500, liabilities: 11_700, equity: 9_800,
 };
 export const COMPANY = INSTITUTION;
 

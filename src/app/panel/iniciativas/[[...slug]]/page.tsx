@@ -2,7 +2,8 @@
 
 // M6 · Seguimiento profundo con ruta por iniciativa:
 //   /panel/iniciativas            → listado del portafolio
-//   /panel/iniciativas/<id>       → ficha a pantalla completa (i1…i14)
+//   /panel/iniciativas/priorizacion → portafolio ordenado con la matriz 4Shine
+//   /panel/iniciativas/<id>       → ficha a pantalla completa (i1…i8)
 // La ficha declara responsable, objetivo CMI, meta de resultado, acciones,
 // presupuesto en tres estados, motores de riesgo, factores con historial y
 // bitácora — con navegación anterior/siguiente (también flechas del teclado).
@@ -17,10 +18,13 @@ import { INITIATIVES, fmtCOP, type InitiativeDemo } from "@/data/demo";
 import { CMI_OBJECTIVES, responsible, type ActionStatus, type InitiativeFull } from "@/data/cmi";
 import { initiativeRisk } from "@/lib/logic";
 import { initiativeTaskStats } from "@/lib/proyectos";
+import { MatrizPanel, PrioChip, usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
+import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
+import { LINES } from "@/data/demo";
 import {
   ChevronRight, CircleCheck, CircleDashed, Circle, Flag, AlertTriangle,
   StickyNote, CalendarClock, User, Target, ArrowLeft, ArrowRight,
-  Loader2, Save, PlusCircle, Pencil, X,
+  Loader2, Save, PlusCircle, Pencil, X, Scale, ListChecks,
 } from "lucide-react";
 
 const FACTOR_COLORS = { VERDE: "var(--ok)", AMBAR: "var(--warn)", ROJO: "var(--bad)" } as const;
@@ -47,10 +51,14 @@ export default function IniciativasPage() {
   const slug = params.slug ?? [];
   const openId = slug[0] ? decodeURIComponent(slug[0]).toLowerCase() : null;
 
+  const { data: prio } = usePriorizacion();
   const go = (path: string) => router.push(path, { scroll: false });
   const openIni = (id: string) => go(`/panel/iniciativas/${id}`);
   const closeIni = () => go("/panel/iniciativas");
 
+  if (openId === "priorizacion") {
+    return <PriorizacionView onOpen={openIni} onBack={closeIni} />;
+  }
   if (openId) {
     return <IniciativaFicha id={openId} onClose={closeIni} onNav={openIni} />;
   }
@@ -70,7 +78,8 @@ export default function IniciativasPage() {
   return (
     <>
       <PageHeader kicker="M6 · Seguimiento" title="Iniciativas, acciones y factores de éxito"
-        desc="Cada iniciativa declara su meta de resultado, sus acciones con meta propia, su responsable, su presupuesto en tres estados y su bitácora. Cuando un factor acumula dos revisiones en rojo, la conversación se puede tener a tiempo."  actions={<AccessChip module="iniciativas" />} />
+        desc="Cada iniciativa declara su meta de resultado, sus acciones con meta propia, su responsable, su presupuesto en tres estados y su bitácora. Cuando un factor acumula dos revisiones en rojo, la conversación se puede tener a tiempo."
+        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost !py-1.5 text-[11.5px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
 
       <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
         <StatCard label="Presupuesto del portafolio" value={totals.planned / 1e6} decimals={0}
@@ -105,6 +114,7 @@ export default function IniciativasPage() {
                     <span className={RISK_CLS[risk.level]} title={risk.drivers.map((d) => d.text).join(" · ")}>
                       Riesgo {risk.level.toLowerCase()} · {risk.score}
                     </span>
+                    <PrioChip c={prio?.ranking.find((r) => r.id === i.id)?.c} decision={prio?.decisions[i.id]?.decision} />
                   </div>
                   <div className="num mt-1 text-[10.5px] text-faint">
                     {owner.dependencia} · {i.start} → {i.end} · acciones {done}/{i.actions.length}
@@ -320,8 +330,11 @@ function IniciativaFicha({ id, onClose, onNav }: {
         </div>
       </div>
 
+      {/* matriz 4Shine de priorización: evaluación por roles y decisión de tiempo */}
+      <MatrizPanel iniId={i.id} line={i.line} horizon={i.horizon} />
+
       {/* detalle */}
-      <div className="rise rise-3 panel">
+      <div className="rise rise-4 panel">
         <div className="grid gap-7 px-6 py-5 lg:grid-cols-2">
           {/* acciones */}
           <div>
@@ -448,6 +461,86 @@ function IniciativaFicha({ id, onClose, onNav }: {
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+/* ─── portafolio priorizado: la matriz aplicada a todas las iniciativas ─── */
+
+function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; onBack: () => void }) {
+  const { data } = usePriorizacion();
+  const rows = data?.ranking ?? [];
+  const evaluated = rows.filter((r) => r.c.n > 0);
+  const decided = Object.values(data?.decisions ?? {});
+  const byDecision = (d: string) => decided.filter((x) => x.decision === d).length;
+  return (
+    <>
+      <div className="rise mb-5 flex flex-wrap items-center gap-2">
+        <button onClick={onBack} className="btn-ghost" title="Volver al listado (Esc)"><ArrowLeft size={13} /> Iniciativas</button>
+      </div>
+      <PageHeader kicker="M6 · Priorización" title="Portafolio priorizado con la matriz 4Shine"
+        desc="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. El puntaje ordena alternativas dentro de cada horizonte; para competir como prioridad crítica D debe ser 3 o 4, y con L en 1 o 2 se resuelve primero la capacidad. La aprobación exige impacto estratégico, capacidad y recursos disponibles."
+        actions={<AccessChip module="iniciativas" />} />
+
+      <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
+        <StatCard label="Iniciativas evaluadas" value={evaluated.length} unit={`de ${rows.length}`} foot={`${data?.evaluations.length ?? 0} evaluaciones del comité`} />
+        <StatCard label="Ahora: implementar" value={byDecision("IMPLEMENTAR")} foot="contribución, capacidad y urgencia" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
+        <StatCard label="Ahora: preparar o validar" value={byDecision("PREPARAR")} foot="etapa acotada con evidencia esperada" accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
+        <StatCard label="Backlog y renuncias" value={byDecision("BACKLOG") + byDecision("RENUNCIAR")} foot="pueden esperar o perdieron alineación" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+      </div>
+
+      {(["CORTO", "MEDIANO"] as const).map((h, hi) => (
+        <Card key={h} className={`rise rise-${hi + 2} mb-5 overflow-hidden`}>
+          <div className="flex items-center gap-2 border-b border-line px-5 py-3">
+            <ListChecks size={14} className="text-cyan-deep" />
+            <span className="text-[13px] font-extrabold text-ink">{h === "CORTO" ? "Corto plazo" : "Mediano plazo"}</span>
+            <span className="text-[11px] text-faint">· {rows.filter((r) => r.horizon === h).length} iniciativas, ordenadas por puntaje consolidado</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-left text-[9.5px] uppercase tracking-wider text-faint">
+                  <th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th>
+                  {CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center" title={`${c.name} · ${c.weight} %`}>{c.key}</th>)}
+                  <th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Tipo</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Decisión</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.filter((r) => r.horizon === h).map((r) => {
+                  const d = data?.decisions[r.id];
+                  const cap = LINES.find((l) => l.n === r.line);
+                  return (
+                    <tr key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer border-t border-line transition-colors hover:bg-surface-2/50">
+                      <td className="num px-4 py-2.5 font-extrabold text-cyan-deep">{r.c.n > 0 ? r.position : "—"}</td>
+                      <td className="px-2 py-2.5">
+                        <div className="font-bold text-ink">{r.name}</div>
+                        <div className="num text-[10px] text-faint">{r.id.toUpperCase()} · {cap?.name} · {r.c.n} evaluador{r.c.n === 1 ? "" : "es"}</div>
+                      </td>
+                      {CRITERIA.map((c) => (
+                        <td key={c.key} className="num px-2 py-2.5 text-center" title={r.c.n ? `${c.name}: ${r.c.avg[c.key]} · ${LEVEL_NAMES[r.c.rounded[c.key]]}` : undefined}>
+                          {r.c.n ? <span className={`font-bold ${r.c.rounded[c.key] >= 3 ? "text-ink" : "text-muted"}`}>{r.c.avg[c.key]}</span> : <span className="text-faint">—</span>}
+                        </td>
+                      ))}
+                      <td className="num px-2 py-2.5 text-right text-[14px] font-extrabold" style={{ color: r.c.n ? (r.c.score >= 80 ? "var(--ok)" : r.c.score >= 65 ? "var(--cyan-deep)" : r.c.score >= 50 ? "var(--warn)" : "var(--bad)") : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
+                      <td className="px-2 py-2.5 text-[11px] text-ink-soft">{r.c.type ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—"}</td>
+                      <td className="px-2 py-2.5">
+                        <span className="flex flex-wrap gap-1">
+                          {r.c.n > 0 && !r.c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]" title="D < 3: no compite como prioridad crítica">D {r.c.rounded.D}</span>}
+                          {r.c.n > 0 && r.c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]" title="L ≤ 2: resolver la capacidad primero">L {r.c.rounded.L}</span>}
+                          {r.c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]" title={`±${r.c.spread} puntos entre evaluadores`}>consenso</span>}
+                          {r.c.n > 0 && r.c.eligible && !r.c.capacityFirst && !r.c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ))}
+      <p className="text-center text-[11px] text-faint">La matriz ayuda a comparar. La priorización ocurre cuando se decide dónde comprometer recursos, qué debe esperar y a qué se renuncia.</p>
     </>
   );
 }

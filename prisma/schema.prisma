@@ -249,6 +249,24 @@ model InitiativeOverride {
   at   DateTime @updatedAt
 }
 
+/// Matriz 4Shine de priorización: una evaluación por evaluador e iniciativa.
+model InitiativeEvaluation {
+  id      String   @id            // "<iniCode>|<email>"
+  iniCode String
+  by      String
+  data    Json
+  at      DateTime @updatedAt
+
+  @@index([iniCode])
+}
+
+/// Decisión de tiempo por iniciativa (implementar, preparar, backlog, renunciar).
+model InitiativeDecision {
+  code String   @id             // i1…
+  data Json
+  at   DateTime @updatedAt
+}
+
 /// Configuración de integraciones (claves en texto plano: solo para la base local).
 model Integration {
   key       String   @id       // openai | r2 | ses

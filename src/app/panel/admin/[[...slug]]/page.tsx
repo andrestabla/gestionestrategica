@@ -244,6 +244,8 @@ const ACTION_DESC: Record<Action, string> = {
   view: "Ver los módulos y sus datos",
   edit_tasks: "Crear, editar, archivar y reprogramar tareas del gestor",
   edit_initiatives: "Avance, factores, bitácora y próximo hito de iniciativas",
+  evaluate_initiatives: "Calificar iniciativas con la matriz 4Shine de priorización (D·E·M·L y tipo)",
+  decide_initiatives: "Decidir el tiempo de cada iniciativa: implementar, preparar, backlog o renunciar",
   report_kpi: "Registrar valores de KPI (incluida la importación CSV)",
   capture_maturity: "Capturar la medición en curso (percepción de su ámbito)",
   publish_maturity: "Calificar D/I/K y nivel, y publicar mediciones",
