@@ -73,11 +73,11 @@ export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: 
     return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
   };
   const poly = (vals: number[]) =>
-    vals.map((v, i) => pt(i, v).map((n) => n.toFixed(1)).join(",")).join(" ");
+    vals.map((v, i) => pt(i, Number.isNaN(v) ? 0 : v).map((n) => n.toFixed(1)).join(",")).join(" ");
 
   const avgOf = (n: number, key: "value" | "target") => {
     const dims = Object.values(scores![n]).filter((d) => d.value >= 0);   // −1 = sin dato
-    return dims.length ? dims.reduce((a, d) => a + d[key], 0) / dims.length : 0;
+    return dims.length ? dims.reduce((a, d) => a + d[key], 0) / dims.length : NaN;   // NaN = sin dato
   };
   const actual = LINES.map((l) => (scores ? avgOf(l.n, "value") : lineScore(l.n)));
   const target = LINES.map((l) => (scores ? avgOf(l.n, "target") : lineTarget(l.n)));
@@ -122,6 +122,7 @@ export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: 
         strokeWidth="2.4" strokeLinejoin="round" filter={`url(#${gid}-glow)`}
         className="draw" style={{ ["--dash" as string]: perimeter }} />
       {actual.map((v, i) => {
+        if (Number.isNaN(v)) return null;
         const [x, y] = pt(i, v);
         return (
           <circle key={i} cx={x} cy={y} r="4.5" fill="var(--cyan)"
@@ -139,7 +140,7 @@ export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: 
             <text x={x} y={y} textAnchor={anchor}>{l.code} {l.short}</text>
             <text x={x} y={y + 16} textAnchor={anchor} className="num"
               fontSize="12.5" fontWeight={800} fill="var(--cyan-deep)">
-              {actual[i].toFixed(1).replace(".", ",")}
+              {Number.isNaN(actual[i]) ? "—" : actual[i].toFixed(1).replace(".", ",")}
             </text>
           </g>
         );
