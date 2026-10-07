@@ -9,13 +9,13 @@ como sistema de gestión, no como documento.
 | Código | Módulo | Qué hace |
 |---|---|---|
 | M1 | Diagnóstico 4Shine-OD | Resumen (radar de capacidades, mapa de calor de 17 dimensiones, tres fuentes, señales), capacidades, dimensiones con sus 68 prácticas y evidencias, test de capacidad empresarial, brechas priorizadas con nivel de acompañamiento y captura del corte A3 |
-| M2 | Benchmark | Posición sectorial frente a pares, presencia territorial por departamento e indicadores frente al sector |
+| M2 | Benchmark | Posición de la empresa frente a las sociedades de su CIIU que reportan a Supersociedades: crecimiento, márgenes, ROA y endeudamiento en percentiles, cuadrante margen × crecimiento con pares comparables y mapa del sector por departamento |
 | M3 | Estrategia | Cuadro de mando de cuatro perspectivas: objetivo → resultados clave (KPI) → dimensión que instala → iniciativa |
 | M4 | Indicadores | KPI con ficha, serie, semáforo, proyección y reporte de valores |
 | M5 | Ruta | Gantt por horizontes, matriz impacto × factibilidad y prioridad compuesta |
-| M6 | Iniciativas | Avance, presupuesto, factores críticos, bitácora; cada iniciativa instala una dimensión con un framework |
+| M6 | Iniciativas | Avance, presupuesto, factores críticos, bitácora; cada iniciativa instala una dimensión con un framework. Matriz 4Shine de priorización: evaluación por roles (D·E·M·L, estratégico/táctico), consolidado del comité, decisión de tiempo con reglas y portafolio ordenado por horizonte |
 | GP | Proyectos | Tareas con responsables, dependencias, evidencia, kanban, cronograma y carga |
-| M7 | Inteligencia | Fuentes del sector y del territorio (observatorios de Algoritmo T) |
+| M7 | Inteligencia | El sector en cifras con datos reales de Supersociedades (tamaño, concentración, departamentos, actividades CIIU, diez mayores) y la puerta a los observatorios de Algoritmo T |
 | — | Informe | Pieza imprimible para la junta |
 | — | Metodología | El sistema 4Shine Empresas leído de las mismas fuentes que usa el motor |
 | — | Administración | Usuarios, permisos, integraciones y branding |
@@ -38,7 +38,7 @@ la demo del diagnóstico en línea.
 ```bash
 npm install
 npm run dev        # http://localhost:3000
-npm test           # 48 pruebas del motor, el store y el diagnóstico
+npm test           # 61 pruebas del motor, el store, el diagnóstico, la priorización y el sector
 ```
 
 Modo demo por defecto, sin base de datos. Cuentas:
@@ -52,6 +52,50 @@ Modo demo por defecto, sin base de datos. Cuentas:
 | junta@andina.example | Junta o directivo (solo lectura) |
 
 Contraseña común: `4shine-demo-2026`.
+
+## Benchmark sectorial (datos reales)
+
+`scripts/sector-fetch.ts` consulta los datos abiertos de la Superintendencia de
+Sociedades en datos.gov.co (carátula `6hqw-m3dm`, resultado integral
+`prwj-nzxa`, situación financiera `pfdp-zks5`) y agrega, para un conjunto de
+códigos CIIU, el número de sociedades, ingresos, cuartiles de crecimiento,
+márgenes, ROA y endeudamiento, concentración, franjas de tamaño, departamentos,
+las sesenta mayores y una muestra de cuarenta pares comparables (10.000 a
+100.000 M de ingresos). El resultado queda en `src/data/sector/<clave>.json`:
+
+```bash
+npm run sector:fetch -- suministros-industriales G4659 G4663 G4669
+npm run sector:fetch -- --corte 2024-12-31 <clave> <CIIU…>
+```
+
+`src/data/sector.ts` tipa el JSON, elige el sector de la empresa
+(`INSTITUTION.sectorKey`) y calcula percentiles a partir de los estados
+financieros de la empresa (`FINANCIALS` en `demo.ts`). Los conceptos del
+portal llevan las tildes como U+FFFD y los valores vienen en miles de pesos;
+el script lo resuelve. La API `/api/td/sector` entrega el resumen y la
+comparación.
+
+## Matriz 4Shine de priorización (M6)
+
+Cada iniciativa se evalúa con cuatro criterios en escala 1–4 con descriptores:
+D impacto en el resultado (40 %), E evidencia de la siguiente etapa (30 %),
+M sostenibilidad y réplica (20 %) y L capacidad de ejecución (10 %).
+Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Cuatro criterios comunes marcan si
+es estratégica o táctica. Reglas: para competir como prioridad crítica D debe
+ser 3 o 4; con L en 1 o 2 se resuelve primero la capacidad; el puntaje ordena
+dentro de cada horizonte. La decisión de tiempo (ahora: implementar · ahora:
+preparar o validar · luego: backlog · renunciar) solo se admite cuando el
+consolidado la permite, y renunciar exige motivo.
+
+| Acción | Consultor | Líder | Responsable | Directivo | Admin |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Evaluar con la matriz | ✅ | ✅ | solo su capacidad | ✅ | — |
+| Decidir el tiempo | ✅ | ✅ | — | — | — |
+
+Motor en `src/lib/priorizacion.ts`; store `evaluateInitiative` /
+`decideInitiative` (una evaluación por evaluador e iniciativa, persistidas en
+`InitiativeEvaluation` e `InitiativeDecision`); API `/api/td/priorizacion`;
+vista `/panel/iniciativas/priorizacion` y panel en cada ficha.
 
 ## Base de datos (SQLite local)
 

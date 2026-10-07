@@ -331,13 +331,13 @@ export function PeerBars({ peers, nationalAvg, refLabel = "media nacional" }:
               style={{ left: w(nationalAvg), borderColor: "var(--gold)" }} />
           </div>
           <span className={`num w-11 shrink-0 text-right text-[12px] ${p.self ? "font-extrabold text-cyan-deep" : "font-semibold text-muted"}`}>
-            {p.value} %
+            {p.value.toLocaleString("es-CO", { maximumFractionDigits: 1 })} %
           </span>
         </div>
       ))}
       <div className="flex items-center gap-2 pt-1 text-[11px] font-medium" style={{ color: "var(--gold)" }}>
         <span className="inline-block h-0 w-5 border-t-[1.5px] border-dashed" style={{ borderColor: "var(--gold)" }} />
-        {refLabel} {nationalAvg} %
+        {refLabel} {nationalAvg.toLocaleString("es-CO", { maximumFractionDigits: 1 })} %
       </div>
     </div>
   );

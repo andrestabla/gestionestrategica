@@ -131,30 +131,9 @@ export const TERRITORIES: Territory[] = [
   { name: "Bolívar", weight: 1, presence: "oportunidad", reading: "Demanda industrial de Cartagena sin cobertura directa." },
 ];
 
-// Comparación ilustrativa con pares del sector (distribuidores regionales)
-export const BENCHMARK = {
-  metric: "Entregas a tiempo y completas",
-  nationalAvg: 84,
-  peers: [
-    { name: "Par A", value: 93 },
-    { name: "Par B", value: 90 },
-    { name: "Andina", value: 88, self: true },
-    { name: "Par C", value: 82 },
-    { name: "Par D", value: 76 },
-  ],
-};
-
-export const QUADRANT = {
-  // posición sectorial: madurez organizacional (x, 0-1) vs. crecimiento (y, 0-1)
-  points: [
-    { name: "Andina", x: 0.46, y: 0.62, self: true },
-    { name: "Par A", x: 0.78, y: 0.7 },
-    { name: "Par B", x: 0.66, y: 0.55 },
-    { name: "Par C", x: 0.38, y: 0.42 },
-    { name: "Par D", x: 0.3, y: 0.2 },
-    { name: "Par E", x: 0.58, y: 0.28 },
-  ],
-};
+// El benchmark sectorial (M2) y la inteligencia (M7) leen datos reales de
+// Supersociedades desde src/data/sector.ts; aquí solo quedan los estados
+// financieros ilustrativos de Andina (FINANCIALS) que la ubican en el sector.
 
 export const DEMO_USERS = [
   { email: "admin@algoritmot.com", name: "Admin de la Plataforma", role: "ADMIN", password: "4shine-demo-2026" },
