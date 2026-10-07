@@ -76,8 +76,8 @@ export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: 
     vals.map((v, i) => pt(i, v).map((n) => n.toFixed(1)).join(",")).join(" ");
 
   const avgOf = (n: number, key: "value" | "target") => {
-    const dims = Object.values(scores![n]);
-    return dims.reduce((a, d) => a + d[key], 0) / dims.length;
+    const dims = Object.values(scores![n]).filter((d) => d.value >= 0);   // −1 = sin dato
+    return dims.length ? dims.reduce((a, d) => a + d[key], 0) / dims.length : 0;
   };
   const actual = LINES.map((l) => (scores ? avgOf(l.n, "value") : lineScore(l.n)));
   const target = LINES.map((l) => (scores ? avgOf(l.n, "target") : lineTarget(l.n)));
@@ -246,6 +246,15 @@ export function MaturityHeatmap({ onCell, selected, scores }: {
               const s = sc[l.n][d.key];
               const lvl = Math.max(1, Math.min(5, Math.round(s.value)));
               const isSel = selected?.line === l.n && selected?.dim === d.key;
+              if (s.value < 0) {
+                return (
+                  <button key={d.key} onClick={() => onCell?.(l.n, d.key)} title={`${d.key} · ${d.name}: sin dato en este corte`}
+                    className="num w-full rounded-xl border border-dashed border-line-strong bg-surface px-1 py-2 text-left text-faint">
+                    <span className="block px-1.5 text-[8.5px] font-bold uppercase tracking-wider">{d.key}</span>
+                    <span className="block px-1.5 text-[15px] font-extrabold leading-tight">—</span>
+                  </button>
+                );
+              }
               return (
                 <button key={d.key} onClick={() => onCell?.(l.n, d.key)}
                   className={`num relative w-full cursor-pointer rounded-xl px-1 py-2 text-left text-white transition-all duration-150 hover:scale-[1.04] hover:shadow-lg ${

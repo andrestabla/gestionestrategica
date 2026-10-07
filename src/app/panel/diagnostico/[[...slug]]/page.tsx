@@ -13,7 +13,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge } from "@/components/ui";
 import { AccessChip, useCan } from "@/components/user-context";
-import { MaturityRadar, MaturityHeatmap, MiniRadar } from "@/components/charts";
+import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
+import { SCORES } from "@/data/demo";
 import { LINES, fmtNum } from "@/data/demo";
 import {
   CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, TEST_QUESTIONS, GUIDES, FLAG_TEXT,
@@ -34,8 +35,14 @@ type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura
 
 /* ═══ Corte que se lee: el publicado (demo A2) o el que se captura en la plataforma ═══ */
 
-type Cut = { src: "vigente" | "curso"; responses: Response[]; C: Consolidated; label: string };
-const DEMO_CUT: Cut = { src: "vigente", responses: OD_RESPONSES, C: consolidate(OD_RESPONSES), label: "Corte publicado · A2" };
+type Cut = { src: "vigente" | "curso"; responses: Response[]; C: Consolidated; label: string; scores: ScoresMap | null };
+const DEMO_CUT: Cut = { src: "vigente", responses: OD_RESPONSES, C: consolidate(OD_RESPONSES), label: "Corte publicado · A2", scores: null };
+/** Mapa de puntajes del corte en curso: las dimensiones sin dato van en −1 (los gráficos las muestran en blanco). */
+const scoresOf = (C: Consolidated, base: ScoresMap): ScoresMap => {
+  const out: ScoresMap = { 1: {}, 2: {}, 3: {}, 4: {} };
+  for (const d of C.dims) out[d.line][d.code] = { value: d.m ?? -1, target: base[d.line][d.code].target };
+  return out;
+};
 const CutCtx = createContext<Cut>(DEMO_CUT);
 const useCut = () => useContext(CutCtx);
 type OdApi = { responses: Response[]; published: boolean; progress: { total: number; perception: number; dik: number; level: number }; f2: number };
@@ -64,7 +71,8 @@ export default function DiagnosticoPage() {
   const eff = src ?? (od?.published ? "curso" : "vigente");
   const cut = useMemo<Cut>(() => {
     if (eff === "curso" && od && hasCurso) {
-      return { src: "curso", responses: od.responses, C: consolidate(od.responses), label: od.published ? "Corte A3 · publicado desde la plataforma" : "Corte en curso · capturado en la plataforma" };
+      const C = consolidate(od.responses);
+      return { src: "curso", responses: od.responses, C, label: od.published ? "Corte A3 · publicado desde la plataforma" : "Corte en curso · capturado en la plataforma", scores: scoresOf(C, SCORES) };
     }
     return DEMO_CUT;
   }, [eff, od, hasCurso]);
@@ -110,8 +118,10 @@ export default function DiagnosticoPage() {
 /* ═══ Resumen ═══ */
 
 function Resumen() {
-  const { scores, data } = useMaturity();
-  const { C, src } = useCut();
+  const { scores: pubScores, data } = useMaturity();
+  const { C, src, label, scores: cutScores } = useCut();
+  const scores = cutScores ?? pubScores;
+  const router = useRouter();
   const verified = src === "curso" ? C.dims.reduce((a, d) => a + d.verified, 0) : EVIDENCE_CATALOG.filter((e) => e.status === "VERIFICADA").length;
   const flagged = C.dims.filter((d) => d.flags.length);
   const belowCaps = C.caps.filter((c) => (c.m ?? 5) < THRESHOLD);
@@ -130,9 +140,9 @@ function Resumen() {
           <div className="px-4 pb-4"><MaturityRadar scores={scores} /></div>
         </Card>
         <Card className="rise rise-2">
-          <CardHeader title="Mapa de calor de las 17 dimensiones" sub={`${data?.current.label ?? "Medición vigente"} · clic en una dimensión abre sus prácticas`} />
+          <CardHeader title="Mapa de calor de las 17 dimensiones" sub={`${src === "curso" ? label : (data?.current.label ?? "Medición vigente")} · clic en una dimensión abre sus prácticas`} />
           <div className="px-5 pb-5 pt-2">
-            <MaturityHeatmap scores={scores} onCell={(_, dim) => { window.location.href = `/panel/diagnostico/dimension/${dim}`; }} />
+            <MaturityHeatmap scores={scores} onCell={(_, dim) => router.push(`/panel/diagnostico/dimension/${dim}`)} />
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
             {LEVELS.map((l) => <span key={l.n} className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded" style={{ background: l.color }} /> {l.n} {l.name}</span>)}
@@ -203,9 +213,10 @@ function Resumen() {
 
 function Capacidad({ n }: { n: number }) {
   const cap = CAPS.find((c) => c.n === n) ?? CAPS[0];
-  const { scores } = useMaturity();
+  const { scores: pubScores } = useMaturity();
   const dims = dimsOf(cap.n);
-  const { C } = useCut();
+  const { C, scores: cutScores } = useCut();
+  const scores = cutScores ?? pubScores;
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-1.5">
@@ -231,8 +242,8 @@ function Capacidad({ n }: { n: number }) {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="num text-right text-[11px] text-muted">F1 {f1(r.f1)} · F2 {f1(r.f2raw)} · F3 {f1(r.f3)}</div>
-                    <div className="text-right"><div className="num text-[20px] font-extrabold text-ink">{fmtNum(s.value, 1)}</div><div className="num text-[10px] text-faint">meta {s.target}</div></div>
-                    <LevelBadge level={Math.max(1, Math.min(5, Math.round(s.value)))} />
+                    <div className="text-right"><div className="num text-[20px] font-extrabold text-ink">{s.value < 0 ? "—" : fmtNum(s.value, 1)}</div><div className="num text-[10px] text-faint">meta {s.target}</div></div>
+                    {s.value >= 0 && <LevelBadge level={Math.max(1, Math.min(5, Math.round(s.value)))} />}
                   </div>
                 </Link>
               );
@@ -241,7 +252,7 @@ function Capacidad({ n }: { n: number }) {
         </Card>
         <Card className="rise rise-2">
           <CardHeader title="Perfil de la capacidad" sub="madurez por dimensión frente a la meta" />
-          <div className="px-4 pb-4"><MiniRadar color={cap.color} axes={dims.map((d) => ({ label: d.code, value: scores[d.line][d.code].value, target: scores[d.line][d.code].target }))} /></div>
+          <div className="px-4 pb-4"><MiniRadar color={cap.color} axes={dims.map((d) => ({ label: d.code, value: Math.max(0, scores[d.line][d.code].value), target: scores[d.line][d.code].target }))} /></div>
         </Card>
       </div>
     </>
