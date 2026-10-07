@@ -19,6 +19,7 @@ import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
+import type { Response as OdResponse } from "@/lib/od";
 
 /* ═══ Estado ═══ */
 
@@ -860,6 +861,37 @@ export function saveF2Response(
   };
   f2Store().push(response);
   return { ok: true, response, total: f2Store().length };
+}
+
+/* ═══ Corte en curso: lo capturado en la plataforma como fuentes del 4Shine-OD ═══
+   F1 = autoevaluaciones por persona (cada quien captura las prácticas de su
+   capacidad); F2 = encuesta anónima; F3 = marcas de evidencia y nivel por
+   dimensión (promedio redondeado de los niveles de sus prácticas); test =
+   respuestas guardadas. El motor (lib/od) consolida igual que con la demo. */
+
+export function platformResponses(): OdResponse[] {
+  const out: OdResponse[] = [];
+  const byUser = new Map<string, OdResponse>();
+  for (const [code, c] of capture()) {
+    if (c.perception === undefined) continue;
+    const r = byUser.get(c.by) ?? { tipo: "f1" as const, meta: { nombre: c.by }, r: {} };
+    r.r[code] = c.perception; byUser.set(c.by, r);
+  }
+  out.push(...byUser.values());
+  for (const f of f2Store()) out.push({ tipo: "f2", meta: { area: f.area ?? "" }, r: f.r, n: { abierta: f.abierta ?? "" } });
+  const r3: OdResponse["r"] = {}; const lv: Record<string, number> = {}; let any = false;
+  for (const d of DIMS) {
+    const levels: number[] = [];
+    for (const p of d.prac) {
+      const c = capture().get(p.code);
+      if (c?.evidence) { r3[p.code] = c.evidence; any = true; }
+      if (c?.level !== undefined) levels.push(c.level);
+    }
+    if (levels.length) { lv[d.code] = Math.round(levels.reduce((x, y) => x + y, 0) / levels.length); any = true; }
+  }
+  if (any) out.push({ tipo: "f3", meta: { nombre: "Advisor" }, r: r3, lv });
+  for (const t of testStore().values()) out.push({ tipo: "test", meta: { nombre: t.name, cargo: t.cargo ?? t.role }, r: t.r });
+  return out;
 }
 
 /* ═══ Reporte de valores de KPI ═══

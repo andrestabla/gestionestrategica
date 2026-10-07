@@ -5,8 +5,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   captureVariable, captureProgress, publishCapture, effectiveCurrent, resetStore,
-  saveF2Response, getF2Responses, saveTestResponse, getTestResponses,
+  saveF2Response, getF2Responses, saveTestResponse, getTestResponses, platformResponses,
 } from "../src/server/store";
+import { consolidate } from "../src/lib/od";
 import { F2_GENERAL } from "../src/data/mapa";
 import { maturityRollup } from "../src/lib/logic";
 import { PRACTICES, DIMS } from "../src/data/mapa";
@@ -76,5 +77,25 @@ test("fuente 2 anónima: valida códigos y mínimo de 30, no guarda identidad; e
   assert.equal(getTestResponses(consultor)[0].r[1], 2);
   assert.equal(getTestResponses(directivo).length, 0);
   assert.ok(!(saveTestResponse(resp3, { r: { "1": 9 } }) as { ok: boolean }).ok);
+  resetStore();
+});
+
+test("corte en curso: lo capturado se consolida con el mismo motor (F1 por persona, F3 por dimensión, F2 y test)", () => {
+  resetStore();
+  assert.equal(platformResponses().length, 0);
+  for (const p of DIMS.find((d) => d.code === "MUL-5")!.prac) {
+    captureVariable(resp3, p.code.replace("MUL-5", "EJE-2"), { perception: 4 });
+    captureVariable(consultor, p.code, { perception: 2, evidence: "P", level: 2 });
+  }
+  const rs = platformResponses();
+  assert.deepEqual(rs.map((r) => r.tipo).sort(), ["f1", "f1", "f3"]);
+  const f3 = rs.find((r) => r.tipo === "f3")!;
+  assert.equal(f3.lv!["MUL-5"], 2);
+  assert.equal(Object.keys(f3.r).length, 4);
+  const c = consolidate(rs);
+  const mul5 = c.dims.find((d) => d.code === "MUL-5")!;
+  assert.equal(mul5.f1, 2); assert.equal(mul5.f3, 2);
+  assert.equal(mul5.m, 2);                 // 0,55·2 + 0,45·2 sin F2 suficiente
+  assert.equal(c.dims.find((d) => d.code === "DIR-1")!.m, null);   // sin dato queda en blanco
   resetStore();
 });

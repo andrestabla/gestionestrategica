@@ -8,7 +8,7 @@
 //   /panel/diagnostico/brechas              → brechas priorizadas y nivel de acompañamiento
 //   /panel/diagnostico/captura              → captura del corte A3 (autoevaluación y verificación)
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge } from "@/components/ui";
@@ -19,9 +19,9 @@ import {
   CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, TEST_QUESTIONS, GUIDES, FLAG_TEXT,
   methodologyOf, frameworkOf, frameworkOfPractice, DRAG_WEIGHT, THRESHOLD, levelName,
 } from "@/data/mapa";
-import { CONSOLIDATED, EVIDENCE_CATALOG, ASSESSMENTS, responsible } from "@/data/cmi";
+import { EVIDENCE_CATALOG, ASSESSMENTS, responsible } from "@/data/cmi";
 import { OD_RESPONSES } from "@/data/od-demo";
-import { readTest, recommend, testContrast, avg, rangeText, type DimResult } from "@/lib/od";
+import { consolidate, readTest, recommend, testContrast, avg, rangeText, type DimResult, type Consolidated } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
 import type { VariableCapture, TestResponse } from "@/server/store";
 import type { Response } from "@/lib/od";
@@ -31,6 +31,14 @@ import {
 } from "lucide-react";
 
 type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura";
+
+/* ═══ Corte que se lee: el publicado (demo A2) o el que se captura en la plataforma ═══ */
+
+type Cut = { src: "vigente" | "curso"; responses: Response[]; C: Consolidated; label: string };
+const DEMO_CUT: Cut = { src: "vigente", responses: OD_RESPONSES, C: consolidate(OD_RESPONSES), label: "Corte publicado · A2" };
+const CutCtx = createContext<Cut>(DEMO_CUT);
+const useCut = () => useContext(CutCtx);
+type OdApi = { responses: Response[]; published: boolean; progress: { total: number; perception: number; dik: number; level: number }; f2: number };
 const TABS: { id: Tab; label: string; icon: typeof Radar; href: string }[] = [
   { id: "resumen", label: "Resumen", icon: Radar, href: "/panel/diagnostico" },
   { id: "capacidad", label: "Capacidades", icon: Layers, href: "/panel/diagnostico/capacidad/1" },
@@ -49,13 +57,24 @@ export default function DiagnosticoPage() {
   const tab: Tab = (["capacidad", "dimension", "test", "brechas", "captura"].includes(seg) ? seg : "resumen") as Tab;
   const arg = slug[1] ? decodeURIComponent(slug[1]).toUpperCase() : null;
   const router = useRouter();
+  const [od, setOd] = useState<OdApi | null>(null);
+  const [src, setSrc] = useState<"vigente" | "curso" | null>(null);
+  useEffect(() => { fetch("/api/td/od").then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) setOd(j); }).catch(() => null); }, [tab]);
+  const hasCurso = (od?.responses.length ?? 0) > 0;
+  const eff = src ?? (od?.published ? "curso" : "vigente");
+  const cut = useMemo<Cut>(() => {
+    if (eff === "curso" && od && hasCurso) {
+      return { src: "curso", responses: od.responses, C: consolidate(od.responses), label: od.published ? "Corte A3 · publicado desde la plataforma" : "Corte en curso · capturado en la plataforma" };
+    }
+    return DEMO_CUT;
+  }, [eff, od, hasCurso]);
 
   return (
-    <>
+    <CutCtx.Provider value={cut}>
       <PageHeader kicker="M1 · Diagnóstico 4Shine-OD" title="Capacidad organizacional de la empresa"
         desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico completo de tres fuentes sobre las 68 prácticas del mapa. Madurez = 0,40 × evidencia + 0,30 × dirección + 0,30 × equipos, con techo de evidencia."
         actions={<AccessChip module="madurez" />} />
-      <div className="rise mb-6 flex flex-wrap gap-1.5 rounded-2xl bg-surface-2 p-1.5">
+      <div className="rise mb-6 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
         {TABS.map((t) => {
           const on = tab === t.id || (tab === "dimension" && t.id === "capacidad");
           return (
@@ -65,14 +84,26 @@ export default function DiagnosticoPage() {
             </button>
           );
         })}
+        {hasCurso && tab !== "captura" && tab !== "test" && (
+          <div className="ml-auto flex items-center gap-1 pr-1 text-[11px]">
+            <span className="hidden text-faint sm:inline">Leer:</span>
+            <button onClick={() => setSrc("vigente")} className={`chip ${cut.src === "vigente" ? "chip-cyan" : ""}`}>Corte publicado</button>
+            <button onClick={() => setSrc("curso")} className={`chip ${cut.src === "curso" ? "chip-cyan" : ""}`}>{od?.published ? "A3 publicado" : "Corte en curso"}</button>
+          </div>
+        )}
       </div>
+      {cut.src === "curso" && (
+        <div className="mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>
+          <b>{cut.label}.</b> {cut.C.f1n} autoevaluaciones, {cut.C.f2n} respuestas de equipos y evidencia {cut.C.hasF3 ? "registrada" : "pendiente"}; las dimensiones sin dato quedan en blanco. {od?.published ? "Es la medición vigente." : "No es la medición vigente hasta que el advisor publique el corte."}
+        </div>
+      )}
       {tab === "resumen" && <Resumen />}
       {tab === "capacidad" && <Capacidad n={Number(arg ?? 1)} />}
       {tab === "dimension" && arg && <Dimension code={arg} />}
       {tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : <TestTab />)}
       {tab === "brechas" && <Brechas />}
       {tab === "captura" && <Captura />}
-    </>
+    </CutCtx.Provider>
   );
 }
 
@@ -80,7 +111,8 @@ export default function DiagnosticoPage() {
 
 function Resumen() {
   const { scores, data } = useMaturity();
-  const C = CONSOLIDATED;
+  const { C, src } = useCut();
+  const verified = src === "curso" ? C.dims.reduce((a, d) => a + d.verified, 0) : EVIDENCE_CATALOG.filter((e) => e.status === "VERIFICADA").length;
   const flagged = C.dims.filter((d) => d.flags.length);
   const belowCaps = C.caps.filter((c) => (c.m ?? 5) < THRESHOLD);
   return (
@@ -89,7 +121,7 @@ function Resumen() {
         <StatCard label="Madurez de la empresa" value={avg(C.caps.map((c) => c.m)) ?? 0} decimals={1} foot="promedio de las cuatro capacidades" />
         <StatCard label="Capacidades en brecha" value={belowCaps.length} foot={belowCaps.length ? belowCaps.map((c) => c.name).join(", ") : "ninguna bajo 3,0"} good={belowCaps.length === 0} />
         <StatCard label="Dimensiones bajo el umbral" value={C.priorities.length} unit="de 17" foot="prioridad = (3,0 − madurez) × arrastre" />
-        <StatCard label="Evidencias verificadas" value={EVIDENCE_CATALOG.filter((e) => e.status === "VERIFICADA").length} unit="de 68" foot="una por práctica, revisadas tal como están" />
+        <StatCard label="Evidencias verificadas" value={verified} unit="de 68" foot="una por práctica, revisadas tal como están" />
       </div>
 
       <div className="mb-5 grid gap-5 lg:grid-cols-[380px_1fr]">
@@ -173,7 +205,7 @@ function Capacidad({ n }: { n: number }) {
   const cap = CAPS.find((c) => c.n === n) ?? CAPS[0];
   const { scores } = useMaturity();
   const dims = dimsOf(cap.n);
-  const C = CONSOLIDATED;
+  const { C } = useCut();
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-1.5">
@@ -220,14 +252,15 @@ function Capacidad({ n }: { n: number }) {
 
 function Dimension({ code }: { code: string }) {
   const d = DIMS.find((x) => x.code === code);
+  const { C, responses } = useCut();
   if (!d) return <div className="text-muted">La dimensión {code} no existe.</div>;
-  const r = CONSOLIDATED.dims.find((x) => x.code === d.code)!;
+  const r = C.dims.find((x) => x.code === d.code)!;
   const cap = CAPS.find((c) => c.n === d.line)!;
   const idx = DIMS.indexOf(d);
   const prev = DIMS[idx - 1], next = DIMS[idx + 1];
-  const F1 = OD_RESPONSES.filter((x) => x.tipo === "f1");
-  const F2 = OD_RESPONSES.filter((x) => x.tipo === "f2");
-  const F3 = OD_RESPONSES.find((x) => x.tipo === "f3")!;
+  const F1 = responses.filter((x) => x.tipo === "f1");
+  const F2 = responses.filter((x) => x.tipo === "f2");
+  const F3 = responses.find((x) => x.tipo === "f3");
   const MARK = { V: ["Verificada", "chip-ok"], P: ["Parcial", "chip-warn"], N: ["No existe", "chip-bad"] } as const;
   return (
     <>
@@ -272,7 +305,7 @@ function Dimension({ code }: { code: string }) {
       <div className="space-y-4">
         {d.prac.map((p) => {
           const ev = EVIDENCE_CATALOG.find((e) => e.practice === p.code)!;
-          const mark = F3.r[p.code] as "V" | "P" | "N" | undefined;
+          const mark = F3?.r[p.code] as "V" | "P" | "N" | undefined;
           const f1avg = avg(F1.map((f) => f.r[p.code]));
           const fw = frameworkOfPractice(p.code);
           const guide = GUIDES.f1[p.code];
@@ -515,7 +548,7 @@ function ResponderTest() {
 /* ═══ Brechas ═══ */
 
 function Brechas() {
-  const C = CONSOLIDATED;
+  const { C } = useCut();
   const R = recommend(C);
   const row = (d: DimResult, i: number) => {
     const dim = dimOf(d.code);
