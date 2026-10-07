@@ -164,7 +164,7 @@ export default function Panel() {
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
             tags={[`${KPIS.length} indicadores`]} />
           <ModuleCard href="/panel/ruta" code="M5" title="Mapa de ruta"
-            desc="Roadmap por horizontes con Gantt y matriz de priorización impacto × factibilidad."
+            desc="Roadmap por horizontes con Gantt y la matriz 4Shine de priorización (D·E·M·L)."
             tags={["2026–2028"]} />
           <ModuleCard href="/panel/iniciativas" code="M6" title="Seguimiento de iniciativas"
             desc="Avance, presupuesto en tres estados y factores críticos de éxito en semáforo."

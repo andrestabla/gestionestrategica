@@ -343,56 +343,62 @@ export function PeerBars({ peers, nationalAvg, refLabel = "media nacional" }:
   );
 }
 
-/* ─── Matriz impacto × factibilidad ─────────────────────────────────────── */
+/* ─── Matriz de priorización 4Shine: capacidad (L) × impacto (D) ───────────
+   Las dos reglas de la matriz definen los cuadrantes: D ≥ 3 para competir como
+   prioridad crítica y L ≥ 3 para implementar ahora. */
 
 export function PriorityMatrix({ items, onSelect, selected }: {
-  items: { id: string; name: string; impact: number; feasibility: number; horizon: string }[];
+  items: { id: string; name: string; D: number; L: number; score: number; horizon: string }[];
   onSelect?: (id: string) => void;
   selected?: string | null;
 }) {
   const W = 460, H = 300, pad = 34;
-  const px = (f: number) => pad + ((f - 1) / 4) * (W - pad - 12);
-  const py = (i: number) => H - pad - ((i - 1) / 4) * (H - pad - 16);
-  const mx = pad + (W - pad - 12) / 2, my = 16 + (H - pad - 16) / 2;
+  const px = (l: number) => pad + ((l - 1) / 3) * (W - pad - 12);
+  const py = (d: number) => H - pad - ((d - 1) / 3) * (H - pad - 16);
+  const mx = px(2.5), my = py(2.5);   // umbral: nivel 3 redondeado
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
-      aria-label="Matriz de priorización: impacto contra factibilidad">
-      <rect x={mx} y={16} width={W - 12 - mx} height={my - 16} rx={10} fill="var(--cyan-wash)" opacity=".8" />
-      <rect x={pad} y={16} width={mx - pad} height={my - 16} rx={10} fill="var(--surface-2)" opacity=".6" />
+      aria-label="Matriz de priorización 4Shine: capacidad de ejecución contra impacto en el resultado">
+      <rect x={mx} y={16} width={W - 12 - mx} height={my - 16} rx={10} fill="#eaf4ee" opacity=".9" />
+      <rect x={pad} y={16} width={mx - pad} height={my - 16} rx={10} fill="var(--cyan-wash)" opacity=".8" />
       <rect x={mx} y={my} width={W - 12 - mx} height={H - pad - my} rx={10} fill="var(--gold-wash)" opacity=".7" />
-      <rect x={pad} y={my} width={mx - pad} height={H - pad - my} rx={10} fill="var(--surface-2)" opacity=".35" />
+      <rect x={pad} y={my} width={mx - pad} height={H - pad - my} rx={10} fill="var(--surface-2)" opacity=".5" />
       <g fontSize="8.5" fontWeight={650} letterSpacing="1.2" fill="var(--faint)">
-        <text x={pad + 10} y={32}>APUESTAS MAYORES</text>
-        <text x={mx + 10} y={32}>QUICK WINS</text>
-        <text x={pad + 10} y={my + 16}>DESCARTAR</text>
-        <text x={mx + 10} y={my + 16}>RELLENO</text>
+        <text x={pad + 10} y={32}>PREPARAR LA CAPACIDAD</text>
+        <text x={mx + 10} y={32}>IMPLEMENTAR AHORA</text>
+        <text x={pad + 10} y={my + 16}>RENUNCIAR O REPLANTEAR</text>
+        <text x={mx + 10} y={my + 16}>BACKLOG</text>
+      </g>
+      <g fontSize="8" fill="var(--faint)">
+        {[1, 2, 3, 4].map((v) => <text key={`x${v}`} x={px(v)} y={H - pad + 11} textAnchor="middle">{v}</text>)}
+        {[1, 2, 3, 4].map((v) => <text key={`y${v}`} x={pad - 6} y={py(v) + 3} textAnchor="end">{v}</text>)}
       </g>
 
       {items.map((it) => {
         const isSel = selected === it.id;
+        const r = 6 + ((it.score - 25) / 75) * 8;   // radio ∝ puntaje (25–100)
         return (
           <g key={it.id} onClick={() => onSelect?.(it.id)}
             style={{ cursor: onSelect ? "pointer" : "default" }}>
             {isSel && (
-              <circle cx={px(it.feasibility)} cy={py(it.impact)}
-                r={it.horizon === "CORTO" ? 17 : 14} fill="none"
+              <circle cx={px(it.L)} cy={py(it.D)} r={r + 6} fill="none"
                 stroke="var(--navy)" strokeWidth="1.5" opacity=".5" />
             )}
-            <circle cx={px(it.feasibility)} cy={py(it.impact)}
-              r={it.horizon === "CORTO" ? 11 : 8}
+            <circle cx={px(it.L)} cy={py(it.D)} r={r}
               fill={it.horizon === "CORTO" ? "var(--cyan)" : "var(--gold-fill)"}
               opacity=".92" stroke="var(--surface)" strokeWidth="2"
               className="transition-transform hover:scale-110"
               style={{ transformOrigin: "center", transformBox: "fill-box" }}>
-              <title>{`${it.name} · impacto ${it.impact} · factibilidad ${it.feasibility}`}</title>
+              <title>{`${it.name} · D ${it.D} · L ${it.L} · ${it.score} pts`}</title>
             </circle>
+            <text x={px(it.L)} y={py(it.D) + 3} textAnchor="middle" fontSize="8" fontWeight="800" fill="white" style={{ pointerEvents: "none" }}>{it.id.toUpperCase()}</text>
           </g>
         );
       })}
 
-      <text x={(W + pad) / 2} y={H - 8} textAnchor="middle" fontSize="10.5" fill="var(--faint)">Factibilidad →</text>
-      <text x={12} y={(H - pad + 16) / 2} textAnchor="middle" fontSize="10.5" fill="var(--faint)"
-        transform={`rotate(-90 12 ${(H - pad + 16) / 2})`}>Impacto →</text>
+      <text x={(W + pad) / 2} y={H - 4} textAnchor="middle" fontSize="10.5" fill="var(--faint)">L · Capacidad de ejecución →</text>
+      <text x={10} y={(H - pad + 16) / 2} textAnchor="middle" fontSize="10.5" fill="var(--faint)"
+        transform={`rotate(-90 10 ${(H - pad + 16) / 2})`}>D · Impacto en el resultado →</text>
     </svg>
   );
 }

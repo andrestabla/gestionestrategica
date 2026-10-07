@@ -467,32 +467,6 @@ export function executiveSummary() {
   };
 }
 
-/* ═══ Prioridad compuesta del portafolio (ruta) ═══
-   0,30·Impacto + 0,20·Urgencia + 0,15·Riesgo + 0,15·Alineación +
-   0,10·Factibilidad + 0,10·Dependencia, todos en 1–5. */
 
-export type PriorityBreakdown = {
-  id: string; name: string; score: number;
-  criteria: { key: string; label: string; weight: number; value: number }[];
-};
-
-export function priorityOf(i: InitiativeFull): PriorityBreakdown {
-  const risk = initiativeRisk(i);
-  const riskValue = Math.min(5, Math.max(1, Math.round(1 + (risk.score / 100) * 4)));
-  const obj = CMI_OBJECTIVES.find((o) => o.id === i.cmi);
-  const health = obj ? objectiveHealth(obj.id).semaphore : "WARN";
-  const alignment = health === "BAD" ? 5 : health === "WARN" ? 3 : 2;   // un objetivo en rojo urge más
-  const criteria = [
-    { key: "impact", label: "Impacto", weight: 0.30, value: i.impact },
-    { key: "urgency", label: "Urgencia", weight: 0.20, value: i.urgency },
-    { key: "risk", label: "Riesgo", weight: 0.15, value: riskValue },
-    { key: "alignment", label: "Alineación", weight: 0.15, value: alignment },
-    { key: "feasibility", label: "Factibilidad", weight: 0.10, value: i.feasibility },
-    { key: "dependency", label: "Dependencia", weight: 0.10, value: i.dependency },
-  ];
-  const score = criteria.reduce((a, c) => a + c.weight * c.value, 0);
-  return { id: i.id, name: i.name, score: Math.round(score * 100) / 100, criteria };
-}
-
-export const priorityRanking = () =>
-  INIS_EFF().map(priorityOf).sort((a, b) => b.score - a.score);
+// La priorización del portafolio usa la matriz 4Shine (src/lib/priorizacion.ts):
+// D impacto, E evidencia, M sostenibilidad y L capacidad, en escala 1–4.

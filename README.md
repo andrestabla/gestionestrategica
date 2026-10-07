@@ -12,7 +12,7 @@ como sistema de gestión, no como documento.
 | M2 | Benchmark | Posición de la empresa frente a las sociedades de su CIIU que reportan a Supersociedades: crecimiento, márgenes, ROA y endeudamiento en percentiles, cuadrante margen × crecimiento con pares comparables y mapa del sector por departamento |
 | M3 | Estrategia | Cuadro de mando de cuatro perspectivas: objetivo → resultados clave (KPI) → dimensión que instala → iniciativa |
 | M4 | Indicadores | KPI con ficha, serie, semáforo, proyección y reporte de valores |
-| M5 | Ruta | Gantt por horizontes, matriz impacto × factibilidad y prioridad compuesta |
+| M5 | Ruta | Gantt por horizontes, matriz 4Shine capacidad (L) × impacto (D) y orden del portafolio con D·E·M·L, las mismas variables que se evalúan en M6 |
 | M6 | Iniciativas | Avance, presupuesto, factores críticos, bitácora; cada iniciativa instala una dimensión con un framework. Matriz 4Shine de priorización: evaluación por roles (D·E·M·L, estratégico/táctico), consolidado del comité, decisión de tiempo con reglas y portafolio ordenado por horizonte |
 | GP | Proyectos | Tareas con responsables, dependencias, evidencia, kanban, cronograma y carga |
 | M7 | Inteligencia | El sector en cifras con datos reales de Supersociedades (tamaño, concentración, departamentos, actividades CIIU, diez mayores) y la puerta a los observatorios de Algoritmo T |
