@@ -53,10 +53,28 @@ Modo demo por defecto, sin base de datos. Cuentas:
 
 Contraseña común: `4shine-demo-2026`.
 
+## Base de datos (SQLite local)
+
+```bash
+npm run db:migrate   # crea var/4shine.db con el esquema (prisma/migrations)
+npm run db:seed      # siembra Andina Suministros con los datos del modo demo
+```
+
+Con `DATABASE_URL` configurada (`.env` y `.env.local`: `file:./var/4shine.db`),
+las mutaciones del diagnóstico escriben en la base y se recuperan al reiniciar:
+captura del corte A3 (`PracticeCapture`), publicación (`Assessment` y
+`DimensionScore`), test de capacidad empresarial (`TestResponse`), notas del
+informe (`TestNote`), encuesta anónima de equipos (`TeamResponse`) y
+verificación de evidencia (`Evidence`). Las tareas del gestor ya persistían.
+La memoria sigue siendo la fuente de lectura; la base es write-through. El
+mapa 4Shine no se persiste: es la definición del sistema (`src/data/4shine.json`).
+
+Pendiente de persistir: reportes de KPI, cambios en iniciativas, comentarios,
+archivos, usuarios, integraciones y branding.
+
 ## Origen
 
 Derivada de PGTD (`/Users/andrestabla/Documents/pgtd`). El historial de git
 conserva esa procedencia; el stack (Next.js 16, React 19, Prisma 7, SQLite
 local) y la arquitectura de escritura (memoria con write-through) no cambian.
-Pendiente: alinear `prisma/schema.prisma` y `prisma/seed.ts` con el modelo de
-capacidades y dimensiones.
+

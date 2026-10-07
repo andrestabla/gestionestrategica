@@ -211,10 +211,42 @@ export async function hydrateFromDb() {
         t.evidenceIds = (r.evidenceIds as string[] | null) ?? t.evidenceIds;
       }
     }
+    // diagnóstico: captura del corte en curso, corte publicado, respuestas y evidencias
+    for (const c of await db.practiceCapture.findMany({ where: { cut: "A3" } })) {
+      capture().set(c.practice, {
+        perception: c.perception ?? undefined, evidence: (c.evidence as VariableCapture["evidence"]) ?? undefined,
+        level: c.level ?? undefined, note: c.note ?? undefined, by: c.by, at: c.at.toISOString(),
+      });
+    }
+    const a3 = await db.assessment.findUnique({ where: { id: "A3" }, include: { scores: true } });
+    if (a3?.status === "PUBLICADA" && a3.scores.length) {
+      const scores: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
+      for (const sc of a3.scores) scores[sc.line][sc.dimension] = { value: sc.value, target: sc.target ?? 0 };
+      g.__pgtdPublished = { id: "A3", label: a3.label, period: a3.period, status: "PUBLICADA", note: a3.note ?? "", scores };
+    }
+    for (const t of await db.testResponse.findMany()) {
+      testStore().set(t.email, { email: t.email, name: t.name, role: t.role, cargo: t.cargo ?? undefined, objetivo: t.objetivo ?? undefined, at: t.at.toISOString(), r: t.answers as TestResponse["r"] });
+    }
+    for (const n of await db.testNote.findMany()) {
+      testNotes().set(n.participant, { restriccion: n.restriccion ?? undefined, evidencias: n.evidencias ?? undefined, accion: n.accion ?? undefined, noNecesita: n.noNecesita ?? undefined, by: n.by, at: n.at.toISOString() });
+    }
+    if (f2Store().length === 0) {
+      for (const f of await db.teamResponse.findMany({ orderBy: { at: "asc" } })) {
+        f2Store().push({ id: f.id, at: f.at.toISOString(), area: f.area ?? undefined, r: f.answers as F2Response["r"], abierta: f.abierta ?? undefined });
+      }
+    }
+    for (const e of await db.evidence.findMany({ where: { status: "VERIFICADA" } })) evidenceStatus().set(e.id, "VERIFICADA");
     g.__pgtdHydrated = true;
-  } catch {
+  } catch (e) {
     // sin conexión: se continúa en modo memoria
+    console.error("[4shine] hidratación falló:", (e as Error).message);
   }
+}
+
+/** Escribe en la base si está configurada; la memoria sigue siendo la fuente. */
+async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
+  if (!hasDb()) return;
+  try { await fn(await prisma()); } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
 }
 
 /* ═══ Lecturas ═══ */
@@ -407,7 +439,7 @@ export async function verifyEvidence(
   if (hasDb()) {
     try {
       const db = await prisma();
-      await db.evidence.updateMany({ where: { title: ev.title }, data: { status: "VERIFICADA" } });
+      await db.evidence.upsert({ where: { id: ev.id }, update: { status: "VERIFICADA", verifiedBy: user.name, verifiedAt: new Date() }, create: { id: ev.id, practice: ev.practice, status: "VERIFICADA", verifiedBy: user.name, verifiedAt: new Date() } });
     } catch { /* memoria como fuente */ }
   }
   return { ok: true, status: "VERIFICADA" };
@@ -745,6 +777,8 @@ export function captureVariable(
   capture().set(varId, next);
   const what = Object.keys(patch).filter((k2) => patch[k2 as keyof typeof patch] !== undefined).join(", ");
   audit(user, "task", varId, `captura A3: ${what}`);
+  const row = { perception: next.perception ?? null, evidence: next.evidence ?? null, level: next.level ?? null, note: next.note ?? null, by: next.by, at: new Date(next.at) };
+  void persist("captura", (db) => db.practiceCapture.upsert({ where: { cut_practice: { cut: "A3", practice: varId } }, update: row, create: { cut: "A3", practice: varId, ...row } }));
   return { ok: true, capture: next };
 }
 
@@ -786,6 +820,19 @@ export function publishCapture(
   g.__pgtdPublished = assessment;
   audit(user, "task", "A3", "medición A3 publicada (corte vigente)");
   void dimOf;
+  void persist("publicación", async (db) => {
+    const company = await db.company.findFirst();
+    if (!company) return;
+    await db.assessment.upsert({
+      where: { id: "A3" },
+      update: { status: "PUBLICADA", note: assessment.note, publishedAt: new Date(), publishedBy: user.name },
+      create: { id: "A3", companyId: company.id, label: assessment.label, period: assessment.period, status: "PUBLICADA", note: assessment.note, publishedAt: new Date(), publishedBy: user.name },
+    });
+    for (const d of DIMS) {
+      const sc = scores[d.line][d.code];
+      await db.dimensionScore.upsert({ where: { assessmentId_dimension: { assessmentId: "A3", dimension: d.code } }, update: { value: sc.value, target: sc.target }, create: { assessmentId: "A3", line: d.line, dimension: d.code, value: sc.value, target: sc.target } });
+    }
+  });
   return { ok: true, assessment };
 }
 
@@ -794,7 +841,7 @@ export function publishCapture(
    sola respuesta (la última reemplaza). El advisor y el líder ven todas;
    los demás solo la propia. */
 
-const testStore = () => g.__pgtdTests!;
+function testStore() { return g.__pgtdTests!; }
 
 export const getTestResponses = (user: SessionUser): TestResponse[] => {
   const all = [...testStore().values()];
@@ -832,12 +879,18 @@ export function saveTestResponse(
   };
   testStore().set(user.email, response);
   audit(user, "task", `test:${user.email}`, `test de capacidad empresarial guardado (${answered} respuestas)`);
+  void persist("test", async (db) => {
+    const company = await db.company.findFirst();
+    if (!company) return;
+    const data = { name: response.name, role: response.role, cargo: response.cargo ?? null, objetivo: response.objetivo ?? null, answers: response.r, at: new Date(response.at) };
+    await db.testResponse.upsert({ where: { email: response.email }, update: data, create: { email: response.email, companyId: company.id, ...data } });
+  });
   return { ok: true, response };
 }
 
 /* ═══ Informe de una página del test: campos que completa el consultor ═══ */
 
-const testNotes = () => g.__pgtdTestNotes!;
+function testNotes() { return g.__pgtdTestNotes!; }
 export const getTestNotes = (): Record<string, TestNotes> => Object.fromEntries(testNotes());
 
 export function setTestNotes(
@@ -858,6 +911,8 @@ export function setTestNotes(
   };
   testNotes().set(id, notes);
   audit(user, "task", `test:${id}`, "informe del test actualizado");
+  const data = { restriccion: notes.restriccion ?? null, evidencias: notes.evidencias ?? null, accion: notes.accion ?? null, noNecesita: notes.noNecesita ?? null, by: notes.by, at: new Date(notes.at) };
+  void persist("notas del test", (db) => db.testNote.upsert({ where: { participant: id }, update: data, create: { participant: id, ...data } }));
   return { ok: true, notes };
 }
 
@@ -866,7 +921,7 @@ export function setTestNotes(
    quién responde ni desde dónde. El advisor y el líder ven el conteo y los
    agregados; nadie ve una respuesta individual con nombre. */
 
-const f2Store = () => g.__pgtdF2!;
+function f2Store() { return g.__pgtdF2!; }
 const F2_CODES = new Set([...DIMS.flatMap((d) => d.f2.map((q) => q.code)), ...F2_GENERAL.map((q) => q.code)]);
 
 export const getF2Responses = (): F2Response[] => [...f2Store()];
@@ -894,6 +949,11 @@ export function saveF2Response(
     r, abierta: abierta || undefined,
   };
   f2Store().push(response);
+  void persist("fuente 2", async (db) => {
+    const company = await db.company.findFirst();
+    if (!company) return;
+    await db.teamResponse.create({ data: { id: response.id, companyId: company.id, area: response.area ?? null, answers: response.r, abierta: response.abierta ?? null, at: new Date(response.at) } });
+  });
   return { ok: true, response, total: f2Store().length };
 }
 

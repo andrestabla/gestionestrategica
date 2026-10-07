@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { verifySurveyToken } from "@/lib/public-token";
 import { INSTITUTION } from "@/data/demo";
-import { saveF2Response } from "@/server/store";
+import { saveF2Response, hydrateFromDb } from "@/server/store";
 
 // POST /api/e/<slug>-<token> — recibe una respuesta anónima de la Fuente 2.
 // Sin sesión: el acceso lo da el token firmado del enlace de la empresa.
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
+  await hydrateFromDb();
   const { token } = await params;
   const [slug, ...rest] = token.split("-");
   if (slug !== INSTITUTION.slug || !verifySurveyToken(slug, rest.join("-"))) {

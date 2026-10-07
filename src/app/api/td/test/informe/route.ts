@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { getTestNotes, setTestNotes } from "@/server/store";
+import { getTestNotes, setTestNotes, hydrateFromDb } from "@/server/store";
 
 // GET  /api/td/test/informe — notas del consultor por participante
 // POST /api/td/test/informe — { id, restriccion?, evidencias?, accion?, noNecesita? }
 export async function GET() {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   return NextResponse.json({ notes: getTestNotes() });
 }
 
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);

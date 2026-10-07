@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { captureVariable, captureProgress } from "@/server/store";
+import { captureVariable, captureProgress, hydrateFromDb } from "@/server/store";
 
 // POST /api/td/captura — registra la captura de una práctica del corte A3:
 // autoevaluación (responsable de la capacidad o advisor), evidencia y nivel
 // (solo advisor). El store exige permisos (403) y rangos (422) con explicación.
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 

@@ -1,6 +1,9 @@
-// PGTD · Plataforma de Gestión de la Transformación Digital — Algoritmo T
-// Motor: SQLite local vía Prisma (archivo var/pgtd.db) — sin servicios
+// 4Shine Empresas · Plataforma de gestión estratégica — Algoritmo T
+// Motor: SQLite local vía Prisma (archivo var/4shine.db), sin servicios
 // externos; el mismo esquema migra a PostgreSQL cambiando el datasource.
+// El mapa (capacidades, dimensiones, prácticas, evidencias) no se persiste:
+// es la definición del sistema (src/data/4shine.json). Aquí viven los datos
+// de cada empresa: usuarios, mediciones, respuestas, gestión y proyectos.
 
 generator client {
   provider = "prisma-client-js"
@@ -17,10 +20,10 @@ model User {
   email         String    @unique
   name          String
   passwordHash  String
-  role          String    @default("DIRECTIVO")   // CONSULTOR | LIDER | RESPONSABLE | DIRECTIVO
-  line          Int?      // 1..4 si es RESPONSABLE
-  institutionId String
-  institution   Institution @relation(fields: [institutionId], references: [id])
+  role          String    @default("DIRECTIVO")   // ADMIN | CONSULTOR | LIDER | RESPONSABLE | DIRECTIVO
+  line          Int?      // 1..4 (capacidad) si es RESPONSABLE
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id])
   active        Boolean   @default(true)
   failedLogins  Int       @default(0)
   lockedUntil   DateTime?
@@ -28,41 +31,139 @@ model User {
   updatedAt     DateTime  @updatedAt
 }
 
-// ─── Institución ─────────────────────────────────────────────────────────────
+// ─── Empresa ─────────────────────────────────────────────────────────────────
 
-model Institution {
+model Company {
   id         String  @id @default(cuid())
   slug       String  @unique
   name       String
   shortName  String
   city       String
   department String
+  sector     String?
+  size       String?
   logoUrl    String?
   active     Boolean @default(true)
 
-  users        User[]
-  assessments  Assessment[]
-  capabilities Capability[]
-  kpis         Kpi[]
-  initiatives  Initiative[]
-  createdAt    DateTime @default(now())
+  users         User[]
+  assessments   Assessment[]
+  kpis          Kpi[]
+  initiatives   Initiative[]
+  testResponses TestResponse[]
+  teamResponses TeamResponse[]
+  createdAt     DateTime @default(now())
 }
 
-// ─── Gobierno del modelo: responsables y Cuadro de Mando Integral ───────────
+// ─── Gobierno del modelo: responsables y cuadro de mando ─────────────────────
 
 model Responsible {
-  id           String @id            // R01…
-  cargo        String
-  dependencia  String
+  id            String @id            // R01…
+  cargo         String
+  dependencia   String
   rolPlataforma String               // LIDER | RESPONSABLE | APORTA | CONSULTA
 }
 
 model CmiObjective {
   id          String @id             // OE-01…
-  perspective String                 // impacto | sostenibilidad | comunidad | procesos | innovacion
+  perspective String                 // financiera | clientes | procesos | aprendizaje
   name        String
-  kpis        Json                   // códigos de KPI asociados
-  line        Int?
+  kpis        Json                   // códigos de KPI (resultados clave)
+  line        Int?                   // capacidad dominante
+}
+
+// ─── Diagnóstico 4Shine-OD: mediciones, captura y respuestas ─────────────────
+
+model Assessment {
+  id          String   @id             // A1, A2, A3…
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  label       String
+  period      String                   // "2027-02"
+  status      String   @default("EN_CAPTURA")   // EN_CAPTURA | PUBLICADA
+  note        String?
+  publishedAt DateTime?
+  publishedBy String?
+  scores      DimensionScore[]
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, publishedAt(sort: Desc)])
+}
+
+model DimensionScore {
+  id           String  @id @default(cuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  line         Int     // capacidad 1..4
+  dimension    String  // DIR-1 … MUL-5
+  value        Float   // madurez 1..5
+  target       Float?  // meta a 24 meses
+
+  @@unique([assessmentId, dimension])
+}
+
+/// Captura del corte en curso, una fila por práctica: autoevaluación del
+/// responsable, marca de evidencia y nivel del advisor.
+model PracticeCapture {
+  id         String   @id @default(cuid())
+  cut        String   @default("A3")   // corte al que pertenece
+  practice   String                    // DIR-1.1 … MUL-5.4
+  perception Int?                      // 1–5
+  evidence   String?                   // V | P | N
+  level      Int?                      // 1–5
+  note       String?
+  by         String
+  at         DateTime @default(now())
+
+  @@unique([cut, practice])
+}
+
+/// Estado de verificación de la evidencia de cada práctica del mapa.
+model Evidence {
+  id         String   @id              // EV-01…
+  practice   String   @unique          // código de práctica
+  status     String   @default("PENDIENTE")   // VERIFICADA | PENDIENTE
+  note       String?
+  fileUrl    String?
+  verifiedBy String?
+  verifiedAt DateTime?
+}
+
+model TestResponse {
+  email     String   @id
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  role      String
+  cargo     String?
+  objetivo  String?
+  answers   Json                      // {1..24: 1–5 | "NI", 25: A–E}
+  at        DateTime @default(now())
+}
+
+/// Campos del informe de una página que completa el consultor. El participante
+/// puede ser un correo de la plataforma o un participante de la demo (demo:<i>),
+/// por eso no lleva relación.
+model TestNote {
+  participant String   @id            // email o demo:<i>
+  restriccion String?
+  evidencias  String?
+  accion      String?
+  noNecesita  String?
+  by          String
+  at          DateTime @default(now())
+}
+
+/// Respuesta anónima de la Fuente 2: sin usuario, sin correo, sin origen.
+model TeamResponse {
+  id        String   @id              // F2-0001…
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  area      String?
+  answers   Json                      // F2-DIR1.a … F2-G6 → 1–5
+  abierta   String?
+  at        DateTime @default(now())
+
+  @@index([companyId, at])
 }
 
 // ─── Gestor de proyectos ─────────────────────────────────────────────────────
@@ -82,16 +183,16 @@ model ProjectTask {
   initiativeId     String?            // Initiative.id (cuid) — se resuelve en seed
   iniCode          String             // i1… (código estable del catálogo)
   title            String
-  desc             String?            // alcance verificable de la actividad
-  assigneeId       String             // responsable principal
-  coAssigneeIds    Json?                  // corresponsables (Person.id[])
+  desc             String?
+  assigneeId       String
+  coAssigneeIds    Json?
   assignee         Person   @relation(fields: [assigneeId], references: [id])
   start            DateTime
   due              DateTime
   status           String   // POR_HACER | EN_CURSO | EN_REVISION | HECHA | BLOQUEADA
   requiresEvidence Boolean  @default(false)
-  evidenceIds      Json?    // EV-xx
-  dependsOn        Json?    // ids de tareas
+  evidenceIds      Json?
+  dependsOn        Json?
   note             String?
 
   @@index([iniCode, status])
@@ -115,7 +216,7 @@ model FileAsset {
   title      String
   kind       String
   fileName   String
-  filePath   String                  // clave local o de R2
+  filePath   String
   size       Int
   mime       String
   uploadedBy String
@@ -125,130 +226,30 @@ model FileAsset {
   @@index([taskId])
 }
 
-// ─── Portafolio académico ────────────────────────────────────────────────────
-
-model Program {
-  id             String  @id @default(cuid())
-  institutionId  String
-  code           String
-  name           String
-  level          String  // Pregrado | Tecnología | Especialización | Maestría
-  faculty        String
-  campus         String
-  modality       String  // Presencial | Híbrida | Virtual
-  students       Int
-  virtualCredits Int     // % de créditos con componente virtual
-  accredited     Boolean @default(false)
-  saberPro       Int?
-  dropout        Float
-  breakEven      Boolean @default(true)
-
-  @@unique([institutionId, code, campus])
-  @@index([institutionId, faculty])
-}
-
-// ─── Instrumento y mediciones de madurez ────────────────────────────────────
-
-model MaturityModel {
-  id          String   @id @default(cuid())
-  version     String   @unique // p.ej. "2026.1"
-  name        String
-  // líneas 4.1–4.4 y dimensiones como catálogo JSON versionado:
-  // lines: [{n:1, code:"4.1", name, color}], dimensions: [{key, name}]
-  lines       Json
-  dimensions  Json
-  active      Boolean  @default(true)
-  assessments Assessment[]
-  createdAt   DateTime @default(now())
-}
-
-model Assessment {
-  id            String   @id @default(cuid())
-  institutionId String
-  institution   Institution @relation(fields: [institutionId], references: [id])
-  modelId       String
-  model         MaturityModel @relation(fields: [modelId], references: [id])
-  label         String   // "Línea base · Fase 0"
-  periodStart   DateTime
-  periodEnd     DateTime
-  status        String   @default("DRAFT")       // DRAFT | EN_CAPTURA | PUBLICADA
-  publishedAt   DateTime?
-  scores        Score[]
-  createdAt     DateTime @default(now())
-
-  @@index([institutionId, publishedAt(sort: Desc)])
-}
-
-model Score {
-  id           String  @id @default(cuid())
-  assessmentId String
-  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  line         Int     // 1..4
-  dimension    String  // organizacional | misional | tecnologica | datos
-  value        Float   // 1..5
-  target       Float?  // meta a 24 meses
-  note         String?
-  evidences    Evidence[]
-
-  @@unique([assessmentId, line, dimension])
-}
-
-model Evidence {
-  id         String   @id @default(cuid())
-  scoreId    String
-  score      Score    @relation(fields: [scoreId], references: [id], onDelete: Cascade)
-  title      String
-  kind       String?  // Documento | Acta | Normativa | Informe | Sistema | Encuesta
-  status     String   @default("PENDIENTE") // VERIFICADA | PENDIENTE
-  source     String?  // dependencia que la aporta
-  fileUrl    String?  // objeto en R2
-  note       String?
-  capturedBy String?
-  capturedAt DateTime @default(now())
-}
-
-// ─── Capacidades y mapa estratégico ─────────────────────────────────────────
-
-model Capability {
-  id            String  @id @default(cuid())
-  institutionId String
-  institution   Institution @relation(fields: [institutionId], references: [id])
-  line          Int
-  name          String
-  description   String?
-  currentLevel  Float
-  targetLevel   Float
-  ownerRole     String?
-  objective     String? // objetivo institucional al que sirve
-  initiatives   Initiative[]
-
-  @@index([institutionId, line])
-}
-
 // ─── Indicadores ─────────────────────────────────────────────────────────────
 
 model Kpi {
   id            String  @id @default(cuid())
-  institutionId String
-  institution   Institution @relation(fields: [institutionId], references: [id])
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id])
   line          Int
   code          String
   name          String
   definition    String?
   formula       String?
-  cmiObjective  String? // OE-xx
-  unit          String  // %, número, razón…
-  source        String? // sistema o dependencia que produce el dato
+  cmiObjective  String?
+  unit          String
+  source        String?
   ownerRole     String?
-  frequency     String   @default("TRIMESTRAL")  // MENSUAL | TRIMESTRAL | SEMESTRAL | ANUAL
+  frequency     String   @default("TRIMESTRAL")
   baseline      Float?
   target        Float?
-  goodDirection String  @default("up") // up | down
+  goodDirection String  @default("up")
   values        KpiValue[]
   initiatives   Initiative[]
 
-  @@unique([institutionId, code])
-  @@index([institutionId, line])
+  @@unique([companyId, code])
+  @@index([companyId, line])
 }
 
 model KpiValue {
@@ -263,39 +264,43 @@ model KpiValue {
   @@unique([kpiId, period])
 }
 
-// ─── Roadmap e iniciativas ───────────────────────────────────────────────────
+// ─── Ruta e iniciativas ──────────────────────────────────────────────────────
 
 model Initiative {
   id             String   @id @default(cuid())
-  institutionId  String
-  institution    Institution @relation(fields: [institutionId], references: [id])
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  code           String                            // i1…
   line           Int
   name           String
   description    String?
-  subsistema     String?  // Administrativo | Formación | Investigación | Proyección social | Bienestar
-  cmiObjective   String?  // OE-xx
+  subsistema     String?
+  cmiObjective   String?
+  dimension      String?                           // dimensión que instala (DIR-4…)
+  framework      String?                           // framework que trabaja (F04…)
   metaResultado  String?
-  actions        Json?    // [{name, meta, status, quarter}]
-  log            Json?    // [{date, type, text}]
-  nextMilestone  Json?    // {date, text}
+  actions        Json?
+  log            Json?
+  nextMilestone  Json?
   horizon        String                            // CORTO | MEDIANO
-  impact         Int      // 1..5
-  feasibility    Int      // 1..5
-  status         String   @default("PLANEADA")   // PLANEADA | EN_CURSO | EN_RIESGO | COMPLETADA
+  impact         Int
+  feasibility    Int
+  urgency        Int      @default(3)
+  dependency     Int      @default(3)
+  status         String   @default("PLANEADA")
   ownerRole      String?
-  startQuarter   String?  // "2026-T3"
+  startQuarter   String?
   endQuarter     String?
   budgetPlanned   Float   @default(0)
   budgetCommitted Float   @default(0)
   budgetExecuted  Float   @default(0)
-  progress       Int      @default(0) // %
-  capabilityId   String?
-  capability     Capability? @relation(fields: [capabilityId], references: [id])
+  progress       Int      @default(0)
   kpiId          String?
   kpi            Kpi?     @relation(fields: [kpiId], references: [id])
   successFactors SuccessFactor[]
 
-  @@index([institutionId, horizon])
+  @@unique([companyId, code])
+  @@index([companyId, horizon])
 }
 
 model SuccessFactor {
@@ -303,8 +308,8 @@ model SuccessFactor {
   initiativeId String
   initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
   name         String
-  state        String   @default("VERDE")         // VERDE | AMBAR | ROJO
-  history      Json?    // [{period:"jun", state:"VERDE"}]
+  state        String   @default("VERDE")
+  history      Json?
   note         String?
   reviewedAt   DateTime @default(now())
 }

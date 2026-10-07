@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { surveyToken } from "@/lib/public-token";
 import { INSTITUTION } from "@/data/demo";
-import { getF2Responses } from "@/server/store";
+import { getF2Responses, hydrateFromDb } from "@/server/store";
 
 // GET /api/td/f2 — enlace anónimo de la encuesta y conteo de respuestas recibidas.
 // Solo advisor, líder y admin ven el enlace; los agregados nunca bajan a una
 // respuesta individual con nombre (no existe tal cosa).
 export async function GET(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const canLink = ["CONSULTOR", "LIDER", "ADMIN"].includes(user.role);
