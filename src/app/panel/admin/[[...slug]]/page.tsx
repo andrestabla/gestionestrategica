@@ -103,7 +103,7 @@ const ROLE_LABEL: Record<ManagedUser["role"], string> = {
   DIRECTIVO: "Directivo",
 };
 
-type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string };
+type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD" };
 
 function EmpresasTab() {
   const me = useUser();
@@ -151,7 +151,7 @@ function EmpresasTab() {
                       <div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[9.5px]">activa</span>}</div>
                       <div className="num text-[10px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div>
                     </td>
-                    <td className="px-4 py-2.5 text-muted">{c.sector || "—"}<div className="text-[10.5px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}</div></td>
+                    <td className="px-4 py-2.5 text-muted">{c.sector || "—"}<div className="text-[10.5px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}{c.country === "EC" ? " · Ecuador · USD" : ""}</div></td>
                     <td className="px-4 py-2.5"><span className="chip">{c.template === "demo" ? "Plantilla demo" : "Vacía"}</span></td>
                     <td className="px-4 py-2.5"><span className={`chip ${c.active ? "chip-ok" : "chip-bad"}`}>{c.active ? "Activa" : "Desactivada"}</span></td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-right">
@@ -191,6 +191,7 @@ function CompanyForm({ saving, initial, onSubmit, onCancel }: {
   const [f, setF] = useState({
     name: initial?.name ?? "", shortName: initial?.shortName ?? "", city: initial?.city ?? "", department: initial?.department ?? "",
     sector: initial?.sector ?? "", size: initial?.size ?? "", ciiu: initial?.ciiu ?? "", sectorKey: initial?.sectorKey ?? "suministros-industriales", template: "vacia",
+    country: initial?.country ?? "CO", currency: initial?.currency ?? "COP",
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   return (
@@ -205,6 +206,16 @@ function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         <div className="grid grid-cols-2 gap-2">
           <input value={f.city} onChange={set("city")} placeholder="Ciudad" className="input !py-2 text-[12px]" />
           <input value={f.department} onChange={set("department")} placeholder="Departamento" className="input !py-2 text-[12px]" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <select value={f.country} onChange={set("country")} className="input !py-2 text-[12px]" title="País: define el mapa territorial y el benchmark">
+            <option value="CO">Colombia (departamentos)</option>
+            <option value="EC">Ecuador (provincias)</option>
+          </select>
+          <select value={f.currency} onChange={set("currency")} className="input !py-2 text-[12px]" title="Moneda de las cifras financieras">
+            <option value="COP">COP (pesos colombianos)</option>
+            <option value="USD">USD (dólares)</option>
+          </select>
         </div>
         <input value={f.sector} onChange={set("sector")} placeholder="Sector (p. ej. Distribución de suministros)" className="input !py-2 text-[12px]" />
         <input value={f.size} onChange={set("size")} placeholder="Tamaño (p. ej. 85 colaboradores · 3 sedes)" className="input !py-2 text-[12px]" />

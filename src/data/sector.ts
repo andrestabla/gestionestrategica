@@ -163,6 +163,9 @@ export function shortName(razon: string, words = 3): string {
   return toks.length > words ? base + "…" : base;
 }
 
+/** Etiqueta de la unidad monetaria de un sector o empresa. */
+export const currencyLabel = (currency?: string) => (currency === "USD" ? "USD millones" : "COP millones");
+
 export const fmtMillones = (v: number) =>
   v >= 1_000_000 ? `${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(v / 1_000_000)} billones`
     : v >= 1000 ? `${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(v / 1000)} mil millones`

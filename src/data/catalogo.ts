@@ -28,6 +28,8 @@ export type CompanyInfo = {
   size: string;
   sectorKey: string;        // sector de referencia para M2/M7 (src/data/sector/<key>.json)
   ciiu: string;
+  country?: "CO" | "EC";    // país: mapa territorial (departamentos/provincias) y benchmark
+  currency?: "COP" | "USD"; // moneda de las cifras financieras
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;

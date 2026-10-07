@@ -273,7 +273,7 @@ async function prisma(): Promise<AnyPrisma> {
 import {
   writeCatalog, readCatalog, companyRow, writeCompanyExtras, writeResponsible, deleteResponsible as dbDeleteResponsible,
   writeObjective, deleteObjective as dbDeleteObjective, writeKpi, deleteKpi as dbDeleteKpi, writeInitiative,
-  deleteInitiative as dbDeleteInitiative, writePerson, deletePerson as dbDeletePerson,
+  deleteInitiative as dbDeleteInitiative, writePerson, deletePerson as dbDeletePerson, clearCatalog as dbClearCatalog,
 } from "@/server/catalog-db";
 import { frameworkOfPractice } from "@/data/mapa";
 import type { Responsible, CmiObjective } from "@/data/cmi";
@@ -292,6 +292,7 @@ export async function hydrateCompanies() {
         slug: c.slug, name: c.name, shortName: c.shortName, city: c.city, department: c.department,
         sector: c.sector ?? "", size: c.size ?? "", sectorKey: c.sectorKey ?? prev?.sectorKey ?? "suministros-industriales",
         ciiu: c.ciiu ?? "", active: c.active, template: (c.template as CompanyInfo["template"]) ?? "vacia",
+        country: (c.country as CompanyInfo["country"]) ?? "CO", currency: (c.currency as CompanyInfo["currency"]) ?? "COP",
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       const t = g.tenants.get(c.slug);
@@ -432,7 +433,7 @@ const slugify = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""
 
 export type CompanyInput = {
   name: string; shortName?: string; slug?: string; city?: string; department?: string; sector?: string; size?: string;
-  sectorKey?: string; ciiu?: string; template?: "demo" | "vacia";
+  sectorKey?: string; ciiu?: string; template?: "demo" | "vacia"; country?: "CO" | "EC"; currency?: "COP" | "USD";
 };
 
 /** Crea una empresa (vacía o desde la plantilla demo) y, con base, la persiste con su catálogo. */
@@ -448,6 +449,7 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
     slug, name, shortName: input.shortName?.trim() || name.split(" ")[0], city: input.city?.trim() ?? "", department: input.department?.trim() ?? "",
     sector: input.sector?.trim() ?? "", size: input.size?.trim() ?? "", sectorKey: input.sectorKey?.trim() || "suministros-industriales",
     ciiu: input.ciiu?.trim() ?? "", active: true, template, createdBy: actor.name, createdAt: new Date().toISOString(),
+    country: input.country === "EC" ? "EC" : "CO", currency: input.currency === "USD" ? "USD" : "COP",
   };
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
@@ -479,6 +481,8 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
   }
   const fields = ["name", "shortName", "city", "department", "sector", "size", "sectorKey", "ciiu"] as const;
   for (const f of fields) if (patch[f] !== undefined) (c as Record<string, unknown>)[f] = String(patch[f]).trim();
+  if (patch.country !== undefined) c.country = patch.country === "EC" ? "EC" : "CO";
+  if (patch.currency !== undefined) c.currency = patch.currency === "USD" ? "USD" : "COP";
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(slug);
   if (t) t.catalog.company = { ...t.catalog.company, ...c };
@@ -1819,6 +1823,22 @@ export function removeInitiative(user: SessionUser, id: string): CatResult {
     await db.initiativeDecision.deleteMany({ where: { companyId, code: id } });
     await db.initiativeEvaluation.deleteMany({ where: { companyId, iniCode: id } });
   });
+  return { ok: true };
+}
+
+/** Vacía el catálogo de la empresa activa (solo admin de plataforma): deja la
+    empresa como recién creada vacía, conservando usuarios, diagnóstico y branding. */
+export async function clearCompanyCatalog(user: SessionUser): Promise<CatResult> {
+  if (!can(user, "manage_companies")) return fail(403, "Solo el administrador de la plataforma vacía el catálogo de una empresa.");
+  const st = S();
+  const c = st.catalog;
+  c.responsibles = []; c.people = []; c.objectives = []; c.kpis = []; c.initiatives = []; c.tasks = [];
+  st.tasks = []; st.archived = []; st.comments = []; st.uploads = []; st.baselines = new Map();
+  st.kpiReports = new Map(); st.iniOverrides = new Map(); st.evals = new Map(); st.decisions = new Map();
+  audit(user, "task", "cat:vaciar", "catálogo vaciado");
+  if (hasDb()) {
+    try { await dbClearCatalog(await prisma(), cid()); } catch (e) { return fail(500, `No se pudo vaciar en la base: ${(e as Error).message}`); }
+  }
   return { ok: true };
 }
 

@@ -45,6 +45,8 @@ model Company {
   size        String?
   sectorKey   String? // referencia sectorial (src/data/sector/<key>.json)
   ciiu        String?
+  country     String  @default("CO") // CO | EC: mapa territorial y fuente del benchmark
+  currency    String  @default("COP") // COP | USD: unidad de las cifras financieras
   financials  Json? // estados financieros de cierre (COP millones)
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia

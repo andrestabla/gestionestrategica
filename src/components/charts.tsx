@@ -6,6 +6,13 @@
 import { useId } from "react";
 import { LINES, DIMENSIONS } from "@/data/demo";
 import { CO_PATHS, CO_VIEW, CESAR_MARK, CESAR_PATH, CESAR_VIEW, projectCesar } from "@/data/geo";
+import { EC_PATHS, EC_VIEW } from "@/data/geo-ec";
+
+/** Geometría territorial por país: departamentos de Colombia o provincias del Ecuador. */
+export const TERRITORY_GEO: Record<"CO" | "EC", { view: { w: number; h: number }; paths: { name: string; d: string }[]; unitName: string }> = {
+  CO: { view: CO_VIEW, paths: CO_PATHS, unitName: "departamento" },
+  EC: { view: EC_VIEW, paths: EC_PATHS, unitName: "provincia" },
+};
 
 /** Mapa de puntajes línea → dimensión. Los gráficos lo reciben por props (la
     vista de la empresa activa, scoresOf(v)); sin él, pintan «sin dato». */
@@ -502,14 +509,17 @@ export function ColombiaMap() {
 /** Mapa del Cesar con tres lentes: cobertura (peso/cobertura del municipio) o
     un mapa de valores (producción, convenios) con radio ∝ √valor. */
 /** Colombia con intensidad por departamento (coautorías / convenios). */
-export function ColombiaImpactMap({ values, selected, onSelect, home = [], unit = "" }: {
+export function ColombiaImpactMap({ values, selected, onSelect, home = [], unit = "", country = "CO" }: {
   values: Record<string, number>;
   selected?: string | null;
   onSelect?: (dept: string | null) => void;
-  /** departamentos con sede de la empresa: se marcan con borde propio */
+  /** departamentos o provincias con sede de la empresa: se marcan con borde propio */
   home?: string[];
   unit?: string;
+  /** país de la empresa: decide la geometría (Colombia por departamentos, Ecuador por provincias) */
+  country?: "CO" | "EC";
 }) {
+  const geo = TERRITORY_GEO[country] ?? TERRITORY_GEO.CO;
   const maxV = Math.max(1, ...Object.values(values));
   const fillOf = (name: string) => {
     const v = values[name] ?? 0;
@@ -518,9 +528,9 @@ export function ColombiaImpactMap({ values, selected, onSelect, home = [], unit 
     return `color-mix(in srgb, var(--cyan-deep) ${Math.round(18 + t * 78)}%, white)`;
   };
   return (
-    <svg viewBox={`0 0 ${CO_VIEW.w} ${CO_VIEW.h}`} className="w-full h-auto" role="img"
-      aria-label="Mapa de Colombia con la intensidad del sector por departamento">
-      {CO_PATHS.map((p) => {
+    <svg viewBox={`0 0 ${geo.view.w} ${geo.view.h}`} className="w-full h-auto" role="img"
+      aria-label={`Mapa con la intensidad del sector por ${geo.unitName}`}>
+      {geo.paths.map((p) => {
         const v = values[p.name] ?? 0;
         const isSel = selected === p.name;
         const isHome = home.includes(p.name);

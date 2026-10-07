@@ -76,3 +76,13 @@ test("razón social abreviada", () => {
   assert.equal(shortName("COLOMBIANA DE REPRESENTACIONES INGENIERIA Y SUMINISTROS S.A."), "Colombiana de Representaciones…");
   assert.equal(shortName("GYJ FERRETERIAS S.A."), "GYJ Ferreterias");
 });
+
+test("el mapa del Ecuador tiene sus provincias continentales", async () => {
+  const { EC_PATHS, EC_VIEW } = await import("../src/data/geo-ec");
+  assert.equal(EC_PATHS.length, 23);
+  for (const n of ["Guayas", "Manabí", "El Oro", "Pichincha", "Esmeraldas", "Santo Domingo de los Tsáchilas", "Los Ríos", "Santa Elena"]) {
+    assert.ok(EC_PATHS.some((p) => p.name === n), n);
+  }
+  assert.ok(EC_VIEW.w === 300 && EC_VIEW.h > 200);
+  for (const p of EC_PATHS) assert.match(p.d, /^M[\d.,\s L]+Z/);
+});

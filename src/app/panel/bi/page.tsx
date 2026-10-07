@@ -80,7 +80,7 @@ export default function BiPage() {
           </div>
         </Card>
         <Card className="rise rise-2">
-          <CardHeader title="Dónde está el sector" sub="participación en ingresos por departamento del domicilio" />
+          <CardHeader title="Dónde está el sector" sub={`participación en ingresos por ${v.catalog.company.country === "EC" ? "provincia" : "departamento"} del domicilio`} />
           <div className="space-y-2 px-5 pb-4">
             {s.departments.slice(0, 8).map((d) => (
               <div key={d.name} className="flex items-center gap-2 text-[11.5px]">
@@ -107,7 +107,7 @@ export default function BiPage() {
       </div>
 
       <Card className="rise rise-3 mb-5">
-        <CardHeader title={`Las diez mayores del sector en ${year}`} sub="ingresos de actividades ordinarias, crecimiento y margen operacional · COP millones" />
+        <CardHeader title={`Las diez mayores del sector en ${year}`} sub={`ingresos de actividades ordinarias, crecimiento y margen operacional · ${s.units}`} />
         <div className="overflow-x-auto px-2 pb-3">
           <table className="w-full text-[12px]">
             <thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Sociedad</th><th className="px-2 py-2">Departamento</th><th className="px-2 py-2">CIIU</th><th className="num px-2 py-2 text-right">Ingresos</th><th className="num px-2 py-2 text-right">Crecimiento</th><th className="num px-2 py-2 text-right">Margen op.</th></tr></thead>

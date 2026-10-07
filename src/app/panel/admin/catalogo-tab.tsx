@@ -765,7 +765,7 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
             <Field label="Comprometido"><input type="number" step="any" value={f.budgetCommitted} onChange={set("budgetCommitted")} className={`${INPUT} num`} /></Field>
             <Field label="Ejecutado"><input type="number" step="any" value={f.budgetExecuted} onChange={set("budgetExecuted")} className={`${INPUT} num`} /></Field>
           </div>
-          <p className="num -mt-1 text-[10px] text-faint">Presupuesto en COP: {fmtCop(num(f.budgetPlanned))} planeado · {fmtCop(num(f.budgetCommitted))} comprometido · {fmtCop(num(f.budgetExecuted))} ejecutado.</p>
+          <p className="num -mt-1 text-[10px] text-faint">Presupuesto en {v.catalog.company.currency ?? "COP"}: {fmtCop(num(f.budgetPlanned))} planeado · {fmtCop(num(f.budgetCommitted))} comprometido · {fmtCop(num(f.budgetExecuted))} ejecutado.</p>
 
           <Field label={`Acciones · ${f.actions.length}`}>
             <div className="space-y-1.5">
@@ -832,6 +832,7 @@ function FinanzasSection({ v, saving, mutate }: SectionProps) {
 }
 
 function FinanzasForm({ initial, saving, onSubmit }: { initial: Financials | null; saving: boolean; onSubmit: (d: Financials) => Promise<boolean> }) {
+  const v = useCatalog();
   const [f, setF] = useState<FinDraft>({
     year: String(initial?.year ?? new Date().getFullYear()),
     revenue: String(initial?.revenue ?? ""), revenuePrev: String(initial?.revenuePrev ?? ""),
@@ -847,7 +848,7 @@ function FinanzasForm({ initial, saving, onSubmit }: { initial: Financials | nul
   });
   return (
     <Card className="rise rise-1 self-start">
-      <CardHeader title={initial ? `Finanzas · ${initial.year}` : "Finanzas"} sub="cifras del último cierre, en COP millones" />
+      <CardHeader title={initial ? `Finanzas · ${initial.year}` : "Finanzas"} sub={`cifras del último cierre, en ${v.catalog.company.currency === "USD" ? "USD" : "COP"} millones`} />
       <div className="space-y-2.5 px-5 pb-5">
         {!initial && <EmptyNote>Esta empresa aún no tiene cifras financieras. Registra el último cierre: ingresos, utilidades y balance.</EmptyNote>}
         <Field label="Año del cierre"><input type="number" value={f.year} onChange={set("year")} placeholder="2025" className={`${INPUT} num ${f.year && !yearOk ? "!border-[var(--bad)]" : ""}`} /></Field>

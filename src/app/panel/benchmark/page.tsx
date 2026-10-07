@@ -38,6 +38,8 @@ export default function BenchmarkPage() {
   const v = useCatalog();
   const { company, financials, territories } = v.catalog;
   const sector = sectorFor(v.catalog);
+  const unitName = v.catalog.company.country === "EC" ? "provincia" : "departamento";
+  const unitNamePl = v.catalog.company.country === "EC" ? "provincias" : "departamentos";
   const year = sector.source.cut.slice(0, 4);
   const byDept = Object.fromEntries(sector.departments.map((d) => [d.name, d]));
   const mapValues = Object.fromEntries(sector.departments.map((d) => [d.name, d.n]));
@@ -76,9 +78,9 @@ export default function BenchmarkPage() {
 
       <div className="mb-5 grid gap-5 lg:grid-cols-[1fr_380px]">
         <Card className="rise rise-1">
-          <CardHeader title="Dónde está el sector y dónde está la empresa" sub="intensidad: sociedades del sector por departamento · borde: sedes de la empresa · clic para leer el territorio" />
+          <CardHeader title="Dónde está el sector y dónde está la empresa" sub={`intensidad: sociedades del sector por ${unitName} · borde: sedes de la empresa · clic para leer el territorio`} />
           <div className="grid gap-4 px-5 pb-5 md:grid-cols-[300px_1fr]">
-            <ColombiaImpactMap values={mapValues} selected={dept} onSelect={setDept} home={home} unit=" sociedades" />
+            <ColombiaImpactMap values={mapValues} selected={dept} onSelect={setDept} home={home} unit=" sociedades" country={v.catalog.company.country ?? "CO"} />
             <div className="space-y-1.5">
               {territories.length === 0 && (
                 <div className="rounded-lg border border-dashed border-line-strong px-3 py-3 text-[12px] leading-relaxed text-muted">
@@ -97,7 +99,7 @@ export default function BenchmarkPage() {
                   </button>
                 );
               })}
-              <div className="pt-2 text-[10.5px] text-faint">{territories.length ? "Otros departamentos con sector: " : "Departamentos con más sociedades del sector: "}{sector.departments.filter((d) => !territories.some((t) => t.name === d.name)).slice(0, 6).map((d) => `${d.name} (${d.n})`).join(", ")}.</div>
+              <div className="pt-2 text-[10.5px] text-faint">{territories.length ? `Otros ${unitNamePl} con sector: ` : `${unitNamePl[0].toUpperCase()}${unitNamePl.slice(1)} con más sociedades del sector: `}{sector.departments.filter((d) => !territories.some((t) => t.name === d.name)).slice(0, 6).map((d) => `${d.name} (${d.n})`).join(", ")}.</div>
             </div>
           </div>
           {(sel || selSector) && (
@@ -126,7 +128,7 @@ export default function BenchmarkPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="rise rise-3">
-          <CardHeader title={bars.metric} sub={home.length ? "pares comparables con domicilio en los departamentos con sede · línea: mediana del sector" : "pares comparables del país (sin sedes registradas) · línea: mediana del sector"} />
+          <CardHeader title={bars.metric} sub={home.length ? `pares comparables con domicilio en ${unitNamePl} con sede · línea: mediana del sector` : "pares comparables del país (sin sedes registradas) · línea: mediana del sector"} />
           <div className="px-5 pb-5">
             <PeerBars peers={bars.peers} nationalAvg={bars.nationalAvg} refLabel="mediana del sector" />
             {!financials && <p className="mt-3 text-[11.5px] text-faint"><FileWarning size={12} className="mr-1 inline" />{NO_FINANCIALS}: las barras muestran solo a los pares.</p>}

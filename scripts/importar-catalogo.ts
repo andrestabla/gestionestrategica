@@ -2,9 +2,12 @@
 // del editor de catálogo) usando las mismas funciones del store, dentro del
 // contexto de la empresa, con escritura a la base configurada en DATABASE_URL.
 //
-//   npx tsx scripts/importar-catalogo.ts <ruta.json> [--slug <slug>] [--crear]
+//   npx tsx scripts/importar-catalogo.ts <ruta.json> [--slug <slug>] [--crear] [--vaciar]
 //
 // --crear: crea la empresa (vacía) si no existe, con los datos de `company`.
+// --vaciar: antes de importar, borra el catálogo actual de la empresa (plan,
+//   iniciativas, KPI, objetivos, personas, responsables); conserva usuarios,
+//   diagnóstico, evidencias y branding.
 // Sin --crear, la empresa debe existir. Idempotente: repetirlo actualiza.
 // Las referencias se cargan en orden: responsables → personas → objetivos (sin
 // KPI) → KPI → objetivos (con KPI) → iniciativas → finanzas → territorio.
@@ -13,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { runWithTenant } from "../src/server/tenant";
 import {
   hydrateCompanies, hydrateFromDb, companyBySlug, createCompany, updateCompany, catalog,
-  upsertResponsible, upsertPerson, upsertObjective, upsertKpi, upsertInitiative, setFinancials, setTerritories,
+  upsertResponsible, upsertPerson, upsertObjective, upsertKpi, upsertInitiative, setFinancials, setTerritories, clearCompanyCatalog,
 } from "../src/server/store";
 import type { SessionUser } from "../src/lib/session";
 
@@ -22,6 +25,7 @@ const file = args.find((a) => !a.startsWith("--"));
 if (!file) { console.error("uso: tsx scripts/importar-catalogo.ts <ruta.json> [--slug <slug>] [--crear]"); process.exit(1); }
 const slugArg = args.includes("--slug") ? args[args.indexOf("--slug") + 1] : undefined;
 const crear = args.includes("--crear");
+const vaciar = args.includes("--vaciar");
 const data = JSON.parse(readFileSync(file, "utf8"));
 const slug: string = slugArg ?? data.company?.slug;
 const admin: SessionUser = { email: "admin@algoritmot.com", name: "Importación de catálogo", role: "ADMIN" };
@@ -44,6 +48,7 @@ async function main() {
     await hydrateFromDb();
     const actor: SessionUser = { ...admin, company: { slug, name: c!.name, shortName: c!.shortName } };
     const check = (what: string, r: { ok: boolean; error?: string }) => { if (!r.ok) throw new Error(`${what}: ${r.error}`); };
+    if (vaciar) { check("vaciar", await clearCompanyCatalog(admin)); console.log("catálogo anterior vaciado"); }
     for (const r of data.responsibles ?? []) check(`responsable ${r.id ?? r.cargo}`, upsertResponsible(actor, r));
     for (const p of data.people ?? []) check(`persona ${p.id ?? p.name}`, upsertPerson(actor, p));
     for (const o of data.objectives ?? []) check(`objetivo ${o.id}`, upsertObjective(actor, { ...o, kpis: [] }));

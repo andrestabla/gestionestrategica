@@ -17,6 +17,7 @@ export function companyRow(c: CompanyInfo) {
   return {
     slug: c.slug, name: c.name, shortName: c.shortName, city: c.city, department: c.department,
     sector: c.sector, size: c.size, sectorKey: c.sectorKey, ciiu: c.ciiu, template: c.template ?? "vacia",
+    country: c.country ?? "CO", currency: c.currency ?? "COP",
     active: c.active, createdBy: c.createdBy ?? null,
   };
 }
@@ -114,6 +115,27 @@ export async function writeTask(db: Db, companyId: string, t: Task) {
     evidenceIds: (t.evidenceIds ?? []) as never, dependsOn: (t.dependsOn ?? []) as never, note: t.note ?? null,
   };
   await db.projectTask.upsert({ where: { companyId_id: { companyId, id: t.id } }, update: data, create: { companyId, id: t.id, baseStart: new Date(t.start), baseDue: new Date(t.due), ...data } });
+}
+
+/** Vacía el catálogo de una empresa (plan de trabajo, iniciativas con sus
+    evaluaciones y decisiones, KPI y sus reportes, objetivos, personas y
+    responsables). No toca el diagnóstico, los usuarios, el branding ni las
+    evidencias. */
+export async function clearCatalog(db: Db, companyId: string) {
+  await db.taskComment.deleteMany({ where: { companyId } });
+  await db.fileAsset.deleteMany({ where: { companyId } });
+  await db.projectTask.deleteMany({ where: { companyId } });
+  await db.initiativeEvaluation.deleteMany({ where: { companyId } });
+  await db.initiativeDecision.deleteMany({ where: { companyId } });
+  await db.initiativeOverride.deleteMany({ where: { companyId } });
+  await db.successFactor.deleteMany({ where: { initiative: { companyId } } });
+  await db.initiative.deleteMany({ where: { companyId } });
+  await db.kpiReport.deleteMany({ where: { companyId } });
+  await db.kpiValue.deleteMany({ where: { kpi: { companyId } } });
+  await db.kpi.deleteMany({ where: { companyId } });
+  await db.cmiObjective.deleteMany({ where: { companyId } });
+  await db.person.deleteMany({ where: { companyId } });
+  await db.responsible.deleteMany({ where: { companyId } });
 }
 
 /** Escribe el catálogo completo de una empresa (idempotente: upsert por código). */
