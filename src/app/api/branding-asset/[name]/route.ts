@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hydrateFromDb } from "@/server/store";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -13,6 +14,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ name: string }> },
 ) {
+  await hydrateFromDb();
   const { name } = await params;
   if (!/^[a-zA-Z0-9._-]+$/.test(name)) {
     return NextResponse.json({ error: "Nombre inválido" }, { status: 400 });

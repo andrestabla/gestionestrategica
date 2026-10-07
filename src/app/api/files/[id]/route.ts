@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 import { getSession } from "@/lib/session";
-import { getUploadById } from "@/server/store";
+import { getUploadById, hydrateFromDb } from "@/server/store";
 
 // GET /api/files/:id — descarga autenticada de una evidencia subida.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const { id } = await params;

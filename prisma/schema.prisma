@@ -194,6 +194,9 @@ model ProjectTask {
   evidenceIds      Json?
   dependsOn        Json?
   note             String?
+  baseStart        DateTime?          // línea base del plan aprobado (se congela)
+  baseDue          DateTime?
+  archived         Boolean  @default(false)
 
   @@index([iniCode, status])
   @@index([assigneeId, due])
@@ -224,6 +227,48 @@ model FileAsset {
   at         DateTime @default(now())
 
   @@index([taskId])
+}
+
+/// Valor de KPI reportado desde la plataforma (se suma a la serie del seed).
+model KpiReport {
+  id     String   @id @default(cuid())
+  code   String
+  period String
+  value  Float
+  note   String?
+  by     String
+  at     DateTime @default(now())
+
+  @@unique([code, period])
+}
+
+/// Cambios de una iniciativa hechos desde la plataforma (sobre el catálogo del seed).
+model InitiativeOverride {
+  code String @id             // i1…
+  data Json
+  at   DateTime @updatedAt
+}
+
+/// Configuración de integraciones (claves en texto plano: solo para la base local).
+model Integration {
+  key       String   @id       // openai | r2 | ses
+  enabled   Boolean  @default(false)
+  fields    Json
+  updatedBy String?
+  at        DateTime @updatedAt
+}
+
+/// Branding de la plataforma (una fila).
+model Branding {
+  id   String   @id @default("default")
+  data Json
+  at   DateTime @updatedAt
+}
+
+/// Notificaciones leídas por usuario.
+model NotifRead {
+  email String @id
+  ids   Json
 }
 
 // ─── Indicadores ─────────────────────────────────────────────────────────────

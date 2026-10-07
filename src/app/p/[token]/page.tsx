@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { verifyPublicToken } from "@/lib/public-token";
 import { INSTITUTION, LINES, fmtCOP, fmtNum } from "@/data/demo";
 import { executiveSummary } from "@/lib/logic";
+import { hydrateFromDb } from "@/server/store";
 import { AlgoritmoMark } from "@/components/logo";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
 import { ShieldAlert, AlertTriangle, Eye } from "lucide-react";
@@ -24,6 +25,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function PublicView(
   { params }: { params: Promise<{ token: string }> },
 ) {
+  await hydrateFromDb();
   const { token } = await params;
   const [slug, ...rest] = token.split("-");
   if (slug !== INSTITUTION.slug || !verifyPublicToken(slug, rest.join("-"))) notFound();

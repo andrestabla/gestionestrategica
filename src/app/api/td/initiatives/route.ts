@@ -3,11 +3,12 @@ import { guard } from "../_helpers";
 import { getSession } from "@/lib/session";
 import { responsible } from "@/data/cmi";
 import { initiativeRisk } from "@/lib/logic";
-import { effectiveInitiatives, updateInitiative } from "@/server/store";
+import { effectiveInitiatives, updateInitiative, hydrateFromDb } from "@/server/store";
 
 // GET /api/td/initiatives — iniciativas EFECTIVAS (seed + cambios de la
 // plataforma) con responsable y riesgo recalculado.
 export async function GET() {
+  await hydrateFromDb();
   const denied = await guard();
   if (denied) return denied;
   return NextResponse.json({
@@ -23,6 +24,7 @@ export async function GET() {
 // revisión de un factor, entrada de bitácora o próximo hito. El store exige
 // permisos por línea (403) y reglas (422) con explicación.
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 

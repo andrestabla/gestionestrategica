@@ -3,13 +3,13 @@ import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   getIntegrationsMasked, setIntegration, getBranding, setBranding,
-  getBrandingHistory, type IntegrationKey,
-} from "@/server/store";
+  getBrandingHistory, type IntegrationKey, hydrateFromDb } from "@/server/store";
 
 // GET /api/td/settings — configuración de administración.
 // branding: cualquier sesión (el shell lo aplica); integraciones: solo
 // quien administra (secretos siempre enmascarados).
 export async function GET() {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const admin = can(user, "manage_platform");
@@ -22,6 +22,7 @@ export async function GET() {
 
 // POST { integration: { key, enabled?, fields? } } | { branding: {…} }
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);

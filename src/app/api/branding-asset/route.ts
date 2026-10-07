@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hydrateFromDb } from "@/server/store";
 import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -11,6 +12,7 @@ const MAX = 8 * 1024 * 1024;
 const OK_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif", "image/x-icon"];
 
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   if (!can(user, "manage_platform")) {

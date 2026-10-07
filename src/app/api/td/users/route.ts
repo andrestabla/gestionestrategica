@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { getUsers, createUser, updateUser } from "@/server/store";
+import { getUsers, createUser, updateUser, hydrateFromDb } from "@/server/store";
 import { can } from "@/lib/permissions";
 
 // GET/POST/PATCH /api/td/users — administración de usuarios (manage_users).
 export async function GET() {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   if (!can(user, "manage_users")) {
@@ -14,6 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);
@@ -24,6 +26,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);

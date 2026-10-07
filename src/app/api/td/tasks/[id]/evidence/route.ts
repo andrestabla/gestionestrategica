@@ -3,7 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { randomBytes } from "crypto";
 import path from "path";
 import { getSession } from "@/lib/session";
-import { attachEvidence } from "@/server/store";
+import { attachEvidence, hydrateFromDb } from "@/server/store";
 
 // POST /api/td/tasks/:id/evidence — multipart: adjunta el archivo del
 // entregable. Almacenamiento local en var/uploads (en producción, la misma
@@ -15,6 +15,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  await hydrateFromDb();
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const { id } = await params;

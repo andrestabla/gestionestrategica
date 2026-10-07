@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findActiveUser } from "@/server/store";
+import { findActiveUser, hydrateFromDb } from "@/server/store";
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
@@ -11,6 +11,7 @@ const DEMO_PASSWORD = "4shine-demo-2026";
 const Body = z.object({ email: z.string().email(), password: z.string().min(4) });
 
 export async function POST(req: Request) {
+  await hydrateFromDb();
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });

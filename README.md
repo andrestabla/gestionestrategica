@@ -69,8 +69,13 @@ verificación de evidencia (`Evidence`). Las tareas del gestor ya persistían.
 La memoria sigue siendo la fuente de lectura; la base es write-through. El
 mapa 4Shine no se persiste: es la definición del sistema (`src/data/4shine.json`).
 
-Pendiente de persistir: reportes de KPI, cambios en iniciativas, comentarios,
-archivos, usuarios, integraciones y branding.
+También persisten los reportes de KPI (`KpiReport`), los cambios de iniciativas
+(`InitiativeOverride`), los comentarios y archivos del gestor (`TaskComment`,
+`FileAsset`), las tareas creadas, archivadas y reprogramadas (`ProjectTask`, con su
+línea base), los usuarios (`User`), las integraciones (`Integration`, claves en texto
+plano: solo para la base local), el branding (`Branding`) y las notificaciones
+leídas (`NotifRead`). Todas las rutas de la API hidratan la memoria desde la base
+antes de responder.
 
 ## Origen
 

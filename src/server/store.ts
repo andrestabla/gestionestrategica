@@ -196,21 +196,63 @@ export async function hydrateFromDb() {
       id: string; status: string; assigneeId: string; coAssigneeIds: unknown;
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
-    const rows = (await db.projectTask.findMany()) as DbTaskRow[];
+    const rows = (await db.projectTask.findMany()) as (DbTaskRow & {
+      iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
+      baseStart: Date | null; baseDue: Date | null; archived: boolean;
+    })[];
     if (rows.length) {
-      const byId = new Map(rows.map((r) => [r.id, r]));
-      for (const t of tasks()) {
-        const r = byId.get(t.id);
-        if (!r) continue;
+      const seedIds = new Set(TASKS_SEED.map((t) => t.id));
+      for (const r of rows) {
+        const day = (d: Date) => d.toISOString().slice(0, 10);
+        let t = tasks().find((x) => x.id === r.id) ?? archived().find((x) => x.id === r.id);
+        if (!t && !seedIds.has(r.id)) {
+          // tarea creada desde la plataforma
+          t = { id: r.id, iniId: r.iniCode, title: r.title, desc: r.desc ?? "", assigneeId: r.assigneeId, start: day(r.start), due: day(r.due), status: r.status as TaskStatus };
+          (r.archived ? archived() : tasks()).push(t);
+        }
+        if (!t) continue;
         t.status = r.status as TaskStatus;
         t.assigneeId = r.assigneeId;
         t.coAssigneeIds = (r.coAssigneeIds as string[] | null) ?? t.coAssigneeIds;
-        t.start = r.start.toISOString().slice(0, 10);
-        t.due = r.due.toISOString().slice(0, 10);
+        t.start = day(r.start);
+        t.due = day(r.due);
         t.note = r.note ?? t.note;
         t.evidenceIds = (r.evidenceIds as string[] | null) ?? t.evidenceIds;
+        t.dependsOn = (r.dependsOn as string[] | null)?.length ? (r.dependsOn as string[]) : t.dependsOn;
+        t.requiresEvidence = r.requiresEvidence;
+        if (r.baseStart && r.baseDue) baselines().set(t.id, { start: day(r.baseStart), due: day(r.baseDue) });
+        if (r.archived && tasks().includes(t)) { tasks().splice(tasks().indexOf(t), 1); if (!archived().includes(t)) archived().push(t); }
       }
     }
+    // gestor: comentarios y archivos adjuntos
+    if (comments().length === 0) {
+      for (const c of await db.taskComment.findMany({ orderBy: { id: "asc" } })) comments().push({ id: c.id, taskId: c.taskId, author: c.author, role: c.role, text: c.text, at: c.at.toISOString() });
+    }
+    if (uploads().length === 0) {
+      for (const u of await db.fileAsset.findMany({ orderBy: { at: "asc" } })) uploads().push({ id: u.id, taskId: u.taskId, title: u.title, kind: u.kind, fileName: u.fileName, filePath: u.filePath, size: u.size, mime: u.mime, uploadedBy: u.uploadedBy, date: u.at.toISOString().slice(0, 10), status: u.status as EvidenceStatus });
+    }
+    // KPI e iniciativas
+    for (const r of await db.kpiReport.findMany({ orderBy: { at: "asc" } })) {
+      const list = kpiReports().get(r.code) ?? [];
+      if (!list.some((x) => x.period === r.period)) list.push({ code: r.code, period: r.period, value: r.value, note: r.note ?? undefined, by: r.by, at: r.at.toISOString() });
+      kpiReports().set(r.code, list);
+    }
+    for (const o of await db.initiativeOverride.findMany()) iniOverrides().set(o.code, o.data as InitiativeOverride);
+    // administración: usuarios, integraciones, branding y notificaciones leídas
+    const dbUsers = await db.user.findMany();
+    if (dbUsers.length) {
+      const seedEmails = new Set(DEMO_USERS.map((u) => u.email));
+      const list = users();
+      for (const u of dbUsers) {
+        const existing = list.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
+        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.active = u.active; }
+        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString() });
+      }
+    }
+    for (const i of await db.integration.findMany()) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
+    const br = await db.branding.findUnique({ where: { id: "default" } });
+    if (br) Object.assign(branding(), br.data as Partial<Branding>);
+    for (const n of await db.notifRead.findMany()) notifRead().set(n.email, new Set(n.ids as string[]));
     // diagnóstico: captura del corte en curso, corte publicado, respuestas y evidencias
     for (const c of await db.practiceCapture.findMany({ where: { cut: "A3" } })) {
       capture().set(c.practice, {
@@ -468,6 +510,7 @@ export function addComment(
   };
   comments().push(comment);
   audit(user, "task", taskId, "comentario añadido");
+  void persist("comentario", (db) => db.taskComment.create({ data: { id: comment.id, taskId, author: comment.author, role: comment.role, text: comment.text, at: new Date(comment.at) } }));
   return { ok: true, comment };
 }
 
@@ -499,6 +542,7 @@ export function attachEvidence(
     status: "PENDIENTE",   // nace pendiente: la verifica el consultor
   };
   uploads().push(evidence);
+  void persist("archivo", (db) => db.fileAsset.create({ data: { id: evidence.id, taskId, title: evidence.title, kind: evidence.kind, fileName: evidence.fileName, filePath: evidence.filePath, size: evidence.size, mime: evidence.mime, uploadedBy: evidence.uploadedBy, status: evidence.status, at: new Date() } }));
   audit(user, "task", taskId, `evidencia adjuntada («${evidence.title}», ${evidence.fileName})`);
   return { ok: true, evidence };
 }
@@ -514,6 +558,7 @@ export function verifyUploadedEvidence(
   const ev = uploads().find((u) => u.id === evidenceId);
   if (!ev) return { ok: false, status: 404, error: "La evidencia no existe." };
   ev.status = "VERIFICADA";
+  void persist("archivo verificado", (db) => db.fileAsset.update({ where: { id: evidenceId }, data: { status: "VERIFICADA" } }));
   audit(user, "evidence", evidenceId, `evidencia subida verificada («${ev.title}»)`);
   return { ok: true };
 }
@@ -596,6 +641,11 @@ export function createTask(
   };
   tasks().push(task);
   baselines().set(id, { start: task.start, due: task.due });
+  void persist("tarea nueva", (db) => db.projectTask.create({ data: {
+    id, iniCode: task.iniId, title: task.title, desc: task.desc, assigneeId: task.assigneeId, coAssigneeIds: task.coAssigneeIds ?? [],
+    start: new Date(task.start), due: new Date(task.due), baseStart: new Date(task.start), baseDue: new Date(task.due),
+    status: task.status, requiresEvidence: task.requiresEvidence ?? false, evidenceIds: [], dependsOn: task.dependsOn ?? [], note: task.note ?? null,
+  } }));
   audit(user, "task", id, `tarea creada («${title}») en ${ini.name}`);
   return { ok: true, task };
 }
@@ -617,6 +667,7 @@ export function archiveTask(user: SessionUser, id: string): MutationResult {
   const idx = tasks().findIndex((x) => x.id === id);
   archived().push(tasks()[idx]);
   tasks().splice(idx, 1);
+  void persist("tarea archivada", (db) => db.projectTask.update({ where: { id }, data: { archived: true } }));
   audit(user, "task", id, `tarea archivada («${t.title}»)`);
   return { ok: true, task: t };
 }
@@ -698,6 +749,12 @@ export function applyCascade(user: SessionUser, id: string, newDue: string):
     t.start = s.newStart;
     t.due = s.newDue;
   }
+  void persist("cascada", async (db) => {
+    for (const tid of allIds) {
+      const t = getTask(tid)!;
+      await db.projectTask.update({ where: { id: tid }, data: { start: new Date(t.start), due: new Date(t.due) } });
+    }
+  });
   audit(user, "task", id,
     `reprogramación en cadena: ${preview.delta > 0 ? "+" : ""}${preview.delta} días · ${preview.shifts.length + 1} tareas (${allIds.join(", ")})`);
   return { ok: true, delta: preview.delta, shifted: preview.shifts.length + 1 };
@@ -1055,6 +1112,8 @@ export function reportKpi(
   kpiReports().set(code, list);
 
   audit(user, "task", code, `KPI ${code}: ${period} = ${value} ${k.unit}${existing >= 0 ? " (corrección)" : ""}`);
+  const row = { value: report.value, note: report.note ?? null, by: report.by, at: new Date(report.at) };
+  void persist("kpi", (db) => db.kpiReport.upsert({ where: { code_period: { code, period } }, update: row, create: { code, period, ...row } }));
   return { ok: true, report, series: effectiveKpiSeries(code) };
 }
 
@@ -1173,6 +1232,7 @@ export function updateInitiative(
 
   iniOverrides().set(id, o);
   audit(user, "task", id, `iniciativa: ${changes.join(" · ")}`);
+  void persist("iniciativa", (db) => db.initiativeOverride.upsert({ where: { code: id }, update: { data: o }, create: { code: id, data: o } }));
   return { ok: true, initiative: effectiveInitiatives().find((i) => i.id === id)! };
 }
 
@@ -1259,6 +1319,11 @@ export function createUser(
     createdBy: actor.name, at: new Date().toISOString(),
   };
   users().push(user);
+  void persist("usuario", async (db) => {
+    const company = await db.company.findFirst();
+    if (!company) return;
+    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, active: true }, create: { email, name: user.name, role: user.role, line: user.line ?? null, passwordHash: "", companyId: company.id } });
+  });
   audit(actor, "task", email, `usuario creado (${input.role}${user.line ? ` · ${capName(user.line)}` : ""})`);
   return { ok: true, user };
 }
@@ -1314,6 +1379,7 @@ export function updateUser(
 
   if (changes.length === 0) return { ok: false, status: 422, error: "Nada que actualizar." };
   audit(actor, "task", u.email, `usuario: ${changes.join(" · ")}`);
+  void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, active: u.active } }));
   return { ok: true, user: u };
 }
 
@@ -1451,6 +1517,7 @@ export function setIntegration(
   cfg.updatedBy = user.name;
   cfg.at = new Date().toISOString();
   integrations().set(key, cfg);
+  void persist("integración", (db) => db.integration.upsert({ where: { key }, update: { enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null }, create: { key, enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null } }));
   audit(user, "task", `int-${key}`, `integración ${spec.name} ${patch.enabled !== undefined ? (patch.enabled ? "activada" : "desactivada") : "configurada"}`);
   return { ok: true };
 }
@@ -1656,6 +1723,7 @@ export function setBranding(
 
   if (changes.length === 0) return err("Nada que actualizar.");
   audit(user, "branding", "branding", `branding: ${changes.join(" · ")}`);
+  void persist("branding", (db) => db.branding.upsert({ where: { id: "default" }, update: { data: { ...b } }, create: { id: "default", data: { ...b } } }));
   return { ok: true, branding: { ...b } };
 }
 
@@ -1678,6 +1746,7 @@ export function markNotifRead(email: string, ids: string[]) {
   const set = notifRead().get(email) ?? new Set<string>();
   for (const id of ids) set.add(id);
   notifRead().set(email, set);
+  void persist("notificaciones", (db) => db.notifRead.upsert({ where: { email }, update: { ids: [...set] }, create: { email, ids: [...set] } }));
 }
 
 /* ═══ Utilidad para la demo ═══ */

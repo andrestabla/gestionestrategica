@@ -129,7 +129,7 @@ async function main() {
       create: {
         id: t.id, initiativeId: iniIds.get(t.iniId), iniCode: t.iniId, title: t.title, desc: t.desc,
         assigneeId: t.assigneeId, coAssigneeIds: t.coAssigneeIds ?? [],
-        start: new Date(t.start), due: new Date(t.due), status: t.status,
+        start: new Date(t.start), due: new Date(t.due), baseStart: new Date(t.start), baseDue: new Date(t.due), status: t.status,
         requiresEvidence: t.requiresEvidence ?? false,
         evidenceIds: (t.evidenceIds ?? []) as never, dependsOn: (t.dependsOn ?? []) as never, note: t.note,
       },
