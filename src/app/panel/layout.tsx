@@ -16,6 +16,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   await hydrateCompanies();
   const company = user.company ? companyBySlug(user.company.slug) : null;
   const companies = user.role === "ADMIN" ? listCompanies().map((c) => ({ slug: c.slug, name: c.name, shortName: c.shortName, active: c.active })) : [];
+  // el admin sin empresa activa elige una por pantalla (si existe alguna)
+  if (user.role === "ADMIN" && !company && companies.length > 0) redirect("/empresas");
   const noCompany = !company || (!company.active && user.role !== "ADMIN");
   // la vista de la empresa activa, resuelta en el servidor para esta sesión
   const view = company ? await inTenant(company.slug, async () => tenantView()) : null;

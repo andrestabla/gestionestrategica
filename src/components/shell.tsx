@@ -11,7 +11,7 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, FlaskConical, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2,
+  FileText, Users2, ArrowRightLeft,
 } from "lucide-react";
 import { AlgoritmoMark } from "@/components/logo";
 import { CommandPalette, SearchButton } from "@/components/command-palette";
@@ -193,13 +193,6 @@ export function AppShell({ children, user, companies = [] }: {
   const pathname = usePathname();
   const router = useRouter();
   const company = user.company;
-  const [switching, setSwitching] = useState(false);
-  const switchCompany = async (slug: string) => {
-    setSwitching(true);
-    const res = await fetch("/api/auth/empresa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
-    setSwitching(false);
-    if (res.ok) { router.push("/panel"); router.refresh(); }
-  };
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -237,6 +230,21 @@ export function AppShell({ children, user, companies = [] }: {
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
     ? [...NAV, { href: "/panel/admin", label: "Administración", icon: Users2 }]
     : NAV;
+
+  // bloque de empresa: nombre de la activa y, para el admin, el paso a la pantalla de elección
+  const companyBlock = (
+    <>
+      {user.role === "ADMIN" && <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Empresa activa</div>}
+      <div className="text-[12.5px] font-bold text-white">{brand?.shortName ?? company?.shortName ?? "Sin empresa"}</div>
+      <div className="mt-0.5 text-[10.5px] leading-snug text-white/40">{brand?.institutionName ?? company?.name ?? "Elige una empresa para operar"}</div>
+      {user.role === "ADMIN" && companies.length > 0 && (
+        <Link href="/empresas" onClick={() => setOpen(false)}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white/[0.08] px-2.5 py-1.5 text-[11px] font-bold text-white/85 transition-colors hover:bg-white/[0.14] hover:text-white">
+          <ArrowRightLeft size={12} /> Cambiar de empresa
+        </Link>
+      )}
+    </>
+  );
 
   const navItems = (mini: boolean) => (
     <nav className={`flex flex-col gap-1 ${mini ? "px-2.5" : "px-3"}`}>
@@ -289,7 +297,7 @@ export function AppShell({ children, user, companies = [] }: {
           )}
           {!collapsed && !(brand?.logoDark || brand?.logoLight) && (
             <div className="leading-tight">
-              <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "PGTD"}</div>
+              <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "4Shine Empresas"}</div>
               <div className="text-[8.5px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 Algoritmo T
               </div>
@@ -302,22 +310,7 @@ export function AppShell({ children, user, companies = [] }: {
             <div className="mb-3 overflow-hidden rounded-xl bg-white/[0.05] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
               <div className="spine h-[2.5px]" />
               <div className="px-4 py-3">
-                {user.role === "ADMIN" && companies.length > 0 ? (
-                  <>
-                    <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Empresa activa</div>
-                    <select value={company?.slug ?? ""} disabled={switching}
-                      onChange={(e) => switchCompany(e.target.value)}
-                      className="mt-1 w-full rounded-lg bg-white/[0.08] px-2 py-1.5 text-[12px] font-bold text-white outline-none">
-                      {!company && <option value="">Elige una empresa…</option>}
-                      {companies.map((c) => <option key={c.slug} value={c.slug} className="text-ink">{c.name}{c.active ? "" : " (inactiva)"}</option>)}
-                    </select>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-[12.5px] font-bold text-white">{brand?.shortName ?? company?.shortName ?? "Empresa"}</div>
-                    <div className="mt-0.5 text-[10.5px] leading-snug text-white/40">{brand?.institutionName ?? company?.name ?? "Sin empresa asignada"}</div>
-                  </>
-                )}
+                {companyBlock}
               </div>
             </div>
           )}
@@ -345,12 +338,28 @@ export function AppShell({ children, user, companies = [] }: {
             style={{ background: "var(--grad-deep)" }}>
             <div className="mb-5 flex items-center justify-between px-5">
               <div className="flex items-center gap-2.5">
-                <AlgoritmoMark size={24} />
-                <span className="text-[13.5px] font-extrabold text-white">PGTD</span>
+                {brand?.logoDark || brand?.logoLight ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={(brand.logoDark ?? brand.logoLight)!} alt="" className="h-6 max-w-[140px] object-contain" />
+                ) : (
+                  <>
+                    <AlgoritmoMark size={24} />
+                    <span className="text-[13.5px] font-extrabold text-white">{brand?.platformName ?? "4Shine Empresas"}</span>
+                  </>
+                )}
               </div>
               <button onClick={() => setOpen(false)} className="text-white/60"><X size={18} /></button>
             </div>
-            {navItems(false)}
+            <div className="flex-1 overflow-y-auto">{navItems(false)}</div>
+            <div className="mt-auto px-4 pb-5 pt-4">
+              <div className="mb-3 overflow-hidden rounded-xl bg-white/[0.05] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
+                <div className="spine h-[2.5px]" />
+                <div className="px-4 py-3">{companyBlock}</div>
+              </div>
+              <button onClick={logout} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white">
+                <LogOut size={14} /> Cerrar sesión
+              </button>
+            </div>
           </aside>
         </div>
       )}

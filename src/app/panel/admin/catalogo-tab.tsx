@@ -1064,8 +1064,8 @@ function Table({ heads, children, minW = 560 }: { heads: string[]; children: Rea
 function RowActions({ saving, onEdit, onDelete }: { saving: boolean; onEdit: () => void; onDelete: () => void }) {
   return (
     <td className="whitespace-nowrap px-4 py-2.5 text-right">
-      <button disabled={saving} onClick={onEdit} title="Editar" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
-      <button disabled={saving} onClick={onDelete} title="Eliminar" className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
+      <button disabled={saving} onClick={onEdit} title="Editar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
+      <button disabled={saving} onClick={onDelete} title="Eliminar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
     </td>
   );
 }

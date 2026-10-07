@@ -66,7 +66,8 @@ export default function LoginPage() {
       body: JSON.stringify({ email, password }),
     });
     if (res.ok) {
-      router.push("/panel");
+      const data = await res.json().catch(() => null);
+      router.push(data?.user?.role === "ADMIN" ? "/empresas" : "/panel");
       router.refresh();
     } else {
       const data = await res.json().catch(() => null);

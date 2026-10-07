@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findUserForLogin, verifyPassword, listCompanies } from "@/server/store";
+import { findUserForLogin, verifyPassword } from "@/server/store";
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
@@ -31,7 +31,8 @@ export async function POST(req: Request) {
   if (found.company && !found.company.active) {
     return NextResponse.json({ error: "La empresa de tu cuenta está desactivada." }, { status: 403 });
   }
-  const company = found.company ?? listCompanies().find((c) => c.active) ?? null;
+  // el admin de plataforma no tiene empresa propia: la elige en /empresas tras entrar
+  const company = found.company ?? null;
   const session: SessionUser = {
     email: found.user.email,
     name: found.user.name,
