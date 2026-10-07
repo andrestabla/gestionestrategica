@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { buildAlerts } from "@/lib/logic";
-import { getComments, getTask, getNotifRead, markNotifRead } from "@/server/store";
-import { INITIATIVES_FULL } from "@/data/cmi";
+import { getComments, getTask, getNotifRead, markNotifRead, tenantView, catalog } from "@/server/store";
 
 // GET /api/td/notifications — el buzón del usuario: alertas del motor
 // dirigidas a su rol/línea + comentarios de su ámbito (las menciones llegan
@@ -25,7 +24,7 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   const items: Notification[] = [];
 
   // 1 · alertas del motor, dirigidas por rol y línea
-  for (const a of buildAlerts()) {
+  for (const a of buildAlerts(tenantView())) {
     const mine =
       user.role === "ADMIN" || user.role === "CONSULTOR" || user.role === "LIDER" ? true
       : user.role === "RESPONSABLE" ? a.line === user.line
@@ -43,7 +42,7 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   for (const c of getComments()) {
     if (c.author === user.name) continue;
     const t = getTask(c.taskId);
-    const line = t ? INITIATIVES_FULL.find((i) => i.id === t.iniId)?.line : undefined;
+    const line = t ? catalog().initiatives.find((i) => i.id === t.iniId)?.line : undefined;
     const mention = c.text.includes("@") && c.text.toLowerCase().includes(firstName);
     const inScope =
       user.role === "ADMIN" || user.role === "CONSULTOR" || user.role === "LIDER" ? true

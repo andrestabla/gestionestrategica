@@ -7,8 +7,9 @@
 
 import { PageHeader, Card, CardHeader, StatCard } from "@/components/ui";
 import { AccessChip } from "@/components/user-context";
-import { INSTITUTION, fmtNum } from "@/data/demo";
-import { SECTOR, fmtMillones, shortName } from "@/data/sector";
+import { useCatalog } from "@/components/catalog-context";
+import { fmtNum } from "@/data/demo";
+import { sectorFor, fmtMillones, shortName } from "@/data/sector";
 import { ExternalLink, Briefcase, Map as MapIcon, TrendingUp, FileOutput, Factory, Database } from "lucide-react";
 
 const SOURCES = [
@@ -39,13 +40,15 @@ const SOURCES = [
 ];
 
 export default function BiPage() {
-  const s = SECTOR;
+  const v = useCatalog();
+  const company = v.catalog.company;
+  const s = sectorFor(v.catalog);
   const year = s.source.cut.slice(0, 4);
   const maxDept = Math.max(...s.departments.map((d) => d.share));
   const maxSize = Math.max(...s.sizes.map((x) => x.n));
   return (
     <>
-      <PageHeader kicker="M7 · Inteligencia" title={`Inteligencia del sector · ${INSTITUTION.sector}`}
+      <PageHeader kicker="M7 · Inteligencia" title={`Inteligencia del sector · ${company.sector}`}
         desc="El contexto que el diagnóstico no mide: cómo se mueve el sector, quién lo concentra, dónde está la demanda y qué talento hay disponible. Llega con datos desde el primer día, sin que la empresa tenga que aportarlos." actions={<AccessChip module="bi" />} />
 
       <div className="mb-5 grid gap-4 sm:grid-cols-4">

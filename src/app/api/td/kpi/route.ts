@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { responsible } from "@/data/cmi";
 import { kpiHealth } from "@/lib/logic";
-import { effectiveKpis, reportKpi, getKpiReports } from "@/server/store";
+import { effectiveKpis, reportKpi, getKpiReports, responsible } from "@/server/store";
 
 // GET /api/td/kpi — indicadores con la serie EFECTIVA (seed + valores
 // reportados desde la plataforma) y su salud recalculada.

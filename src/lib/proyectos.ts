@@ -6,15 +6,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
-  PEOPLE, person, isOverdue, dueSoon, DEMO_TODAY, assigneesOf,
+  isOverdue, dueSoon, DEMO_TODAY, assigneesOf,
   type Task, type TaskStatus,
 } from "@/data/proyectos";
-import { getTasks } from "@/server/store";
-import { INITIATIVES_FULL } from "@/data/cmi";
-
-// Fuente de tareas: el store mutable (memoria + write-through a Postgres).
-const TASKS = () => getTasks();
-const tasksOf = (iniId: string) => TASKS().filter((t) => t.iniId === iniId);
+// Las tareas, las personas y las iniciativas vienen de la vista de la empresa
+// (lib/vista): en el servidor, del store de la empresa activa; en el
+// navegador, del CatalogProvider.
+import { person as personOf, type TenantView } from "@/lib/vista";
 
 /* ═══ Alertas de tareas ═══ */
 
@@ -32,13 +30,14 @@ export type TaskAlert = {
 const daysLate = (t: Task) =>
   Math.round((new Date(DEMO_TODAY).getTime() - new Date(t.due).getTime()) / 86_400_000);
 
-export function taskAlerts(): TaskAlert[] {
+export function taskAlerts(v: TenantView): TaskAlert[] {
   const alerts: TaskAlert[] = [];
-  const byId = new Map(TASKS().map((t) => [t.id, t]));
+  const byId = new Map(v.tasks.map((t) => [t.id, t]));
 
-  for (const t of TASKS()) {
-    const ini = INITIATIVES_FULL.find((i) => i.id === t.iniId)!;
-    const who = person(t.assigneeId).name;
+  for (const t of v.tasks) {
+    const ini = v.initiatives.find((i) => i.id === t.iniId);
+    if (!ini) continue;
+    const who = personOf(v, t.assigneeId).name;
     const line = ini.line;
 
     if (isOverdue(t)) {
@@ -115,10 +114,10 @@ export type Workload = {
   total: number;
 };
 
-export function workload(): Workload[] {
-  return PEOPLE.map((p) => {
+export function workload(v: TenantView): Workload[] {
+  return v.catalog.people.map((p) => {
     // cuenta como suya toda tarea donde es principal o corresponsable
-    const mine = TASKS().filter((t) => assigneesOf(t).includes(p.id));
+    const mine = v.tasks.filter((t) => assigneesOf(t).includes(p.id));
     return {
       personId: p.id,
       name: p.name,
@@ -135,8 +134,8 @@ export function workload(): Workload[] {
 
 /* ═══ Estadísticas por iniciativa ═══ */
 
-export function initiativeTaskStats(iniId: string) {
-  const mine = tasksOf(iniId);
+export function initiativeTaskStats(v: TenantView, iniId: string) {
+  const mine = v.tasks.filter((t) => t.iniId === iniId);
   return {
     total: mine.length,
     done: mine.filter((t) => t.status === "HECHA").length,
@@ -148,17 +147,17 @@ export function initiativeTaskStats(iniId: string) {
   };
 }
 
-export function portfolioTaskStats() {
+export function portfolioTaskStats(v: TenantView) {
   const byStatus: Record<TaskStatus, number> = {
     POR_HACER: 0, EN_CURSO: 0, EN_REVISION: 0, BLOQUEADA: 0, HECHA: 0,
   };
-  for (const t of TASKS()) byStatus[t.status]++;
+  for (const t of v.tasks) byStatus[t.status]++;
   return {
-    total: TASKS().length,
+    total: v.tasks.length,
     byStatus,
-    overdue: TASKS().filter(isOverdue).length,
-    dueSoon: TASKS().filter((t) => dueSoon(t)).length,
-    withEvidence: TASKS().filter((t) => (t.evidenceIds?.length ?? 0) > 0).length,
-    people: PEOPLE.filter((p) => TASKS().some((t) => assigneesOf(t).includes(p.id))).length,
+    overdue: v.tasks.filter(isOverdue).length,
+    dueSoon: v.tasks.filter((t) => dueSoon(t)).length,
+    withEvidence: v.tasks.filter((t) => (t.evidenceIds?.length ?? 0) > 0).length,
+    people: v.catalog.people.filter((p) => v.tasks.some((t) => assigneesOf(t).includes(p.id))).length,
   };
 }

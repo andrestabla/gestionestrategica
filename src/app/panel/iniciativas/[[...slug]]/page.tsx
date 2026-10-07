@@ -14,13 +14,14 @@ import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, StateDot, StatusChip, StatCard } from "@/components/ui";
 import { AccessChip, useCan } from "@/components/user-context";
 import { BudgetBar } from "@/components/charts";
-import { INITIATIVES, fmtCOP, type InitiativeDemo } from "@/data/demo";
-import { CMI_OBJECTIVES, responsible, type ActionStatus, type InitiativeFull } from "@/data/cmi";
+import { fmtCOP, LINES } from "@/data/demo";
+import type { ActionStatus, InitiativeFull } from "@/data/cmi";
+import { useCatalog } from "@/components/catalog-context";
+import { initiativesOf, responsible, type InitiativeView } from "@/lib/vista";
 import { initiativeRisk } from "@/lib/logic";
 import { initiativeTaskStats } from "@/lib/proyectos";
 import { MatrizPanel, PrioChip, usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
 import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
-import { LINES } from "@/data/demo";
 import {
   ChevronRight, CircleCheck, CircleDashed, Circle, Flag, AlertTriangle,
   StickyNote, CalendarClock, User, Target, ArrowLeft, ArrowRight,
@@ -52,6 +53,7 @@ export default function IniciativasPage() {
   const openId = slug[0] ? decodeURIComponent(slug[0]).toLowerCase() : null;
 
   const { data: prio } = usePriorizacion();
+  const v = useCatalog();
   const go = (path: string) => router.push(path, { scroll: false });
   const openIni = (id: string) => go(`/panel/iniciativas/${id}`);
   const closeIni = () => go("/panel/iniciativas");
@@ -63,7 +65,8 @@ export default function IniciativasPage() {
     return <IniciativaFicha id={openId} onClose={closeIni} onNav={openIni} />;
   }
 
-  const totals = INITIATIVES.reduce(
+  const inis = initiativesOf(v);
+  const totals = inis.reduce(
     (a, i) => ({
       planned: a.planned + i.budgetPlanned,
       committed: a.committed + i.budgetCommitted,
@@ -71,8 +74,8 @@ export default function IniciativasPage() {
     }),
     { planned: 0, committed: 0, executed: 0 },
   );
-  const redFactors = INITIATIVES.flatMap((i) => i.factors.filter((f) => f.state === "ROJO"));
-  const allActions = INITIATIVES.flatMap((i) => i.actions);
+  const redFactors = inis.flatMap((i) => i.factors.filter((f) => f.state === "ROJO"));
+  const allActions = inis.flatMap((i) => i.actions);
   const doneActions = allActions.filter((a) => a.status === "HECHA").length;
 
   return (
@@ -83,9 +86,9 @@ export default function IniciativasPage() {
 
       <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
         <StatCard label="Presupuesto del portafolio" value={totals.planned / 1e6} decimals={0}
-          prefix="$ " unit="M COP" foot={`${INITIATIVES.length} iniciativas`} />
+          prefix="$ " unit="M COP" foot={`${inis.length} iniciativas`} />
         <StatCard label="Ejecutado + comprometido"
-          value={Math.round(((totals.executed + totals.committed) / totals.planned) * 100)} unit="%"
+          value={totals.planned > 0 ? Math.round(((totals.executed + totals.committed) / totals.planned) * 100) : 0} unit="%"
           foot={fmtCOP(totals.executed + totals.committed)}
           accent="linear-gradient(90deg, var(--n4), var(--n5))" />
         <StatCard label="Acciones completadas" value={doneActions} unit={`de ${allActions.length}`}
@@ -97,11 +100,16 @@ export default function IniciativasPage() {
       </div>
 
       <div className="space-y-3.5">
-        {INITIATIVES.map((i, idx) => {
-          const owner = responsible(i.ownerId);
+        {inis.length === 0 && (
+          <p className="rise rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
+            Esta empresa aún no tiene iniciativas en su portafolio.
+          </p>
+        )}
+        {inis.map((i, idx) => {
+          const owner = responsible(v, i.ownerId);
           const done = i.actions.filter((a) => a.status === "HECHA").length;
           const risk = initiativeRisk(i);
-          const ts = initiativeTaskStats(i.id);
+          const ts = initiativeTaskStats(v, i.id);
           return (
             <Card key={i.id} className={`rise rise-${Math.min(idx + 1, 4)} overflow-hidden`}>
               <button onClick={() => openIni(i.id)}
@@ -152,10 +160,12 @@ function IniciativaFicha({ id, onClose, onNav }: {
   onClose: () => void;
   onNav: (id: string) => void;
 }) {
-  const base: InitiativeDemo | null = INITIATIVES.find((x) => x.id === id) ?? null;
+  const v = useCatalog();
+  const inis = initiativesOf(v);
+  const base: InitiativeView | null = inis.find((x) => x.id === id) ?? null;
 
   // iniciativa efectiva: el seed + los cambios hechos desde la plataforma
-  const [effIni, setEffIni] = useState<InitiativeDemo | null>(null);
+  const [effIni, setEffIni] = useState<InitiativeFull | null>(null);
   const refetch = useCallback(async () => {
     try {
       const res = await fetch("/api/td/initiatives");
@@ -165,13 +175,13 @@ function IniciativaFicha({ id, onClose, onNav }: {
         .find((x) => x.id === id);
       if (found) {
         const { owner: _o, risk: _r, ...rest } = found;
-        setEffIni({ ...rest, owner: responsible(rest.ownerId).dependencia });
+        setEffIni(rest);
       }
     } catch { /* seed como respaldo */ }
   }, [id]);
   useEffect(() => { setEffIni(null); refetch(); }, [refetch]);
 
-  const i = effIni ?? base;
+  const i: InitiativeView | null = effIni ? { ...effIni, owner: responsible(v, effIni.ownerId).dependencia } : base;
   const canEdit = useCan("edit_initiatives", i?.line);
 
   // mutación con el error explicado por el servidor
@@ -191,9 +201,9 @@ function IniciativaFicha({ id, onClose, onNav }: {
     return res.ok;
   };
 
-  const idx = i ? INITIATIVES.findIndex((x) => x.id === i.id) : -1;
-  const prev = idx > 0 ? INITIATIVES[idx - 1] : null;
-  const next = idx >= 0 && idx < INITIATIVES.length - 1 ? INITIATIVES[idx + 1] : null;
+  const idx = i ? inis.findIndex((x) => x.id === i.id) : -1;
+  const prev = idx > 0 ? inis[idx - 1] : null;
+  const next = idx >= 0 && idx < inis.length - 1 ? inis[idx + 1] : null;
 
   // Escape vuelve al listado · flechas navegan entre iniciativas
   useEffect(() => {
@@ -221,11 +231,11 @@ function IniciativaFicha({ id, onClose, onNav }: {
     );
   }
 
-  const owner = responsible(i.ownerId);
-  const cmiObj = CMI_OBJECTIVES.find((o) => o.id === i.cmi);
+  const owner = responsible(v, i.ownerId);
+  const cmiObj = v.catalog.objectives.find((o) => o.id === i.cmi);
   const done = i.actions.filter((a) => a.status === "HECHA").length;
   const risk = initiativeRisk(i);
-  const ts = initiativeTaskStats(i.id);
+  const ts = initiativeTaskStats(v, i.id);
 
   return (
     <>
@@ -234,7 +244,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
         <button onClick={onClose} className="btn-ghost" title="Volver al listado (Esc)">
           <ArrowLeft size={13} /> Iniciativas
         </button>
-        <span className="num text-[11px] text-faint">{idx + 1} de {INITIATIVES.length}</span>
+        <span className="num text-[11px] text-faint">{idx + 1} de {inis.length}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <button onClick={() => prev && onNav(prev.id)} disabled={!prev}
             title={prev ? `${prev.id} · ${prev.name}` : undefined}

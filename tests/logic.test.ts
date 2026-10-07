@@ -159,7 +159,7 @@ test("initiativeRisk: los datos reales de i7 e i2 producen riesgo alto y medio o
 /* ─── rollup y alertas ─── */
 
 test("maturityRollup: 17 dimensiones, serie creciente y sin dimensiones huérfanas", () => {
-  const r = maturityRollup();
+  const r = maturityRollup(tenantView());
   assert.equal(r.cells.length, 17);
   assert.equal(r.history.length, 2);
   assert.ok(r.history[1].institution > r.history[0].institution);
@@ -167,7 +167,7 @@ test("maturityRollup: 17 dimensiones, serie creciente y sin dimensiones huérfan
 });
 
 test("buildAlerts: ordenadas por severidad y con las rachas rojas presentes", () => {
-  const alerts = buildAlerts();
+  const alerts = buildAlerts(tenantView());
   assert.ok(alerts.length > 0);
   for (let i = 1; i < alerts.length; i++) {
     assert.ok(alerts[i].severity >= alerts[i - 1].severity);
@@ -179,13 +179,13 @@ test("buildAlerts: ordenadas por severidad y con las rachas rojas presentes", ()
 
 test("objectiveHealth cubre todos los objetivos sin lanzar", () => {
   for (const o of CMI_OBJECTIVES) {
-    const h = objectiveHealth(o.id);
+    const h = objectiveHealth(tenantView(), o.id);
     assert.ok(["OK", "WARN", "BAD"].includes(h.semaphore));
   }
 });
 
 test("executiveSummary es consistente con los catálogos", () => {
-  const s = executiveSummary();
+  const s = executiveSummary(tenantView());
   assert.equal(s.kpis.length, KPI_CATALOG.length);
   assert.equal(s.initiatives.length, INITIATIVES_FULL.length);
   assert.equal(s.objectives.length, CMI_OBJECTIVES.length);
@@ -226,7 +226,7 @@ test("proyectos: integridad referencial de tareas, personas y dependencias", () 
 
 test("proyectos: toda iniciativa del roadmap tiene plan de trabajo", () => {
   for (const i of INITIATIVES_FULL) {
-    assert.ok(initiativeTaskStats(i.id).total >= 3, `${i.id} sin tareas suficientes`);
+    assert.ok(initiativeTaskStats(tenantView(), i.id).total >= 3, `${i.id} sin tareas suficientes`);
   }
 });
 
@@ -258,27 +258,27 @@ test("proyectos: toda tarea tiene descripción y toda HECHA tiene evidencia", ()
 });
 
 test("proyectos: alertas de tareas tipificadas e integradas al motor global", () => {
-  const ta = taskAlerts();
+  const ta = taskAlerts(tenantView());
   assert.ok(ta.some((a) => a.kind === "TAREA_VENCIDA"));
   assert.ok(ta.some((a) => a.kind === "TAREA_BLOQUEADA"));
   assert.ok(ta.some((a) => a.kind === "DEPENDENCIA_VENCIDA"), "la cadena i7-02 → i7-04 debe alertar");
   for (const a of ta) assert.ok(a.ownerName.includes(" "), "nombre propio en la alerta");
   // integración: el motor global las incluye con href al gestor
-  const all = buildAllAlerts();
+  const all = buildAllAlerts(tenantView());
   const fromTasks = all.filter((a) => a.href === "/panel/proyectos");
   assert.equal(fromTasks.length, ta.length);
   for (let i = 1; i < all.length; i++) assert.ok(all[i].severity >= all[i - 1].severity);
 });
 
 test("proyectos: carga por persona y estadísticas del portafolio consistentes", () => {
-  const w = workload();
+  const w = workload(tenantView());
   assert.ok(w.length >= 9, "la mayoría del directorio tiene tareas");
   // con corresponsables, cada tarea cuenta una vez por cada responsable
   const sumTotal = w.reduce((a, x) => a + x.total, 0);
   const totalAssignments = TASKS.reduce((a, t) => a + assigneesOf(t).length, 0);
   assert.equal(sumTotal, totalAssignments);
   assert.ok(sumTotal > TASKS.length, "los corresponsables suman carga por persona");
-  const s = portfolioTaskStats();
+  const s = portfolioTaskStats(tenantView());
   assert.equal(Object.values(s.byStatus).reduce((a, b) => a + b, 0), s.total);
   assert.ok(DEMO_TODAY.startsWith("2027-03"), "hoy demo coherente con DEMO_NOW_INDEX");
 });
@@ -286,7 +286,7 @@ test("proyectos: carga por persona y estadísticas del portafolio consistentes",
 /* ─── permisos y store de escritura ─── */
 
 import { can, describeAccess, MODULE_ACTIONS, PERMISSION_MATRIX, type ModuleKey } from "../src/lib/permissions";
-import { updateTask, verifyEvidence, getTask, getAudit, resetStore } from "../src/server/store";
+import { updateTask, verifyEvidence, getTask, getAudit, resetStore, tenantView } from "../src/server/store";
 import type { SessionUser } from "../src/lib/session";
 
 const U = {

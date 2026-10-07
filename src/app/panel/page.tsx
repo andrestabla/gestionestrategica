@@ -6,9 +6,9 @@
 import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
-import {
-  LINES, PREV_SCORES, INITIATIVES, KPIS, fmtCOP,
-} from "@/data/demo";
+import { useCatalog } from "@/components/catalog-context";
+import { LINES, fmtCOP } from "@/data/demo";
+import { prevScores } from "@/lib/vista";
 import { buildAlerts, executiveSummary } from "@/lib/logic";
 import { useMaturity } from "@/lib/use-maturity";
 import { ArrowRight, ShieldAlert, AlertTriangle, Info } from "lucide-react";
@@ -20,29 +20,33 @@ const SEV_META = {
 } as const;
 
 export default function Panel() {
+  const v = useCatalog();
   // medición vigente efectiva (si A3 se publicó desde la plataforma, manda A3)
   const { data: matData, scores: effScores, lineScoreOf, prevLineScoreOf, institution } = useMaturity();
   const score = institution;
+  const prevByLine = prevScores(v);
   const prev = matData?.previous
     ? [1, 2, 3, 4].reduce((a, n) => a + (prevLineScoreOf(n) ?? 0), 0) / 4
-    : Object.values(PREV_SCORES).reduce((a, b) => a + b, 0) / 4;
-  const alerts = buildAlerts();
-  const summary = executiveSummary();
-  const budget = INITIATIVES.reduce(
+    : Object.values(prevByLine).reduce((a, b) => a + b, 0) / 4;
+  const alerts = buildAlerts(v);
+  const summary = executiveSummary(v);
+  const initiatives = v.initiatives;
+  const budget = initiatives.reduce(
     (a, i) => ({
       planned: a.planned + i.budgetPlanned,
       executed: a.executed + i.budgetExecuted,
     }),
     { planned: 0, executed: 0 },
   );
-
+  const budgetPct = budget.planned ? Math.round((budget.executed / budget.planned) * 100) : 0;
+  const serie = summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ");
 
   return (
     <>
       <PageHeader
-        kicker="Andina Suministros"
+        kicker={v.catalog.company.name}
         title="Estado de la capacidad organizacional"
-        desc={`Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}) · publicada. Serie de la empresa: ${summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ")}.`}
+        desc={`Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}).${serie ? ` Serie de la empresa: ${serie}.` : " Aún no hay mediciones publicadas."}`}
       />
 
       {/* ── héroe: gauge + avance por línea ── */}
@@ -63,7 +67,7 @@ export default function Panel() {
             <div className="label">Avance por capacidad</div>
             {LINES.map((l) => {
               const now = lineScoreOf(l.n);
-              const before = prevLineScoreOf(l.n) ?? PREV_SCORES[l.n];
+              const before = prevLineScoreOf(l.n) ?? prevByLine[l.n] ?? 0;
               return (
                 <Link key={l.n} href={`/panel/diagnostico/capacidad/${l.n}`} className="group block">
                   <div className="mb-1.5 flex items-baseline justify-between">
@@ -107,10 +111,10 @@ export default function Panel() {
       {/* ── métricas ── */}
       <div className="rise rise-2 mb-5 grid gap-4 sm:grid-cols-3">
         <StatCard label="Iniciativas en ejecución"
-          value={INITIATIVES.filter((i) => i.status === "EN_CURSO").length}
-          unit={`de ${INITIATIVES.length}`} foot="Roadmap 2026–2028" />
+          value={initiatives.filter((i) => i.status === "EN_CURSO").length}
+          unit={`de ${initiatives.length}`} foot="Roadmap 2026–2028" />
         <StatCard label="Presupuesto ejecutado"
-          value={Math.round((budget.executed / budget.planned) * 100)} unit="%"
+          value={budgetPct} unit="%"
           foot={`${fmtCOP(budget.executed)} de ${fmtCOP(budget.planned)}`}
           accent="linear-gradient(90deg, var(--n4), var(--n5))" />
         <StatCard label="Alertas del motor de seguimiento" value={summary.alertCounts.critical}
@@ -162,7 +166,7 @@ export default function Panel() {
             tags={["4 perspectivas", "10 objetivos"]} />
           <ModuleCard href="/panel/kpi" code="M4" title="Indicadores"
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
-            tags={[`${KPIS.length} indicadores`]} />
+            tags={[`${v.kpis.length} indicadores`]} />
           <ModuleCard href="/panel/ruta" code="M5" title="Mapa de ruta"
             desc="Roadmap por horizontes con Gantt y la matriz 4Shine de priorización (D·E·M·L)."
             tags={["2026–2028"]} />

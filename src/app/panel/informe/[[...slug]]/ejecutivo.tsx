@@ -11,8 +11,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui";
 import { MaturityHeatmap, MaturityRadar, BudgetBar } from "@/components/charts";
-import { LINES, DIMENSIONS, fmtCOP, fmtNum, INSTITUTION } from "@/data/demo";
-import { CMI_OBJECTIVES } from "@/data/cmi";
+import { useCatalog } from "@/components/catalog-context";
+import { LINES, DIMENSIONS, fmtCOP, fmtNum } from "@/data/demo";
 import { useMaturity } from "@/lib/use-maturity";
 import { downloadCsv } from "@/lib/csv";
 import {
@@ -97,6 +97,7 @@ function Sparkline({ points }: { points: { period: string; value: number }[] }) 
 
 export default function EjecutivoTab() {
   const router = useRouter();
+  const v = useCatalog();
   const [s, setS] = useState<Summary | null>(null);
   const [gp, setGp] = useState<GpData | null>(null);
   const { scores } = useMaturity();
@@ -191,7 +192,7 @@ export default function EjecutivoTab() {
   const lineByValue = [...s.maturity.lines].sort((a, b) => b.value - a.value);
   const strongest = lineByValue[0];
   const weakest = lineByValue[lineByValue.length - 1];
-  const budgetUsedPct = Math.round(((s.budget.executed + s.budget.committed) / s.budget.planned) * 100);
+  const budgetUsedPct = s.budget.planned ? Math.round(((s.budget.executed + s.budget.committed) / s.budget.planned) * 100) : 0;
   const delta = (l: { value: number; prev: number | null }) =>
     l.prev === null ? null : Math.round((l.value - l.prev) * 10) / 10;
 
@@ -260,7 +261,7 @@ export default function EjecutivoTab() {
         <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5">
           <div>
             <div className="kicker mb-1">Informe ejecutivo · PGTD</div>
-            <h1 className="text-[20px] font-extrabold tracking-tight text-ink">{INSTITUTION.name}</h1>
+            <h1 className="text-[20px] font-extrabold tracking-tight text-ink">{v.catalog.company.name}</h1>
             <p className="mt-1 text-[12px] text-muted">
               Medición vigente: <b className="text-ink">{s.maturity.assessment.label}</b> ({s.maturity.assessment.period}) ·
               corte del informe: {hoy}
@@ -568,7 +569,7 @@ export default function EjecutivoTab() {
             <table className="w-full text-[11.5px]">
               <tbody>
                 {s.objectives.map((o) => {
-                  const obj = CMI_OBJECTIVES.find((c) => c.id === o.id);
+                  const obj = v.catalog.objectives.find((c) => c.id === o.id);
                   if (!obj) return null;
                   return (
                     <tr key={o.id} className="border-b border-line last:border-0">

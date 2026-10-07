@@ -1105,7 +1105,7 @@ export function publishCapture(
     };
   }
   // dimensión = promedio simple de sus prácticas calificadas
-  const base = latestPublished(cat().assessments)!.scores!;
+  const base = (latestPublished(cat().assessments) ?? emptyAssessment()).scores!;
   const scores: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
   for (const d of DIMS) {
     const avg = d.prac.reduce((a, x) => a + capture().get(x.code)!.level!, 0) / d.prac.length;
@@ -1575,16 +1575,34 @@ export function decideInitiative(
 export const publishedAssessment = (): AssessmentRecord | null => S().published ?? null;
 
 export const effectiveCurrent = (): AssessmentRecord =>
-  S().published ?? latestPublished(cat().assessments)!;
+  S().published ?? latestPublished(cat().assessments) ?? emptyAssessment();
 
 export const effectivePrevious = (): AssessmentRecord | null =>
-  S().published ? latestPublished(cat().assessments)! : previousPublished(cat().assessments);
+  S().published ? latestPublished(cat().assessments) : previousPublished(cat().assessments);
 
 export const effectiveAssessments = () =>
   cat().assessments.map((a) =>
     a.id === "A3" && S().published
       ? { id: a.id, label: a.label, period: S().published!.period, status: "PUBLICADA" as const, note: S().published!.note }
       : { id: a.id, label: a.label, period: a.period, status: a.status, note: a.note });
+
+/* ═══ Vista de la empresa activa (para la UI y la lógica) ═══ */
+
+import { emptyAssessment, type TenantView } from "@/lib/vista";
+
+export function tenantView(): TenantView {
+  const current = effectiveCurrent();
+  return {
+    catalog: cat(),
+    initiatives: effectiveInitiatives(),
+    kpis: effectiveKpis(),
+    tasks: getTasks(),
+    current,
+    previous: effectivePrevious(),
+    assessments: effectiveAssessments(),
+    published: Boolean(publishedAssessment()),
+  };
+}
 
 /* ═══ Administración de usuarios (manage_users) ═══
    Usuarios efectivos: los del seed + los creados desde la plataforma.

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { responsible } from "@/data/cmi";
 import { initiativeRisk } from "@/lib/logic";
-import { effectiveInitiatives, updateInitiative } from "@/server/store";
+import { effectiveInitiatives, updateInitiative, responsible } from "@/server/store";
 
 // GET /api/td/initiatives — iniciativas EFECTIVAS (seed + cambios de la
 // plataforma) con responsable y riesgo recalculado.

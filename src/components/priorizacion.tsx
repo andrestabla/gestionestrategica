@@ -11,8 +11,11 @@ import {
   CRITERIA, TYPE_CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf,
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeMarks,
 } from "@/lib/priorizacion";
-import type { DecisionRecord } from "@/data/priorizacion-demo";
+import type { Catalog } from "@/data/catalogo";
 import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2 } from "lucide-react";
+
+/** Decisión de la gerencia sobre una iniciativa (misma forma que las del catálogo). */
+type DecisionRecord = Catalog["seedDecisions"][number];
 
 export type PriorizacionData = {
   me: string;

@@ -14,14 +14,13 @@ import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge } from "@/components/ui";
 import { AccessChip, useCan } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
-import { SCORES } from "@/data/demo";
+import { useCatalog } from "@/components/catalog-context";
 import { LINES, fmtNum } from "@/data/demo";
 import {
   CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, TEST_QUESTIONS, GUIDES, FLAG_TEXT,
   methodologyOf, frameworkOf, frameworkOfPractice, DRAG_WEIGHT, THRESHOLD, levelName,
 } from "@/data/mapa";
-import { EVIDENCE_CATALOG, ASSESSMENTS, responsible } from "@/data/cmi";
-import { OD_RESPONSES } from "@/data/od-demo";
+import { scoresOf, responsible } from "@/lib/vista";
 import { consolidate, readTest, recommend, testContrast, avg, rangeText, type DimResult, type Consolidated } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
 import type { VariableCapture, TestResponse, TestNotes } from "@/server/store";
@@ -33,17 +32,20 @@ import {
 
 type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura" | "informe";
 
-/* ═══ Corte que se lee: el publicado (demo A2) o el que se captura en la plataforma ═══ */
+/* ═══ Corte que se lee: el publicado (las fuentes demo de la empresa, si las
+   tiene) o el que se captura en la plataforma ═══ */
 
 type Cut = { src: "vigente" | "curso"; responses: Response[]; C: Consolidated; label: string; scores: ScoresMap | null };
-const DEMO_CUT: Cut = { src: "vigente", responses: OD_RESPONSES, C: consolidate(OD_RESPONSES), label: "Corte publicado · A2", scores: null };
+/** Corte sin fuentes: todas las dimensiones sin dato. Solo sirve de valor por
+    defecto del contexto; el DiagnosticoPage siempre provee el corte real. */
+const EMPTY_CUT: Cut = { src: "vigente", responses: [], C: consolidate([]), label: "Sin corte", scores: null };
 /** Mapa de puntajes del corte en curso: las dimensiones sin dato van en −1 (los gráficos las muestran en blanco). */
-const scoresOf = (C: Consolidated, base: ScoresMap): ScoresMap => {
+const cutScoresOf = (C: Consolidated, base: ScoresMap): ScoresMap => {
   const out: ScoresMap = { 1: {}, 2: {}, 3: {}, 4: {} };
-  for (const d of C.dims) out[d.line][d.code] = { value: d.m ?? -1, target: base[d.line][d.code].target };
+  for (const d of C.dims) out[d.line][d.code] = { value: d.m ?? -1, target: base[d.line]?.[d.code]?.target ?? 3 };
   return out;
 };
-const CutCtx = createContext<Cut>(DEMO_CUT);
+const CutCtx = createContext<Cut>(EMPTY_CUT);
 const useCut = () => useContext(CutCtx);
 type OdApi = { responses: Response[]; published: boolean; progress: { total: number; perception: number; dik: number; level: number }; f2: number };
 const TABS: { id: Tab; label: string; icon: typeof Radar; href: string }[] = [
@@ -66,18 +68,25 @@ export default function DiagnosticoPage() {
   const arg = slug[1] ? decodeURIComponent(slug[1]).toUpperCase() : null;
   const arg2 = slug[2] ? decodeURIComponent(slug[2]) : null;
   const router = useRouter();
+  const v = useCatalog();
   const [od, setOd] = useState<OdApi | null>(null);
   const [src, setSrc] = useState<"vigente" | "curso" | null>(null);
   useEffect(() => { fetch("/api/td/od").then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) setOd(j); }).catch(() => null); }, [tab]);
   const hasCurso = (od?.responses.length ?? 0) > 0;
+  // Corte publicado: las fuentes demo de la empresa (vacías en una empresa nueva:
+  // entonces el corte publicado no tiene respuestas y la UI rinde con el corte en curso).
+  const publishedCut = useMemo<Cut>(() => {
+    const responses = v.catalog.demoResponses;
+    return { src: "vigente", responses, C: consolidate(responses), label: `Corte publicado · ${v.current.id}`, scores: null };
+  }, [v]);
   const eff = src ?? (od?.published ? "curso" : "vigente");
   const cut = useMemo<Cut>(() => {
     if (eff === "curso" && od && hasCurso) {
       const C = consolidate(od.responses);
-      return { src: "curso", responses: od.responses, C, label: od.published ? "Corte A3 · publicado desde la plataforma" : "Corte en curso · capturado en la plataforma", scores: scoresOf(C, SCORES) };
+      return { src: "curso", responses: od.responses, C, label: od.published ? "Corte A3 · publicado desde la plataforma" : "Corte en curso · capturado en la plataforma", scores: cutScoresOf(C, scoresOf(v)) };
     }
-    return DEMO_CUT;
-  }, [eff, od, hasCurso]);
+    return publishedCut;
+  }, [eff, od, hasCurso, publishedCut, v]);
 
   return (
     <CutCtx.Provider value={cut}>
@@ -123,11 +132,12 @@ export default function DiagnosticoPage() {
 /* ═══ Resumen ═══ */
 
 function Resumen() {
+  const v = useCatalog();
   const { scores: pubScores, data } = useMaturity();
   const { C, src, label, scores: cutScores } = useCut();
   const scores = cutScores ?? pubScores;
   const router = useRouter();
-  const verified = src === "curso" ? C.dims.reduce((a, d) => a + d.verified, 0) : EVIDENCE_CATALOG.filter((e) => e.status === "VERIFICADA").length;
+  const verified = src === "curso" ? C.dims.reduce((a, d) => a + d.verified, 0) : v.catalog.evidences.filter((e) => e.status === "VERIFICADA").length;
   const flagged = C.dims.filter((d) => d.flags.length);
   const belowCaps = C.caps.filter((c) => (c.m ?? 5) < THRESHOLD);
   return (
@@ -201,7 +211,8 @@ function Resumen() {
       <Card className="rise rise-4">
         <CardHeader title="Serie de mediciones" sub="la madurez es una serie, no una foto" />
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
-          {ASSESSMENTS.map((a) => (
+          {v.assessments.length === 0 && <div className="text-[12.5px] italic text-faint sm:col-span-3">Aún no hay mediciones: la primera se construye en «Captura A3».</div>}
+          {v.assessments.map((a) => (
             <div key={a.id} className={`rounded-xl px-4 py-3 ${a.status === "PUBLICADA" ? "bg-surface-2" : "border border-dashed border-line-strong"}`}>
               <div className="flex items-center justify-between"><span className="num text-[10px] font-bold text-faint">{a.id} · {a.period}</span><span className={`chip ${a.status === "PUBLICADA" ? "chip-ok" : "chip-warn"}`}>{a.status === "PUBLICADA" ? "Publicada" : "En captura"}</span></div>
               <div className="mt-1 text-[13px] font-bold text-ink">{a.label}</div>
@@ -237,8 +248,9 @@ function Capacidad({ n }: { n: number }) {
           <CardHeader title={`${cap.name} · ${cap.verb}`} sub={cap.q} />
           <div className="divide-y divide-line">
             {dims.map((d) => {
-              const r = C.dims.find((x) => x.code === d.code)!;
-              const s = scores[d.line][d.code];
+              const r = C.dims.find((x) => x.code === d.code);
+              if (!r) return null;
+              const s = scores[d.line]?.[d.code] ?? { value: -1, target: 3 };
               return (
                 <Link key={d.code} href={`/panel/diagnostico/dimension/${d.code}`} className="grid gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2/70 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div>
@@ -257,7 +269,7 @@ function Capacidad({ n }: { n: number }) {
         </Card>
         <Card className="rise rise-2">
           <CardHeader title="Perfil de la capacidad" sub="madurez por dimensión frente a la meta" />
-          <div className="px-4 pb-4"><MiniRadar color={cap.color} axes={dims.map((d) => ({ label: d.code, value: Math.max(0, scores[d.line][d.code].value), target: scores[d.line][d.code].target }))} /></div>
+          <div className="px-4 pb-4"><MiniRadar color={cap.color} axes={dims.map((d) => { const s = scores[d.line]?.[d.code]; return { label: d.code, value: Math.max(0, s?.value ?? 0), target: s?.target ?? 3 }; })} /></div>
         </Card>
       </div>
     </>
@@ -267,11 +279,12 @@ function Capacidad({ n }: { n: number }) {
 /* ═══ Dimensión ═══ */
 
 function Dimension({ code }: { code: string }) {
+  const v = useCatalog();
   const d = DIMS.find((x) => x.code === code);
   const { C, responses } = useCut();
-  if (!d) return <div className="text-muted">La dimensión {code} no existe.</div>;
-  const r = C.dims.find((x) => x.code === d.code)!;
-  const cap = CAPS.find((c) => c.n === d.line)!;
+  const r = d ? C.dims.find((x) => x.code === d.code) : undefined;
+  const cap = d ? CAPS.find((c) => c.n === d.line) : undefined;
+  if (!d || !r || !cap) return <div className="text-muted">La dimensión {code} no existe.</div>;
   const idx = DIMS.indexOf(d);
   const prev = DIMS[idx - 1], next = DIMS[idx + 1];
   const F1 = responses.filter((x) => x.tipo === "f1");
@@ -320,7 +333,7 @@ function Dimension({ code }: { code: string }) {
 
       <div className="space-y-4">
         {d.prac.map((p) => {
-          const ev = EVIDENCE_CATALOG.find((e) => e.practice === p.code)!;
+          const ev = v.catalog.evidences.find((e) => e.practice === p.code);   // puede no existir en una empresa nueva
           const mark = F3?.r[p.code] as "V" | "P" | "N" | undefined;
           const f1avg = avg(F1.map((f) => f.r[p.code]));
           const fw = frameworkOfPractice(p.code);
@@ -333,10 +346,10 @@ function Dimension({ code }: { code: string }) {
                   <p className="mt-1.5 text-[13.5px] font-semibold leading-snug text-ink">{p.f1}</p>
                   {guide?.q && <p className="mt-1 text-[11.5px] italic text-muted">{guide.q}</p>}
                   <div className="mt-3 rounded-xl bg-surface-2 px-4 py-3">
-                    <div className="mb-1 flex items-center gap-2"><span className="label">Evidencia</span>{mark && <span className={`chip ${MARK[mark][1]}`}>{MARK[mark][0]}</span>}<span className="num text-[10px] text-faint">{ev.id} · {ev.kind} · {responsible(ev.sourceId).dependencia}</span></div>
+                    <div className="mb-1 flex items-center gap-2"><span className="label">Evidencia</span>{mark && <span className={`chip ${MARK[mark][1]}`}>{MARK[mark][0]}</span>}{ev ? <span className="num text-[10px] text-faint">{ev.id} · {ev.kind} · {responsible(v, ev.sourceId).dependencia}</span> : <span className="text-[10px] italic text-faint">sin evidencia registrada</span>}</div>
                     <p className="text-[12px] leading-snug text-ink-soft">{p.ev}</p>
                     <p className="mt-1 text-[11.5px] leading-snug text-muted">{p.verif}</p>
-                    {ev.note && <p className="mt-1 text-[11px] italic text-muted">{ev.note}</p>}
+                    {ev?.note && <p className="mt-1 text-[11px] italic text-muted">{ev.note}</p>}
                   </div>
                 </div>
                 <div className="rounded-xl border border-line px-4 py-3">
@@ -369,13 +382,14 @@ function useTestResponses() {
 }
 
 function TestTab() {
+  const v = useCatalog();
   const { stored, mine } = useTestResponses();
-  const demo = OD_RESPONSES.filter((x) => x.tipo === "test");
+  const demo = v.catalog.demoResponses.filter((x) => x.tipo === "test");
   const tests = [...demo, ...stored.map(toResponse)];
   const reads = tests.map((t) => readTest(t.r));
   const contrast = testContrast(tests);
   const stages = new Set(reads.map((r) => r.stage));
-  const lead = reads[0];
+  const lead: (typeof reads)[number] | undefined = reads[0];   // sin participantes en una empresa nueva
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
@@ -393,6 +407,7 @@ function TestTab() {
             <table className="w-full text-[12.5px]">
               <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{TEST.bloques.map((b) => <th key={b.cap} className="num px-2 py-2 text-center">{b.cap}</th>)}<th className="px-3 py-2">Etapa según respuestas</th><th className="px-3 py-2">Pregunta 25</th></tr></thead>
               <tbody>
+                {tests.length === 0 && <tr className="border-t border-line"><td colSpan={2 + TEST.bloques.length} className="px-3 py-4 text-[12.5px] italic text-faint">Nadie ha respondido el test todavía.</td></tr>}
                 {tests.map((t, i) => (
                   <tr key={i} className="border-t border-line">
                     <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[10.5px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""} · <Link href={`/panel/diagnostico/test/informe/${i < demo.length ? `demo:${i}` : encodeURIComponent(stored[i - demo.length].email)}`} className="font-bold text-cyan-deep hover:underline">informe</Link></div></td>
@@ -425,17 +440,18 @@ function TestTab() {
           </div>
         </Card>
         <Card className="rise rise-4">
-          <CardHeader title="Patrones y prioridades" sub={`según las respuestas de ${String(tests[0].meta.nombre)}`} />
+          <CardHeader title="Patrones y prioridades" sub={lead ? `según las respuestas de ${String(tests[0].meta.nombre)}` : "se leen a partir del primer test respondido"} />
           <div className="divide-y divide-line">
-            {lead.patterns.map((p, i) => (
+            {!lead && <div className="px-5 py-4 text-[12.5px] italic text-faint">Sin respuestas todavía.</div>}
+            {lead?.patterns.map((p, i) => (
               <div key={p.hip} className="px-5 py-3"><div className="label mb-0.5">{i === 0 ? "Prioridad principal" : "Prioridad de soporte"} · preguntas {p.qs.join(", ")}</div><div className="text-[13px] font-bold text-ink">{p.accion}</div><div className="text-[12px] text-muted">{p.hip}</div></div>
             ))}
-            {lead.pending.length > 0 && <div className="px-5 py-3 text-[12px] text-muted">Pendientes de verificación: preguntas {lead.pending.join(", ")}.</div>}
+            {lead && lead.pending.length > 0 && <div className="px-5 py-3 text-[12px] text-muted">Pendientes de verificación: preguntas {lead.pending.join(", ")}.</div>}
           </div>
         </Card>
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-5">
-        {STAGES.map((s) => { const on = lead.stage === s.name; return (
+        {STAGES.map((s) => { const on = lead?.stage === s.name; return (
           <div key={s.name} className={`rounded-xl px-4 py-3 ${on ? "text-white" : "bg-surface-2"}`} style={on ? { background: "var(--navy)" } : undefined}>
             <div className={`text-[13px] font-extrabold ${on ? "" : "text-ink"}`}>{s.name}</div>
             <div className={`mt-0.5 text-[11px] leading-snug ${on ? "text-white/80" : "text-muted"}`}>{s.pregunta}</div>
@@ -579,13 +595,14 @@ function PrintField({ label, value, id, field, canEdit, onSave, placeholder }: {
 }
 
 function InformeTest({ id }: { id: string }) {
+  const v = useCatalog();
   const { stored } = useTestResponses();
   const canPublish = useCan("publish_maturity"), canLead = useCan("edit_initiatives");
   const canEdit = canPublish || canLead;
   const [notes, setNotes] = useState<Record<string, TestNotes>>({});
   const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => { fetch("/api/td/test/informe").then((r) => (r.ok ? r.json() : null)).then((j) => j && setNotes(j.notes)).catch(() => null); }, []);
-  const demo = OD_RESPONSES.filter((x) => x.tipo === "test");
+  const demo = v.catalog.demoResponses.filter((x) => x.tipo === "test");
   const resp: Response | null = id.startsWith("demo:") ? (demo[Number(id.slice(5))] ?? null) : (() => { const t = stored.find((x) => x.email === id); return t ? { ...toResponse(t), meta: { ...toResponse(t).meta, objetivo: t.objetivo, at: t.at } } : null; })();
   if (!resp) return <div className="text-muted">{stored.length ? "No encontramos ese participante." : "Cargando el participante…"}</div>;
   const T = readTest(resp.r);
@@ -665,6 +682,7 @@ function InformeTest({ id }: { id: string }) {
 /* ═══ Informe del diagnóstico completo (cinco salidas, imprimible) ═══ */
 
 function InformeDiagnostico() {
+  const v = useCatalog();
   const { C, label, scores: cutScores } = useCut();
   const { scores: pubScores } = useMaturity();
   const scores = cutScores ?? pubScores;
@@ -681,7 +699,7 @@ function InformeDiagnostico() {
       </div>
       <div className="panel mb-5 px-7 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><div className="kicker">Diagnóstico 4Shine-OD · {label}</div><h2 className="text-[20px] font-extrabold tracking-tight text-ink">Andina Suministros</h2><div className="text-[12px] text-muted">{C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}</div></div>
+          <div><div className="kicker">Diagnóstico 4Shine-OD · {label}</div><h2 className="text-[20px] font-extrabold tracking-tight text-ink">{v.catalog.company.name}</h2><div className="text-[12px] text-muted">{C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}</div></div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
         </div>

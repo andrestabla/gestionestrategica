@@ -20,6 +20,35 @@ como sistema de gestión, no como documento.
 | — | Metodología | El sistema 4Shine Empresas leído de las mismas fuentes que usa el motor |
 | — | Administración | Usuarios, permisos, integraciones y branding |
 
+## Multiempresa (tenants)
+
+La plataforma atiende varias empresas con un mismo despliegue y cada una es
+un contexto independiente: usuarios y roles, diagnóstico (captura, test,
+Fuente 2, cortes publicados), portafolio (objetivos, KPI, iniciativas,
+personas, tareas), priorización, archivos, branding e integraciones.
+
+- **Admin de plataforma** (`admin@algoritmot.com`): no pertenece a ninguna
+  empresa. Crea, edita, desactiva y elimina empresas (Administración →
+  Empresas), crea cuentas en cada una y las reasigna. Opera la empresa
+  activa que elige en el menú lateral.
+- **Roles de empresa** (advisor, líder, responsable de capacidad, junta):
+  valen solo dentro de su empresa; el login resuelve la empresa del usuario y
+  la sesión la lleva. No se crean administradores dentro de una empresa.
+- **Catálogo por empresa** (`src/data/catalogo.ts`): Andina Suministros es la
+  plantilla demo. Una empresa nueva nace vacía (solo el mapa 4Shine) o
+  copiando la plantilla (objetivos, KPI, iniciativas, personas y tareas de
+  ejemplo); su catálogo vive en la base (`src/server/catalog-db.ts`).
+- **Contexto de petición** (`src/server/tenant.ts`): cada ruta de la API corre
+  dentro de `withTenant()` y el store resuelve el estado de la empresa activa;
+  los enlaces públicos (`/p/<slug>-token`, `/e/<slug>-token`) resuelven la
+  empresa por el slug firmado. En la interfaz, la vista de la empresa llega
+  por `useCatalog()` (`src/components/catalog-context.tsx`, tipo `TenantView`
+  en `src/lib/vista.ts`) y toda la lógica (`lib/logic`, `lib/proyectos`) la
+  recibe como primer argumento. Una prueba (`tests/aislamiento.test.ts`)
+  impide que la interfaz importe constantes de la empresa demo.
+- **Base de datos**: todas las tablas de datos de empresa llevan `companyId`
+  con borrado en cascada; eliminar una empresa borra todo lo suyo.
+
 ## Fuente única de las definiciones
 
 `src/data/4shine.json` se exporta desde los generadores de la línea
@@ -47,7 +76,7 @@ Modo demo por defecto, sin base de datos. Cuentas:
 |---|---|
 | admin@algoritmot.com | Admin de la plataforma |
 | advisor@4shine.co | Advisor 4Shine (configura, verifica y publica) |
-| gerencia@andina.example | Líder de la empresa |
+| gerencia@andina.example | Líder de la empresa (Andina) |
 | operaciones@andina.example | Responsable de la capacidad Ejecución |
 | junta@andina.example | Junta o directivo (solo lectura) |
 

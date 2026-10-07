@@ -14,10 +14,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard } from "@/components/ui";
 import { AccessChip, useUser, useCan } from "@/components/user-context";
-import { INITIATIVES, EVIDENCES } from "@/data/demo";
+import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
+import { evidencesOf, person } from "@/lib/vista";
 import {
   initials, isOverdue as isOverdueFn, dueSoon as dueSoonFn, DEMO_TODAY,
-  TASK_STATUS_META, person as personFn, assigneesOf,
+  TASK_STATUS_META, assigneesOf,
   type Task, type TaskStatus, type Person,
 } from "@/data/proyectos";
 import type { TaskAlert, Workload } from "@/lib/proyectos";
@@ -72,10 +73,13 @@ export default function ProyectosPage() {
   const params = useParams<{ slug?: string[] }>();
   const [view, setView] = useState<View>("tablero");
   const [data, setData] = useState<ApiData | null>(null);
+  const v = useCatalog();
+  const refetchCatalog = useCatalogRefetch();
+  const inis = v.initiatives;
 
   // el seguimiento de cada iniciativa vive en la URL: /panel/proyectos/<iniId>
   const slugIni = params.slug?.[0] ? decodeURIComponent(params.slug[0]).toLowerCase() : null;
-  const iniFilter = slugIni && INITIATIVES.some((i) => i.id === slugIni) ? slugIni : null;
+  const iniFilter = slugIni && inis.some((i) => i.id === slugIni) ? slugIni : null;
   const setIniFilter = (id: string | null) =>
     router.push(id ? `/panel/proyectos/${id}` : "/panel/proyectos", { scroll: false });
 
@@ -83,7 +87,7 @@ export default function ProyectosPage() {
   useEffect(() => {
     if (typeof window === "undefined" || iniFilter) return;
     const legacy = new URLSearchParams(window.location.search).get("ini");
-    if (legacy && INITIATIVES.some((i) => i.id === legacy)) {
+    if (legacy && inis.some((i) => i.id === legacy)) {
       router.replace(`/panel/proyectos/${legacy}`, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,6 +102,11 @@ export default function ProyectosPage() {
     const res = await fetch("/api/td/tasks");
     if (res.ok) setData(await res.json());
   }, []);
+  // tras una mutación, además del plan se refresca la vista de la empresa
+  // (las tareas vigentes alimentan los conteos de otras páginas)
+  const refetchAll = useCallback(async () => {
+    await Promise.all([refetch(), refetchCatalog()]);
+  }, [refetch, refetchCatalog]);
   useEffect(() => { refetch(); }, [refetch]);
 
   const patchTask = useCallback(async (id: string, patch: Record<string, unknown>) => {
@@ -111,10 +120,10 @@ export default function ProyectosPage() {
       const body = await res.json().catch(() => null);
       setError(body?.error ?? `Error ${res.status}`);
     } else {
-      await refetch();
+      await refetchAll();
     }
     setSaving(false);
-  }, [refetch]);
+  }, [refetchAll]);
 
   const verifyEv = useCallback(async (id: string) => {
     setSaving(true); setError(null);
@@ -138,18 +147,18 @@ export default function ProyectosPage() {
     });
     const ok = res.ok;
     if (!ok) setError((await res.json().catch(() => null))?.error ?? `Error ${res.status}`);
-    else { await refetch(); setCreating(false); }
+    else { await refetchAll(); setCreating(false); }
     setSaving(false);
     return ok;
-  }, [refetch]);
+  }, [refetchAll]);
 
   const archiveTask = useCallback(async (id: string) => {
     setSaving(true); setError(null);
     const res = await fetch(`/api/td/tasks/${id}`, { method: "DELETE" });
     if (!res.ok) setError((await res.json().catch(() => null))?.error ?? `Error ${res.status}`);
-    else { setOpenTask(null); await refetch(); }
+    else { setOpenTask(null); await refetchAll(); }
     setSaving(false);
-  }, [refetch]);
+  }, [refetchAll]);
 
   const tasks = useMemo(() => data?.tasks ?? [], [data]);
   const personOf = useCallback(
@@ -175,7 +184,7 @@ export default function ProyectosPage() {
     );
   }
 
-  const currentIni = iniFilter ? INITIATIVES.find((i) => i.id === iniFilter) : null;
+  const currentIni = iniFilter ? inis.find((i) => i.id === iniFilter) : null;
 
   return (
     <>
@@ -183,7 +192,7 @@ export default function ProyectosPage() {
         title={currentIni ? currentIni.name : "Plan de trabajo del portafolio"}
         desc={currentIni
           ? `Plan de trabajo de la iniciativa: ${filtered.length} tareas. Hoy (demo): ${fmtDate(DEMO_TODAY)}.`
-          : `${data.stats.total} tareas en ${INITIATIVES.length} iniciativas · las mutaciones pasan por la matriz de permisos del servidor. Hoy (demo): ${fmtDate(DEMO_TODAY)}.`}
+          : `${data.stats.total} tareas en ${inis.length} iniciativas · las mutaciones pasan por la matriz de permisos del servidor. Hoy (demo): ${fmtDate(DEMO_TODAY)}.`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {currentIni && (
@@ -191,7 +200,7 @@ export default function ProyectosPage() {
                 Ficha de la iniciativa →
               </Link>
             )}
-            {canCreate && (
+            {canCreate && inis.length > 0 && (
               <button onClick={() => setCreating((c) => !c)}
                 className="btn-primary !py-1.5 text-[12px]">
                 <Plus size={13} /> Nueva tarea
@@ -222,16 +231,16 @@ export default function ProyectosPage() {
       )}
 
       {/* alta de tarea */}
-      {creating && canCreate && (
+      {creating && canCreate && inis.length > 0 && (
         <NewTaskForm people={data.people} allTasks={tasks}
-          defaultIni={iniFilter ?? INITIATIVES[0].id}
+          defaultIni={iniFilter ?? inis[0].id}
           saving={saving} onCreate={createTask} onClose={() => setCreating(false)} />
       )}
 
       {/* métricas */}
       <div className="rise rise-1 mb-5 grid gap-4 sm:grid-cols-4">
         <StatCard label="Tareas del portafolio" value={data.stats.total}
-          unit={`en ${INITIATIVES.length} iniciativas`}
+          unit={`en ${inis.length} iniciativas`}
           foot={`${data.stats.byStatus.HECHA} hechas · ${data.stats.byStatus.EN_CURSO + data.stats.byStatus.EN_REVISION} activas`} />
         <StatCard label="Vencidas" value={data.stats.overdue} unit="tareas"
           foot="Fecha compromiso superada sin cierre"
@@ -285,7 +294,7 @@ export default function ProyectosPage() {
           className={`chip cursor-pointer ${iniFilter === null ? "chip-cyan" : ""}`}>
           Todas las iniciativas
         </button>
-        {INITIATIVES.filter((i) => tasks.some((t) => t.iniId === i.id)).map((i) => (
+        {inis.filter((i) => tasks.some((t) => t.iniId === i.id)).map((i) => (
           <button key={i.id} onClick={() => setIniFilter(iniFilter === i.id ? null : i.id)}
             className={`chip cursor-pointer ${iniFilter === i.id ? "chip-cyan" : ""}`} title={i.name}>
             {i.name.length > 26 ? i.name.slice(0, 25) + "…" : i.name}
@@ -351,7 +360,7 @@ export default function ProyectosPage() {
                       </div>
                     ))}
                   </div>
-                  {INITIATIVES.filter((i) => filtered.some((t) => t.iniId === i.id)).map((ini) => {
+                  {inis.filter((i) => filtered.some((t) => t.iniId === i.id)).map((ini) => {
                     const mine = filtered.filter((t) => t.iniId === ini.id)
                       .sort((a, b) => a.start.localeCompare(b.start));
                     return (
@@ -512,13 +521,14 @@ export default function ProyectosPage() {
 /* ─── tarjeta del tablero ─── */
 
 function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; onOpen: () => void }) {
-  const ini = INITIATIVES.find((i) => i.id === t.iniId)!;
+  const v = useCatalog();
+  const ini = v.initiatives.find((i) => i.id === t.iniId);
   const late = isOverdueFn(t);
   const soon = dueSoonFn(t);
   return (
     <button onClick={onOpen} className="panel panel-lift block w-full p-3 text-left">
       <div className="text-[12px] font-bold leading-snug text-ink">{t.title}</div>
-      <div className="mt-1.5 truncate text-[9.5px] text-faint">{ini.name}</div>
+      <div className="mt-1.5 truncate text-[9.5px] text-faint">{ini?.name ?? t.iniId.toUpperCase()}</div>
       <div className="mt-2 flex items-center justify-between">
         <span className="flex items-center -space-x-1.5">
           <span className="num grid h-6 w-6 place-items-center rounded-full text-[8.5px] font-extrabold text-white ring-2 ring-surface"
@@ -527,7 +537,7 @@ function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; on
             {p ? initials(p.name) : "?"}
           </span>
           {(t.coAssigneeIds ?? []).slice(0, 2).map((cid) => {
-            const cp = personFn(cid);
+            const cp = person(v, cid);
             return (
               <span key={cid} className="num grid h-6 w-6 place-items-center rounded-full bg-surface-3 text-[8.5px] font-extrabold text-ink-soft ring-2 ring-surface"
                 title={`${cp.name} (corresponsable)`}>
@@ -580,6 +590,8 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
   baseline: { start: string; due: string } | null;
   allTasks: Task[];
 }) {
+  const v = useCatalog();
+  const evidences = evidencesOf(v);
   const [commentText, setCommentText] = useState("");
   const [evTitle, setEvTitle] = useState("");
   const [evFile, setEvFile] = useState<File | null>(null);
@@ -805,7 +817,8 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             <div className="label mb-1.5 flex items-center gap-1 !text-[8.5px]"><FileText size={10} /> Evidencia del entregable</div>
             {(task.evidenceIds?.length ?? 0) > 0 ? (
               task.evidenceIds!.map((eid) => {
-                const ev = EVIDENCES.find((e) => e.id === eid)!;
+                const ev = evidences.find((e) => e.id === eid)
+                  ?? { id: eid, title: `Evidencia ${eid}`, kind: "—", date: "—", status: "PENDIENTE" as const };
                 const st = evidenceStatus[eid] ?? ev.status;
                 return (
                   <div key={eid} className="mb-1 flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
@@ -977,6 +990,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const v = useCatalog();
   const [iniId, setIniId] = useState(defaultIni);
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
@@ -999,7 +1013,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
             <div className="label mb-1 !text-[8.5px]">Iniciativa</div>
             <select value={iniId} onChange={(e) => { setIniId(e.target.value); setDependsOn(""); }}
               className="input !py-2 text-[12px]">
-              {INITIATIVES.map((i) => (
+              {v.initiatives.map((i) => (
                 <option key={i.id} value={i.id}>{i.id.toUpperCase()} · {i.name}</option>
               ))}
             </select>

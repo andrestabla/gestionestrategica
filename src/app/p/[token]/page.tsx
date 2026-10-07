@@ -6,7 +6,8 @@ import { notFound } from "next/navigation";
 import { verifyPublicToken } from "@/lib/public-token";
 import { LINES, fmtCOP, fmtNum } from "@/data/demo";
 import { executiveSummary } from "@/lib/logic";
-import { hydrateCompanies, companyBySlug } from "@/server/store";
+import { hydrateCompanies, companyBySlug, tenantView } from "@/server/store";
+import { scoresOf } from "@/lib/vista";
 import { inTenant } from "@/app/api/td/_helpers";
 import { AlgoritmoMark } from "@/components/logo";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
@@ -33,7 +34,7 @@ export default async function PublicView(
   if (!company?.active || !verifyPublicToken(slug, rest.join("-"))) notFound();
   const INSTITUTION = company;
 
-  const s = await inTenant(slug, async () => executiveSummary());
+  const { s, scores } = await inTenant(slug, async () => { const v = tenantView(); return { s: executiveSummary(v), scores: scoresOf(v) }; });
   const criticals = s.alerts.filter((a) => a.severity === 1);
   const inisSorted = [...s.initiatives].sort((a, b) => b.risk.score - a.risk.score);
 
@@ -84,7 +85,7 @@ export default async function PublicView(
             );
           })}
         </div>
-        <div className="hidden lg:block"><MaturityRadar size={300} /></div>
+        <div className="hidden lg:block"><MaturityRadar size={300} scores={scores} /></div>
       </section>
 
       {/* alertas críticas */}

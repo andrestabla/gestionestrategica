@@ -1,32 +1,29 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { PEOPLE } from "@/data/proyectos";
 import {
   getTasks, getAudit, getEvidenceStatus,
-  getComments, getUploads, deviationDays, portfolioSlippage, getBaseline,
-} from "@/server/store";
+  getComments, getUploads, deviationDays, portfolioSlippage, getBaseline, tenantView, catalog } from "@/server/store";
 import { taskAlerts, workload, portfolioTaskStats } from "@/lib/proyectos";
 import { can } from "@/lib/permissions";
-import { INITIATIVES_FULL, EVIDENCE_CATALOG } from "@/data/cmi";
 
 export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   // por tarea, si ESTE usuario puede editarla (la UI refleja lo que el servidor exige)
   const editable = Object.fromEntries(
     getTasks().map((t) => {
-      const ini = INITIATIVES_FULL.find((i) => i.id === t.iniId)!;
-      return [t.id, can(user, "edit_tasks", ini.line)];
+      const ini = catalog().initiatives.find((i) => i.id === t.iniId);
+      return [t.id, can(user, "edit_tasks", ini?.line)];
     }),
   );
   return NextResponse.json({
     tasks: getTasks(),
-    people: PEOPLE,
-    alerts: taskAlerts(),
-    workload: workload(),
-    stats: portfolioTaskStats(),
+    people: catalog().people,
+    alerts: taskAlerts(tenantView()),
+    workload: workload(tenantView()),
+    stats: portfolioTaskStats(tenantView()),
     audit: getAudit().slice(0, 20),
     editable,
     canVerifyEvidence: can(user, "verify_evidence"),
-    evidenceStatus: Object.fromEntries(EVIDENCE_CATALOG.map((e) => [e.id, getEvidenceStatus(e.id)])),
+    evidenceStatus: Object.fromEntries(catalog().evidences.map((e) => [e.id, getEvidenceStatus(e.id)])),
     comments: getComments(),
     uploads: getUploads(),
     slippage: portfolioSlippage(),

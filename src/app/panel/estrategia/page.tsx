@@ -9,18 +9,23 @@ import { useState } from "react";
 import Link from "next/link";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
 import { AccessChip } from "@/components/user-context";
-import { CAPABILITIES, KPIS, INITIATIVES, LINES, fmtNum } from "@/data/demo";
-import { PERSPECTIVES, CMI_OBJECTIVES, responsible } from "@/data/cmi";
+import { LINES, fmtNum } from "@/data/demo";
+import { PERSPECTIVES } from "@/data/cmi";
+import { useCatalog } from "@/components/catalog-context";
+import { capabilitiesOf, responsible } from "@/lib/vista";
 import { X, Target, Gauge, Network, ListChecks } from "lucide-react";
 
 export default function CapacidadesPage() {
   const [objId, setObjId] = useState<string | null>("OE-10");
+  const v = useCatalog();
+  const objectives = v.catalog.objectives;
+  const capabilities = capabilitiesOf(v);
 
-  const obj = objId ? CMI_OBJECTIVES.find((o) => o.id === objId) : null;
-  const objKpis = obj ? KPIS.filter((k) => obj.kpis.includes(k.code)) : [];
-  const objInis = obj ? INITIATIVES.filter((i) => i.cmi === obj.id) : [];
+  const obj = objId ? objectives.find((o) => o.id === objId) : null;
+  const objKpis = obj ? v.kpis.filter((k) => obj.kpis.includes(k.code)) : [];
+  const objInis = obj ? v.initiatives.filter((i) => i.cmi === obj.id) : [];
   const objCaps = obj
-    ? CAPABILITIES.filter((c) => objInis.some((i) => i.capability === c.id))
+    ? capabilities.filter((c) => objInis.some((i) => i.capability === c.id))
     : [];
 
   return (
@@ -31,8 +36,13 @@ export default function CapacidadesPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         {/* ── mapa por perspectivas ── */}
         <div className="min-w-0 space-y-3">
+          {objectives.length === 0 && (
+            <p className="rise rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
+              Esta empresa aún no tiene objetivos estratégicos definidos.
+            </p>
+          )}
           {PERSPECTIVES.map((p, pi) => {
-            const objectives = CMI_OBJECTIVES.filter((o) => o.perspective === p.id);
+            const objectives = v.catalog.objectives.filter((o) => o.perspective === p.id);
             return (
               <div key={p.id} className={`panel rise rise-${Math.min(pi + 1, 4)} overflow-hidden`}>
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-5 pb-2 pt-3.5">
@@ -44,7 +54,7 @@ export default function CapacidadesPage() {
                 <div className="grid gap-2 px-4 pb-4 sm:grid-cols-3">
                   {objectives.map((o) => {
                     const active = objId === o.id;
-                    const inis = INITIATIVES.filter((i) => i.cmi === o.id).length;
+                    const inis = v.initiatives.filter((i) => i.cmi === o.id).length;
                     return (
                       <button key={o.id} onClick={() => setObjId(active ? null : o.id)}
                         className={`rounded-xl px-3.5 py-3 text-left transition-all duration-150 ${
@@ -99,6 +109,9 @@ export default function CapacidadesPage() {
                       <Gauge size={11} /> Indicadores
                     </div>
                     <div className="space-y-1.5">
+                      {objKpis.length === 0 && (
+                        <p className="text-[11.5px] italic text-faint">Sin indicadores asociados.</p>
+                      )}
                       {objKpis.map((k) => {
                         const last = k.series[k.series.length - 1];
                         return (
@@ -107,7 +120,7 @@ export default function CapacidadesPage() {
                             <span className="num text-[9.5px] font-bold text-cyan-deep">{k.code}</span>
                             <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">{k.name}</span>
                             <span className="num text-[11px] font-bold text-ink">
-                              {fmtNum(last.value, 1)} <span className="text-[9px] font-medium text-faint">{k.unit}</span>
+                              {last ? fmtNum(last.value, 1) : "—"} <span className="text-[9px] font-medium text-faint">{k.unit}</span>
                             </span>
                           </Link>
                         );
@@ -150,7 +163,7 @@ export default function CapacidadesPage() {
                             className="block rounded-lg bg-gold-wash px-3 py-2 transition-transform hover:translate-x-0.5">
                             <div className="text-[12px] font-semibold text-ink">{i.name}</div>
                             <div className="num mt-0.5 text-[10px]" style={{ color: "var(--gold)" }}>
-                              {i.subsistema} · avance {i.progress} % · {responsible(i.ownerId).dependencia}
+                              {i.subsistema} · avance {i.progress} % · {responsible(v, i.ownerId).dependencia}
                             </div>
                           </Link>
                         ))}
@@ -168,9 +181,9 @@ export default function CapacidadesPage() {
       <div className="rise rise-3 mt-8">
         <div className="kicker mb-4">Catálogo de capacidades · nivel actual → meta</div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {CAPABILITIES.map((c) => {
+          {capabilities.map((c) => {
             const line = LINES.find((l) => l.n === c.line)!;
-            const inis = INITIATIVES.filter((i) => i.capability === c.id);
+            const inis = v.initiatives.filter((i) => i.capability === c.id);
             return (
               <div key={c.id} className="panel panel-lift p-4">
                 <div className="flex items-start justify-between gap-2">

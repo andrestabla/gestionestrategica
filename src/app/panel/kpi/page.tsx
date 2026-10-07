@@ -8,8 +8,10 @@ import Link from "next/link";
 import { PageHeader, Card } from "@/components/ui";
 import { AccessChip, useCan } from "@/components/user-context";
 import { Sparkline } from "@/components/charts";
-import { KPIS, LINES, INITIATIVES, fmtNum } from "@/data/demo";
-import { CMI_OBJECTIVES, responsible, type KpiFull } from "@/data/cmi";
+import { LINES, fmtNum } from "@/data/demo";
+import type { KpiFull } from "@/data/cmi";
+import { useCatalog } from "@/components/catalog-context";
+import { kpisOf, responsible, type KpiView } from "@/lib/vista";
 import { kpiHealth } from "@/lib/logic";
 import {
   X, User, Database, CalendarClock, Target, ListChecks, Sigma,
@@ -27,6 +29,8 @@ export default function KpiPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const canReportAny = useCan("report_kpi");
+  const v = useCatalog();
+  const kpis = kpisOf(v);
 
   // serie efectiva: seed + valores reportados desde la plataforma
   const [eff, setEff] = useState<Record<string, { series: KpiFull["series"]; reported: string[] }>>({});
@@ -46,12 +50,12 @@ export default function KpiPage() {
   const seriesOf = (k: { code: string; series: KpiFull["series"] }) =>
     eff[k.code]?.series ?? k.series;
 
-  const list = lineFilter ? KPIS.filter((k) => k.line === lineFilter) : KPIS;
-  const kpi = open ? KPIS.find((k) => k.code === open) : null;
+  const list = lineFilter ? kpis.filter((k) => k.line === lineFilter) : kpis;
+  const kpi = open ? kpis.find((k) => k.code === open) : null;
   const kpiSeries = kpi ? seriesOf(kpi) : [];
-  const health = kpi ? kpiHealth({ ...kpi, series: kpiSeries }) : null;
-  const kpiObj = kpi ? CMI_OBJECTIVES.find((o) => o.id === kpi.cmi) : null;
-  const kpiInis = kpi ? INITIATIVES.filter((i) => i.kpi === kpi.code) : [];
+  const health = kpi && kpiSeries.length > 0 ? kpiHealth({ ...kpi, series: kpiSeries }) : null;
+  const kpiObj = kpi ? v.catalog.objectives.find((o) => o.id === kpi.cmi) : null;
+  const kpiInis = kpi ? v.initiatives.filter((i) => i.kpi === kpi.code) : [];
 
   return (
     <>
@@ -75,12 +79,12 @@ export default function KpiPage() {
       <div className="rise mb-5 flex flex-wrap gap-2">
         <button onClick={() => setLineFilter(null)}
           className={`chip cursor-pointer ${lineFilter === null ? "chip-cyan" : ""}`}>
-          Todos · {KPIS.length}
+          Todos · {kpis.length}
         </button>
         {LINES.map((l) => (
           <button key={l.n} onClick={() => setLineFilter(lineFilter === l.n ? null : l.n)}
             className={`chip cursor-pointer ${lineFilter === l.n ? "chip-cyan" : ""}`}>
-            {l.code} {l.short} · {KPIS.filter((k) => k.line === l.n).length}
+            {l.code} {l.short} · {kpis.filter((k) => k.line === l.n).length}
           </button>
         ))}
       </div>
@@ -88,15 +92,21 @@ export default function KpiPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         {/* tarjetas */}
         <div className="grid content-start gap-3.5 sm:grid-cols-2">
+          {list.length === 0 && (
+            <p className="rise rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted sm:col-span-2">
+              {kpis.length === 0 ? "Esta empresa aún no tiene indicadores definidos." : "No hay indicadores en esta capacidad."}
+            </p>
+          )}
           {list.map((k, idx) => {
             const series = seriesOf(k);
-            const last = series[series.length - 1];
+            const last = series[series.length - 1] ?? { period: "", value: 0 };
             const prev = series[series.length - 2];
             const delta = prev ? last.value - prev.value : 0;
             const improving = k.goodDirection === "up" ? delta >= 0 : delta <= 0;
-            const toTarget = k.goodDirection === "up"
+            const ratio = k.goodDirection === "up"
               ? (last.value / k.target) * 100
               : (k.target / last.value) * 100;
+            const toTarget = Number.isFinite(ratio) ? ratio : 0;
             const line = LINES.find((l) => l.n === k.line)!;
             const active = open === k.code;
             return (
@@ -162,9 +172,9 @@ export default function KpiPage() {
                     <div>
                       <div className="label !text-[8.5px]">Dueño del dato</div>
                       <div className="text-[11.5px] font-semibold leading-snug text-ink">
-                        {responsible(kpi.ownerId).cargo}
+                        {responsible(v, kpi.ownerId).cargo}
                       </div>
-                      <div className="text-[10px] text-faint">{responsible(kpi.ownerId).dependencia}</div>
+                      <div className="text-[10px] text-faint">{responsible(v, kpi.ownerId).dependencia}</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
@@ -286,6 +296,7 @@ function KpiImport({ onDone, onClose }: {
   onDone: () => Promise<void>;
   onClose: () => void;
 }) {
+  const v = useCatalog();
   const [rows, setRows] = useState<ImportRow[] | null>(null);
   const [fileName, setFileName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -309,7 +320,7 @@ function KpiImport({ onDone, onClose }: {
       const period = cells[idx.period] ?? "";
       const value = Number((cells[idx.value] ?? "").replace(",", "."));
       const note = idx.note >= 0 ? cells[idx.note] || undefined : undefined;
-      const k = KPIS.find((x) => x.code === code);
+      const k = v.kpis.find((x) => x.code === code);
       const problem = !k ? `código desconocido (${code || "vacío"})`
         : periodIndex(period) === 0 ? `periodo inválido (${period})`
         : !Number.isFinite(value) || value < 0 ? "valor no numérico"
@@ -426,7 +437,7 @@ function KpiImport({ onDone, onClose }: {
 /* ─── registrar el valor del periodo (report_kpi, por línea) ─── */
 
 function ReportForm({ kpi, onReported }: {
-  kpi: (typeof KPIS)[number];
+  kpi: KpiView;
   onReported: () => Promise<void>;
 }) {
   const canReport = useCan("report_kpi", kpi.line);

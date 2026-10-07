@@ -5,24 +5,13 @@
 // consumidas por las páginas y expuestas por /api/td/*.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import {
-  KPI_CATALOG, INITIATIVES_FULL, EVIDENCE_CATALOG, SCORES_HISTORY,
-  CMI_OBJECTIVES, responsible,
-  type KpiFull, type InitiativeFull,
-} from "@/data/cmi";
+import type { KpiFull, InitiativeFull } from "@/data/cmi";
 import { LINES, DIMENSIONS } from "@/data/demo";
 import { taskAlerts } from "@/lib/proyectos";
-// medición vigente EFECTIVA: si el corte A3 se publicó desde la plataforma,
-// el store manda; si no, rige el seed (A2)
-import {
-  effectiveCurrent as currentAssessment,
-  effectivePrevious as previousAssessment,
-  publishedAssessment, effectiveKpis, effectiveInitiatives,
-} from "@/server/store";
-
-// catálogos EFECTIVOS: el seed + lo escrito desde la plataforma
-const KPIS_EFF = () => effectiveKpis();
-const INIS_EFF = () => effectiveInitiatives();
+// Toda regla que lea datos de la empresa recibe su vista (lib/vista): el
+// catálogo más lo efectivo. Así la misma función sirve en el servidor (store
+// de la empresa activa) y en el navegador (CatalogProvider).
+import { responsible, type TenantView } from "@/lib/vista";
 
 /* ═══ Utilidades de periodo ═══ */
 
@@ -199,15 +188,15 @@ export type ObjectiveHealth = {
   worstInitiativeRisk: InitiativeRisk["level"] | null;
 };
 
-export function objectiveHealth(objId: string): ObjectiveHealth {
-  const obj = CMI_OBJECTIVES.find((o) => o.id === objId)!;
-  const healths = obj.kpis
-    .map((c) => KPIS_EFF().find((k) => k.code === c))
+export function objectiveHealth(v: TenantView, objId: string): ObjectiveHealth {
+  const obj = v.catalog.objectives.find((o) => o.id === objId);
+  const healths = (obj?.kpis ?? [])
+    .map((c) => v.kpis.find((k) => k.code === c))
     .filter(Boolean)
     .map((k) => kpiHealth(k!));
   const kpiOk = healths.filter((h) => h.semaphore !== "BAD" && h.improving).length;
 
-  const inis = INIS_EFF().filter((i) => i.cmi === objId);
+  const inis = v.initiatives.filter((i) => i.cmi === objId);
   const risks = inis.map(initiativeRisk);
   const worst = risks.length
     ? (["CRÍTICO", "ALTO", "MEDIO", "BAJO"] as const).find((l) => risks.some((r) => r.level === l))!
@@ -227,13 +216,13 @@ export function objectiveHealth(objId: string): ObjectiveHealth {
    La madurez es una serie, no una foto (1.1): deltas entre cortes y celdas
    sin evidencia como hallazgo (1.10). */
 
-export function maturityRollup() {
-  const cur = currentAssessment();
-  const prev = previousAssessment();
+export function maturityRollup(v: TenantView) {
+  const cur = v.current;
+  const prev = v.previous;
   const cells = DIMENSIONS.map((d) => {
-    const c = cur.scores![d.line][d.key];
+    const c = cur.scores?.[d.line]?.[d.key] ?? { value: 1, target: 3 };
     const p = prev?.scores?.[d.line]?.[d.key];
-    const evidences = EVIDENCE_CATALOG.filter((e) => e.dimension === d.key);
+    const evidences = v.catalog.evidences.filter((e) => e.dimension === d.key);
     return {
       line: d.line, dimension: d.key, name: d.name,
       value: c.value, target: c.target,
@@ -246,7 +235,7 @@ export function maturityRollup() {
     const ds = Object.values(scores[n]);
     return ds.reduce((a, c) => a + c[which], 0) / ds.length;
   };
-  const lineAvg = (n: number, which: "value" | "target") => avgOf(cur.scores!, n, which);
+  const lineAvg = (n: number, which: "value" | "target") => (cur.scores ? avgOf(cur.scores, n, which) : which === "value" ? 1 : 3);
   return {
     assessment: { id: cur.id, label: cur.label, period: cur.period },
     previous: prev ? { id: prev.id, label: prev.label, period: prev.period } : null,
@@ -261,9 +250,9 @@ export function maturityRollup() {
       target: LINES.reduce((a, l) => a + lineAvg(l.n, "target"), 0) / LINES.length,
     },
     cellsWithoutEvidence: cells.filter((c) => c.verified === 0),
-    unverifiedEvidences: EVIDENCE_CATALOG.filter((e) => e.status === "PENDIENTE").length,
-    history: SCORES_HISTORY
-      .map((a) => (a.id === "A3" && publishedAssessment() ? publishedAssessment()! : a))
+    unverifiedEvidences: v.catalog.evidences.filter((e) => e.status === "PENDIENTE").length,
+    history: v.catalog.assessments
+      .map((a) => (a.id === "A3" && v.published ? v.current : a))
       .filter((a) => a.scores).map((a) => ({
       id: a.id, period: a.period,
       institution: LINES.reduce((acc, l) => acc + avgOf(a.scores!, l.n, "value"), 0) / LINES.length,
@@ -297,11 +286,11 @@ export type Alert = {
   line?: number;                    // línea misional (para dirigir notificaciones)
 };
 
-export function buildAlerts(): Alert[] {
+export function buildAlerts(v: TenantView): Alert[] {
   const alerts: Alert[] = [];
 
   // tareas del gestor de proyectos (vencidas, bloqueadas, sin evidencia, en cadena)
-  for (const ta of taskAlerts()) {
+  for (const ta of taskAlerts(v)) {
     alerts.push({
       id: ta.id,
       kind: ta.kind,
@@ -315,7 +304,7 @@ export function buildAlerts(): Alert[] {
   }
 
   // factores en racha roja
-  for (const i of INIS_EFF()) {
+  for (const i of v.initiatives) {
     for (const f of i.factors) {
       if (f.state !== "ROJO") continue;
       const streak = [...f.history].reverse().findIndex((h) => h !== "ROJO");
@@ -327,7 +316,7 @@ export function buildAlerts(): Alert[] {
           title: f.name,
           detail: `${len} revisiones seguidas en rojo en «${i.name}». ${f.note ?? ""}`.trim(),
           href: `/panel/iniciativas/${i.id}`,
-          owner: responsible(i.ownerId).dependencia,
+          owner: responsible(v, i.ownerId).dependencia,
           line: i.line,
         });
       }
@@ -335,7 +324,7 @@ export function buildAlerts(): Alert[] {
   }
 
   // KPI en contra y proyección insuficiente
-  for (const k of KPIS_EFF()) {
+  for (const k of v.kpis) {
     const h = kpiHealth(k);
     if (!h.improving && h.semaphore !== "OK") {
       alerts.push({
@@ -344,7 +333,7 @@ export function buildAlerts(): Alert[] {
         title: k.name,
         detail: `Último dato (${h.latestPeriod}): ${h.latest} ${k.unit}, en dirección contraria a la meta de ${k.target}.`,
         href: "/panel/kpi",
-        owner: responsible(k.ownerId).dependencia,
+        owner: responsible(v, k.ownerId).dependencia,
         line: k.line,
       });
     }
@@ -355,7 +344,7 @@ export function buildAlerts(): Alert[] {
         title: `${k.name}: dato rezagado`,
         detail: `Periodicidad ${k.frequency.toLowerCase()}; el último dato es de ${h.latestPeriod} (${h.staleBy} meses sobre lo tolerado).`,
         href: "/panel/kpi",
-        owner: responsible(k.ownerId).dependencia,
+        owner: responsible(v, k.ownerId).dependencia,
         line: k.line,
       });
     }
@@ -366,14 +355,14 @@ export function buildAlerts(): Alert[] {
         title: `${k.name}: el ritmo no alcanza`,
         detail: `Mejora, pero al ritmo actual llegaría a ${h.projection.projectedAtTarget} ${k.unit} en dic-2028, frente a una meta de ${k.target}.`,
         href: "/panel/kpi",
-        owner: responsible(k.ownerId).dependencia,
+        owner: responsible(v, k.ownerId).dependencia,
         line: k.line,
       });
     }
   }
 
   // riesgo de iniciativas (desalineación y acciones vencidas)
-  for (const i of INIS_EFF()) {
+  for (const i of v.initiatives) {
     const r = initiativeRisk(i);
     for (const d of r.drivers) {
       if (d.text.startsWith("Ejecución presupuestal")) {
@@ -383,7 +372,7 @@ export function buildAlerts(): Alert[] {
           title: i.name,
           detail: d.text + ".",
           href: `/panel/iniciativas/${i.id}`,
-          owner: responsible(i.ownerId).dependencia,
+          owner: responsible(v, i.ownerId).dependencia,
           line: i.line,
         });
       }
@@ -394,7 +383,7 @@ export function buildAlerts(): Alert[] {
           title: i.name,
           detail: d.text + ".",
           href: `/panel/iniciativas/${i.id}`,
-          owner: responsible(i.ownerId).dependencia,
+          owner: responsible(v, i.ownerId).dependencia,
           line: i.line,
         });
       }
@@ -402,7 +391,7 @@ export function buildAlerts(): Alert[] {
   }
 
   // instrumento: celdas sin evidencia y evidencias sin verificar
-  const roll = maturityRollup();
+  const roll = maturityRollup(v);
   for (const c of roll.cellsWithoutEvidence) {
     const line = LINES.find((l) => l.n === c.line)!;
     const dim = DIMENSIONS.find((d) => d.key === c.dimension)!;
@@ -430,10 +419,10 @@ export function buildAlerts(): Alert[] {
 
 /* ═══ Resumen ejecutivo (para el panel y /api/td/summary) ═══ */
 
-export function executiveSummary() {
-  const roll = maturityRollup();
-  const risks = INIS_EFF().map((i) => ({ i, r: initiativeRisk(i) }));
-  const budget = INIS_EFF().reduce(
+export function executiveSummary(v: TenantView) {
+  const roll = maturityRollup(v);
+  const risks = v.initiatives.map((i) => ({ i, r: initiativeRisk(i) }));
+  const budget = v.initiatives.reduce(
     (a, i) => ({
       planned: a.planned + i.budgetPlanned,
       committed: a.committed + i.budgetCommitted,
@@ -441,11 +430,11 @@ export function executiveSummary() {
     }),
     { planned: 0, committed: 0, executed: 0 },
   );
-  const actions = INIS_EFF().flatMap((i) => i.actions);
-  const alerts = buildAlerts();
+  const actions = v.initiatives.flatMap((i) => i.actions);
+  const alerts = buildAlerts(v);
   return {
     maturity: roll,
-    kpis: KPIS_EFF().map((k) => ({ code: k.code, name: k.name, health: kpiHealth(k) })),
+    kpis: v.kpis.map((k) => ({ code: k.code, name: k.name, health: kpiHealth(k) })),
     initiatives: risks.map(({ i, r }) => ({
       id: i.id, name: i.name, status: i.status, progress: i.progress, risk: r,
     })),
@@ -453,11 +442,11 @@ export function executiveSummary() {
     actions: {
       total: actions.length,
       done: actions.filter((a) => a.status === "HECHA").length,
-      late: INIS_EFF().flatMap((i) =>
+      late: v.initiatives.flatMap((i) =>
         i.actions.filter((a) => a.status !== "HECHA" && periodIndex(a.quarter) < DEMO_NOW_INDEX),
       ).length,
     },
-    objectives: CMI_OBJECTIVES.map((o) => objectiveHealth(o.id)),
+    objectives: v.catalog.objectives.map((o) => objectiveHealth(v, o.id)),
     alerts,
     alertCounts: {
       critical: alerts.filter((a) => a.severity === 1).length,

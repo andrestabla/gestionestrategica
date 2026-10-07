@@ -4,11 +4,15 @@
 // glow sutil. Sin dependencias externas.
 
 import { useId } from "react";
-import { LINES, DIMENSIONS, SCORES, lineScore, lineTarget } from "@/data/demo";
+import { LINES, DIMENSIONS } from "@/data/demo";
 import { CO_PATHS, CO_VIEW, CESAR_MARK, CESAR_PATH, CESAR_VIEW, projectCesar } from "@/data/geo";
 
-/** Mapa de puntajes línea → dimensión (el de la medición vigente por defecto). */
+/** Mapa de puntajes línea → dimensión. Los gráficos lo reciben por props (la
+    vista de la empresa activa, scoresOf(v)); sin él, pintan «sin dato». */
 export type ScoresMap = Record<number, Record<string, { value: number; target: number }>>;
+
+/** Sin puntajes: ninguna celda. Los gráficos lo leen como «sin dato» (—). */
+const NO_SCORES: ScoresMap = { 1: {}, 2: {}, 3: {}, 4: {} };
 
 const fmtLevel = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1).replace(".", ","));
 
@@ -63,7 +67,7 @@ export function ScoreGauge({ value, max = 5, size = 210 }:
 
 /* ─── Radar de madurez (4 ejes) ─────────────────────────────────────────── */
 
-export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: ScoresMap }) {
+export function MaturityRadar({ size = 380, scores = NO_SCORES }: { size?: number; scores?: ScoresMap }) {
   const gid = useId();
   const cx = size / 2, cy = size / 2 + 8;
   const rMax = size * 0.31;
@@ -76,11 +80,11 @@ export function MaturityRadar({ size = 380, scores }: { size?: number; scores?: 
     vals.map((v, i) => pt(i, Number.isNaN(v) ? 0 : v).map((n) => n.toFixed(1)).join(",")).join(" ");
 
   const avgOf = (n: number, key: "value" | "target") => {
-    const dims = Object.values(scores![n]).filter((d) => d.value >= 0);   // −1 = sin dato
+    const dims = Object.values(scores[n] ?? {}).filter((d) => d.value >= 0);   // −1 = sin dato
     return dims.length ? dims.reduce((a, d) => a + d[key], 0) / dims.length : NaN;   // NaN = sin dato
   };
-  const actual = LINES.map((l) => (scores ? avgOf(l.n, "value") : lineScore(l.n)));
-  const target = LINES.map((l) => (scores ? avgOf(l.n, "target") : lineTarget(l.n)));
+  const actual = LINES.map((l) => avgOf(l.n, "value"));
+  const target = LINES.map((l) => avgOf(l.n, "target"));
   const perimeter = 4 * Math.SQRT2 * rMax; // aproximación suficiente para el dash
 
   return (
@@ -227,12 +231,12 @@ export function MiniRadar({ axes, color = "var(--cyan)", size = 200, max = 5 }: 
 
 const LEVEL_BG = ["", "var(--n1)", "var(--n2)", "var(--n3)", "var(--n4)", "var(--n5)"];
 
-export function MaturityHeatmap({ onCell, selected, scores }: {
+export function MaturityHeatmap({ onCell, selected, scores = NO_SCORES }: {
   onCell?: (line: number, dim: string) => void;
   selected?: { line: number; dim: string } | null;
   scores?: ScoresMap;
 }) {
-  const sc = scores ?? SCORES;
+  const sc = scores;
   return (
     <div className="space-y-2.5">
       {LINES.map((l) => {
@@ -244,7 +248,7 @@ export function MaturityHeatmap({ onCell, selected, scores }: {
               {l.code} <span className="font-semibold text-ink-soft">{l.short}</span>
             </div>
             {dims.map((d) => {
-              const s = sc[l.n][d.key];
+              const s = sc[l.n]?.[d.key] ?? { value: -1, target: 3 };   // sin celda = sin dato
               const lvl = Math.max(1, Math.min(5, Math.round(s.value)));
               const isSel = selected?.line === l.n && selected?.dim === d.key;
               if (s.value < 0) {

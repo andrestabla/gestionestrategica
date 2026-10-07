@@ -5,8 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   captureVariable, captureProgress, publishCapture, effectiveCurrent, resetStore,
-  saveF2Response, getF2Responses, saveTestResponse, getTestResponses, platformResponses,
-} from "../src/server/store";
+  saveF2Response, getF2Responses, saveTestResponse, getTestResponses, platformResponses, tenantView } from "../src/server/store";
 import { consolidate } from "../src/lib/od";
 import { F2_GENERAL } from "../src/data/mapa";
 import { maturityRollup } from "../src/lib/logic";
@@ -49,7 +48,7 @@ test("publicar exige las 68 prácticas calificadas; la dimensión es el promedio
   assert.equal(cur.id, "A3");
   assert.equal(cur.scores![3]["EJE-2"].value, 4);
   assert.equal(cur.scores![1]["DIR-1"].value, 3);
-  const roll = maturityRollup();
+  const roll = maturityRollup(tenantView());
   assert.equal(roll.assessment.id, "A3");
   assert.equal(roll.cells.length, DIMS.length);
   const closed = captureVariable(consultor, "EJE-2.1", { level: 4 });

@@ -1,9 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SECTOR, percentileOf, sectorComparison, sectorQuadrant, sectorPeerBars, shortName, companyRatios } from "../src/data/sector";
-import { TERRITORIES } from "../src/data/demo";
+import { sectorFor, percentileOf, sectorComparison, sectorQuadrant, sectorPeerBars, shortName, companyRatios, SECTORS } from "../src/data/sector";
+import { ANDINA_CATALOG, emptyCatalog } from "../src/data/catalogo";
+
+const CAT = ANDINA_CATALOG;
+const SECTOR = sectorFor(CAT);
 
 test("el sector trae empresas reales con distribución coherente", () => {
+  assert.equal(SECTOR, SECTORS[CAT.company.sectorKey], "sectorFor resuelve por sectorKey del catálogo");
   assert.ok(SECTOR.n > 100, "más de 100 sociedades");
   assert.equal(SECTOR.peers.length, 60);
   assert.ok(SECTOR.comparables.length >= 20);
@@ -18,6 +22,11 @@ test("el sector trae empresas reales con distribución coherente", () => {
   assert.match(SECTOR.source.cut, /^\d{4}-12-31$/);
 });
 
+test("un sectorKey desconocido cae al sector por defecto", () => {
+  const other = emptyCatalog({ ...CAT.company, slug: "otra", sectorKey: "no-existe" });
+  assert.equal(sectorFor(other), SECTORS["suministros-industriales"]);
+});
+
 test("percentil interpola entre cuartiles y se invierte cuando menos es mejor", () => {
   const q = { n: 10, p10: -20, p25: -5, p50: 5, p75: 15, p90: 30 };
   assert.equal(percentileOf(q, 5), 0.5);
@@ -28,23 +37,38 @@ test("percentil interpola entre cuartiles y se invierte cuando menos es mejor", 
 });
 
 test("la comparación de Andina con el sector cubre las seis razones", () => {
-  const cmp = sectorComparison();
+  const cmp = sectorComparison(CAT);
   assert.equal(cmp.length, 6);
   const g = cmp.find((c) => c.key === "growth")!;
-  assert.equal(g.value, companyRatios().growth);
+  assert.equal(g.value, companyRatios(CAT.financials!).growth);
   assert.ok(g.percentile >= 1 && g.percentile <= 99);
   const lev = cmp.find((c) => c.key === "leverage")!;
   assert.equal(lev.best, SECTOR.dist.leverage.p25, "para endeudamiento el mejor cuartil es el inferior");
 });
 
 test("cuadrante y barras ubican a la empresa entre pares reales", () => {
-  const pts = sectorQuadrant();
+  const pts = sectorQuadrant(CAT);
   assert.equal(pts.filter((p) => p.self).length, 1);
+  assert.equal(pts.find((p) => p.self)!.name, CAT.company.shortName);
   assert.ok(pts.length > 10);
   for (const p of pts) assert.ok(p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
-  const bars = sectorPeerBars(TERRITORIES.filter((t) => t.presence === "sede").map((t) => t.name));
+  const home = CAT.territories.filter((t) => t.presence === "sede").map((t) => t.name);
+  const bars = sectorPeerBars(CAT, home);
   assert.ok(bars.peers.some((p) => p.self));
   assert.ok(bars.peers.length >= 2);
+  assert.equal(bars.nationalAvg, SECTOR.dist.growth.p50);
+});
+
+test("sin estados financieros ni territorio: estructuras vacías y seguras", () => {
+  const cat = emptyCatalog({ ...CAT.company, slug: "nueva" });
+  assert.equal(cat.financials, null);
+  assert.deepEqual(sectorComparison(cat), []);
+  const pts = sectorQuadrant(cat);
+  assert.equal(pts.filter((p) => p.self).length, 0, "sin punto propio");
+  assert.equal(pts.length, SECTOR.comparables.length, "solo los pares");
+  const bars = sectorPeerBars(cat, []);
+  assert.ok(!bars.peers.some((p) => p.self), "sin barra propia");
+  assert.ok(bars.peers.length >= 2, "sin sedes se toman comparables del país");
   assert.equal(bars.nationalAvg, SECTOR.dist.growth.p50);
 });
 

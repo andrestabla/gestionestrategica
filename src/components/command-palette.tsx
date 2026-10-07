@@ -7,8 +7,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PRACTICES, DIMS, FRAMEWORKS } from "@/data/mapa";
-import { KPI_CATALOG, INITIATIVES_FULL } from "@/data/cmi";
-import { TASKS, PEOPLE } from "@/data/proyectos";
+import { useCatalog } from "@/components/catalog-context";
+import type { TenantView } from "@/lib/vista";
 import { Search, CornerDownLeft } from "lucide-react";
 
 type Entry = {
@@ -23,7 +23,8 @@ type Entry = {
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-function buildIndex(): Entry[] {
+/** Índice de búsqueda: el mapa 4Shine (fijo) más el portafolio de la empresa activa. */
+function buildIndex(v: TenantView): Entry[] {
   const e: Entry[] = [];
   for (const p of PRACTICES) {
     e.push({
@@ -49,7 +50,7 @@ function buildIndex(): Entry[] {
       haystack: norm(`${f.id} ${f.name} ${f.promise}`),
     });
   }
-  for (const k of KPI_CATALOG) {
+  for (const k of v.kpis) {
     e.push({
       id: k.code, group: "Indicadores",
       title: `${k.code} · ${k.name}`, sub: `${k.unit} · ${k.frequency}`,
@@ -57,7 +58,7 @@ function buildIndex(): Entry[] {
       haystack: norm(`${k.code} ${k.name} ${k.definition}`),
     });
   }
-  for (const i of INITIATIVES_FULL) {
+  for (const i of v.initiatives) {
     e.push({
       id: i.id, group: "Iniciativas",
       title: `${i.id.toUpperCase()} · ${i.name}`, sub: i.subsistema,
@@ -65,7 +66,7 @@ function buildIndex(): Entry[] {
       haystack: norm(`${i.id} ${i.name} ${i.objetivo}`),
     });
   }
-  for (const t of TASKS) {
+  for (const t of v.tasks) {
     e.push({
       id: t.id, group: "Tareas",
       title: `${t.id} · ${t.title}`, sub: `vence ${t.due}`,
@@ -73,7 +74,7 @@ function buildIndex(): Entry[] {
       haystack: norm(`${t.id} ${t.title} ${t.desc}`),
     });
   }
-  for (const p of PEOPLE) {
+  for (const p of v.catalog.people) {
     e.push({
       id: p.id, group: "Personas",
       title: p.name, sub: p.cargo,
@@ -108,7 +109,8 @@ export function CommandPalette() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const index = useMemo(buildIndex, []);
+  const v = useCatalog();
+  const index = useMemo(() => buildIndex(v), [v]);
 
   // ⌘K / Ctrl+K abre; Esc cierra
   useEffect(() => {

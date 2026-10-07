@@ -8,7 +8,9 @@ import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatusChip } from "@/components/ui";
 import { AccessChip } from "@/components/user-context";
 import { GanttChart, PriorityMatrix } from "@/components/charts";
-import { INITIATIVES, LINES, fmtCOP } from "@/data/demo";
+import { LINES, fmtCOP } from "@/data/demo";
+import { useCatalog } from "@/components/catalog-context";
+import { initiativesOf } from "@/lib/vista";
 import { usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
 import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
 
@@ -16,7 +18,9 @@ const SCORE_COLOR = (s: number) => s >= 80 ? "var(--ok)" : s >= 65 ? "var(--cyan
 
 export default function RutaPage() {
   const [sel, setSel] = useState<string | null>(null);
-  const ini = sel ? INITIATIVES.find((i) => i.id === sel) : null;
+  const v = useCatalog();
+  const inis = initiativesOf(v);
+  const ini = sel ? inis.find((i) => i.id === sel) : null;
   const { data: prio } = usePriorizacion();
   const rows = prio?.ranking ?? [];
   const cOf = (id: string) => rows.find((r) => r.id === id)?.c;
@@ -24,8 +28,8 @@ export default function RutaPage() {
   const selC = ini ? cOf(ini.id) : undefined;
   const selD = ini ? prio?.decisions[ini.id] : undefined;
 
-  const corto = INITIATIVES.filter((i) => i.horizon === "CORTO");
-  const mediano = INITIATIVES.filter((i) => i.horizon === "MEDIANO");
+  const corto = inis.filter((i) => i.horizon === "CORTO");
+  const mediano = inis.filter((i) => i.horizon === "MEDIANO");
 
   return (
     <>
@@ -37,8 +41,11 @@ export default function RutaPage() {
           <CardHeader title="Cronograma por horizontes"
             sub={`Corto plazo: ${corto.length} iniciativas · mediano plazo: ${mediano.length}`} />
           <div className="px-5 py-4">
+            {inis.length === 0 && (
+              <p className="mb-3 text-[12.5px] italic text-faint">Esta empresa aún no tiene iniciativas en su ruta.</p>
+            )}
             <GanttChart onSelect={setSel}
-              items={INITIATIVES.map((i) => ({
+              items={inis.map((i) => ({
                 id: i.id, name: i.name, start: i.start, end: i.end,
                 horizon: i.horizon, progress: i.progress,
               }))} />
@@ -174,6 +181,9 @@ export default function RutaPage() {
           <Card key={g.label}>
             <CardHeader title={g.label} />
             <div className="divide-y divide-line">
+              {g.items.length === 0 && (
+                <p className="px-5 py-4 text-[12px] italic text-faint">Sin iniciativas en este horizonte.</p>
+              )}
               {g.items.map((i) => (
                 <button key={i.id} onClick={() => setSel(i.id)}
                   className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-2">

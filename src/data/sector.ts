@@ -1,12 +1,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Benchmark sectorial con datos reales de la Superintendencia de Sociedades
 // (datos abiertos · datos.gov.co). El JSON por sector lo produce
-// scripts/sector-fetch.ts; aquí se tipa, se elige el sector de la empresa y se
-// calculan las posiciones (percentiles) frente a la distribución del sector.
+// scripts/sector-fetch.ts; aquí se tipa, se resuelve el sector de la empresa a
+// partir de su catálogo y se calculan las posiciones (percentiles) frente a la
+// distribución del sector. Este módulo no conoce a ninguna empresa fija: toda
+// función recibe el catálogo (o sus partes) de forma explícita.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import suministros from "./sector/suministros-industriales.json";
-import { INSTITUTION, FINANCIALS } from "./demo";
+import type { Catalog, Financials } from "@/data/catalogo";
 
 export type Quantiles = { n: number; p10: number | null; p25: number | null; p50: number | null; p75: number | null; p90: number | null };
 export type SectorPeer = {
@@ -37,8 +39,13 @@ export const SECTORS: Record<string, SectorData> = {
 
 export const sectorOf = (key: string): SectorData | null => SECTORS[key] ?? null;
 
-/** Sector de la empresa activa. */
-export const SECTOR: SectorData = SECTORS[INSTITUTION.sectorKey] ?? suministros as SectorData;
+/** Sector de referencia por defecto cuando el `sectorKey` de la empresa no
+    tiene JSON cargado (hoy solo existe uno). */
+export const DEFAULT_SECTOR_KEY = "suministros-industriales";
+
+/** Sector de referencia de una empresa, según `company.sectorKey` de su catálogo. */
+export const sectorFor = (cat: Catalog): SectorData =>
+  SECTORS[cat.company.sectorKey] ?? SECTORS[DEFAULT_SECTOR_KEY];
 
 /** Posición de un valor dentro de la distribución (0..1), interpolando entre los
     percentiles publicados. Para métricas donde «menos es mejor» (endeudamiento)
@@ -75,9 +82,9 @@ export const RATIOS: { key: RatioKey; name: string; unit: string; lowerIsBetter?
   { key: "leverage", name: "Endeudamiento", unit: "%", lowerIsBetter: true, help: "Total pasivos sobre total de activos." },
 ];
 
-/** Razones financieras de la empresa activa, derivadas de FINANCIALS (demo). */
-export function companyRatios(): Record<RatioKey, number> {
-  const f = FINANCIALS;
+/** Razones financieras de una empresa a partir de sus estados financieros de
+    cierre (COP millones, misma estructura que reporta a Supersociedades). */
+export function companyRatios(f: Financials): Record<RatioKey, number> {
   const pct = (a: number, b: number) => Math.round((a / b) * 1000) / 10;
   return {
     growth: pct(f.revenue - f.revenuePrev, f.revenuePrev),
@@ -89,9 +96,17 @@ export function companyRatios(): Record<RatioKey, number> {
   };
 }
 
-/** Comparación de la empresa con el sector, razón por razón. */
-export function sectorComparison(sector: SectorData = SECTOR) {
-  const mine = companyRatios();
+export type RatioComparison = (typeof RATIOS)[number] & {
+  value: number; median: number | null; best: number | null; percentile: number; better: boolean;
+};
+
+/** Comparación de la empresa con su sector, razón por razón. Si la empresa no
+    tiene estados financieros registrados (`catalog.financials === null`)
+    devuelve `[]`: M2 muestra entonces «sin estados financieros registrados». */
+export function sectorComparison(cat: Catalog): RatioComparison[] {
+  if (!cat.financials) return [];
+  const sector = sectorFor(cat);
+  const mine = companyRatios(cat.financials);
   return RATIOS.map((r) => {
     const q = sector.dist[r.key];
     const value = mine[r.key];
@@ -101,31 +116,40 @@ export function sectorComparison(sector: SectorData = SECTOR) {
   });
 }
 
+export type QuadrantPoint = { name: string; x: number; y: number; self: boolean };
+
 /** Puntos del cuadrante: rentabilidad (margen operacional) × crecimiento, en
-    percentiles del sector, para la empresa y los pares comparables. */
-export function sectorQuadrant(sector: SectorData = SECTOR) {
-  const mine = companyRatios();
-  const pt = (name: string, op: number, g: number, self = false) => ({
+    percentiles del sector, para la empresa y los pares comparables. Sin
+    estados financieros registrados solo se devuelven los pares (ningún punto
+    con `self: true`): M2 dibuja el sector y avisa que falta la empresa. */
+export function sectorQuadrant(cat: Catalog): QuadrantPoint[] {
+  const sector = sectorFor(cat);
+  const pt = (name: string, op: number, g: number, self = false): QuadrantPoint => ({
     name, x: percentileOf(sector.dist.opMargin, op), y: percentileOf(sector.dist.growth, g), self,
   });
-  return [
-    pt(INSTITUTION.shortName, mine.opMargin, mine.growth, true),
-    ...sector.comparables.map((p) => pt(shortName(p.name), p.opMargin ?? 0, p.growth ?? 0)),
-  ];
+  const peers = sector.comparables.map((p) => pt(shortName(p.name), p.opMargin ?? 0, p.growth ?? 0));
+  if (!cat.financials) return peers;
+  const mine = companyRatios(cat.financials);
+  return [pt(cat.company.shortName, mine.opMargin, mine.growth, true), ...peers];
 }
 
-/** Pares de referencia para las barras: comparables de los departamentos donde
-    la empresa tiene sede, ordenados por crecimiento. */
-export function sectorPeerBars(depts: string[], sector: SectorData = SECTOR, limit = 6) {
-  const mine = companyRatios();
-  const home = sector.comparables.filter((p) => depts.includes(p.dept) && p.growth !== null).slice(0, limit);
+export type PeerBar = { name: string; value: number; self: boolean };
+
+/** Pares de referencia para las barras: comparables con domicilio en los
+    departamentos indicados (normalmente los de sede de la empresa), ordenados
+    por crecimiento. Si `depts` está vacío se toman los comparables de todo el
+    país. Sin estados financieros registrados las barras no incluyen a la
+    empresa (ninguna con `self: true`). */
+export function sectorPeerBars(cat: Catalog, depts: string[], limit = 6): { metric: string; nationalAvg: number; peers: PeerBar[] } {
+  const sector = sectorFor(cat);
+  const pool = sector.comparables.filter((p) => p.growth !== null && (depts.length === 0 || depts.includes(p.dept)));
+  const home = pool.slice(0, limit);
+  const peers: PeerBar[] = home.map((p) => ({ name: shortName(p.name), value: p.growth!, self: false }));
+  if (cat.financials) peers.push({ name: cat.company.shortName, value: companyRatios(cat.financials).growth, self: true });
   return {
     metric: `Crecimiento de ingresos ${sector.source.cut.slice(0, 4)}`,
     nationalAvg: sector.dist.growth.p50 ?? 0,
-    peers: [
-      ...home.map((p) => ({ name: shortName(p.name), value: p.growth!, self: false })),
-      { name: INSTITUTION.shortName, value: mine.growth, self: true },
-    ].sort((a, b) => b.value - a.value),
+    peers: peers.sort((a, b) => b.value - a.value),
   };
 }
 
