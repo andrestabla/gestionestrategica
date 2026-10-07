@@ -38,7 +38,7 @@ la demo del diagnóstico en línea.
 ```bash
 npm install
 npm run dev        # http://localhost:3000
-npm test           # 61 pruebas del motor, el store, el diagnóstico, la priorización y el sector
+npm test           # 64 pruebas del motor, el store, el diagnóstico, la priorización, el sector y el despliegue
 ```
 
 Modo demo por defecto, sin base de datos. Cuentas:
@@ -96,6 +96,30 @@ Motor en `src/lib/priorizacion.ts`; store `evaluateInitiative` /
 `decideInitiative` (una evaluación por evaluador e iniciativa, persistidas en
 `InitiativeEvaluation` e `InitiativeDecision`); API `/api/td/priorizacion`;
 vista `/panel/iniciativas/priorizacion` y panel en cada ficha.
+
+## Despliegue con PostgreSQL (Vercel)
+
+El esquema de producción es `prisma/postgres/schema.prisma` (idéntico al
+local salvo el proveedor; una prueba lo verifica) con su migración en
+`prisma/postgres/migrations`. El cliente elige el driver por la URL:
+`postgres://…` usa `@prisma/adapter-pg`, `file:` usa SQLite.
+
+1. Crear la base (Neon, Vercel Postgres o propia) y, en Vercel, las
+   variables de `.env.example`: `DATABASE_URL`, `AUTH_SECRET`
+   (`openssl rand -base64 32`), `DEMO_LOGIN=off` y las cuatro `R2_*`
+   (el disco de Vercel es efímero: evidencias y logos van a R2).
+2. `vercel.json` fija el build en `npm run build:vercel`, que genera el
+   cliente con la configuración PostgreSQL, aplica `prisma migrate deploy` y
+   construye Next; región `gru1` (São Paulo).
+3. Sembrar una vez: `DATABASE_URL=postgres://… npm run db:pg:seed`.
+4. Con `DEMO_LOGIN=off` la contraseña demo deja de valer: fijar contraseñas
+   reales con `POST /api/td/users/password` `{ email, password }` (rol con
+   `manage_users`); el login valida con bcrypt contra `User.passwordHash`.
+
+Para cambiar el esquema: editar `prisma/schema.prisma`, correr
+`npm run db:migrate` (SQLite), copiar el cambio a `prisma/postgres/schema.prisma`
+y generar la migración PostgreSQL sin base con
+`npx prisma migrate diff --from-migrations prisma/postgres/migrations --to-schema prisma/postgres/schema.prisma --script > prisma/postgres/migrations/<n>_<nombre>/migration.sql`.
 
 ## Base de datos (SQLite local)
 

@@ -11,7 +11,12 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "tsx --test tests/*.test.ts",
-    "sector:fetch": "tsx scripts/sector-fetch.ts"
+    "sector:fetch": "tsx scripts/sector-fetch.ts",
+    "postinstall": "prisma generate",
+    "db:pg:generate": "prisma generate --config prisma.config.postgres.ts",
+    "db:pg:deploy": "prisma migrate deploy --config prisma.config.postgres.ts",
+    "db:pg:seed": "tsx prisma/seed.ts",
+    "build:vercel": "prisma generate --config prisma.config.postgres.ts && prisma migrate deploy --config prisma.config.postgres.ts && next build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

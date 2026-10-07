@@ -44,3 +44,6 @@ var/uploads/
 
 # base de datos local (SQLite)
 var/*.db
+
+# plantilla de variables (sí se versiona)
+!.env.example

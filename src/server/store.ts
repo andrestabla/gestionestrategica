@@ -183,11 +183,18 @@ async function prisma(): Promise<AnyPrisma> {
   const gp = globalThis as unknown as { __pgtdPrisma?: AnyPrisma };
   if (!gp.__pgtdPrisma) {
     const { PrismaClient } = await serverImport("@prisma/client") as AnyPrisma;
-    const { PrismaBetterSqlite3 } = await serverImport("@prisma/adapter-better-sqlite3") as AnyPrisma;
-    // ruta absoluta: el runtime de Next puede resolver ./ contra otro CWD
     let url = process.env.DATABASE_URL!;
-    if (url.startsWith("file:./")) url = "file:" + process.cwd() + "/" + url.slice(7);
-    const adapter = new PrismaBetterSqlite3({ url });
+    let adapter: AnyPrisma;
+    if (/^postgres(ql)?:\/\//.test(url)) {
+      // PostgreSQL (Neon, Vercel Postgres, local): prisma/postgres/schema.prisma
+      const { PrismaPg } = await serverImport("@prisma/adapter-pg") as AnyPrisma;
+      adapter = new PrismaPg({ connectionString: url });
+    } else {
+      // SQLite local; ruta absoluta porque el runtime de Next puede resolver ./ contra otro CWD
+      const { PrismaBetterSqlite3 } = await serverImport("@prisma/adapter-better-sqlite3") as AnyPrisma;
+      if (url.startsWith("file:./")) url = "file:" + process.cwd() + "/" + url.slice(7);
+      adapter = new PrismaBetterSqlite3({ url });
+    }
     gp.__pgtdPrisma = new PrismaClient({ adapter });
   }
   return gp.__pgtdPrisma;
@@ -1424,6 +1431,44 @@ export function createUser(
   });
   audit(actor, "task", email, `usuario creado (${input.role}${user.line ? ` · ${capName(user.line)}` : ""})`);
   return { ok: true, user };
+}
+
+/** Contraseña real contra la base (bcrypt). Devuelve null cuando no hay base
+    o el usuario no tiene contraseña fijada: entonces aplica la demo, si está
+    permitida (DEMO_LOGIN distinto de «off»). */
+export async function verifyPassword(email: string, password: string): Promise<boolean | null> {
+  if (!hasDb()) return null;
+  try {
+    const db = await prisma();
+    const u = await db.user.findUnique({ where: { email: email.toLowerCase() }, select: { passwordHash: true, active: true } });
+    if (!u || !u.passwordHash) return null;
+    const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
+    return Boolean(u.active) && (await (bcrypt.default ?? bcrypt).compare(password, u.passwordHash));
+  } catch {
+    return null;
+  }
+}
+
+/** Fija o cambia la contraseña de un usuario (manage_users). Exige base de datos. */
+export async function setUserPassword(
+  actor: SessionUser, email: string, password: string,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
+  const target = users().find((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (!target) return { ok: false, status: 404, error: "El usuario no existe." };
+  if (typeof password !== "string" || password.length < 10) return { ok: false, status: 422, error: "La contraseña debe tener al menos 10 caracteres." };
+  if (!hasDb()) return { ok: false, status: 422, error: "Fijar contraseñas exige base de datos; en modo demo todos entran con la contraseña demo." };
+  const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
+  const hash = await (bcrypt.default ?? bcrypt).hash(password, 10);
+  const db = await prisma();
+  const company = await db.company.findFirst();
+  await db.user.upsert({
+    where: { email: target.email.toLowerCase() },
+    update: { passwordHash: hash },
+    create: { email: target.email.toLowerCase(), name: target.name, role: target.role, line: target.line ?? null, passwordHash: hash, companyId: company?.id ?? "" },
+  });
+  audit(actor, "task", target.email, "contraseña fijada");
+  return { ok: true };
 }
 
 export function updateUser(

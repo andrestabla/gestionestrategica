@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { hydrateFromDb } from "@/server/store";
 import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
-import { writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import { putObject } from "@/server/storage";
 
 // POST /api/branding-asset — sube un recurso de marca (logo, favicon,
-// imagen de login, loader) al almacenamiento local (var/branding). Con R2
-// activo, el destino cambia sin tocar la UI. Devuelve la URL servible.
+// imagen de login, loader): var/branding en local, el bucket con R2
+// configurado (src/server/storage.ts). Devuelve la URL servible.
 const MAX = 8 * 1024 * 1024;
 const OK_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif", "image/x-icon"];
 
@@ -29,8 +28,6 @@ export async function POST(req: Request) {
 
   const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60);
   const name = `${Date.now().toString(36)}-${safe}`;
-  const dir = path.join(process.cwd(), "var", "branding");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
+  await putObject("branding", name, Buffer.from(await file.arrayBuffer()), file.type);
   return NextResponse.json({ url: `/api/branding-asset/${name}` }, { status: 201 });
 }

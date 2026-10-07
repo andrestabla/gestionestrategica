@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
 import { randomBytes } from "crypto";
-import path from "path";
 import { getSession } from "@/lib/session";
 import { attachEvidence, hydrateFromDb } from "@/server/store";
+import { putObject } from "@/server/storage";
 
 // POST /api/td/tasks/:id/evidence — multipart: adjunta el archivo del
-// entregable. Almacenamiento local en var/uploads (en producción, la misma
-// interfaz escribe a Cloudflare R2: cambia el destino, no el contrato).
+// entregable. Local en var/uploads; con R2 configurado, en el bucket
+// (src/server/storage.ts): cambia el destino, no el contrato.
 const MAX_SIZE = 15 * 1024 * 1024; // 15 MB
 const ALLOWED = /\.(pdf|docx?|xlsx?|pptx?|png|jpe?g|zip|csv)$/i;
 
@@ -37,9 +36,6 @@ export async function POST(
 
   const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
   const key = `${randomBytes(8).toString("hex")}-${safeName}`;
-  const dir = path.join(process.cwd(), "var", "uploads");
-  await mkdir(dir, { recursive: true });
-  const filePath = path.join(dir, key);
 
   // el permiso se valida ANTES de escribir el archivo
   const result = attachEvidence(user, id,
@@ -47,6 +43,6 @@ export async function POST(
     { title, kind });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
 
-  await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+  await putObject("uploads", key, Buffer.from(await file.arrayBuffer()), file.type || "application/octet-stream");
   return NextResponse.json({ evidence: result.evidence });
 }

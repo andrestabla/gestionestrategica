@@ -3,12 +3,14 @@
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { INSTITUTION, KPIS, INITIATIVES, DEMO_USERS } from "../src/data/demo";
 import { RESPONSIBLES, CMI_OBJECTIVES, SCORES_HISTORY, EVIDENCE_CATALOG } from "../src/data/cmi";
 import { PEOPLE, TASKS } from "../src/data/proyectos";
 
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./var/4shine.db" });
+const url = process.env.DATABASE_URL ?? "file:./var/4shine.db";
+const adapter = /^postgres(ql)?:\/\//.test(url) ? new PrismaPg({ connectionString: url }) : new PrismaBetterSqlite3({ url });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

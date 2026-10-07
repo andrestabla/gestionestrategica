@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findActiveUser, hydrateFromDb } from "@/server/store";
+import { findActiveUser, verifyPassword, hydrateFromDb } from "@/server/store";
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
-
-// Prototipo: valida contra los usuarios demo. Con la base de datos conectada,
-// esta ruta pasa a consultar el modelo User (bcrypt + control de intentos).
+// En producción: DEMO_LOGIN=off desactiva la contraseña demo; entonces solo
+// entra quien tiene contraseña fijada en la base (bcrypt).
+const demoAllowed = () => process.env.DEMO_LOGIN !== "off";
 
 const Body = z.object({ email: z.string().email(), password: z.string().min(4) });
 
@@ -18,7 +18,9 @@ export async function POST(req: Request) {
   }
   const { email, password } = parsed.data;
   const user = findActiveUser(email);
-  if (!user || password !== DEMO_PASSWORD) {
+  const real = user ? await verifyPassword(user.email, password) : false;
+  const ok = real === true || (real === null && demoAllowed() && password === DEMO_PASSWORD);
+  if (!user || !ok) {
     return NextResponse.json(
       { error: "Credenciales incorrectas. Verifica el correo y la contraseña." },
       { status: 401 },
