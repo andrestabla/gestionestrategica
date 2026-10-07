@@ -155,6 +155,7 @@ type Registry = {
   tenants: Map<string, TenantState>;
   platformUsers: ManagedUser[];            // admins de plataforma (sin empresa)
   companiesHydrated: boolean;
+  companiesHydratedAt: number;   // última lectura del registro (se refresca cada minuto: varias instancias)
 };
 
 const g = (() => {
@@ -165,6 +166,7 @@ const g = (() => {
       tenants: new Map(),
       platformUsers: PLATFORM_USERS.map((u) => ({ email: u.email, name: u.name, role: u.role, active: true, seeded: true })),
       companiesHydrated: false,
+      companiesHydratedAt: 0,
     };
   }
   return gg.__4shine;
@@ -281,12 +283,18 @@ import type { Person } from "@/data/proyectos";
 import type { Financials } from "@/data/catalogo";
 import type { Territory } from "@/data/demo";
 
-/** Carga las empresas y los admins de plataforma desde la base (una vez). */
+const COMPANIES_TTL_MS = 60_000;
+
+/** Carga las empresas y los admins de plataforma desde la base. Se repite
+    cada minuto para que los cambios hechos en otra instancia (alta, cambio
+    de identificador, desactivación) lleguen a todas. */
 export async function hydrateCompanies() {
-  if (!hasDb() || g.companiesHydrated) return;
+  if (!hasDb()) return;
+  if (g.companiesHydrated && Date.now() - g.companiesHydratedAt < COMPANIES_TTL_MS) return;
   try {
     const db = await prisma();
-    for (const c of await db.company.findMany()) {
+    const rows = await db.company.findMany();
+    for (const c of rows) {
       const prev = g.companies.get(c.slug);
       g.companies.set(c.slug, {
         slug: c.slug, name: c.name, shortName: c.shortName, city: c.city, department: c.department,
@@ -299,12 +307,18 @@ export async function hydrateCompanies() {
       const t = g.tenants.get(c.slug);
       if (t) t.dbId = c.id;
     }
+    // empresas que ya no están en la base con ese identificador (renombradas o eliminadas en otra instancia)
+    const seen = new Set(rows.map((c: { slug: string }) => c.slug));
+    for (const slug of [...g.companies.keys()]) {
+      if (!seen.has(slug) && g.companies.get(slug)?.dbId) { g.companies.delete(slug); g.tenants.delete(slug); }
+    }
     for (const u of await db.user.findMany({ where: { companyId: null } })) {
       const existing = g.platformUsers.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
       if (existing) { existing.name = u.name; existing.active = u.active; }
       else g.platformUsers.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], active: u.active, seeded: false, at: u.createdAt.toISOString() });
     }
     g.companiesHydrated = true;
+    g.companiesHydratedAt = Date.now();
   } catch (e) {
     console.error("[4shine] hidratación de empresas falló:", (e as Error).message);
   }
