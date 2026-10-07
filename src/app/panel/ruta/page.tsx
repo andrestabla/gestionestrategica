@@ -180,7 +180,7 @@ export default function RutaPage() {
       {/* listas por horizonte */}
       <div className={`rise rise-3 grid gap-5 ${horizons.length >= 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         {horizons.map((hz, k) => ({
-          label: `${horizonTitle(hz)}${k === 0 ? " (0–" : ` (${horizons[k - 1].months}–`}${hz.months} meses)`,
+          label: `${hz.label} · ${k === 0 ? 0 : horizons[k - 1].months}–${hz.months} meses`,
           items: inis.filter((i) => i.horizon === hz.id), color: hColor(hz.id),
         })).map((g) => (
           <Card key={g.label}>
