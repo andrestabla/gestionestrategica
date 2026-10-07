@@ -302,9 +302,20 @@ export async function hydrateFromDb() {
 }
 
 /** Escribe en la base si está configurada; la memoria sigue siendo la fuente. */
+// En un entorno serverless (Vercel) la función se congela al responder: una
+// escritura lanzada sin esperar se perdería. `after()` de Next registra la
+// promesa para que la plataforma la complete antes de apagar la función; fuera
+// de una petición (pruebas, seed) no hay ámbito y se omite sin fallar.
 async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
-  try { await fn(await prisma()); } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
+  const run = (async () => {
+    try { await fn(await prisma()); } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
+  })();
+  try {
+    const { after } = await serverImport("next/server") as { after?: (task: Promise<unknown>) => void };
+    after?.(run);
+  } catch { /* sin ámbito de petición: la promesa sigue su curso */ }
+  await run;
 }
 
 /* ═══ Lecturas ═══ */
