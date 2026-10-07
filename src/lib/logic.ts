@@ -52,6 +52,15 @@ const TARGET_DATE_INDEX = 2028 * 12 + 11; // horizonte del roadmap: dic-2028
 
 export function kpiHealth(k: KpiFull): KpiHealth {
   const series = k.series;
+  // KPI sin medición (empresas nuevas o resultados clave todavía sin dato):
+  // salud neutra y «sin dato fresco», sin proyección.
+  if (!series.length) {
+    return {
+      code: k.code, latest: k.baseline, latestPeriod: "—", delta: 0, improving: false, pctToTarget: 0,
+      semaphore: "WARN", isStale: true, staleBy: 0,
+      projection: { slopePerMonth: 0, projectedAtTarget: k.baseline, willReachTarget: false },
+    };
+  }
   const last = series[series.length - 1];
   const prev = series[series.length - 2];
   const delta = prev ? last.value - prev.value : 0;

@@ -437,3 +437,12 @@ test("fase2: la línea base congela el plan y mide el deslizamiento", async () =
   assert.ok(portfolioSlippage().daysGained > 0);
   resetStore();
 });
+
+test("kpi: un KPI sin medición tiene salud neutra y no rompe el motor", () => {
+  const k = { ...KPI_CATALOG[0], code: "SIN-01", series: [] as KpiFull["series"] };
+  const h = kpiHealth(k);
+  assert.equal(h.semaphore, "WARN");
+  assert.equal(h.latestPeriod, "—");
+  assert.ok(h.isStale);
+  assert.equal(h.latest, k.baseline);
+});

@@ -12,6 +12,7 @@
 // Las referencias se cargan en orden: responsables → personas → objetivos (sin
 // KPI) → KPI → objetivos (con KPI) → iniciativas → finanzas → territorio.
 
+import "dotenv/config";   // DATABASE_URL de .env (local); en producción se exporta en el entorno
 import { readFileSync } from "node:fs";
 import { runWithTenant } from "../src/server/tenant";
 import {
