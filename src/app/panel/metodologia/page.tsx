@@ -29,6 +29,7 @@ const ACTION_LABEL: Record<Action, string> = {
   verify_evidence: "Verificar evidencia de tareas",
   manage_users: "Administrar usuarios y roles de la empresa",
   manage_companies: "Crear, editar, desactivar y eliminar empresas",
+  manage_catalog: "Editar el catálogo de la empresa (responsables, personas, objetivos, KPI, iniciativas, finanzas y territorio)",
   manage_platform: "Integraciones, branding y configuración",
 };
 const ROLES: { key: Role; label: string }[] = [

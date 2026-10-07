@@ -3,6 +3,8 @@
 // Módulo de administración (manage_users, solo consultor):
 //   /panel/admin/empresas       → empresas (tenants): crear, editar, desactivar, eliminar
 //   /panel/admin/usuarios       → cuentas, roles y estado de la empresa activa
+//   /panel/admin/catalogo       → catálogo de la empresa activa (manage_catalog): responsables,
+//                                 personas, objetivos, KPI, iniciativas, finanzas y territorio
 //   /panel/admin/permisos       → la matriz RBAC documentada
 //   /panel/admin/integraciones  → OpenAI · Cloudflare R2 · AWS SES
 //   /panel/admin/branding       → identidad de la plataforma (aplicada en vivo)
@@ -14,17 +16,19 @@ import { AccessChip, useCan, useUser } from "@/components/user-context";
 import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
+import { CatalogoTab } from "../catalogo-tab";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft,
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen,
 } from "lucide-react";
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "empresas" | "usuarios" | "permisos" | "integraciones" | "branding";
+type Tab = "empresas" | "usuarios" | "catalogo" | "permisos" | "integraciones" | "branding";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
+  { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "permisos", label: "Permisos de acceso", icon: KeyRound },
   { id: "integraciones", label: "Integraciones", icon: Plug },
   { id: "branding", label: "Branding", icon: Palette },
@@ -35,16 +39,17 @@ export default function AdminPage() {
   const canUsers = useCan("manage_users");
   const canPlatform = useCan("manage_platform");
   const canCompanies = useCan("manage_companies");
+  const canCatalog = useCan("manage_catalog");
   const router = useRouter();
   const params = useParams<{ slug?: string[] }>();
 
-  // el consultor solo administra usuarios y roles; el admin, todo el módulo
+  // el consultor administra usuarios, roles y el catálogo (también el líder); el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "usuarios" ? canUsers : t.id === "empresas" ? canCompanies : canPlatform);
+    t.id === "usuarios" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
-  if (!canUsers && !canPlatform) {
+  if (!canUsers && !canPlatform && !canCatalog) {
     return (
       <>
         <PageHeader kicker="Administración" title="Usuarios y permisos" />
@@ -75,6 +80,7 @@ export default function AdminPage() {
 
       {tab === "empresas" && <EmpresasTab />}
       {tab === "usuarios" && <UsersTab canCompanies={canCompanies} />}
+      {tab === "catalogo" && <CatalogoTab />}
       {tab === "permisos" && <PermisosTab />}
       {tab === "integraciones" && <IntegracionesTab />}
       {tab === "branding" && <BrandingTab />}
@@ -394,6 +400,7 @@ const ACTION_DESC: Record<Action, string> = {
   verify_evidence: "Verificar evidencia — la garantía de independencia",
   manage_users: "Administrar usuarios y roles de la empresa",
   manage_companies: "Crear, editar, desactivar y eliminar empresas",
+  manage_catalog: "Editar el catálogo de la empresa (responsables, personas, objetivos, KPI, iniciativas, finanzas y territorio)",
   manage_platform: "Integraciones, branding y configuración de la plataforma",
 };
 

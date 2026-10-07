@@ -170,7 +170,10 @@ const g = (() => {
   return gg.__4shine;
 })();
 
-function newState(slug: string, catalog: Catalog, dbId: string | null): TenantState {
+function newState(slug: string, source: Catalog, dbId: string | null): TenantState {
+  // copia propia: el catálogo de la empresa se edita desde la plataforma y
+  // no debe tocar la plantilla ni el de otra empresa
+  const catalog = structuredClone(source);
   return {
     slug, dbId, catalog,
     tasks: catalog.tasks.map((t) => ({ ...t })),
@@ -267,7 +270,16 @@ async function prisma(): Promise<AnyPrisma> {
    El registro de empresas es global; el estado de cada una se hidrata la
    primera vez que una petición la activa. */
 
-import { writeCatalog, readCatalog, companyRow } from "@/server/catalog-db";
+import {
+  writeCatalog, readCatalog, companyRow, writeCompanyExtras, writeResponsible, deleteResponsible as dbDeleteResponsible,
+  writeObjective, deleteObjective as dbDeleteObjective, writeKpi, deleteKpi as dbDeleteKpi, writeInitiative,
+  deleteInitiative as dbDeleteInitiative, writePerson, deletePerson as dbDeletePerson,
+} from "@/server/catalog-db";
+import { frameworkOfPractice } from "@/data/mapa";
+import type { Responsible, CmiObjective } from "@/data/cmi";
+import type { Person } from "@/data/proyectos";
+import type { Financials } from "@/data/catalogo";
+import type { Territory } from "@/data/demo";
 
 /** Carga las empresas y los admins de plataforma desde la base (una vez). */
 export async function hydrateCompanies() {
@@ -1585,6 +1597,267 @@ export const effectiveAssessments = () =>
     a.id === "A3" && S().published
       ? { id: a.id, label: a.label, period: S().published!.period, status: "PUBLICADA" as const, note: S().published!.note }
       : { id: a.id, label: a.label, period: a.period, status: a.status, note: a.note });
+
+/* ═══ Editor del catálogo de la empresa (manage_catalog) ═══
+   Responsables (cargos), personas, objetivos, KPI, iniciativas, finanzas y
+   territorio. Cada mutación valida, mantiene las referencias entre entidades
+   y persiste su fila; los códigos se asignan en secuencia cuando faltan. */
+
+type CatResult = { ok: true } | { ok: false; status: number; error: string };
+const fail = (status: number, error: string): CatResult => ({ ok: false, status, error });
+const nextCode = (prefix: string, used: string[], width: number) => {
+  let n = 1;
+  const taken = new Set(used);
+  while (taken.has(`${prefix}${String(n).padStart(width, "0")}`)) n++;
+  return `${prefix}${String(n).padStart(width, "0")}`;
+};
+const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+const num = (v: unknown, fallback = 0) => (typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : fallback);
+const int = (v: unknown, lo: number, hi: number, fallback: number) => Math.min(hi, Math.max(lo, Math.round(num(v, fallback))));
+const QUARTER = /^\d{4}-T[1-4]$/;
+
+function canCatalog(user: SessionUser): CatResult | null {
+  return can(user, "manage_catalog") ? null : fail(403, "El catálogo lo editan el advisor y el líder de la empresa (o el admin de la plataforma).");
+}
+
+export function upsertResponsible(user: SessionUser, input: Partial<Responsible>): CatResult & { id?: string } {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  const cargo = str(input.cargo, 120), dependencia = str(input.dependencia, 120);
+  const rol = input.rolPlataforma;
+  if (cargo.length < 3) return fail(422, "El cargo debe tener al menos 3 caracteres.");
+  if (!dependencia) return fail(422, "La dependencia es obligatoria.");
+  if (!["LIDER", "RESPONSABLE", "APORTA", "CONSULTA"].includes(rol ?? "")) return fail(422, "Rol en la plataforma inválido (LIDER, RESPONSABLE, APORTA o CONSULTA).");
+  const id = str(input.id, 10) || nextCode("R", c.responsibles.map((r) => r.id), 2);
+  const r: Responsible = { id, cargo, dependencia, rolPlataforma: rol as Responsible["rolPlataforma"] };
+  const idx = c.responsibles.findIndex((x) => x.id === id);
+  if (idx >= 0) c.responsibles[idx] = r; else c.responsibles.push(r);
+  audit(user, "task", `cat:${id}`, `responsable ${idx >= 0 ? "actualizado" : "creado"} (${cargo})`);
+  void persist("catálogo", (db) => writeResponsible(db, cid(), r));
+  return { ok: true, id };
+}
+
+export function removeResponsible(user: SessionUser, id: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (!c.responsibles.some((r) => r.id === id)) return fail(404, "El responsable no existe.");
+  const refs = [
+    ...c.kpis.filter((k) => k.ownerId === id).map((k) => `KPI ${k.code}`),
+    ...c.initiatives.filter((i) => i.ownerId === id).map((i) => `iniciativa ${i.id}`),
+    ...c.people.filter((p) => p.responsibleId === id).map((p) => `persona ${p.name}`),
+  ];
+  if (refs.length) return fail(422, `No se puede eliminar: lo referencian ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}. Reasigna primero.`);
+  c.responsibles = c.responsibles.filter((r) => r.id !== id);
+  audit(user, "task", `cat:${id}`, "responsable eliminado");
+  void persist("catálogo", (db) => dbDeleteResponsible(db, cid(), id));
+  return { ok: true };
+}
+
+export function upsertPerson(user: SessionUser, input: Partial<Person>): CatResult & { id?: string } {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  const name = str(input.name, 120), cargo = str(input.cargo, 120), dependencia = str(input.dependencia, 120), email = str(input.email, 160).toLowerCase();
+  const responsibleId = str(input.responsibleId, 10);
+  if (name.length < 3) return fail(422, "El nombre debe tener al menos 3 caracteres.");
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(422, "Correo inválido.");
+  if (responsibleId && !c.responsibles.some((r) => r.id === responsibleId)) return fail(422, "El cargo responsable no existe en el catálogo.");
+  const id = str(input.id, 10) || nextCode("P", c.people.map((p) => p.id), 2);
+  if (email && c.people.some((p) => p.id !== id && p.email.toLowerCase() === email)) return fail(422, "Ya hay una persona con ese correo.");
+  const p: Person = { id, name, cargo, dependencia, email, responsibleId };
+  const idx = c.people.findIndex((x) => x.id === id);
+  if (idx >= 0) c.people[idx] = p; else c.people.push(p);
+  audit(user, "task", `cat:${id}`, `persona ${idx >= 0 ? "actualizada" : "creada"} (${name})`);
+  void persist("catálogo", (db) => writePerson(db, cid(), p));
+  return { ok: true, id };
+}
+
+export function removePerson(user: SessionUser, id: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (!c.people.some((p) => p.id === id)) return fail(404, "La persona no existe.");
+  const n = tasks().filter((t) => t.assigneeId === id || t.coAssigneeIds?.includes(id)).length;
+  if (n) return fail(422, `No se puede eliminar: tiene ${n} tarea${n === 1 ? "" : "s"} asignada${n === 1 ? "" : "s"}. Reasígnalas primero.`);
+  c.people = c.people.filter((p) => p.id !== id);
+  audit(user, "task", `cat:${id}`, "persona eliminada");
+  void persist("catálogo", (db) => dbDeletePerson(db, cid(), id));
+  return { ok: true };
+}
+
+export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>): CatResult & { id?: string } {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  const name = str(input.name, 240), perspective = str(input.perspective, 20);
+  if (name.length < 5) return fail(422, "El objetivo debe tener al menos 5 caracteres.");
+  if (!["financiera", "clientes", "procesos", "aprendizaje"].includes(perspective)) return fail(422, "Perspectiva inválida.");
+  const kpis = Array.isArray(input.kpis) ? input.kpis.map((k) => str(k, 20).toUpperCase()).filter(Boolean) : [];
+  const missing = kpis.filter((k) => !c.kpis.some((x) => x.code === k));
+  if (missing.length) return fail(422, `KPI inexistentes: ${missing.join(", ")}.`);
+  const line = input.line === undefined || input.line === null ? undefined : int(input.line, 1, 4, 1);
+  const id = str(input.id, 10) || nextCode("OE-", c.objectives.map((o) => o.id), 2);
+  const o: CmiObjective = { id, perspective, name, kpis, ...(line ? { line } : {}) };
+  const idx = c.objectives.findIndex((x) => x.id === id);
+  if (idx >= 0) c.objectives[idx] = o; else c.objectives.push(o);
+  audit(user, "task", `cat:${id}`, `objetivo ${idx >= 0 ? "actualizado" : "creado"}`);
+  void persist("catálogo", (db) => writeObjective(db, cid(), o));
+  return { ok: true, id };
+}
+
+export function removeObjective(user: SessionUser, id: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (!c.objectives.some((o) => o.id === id)) return fail(404, "El objetivo no existe.");
+  const refs = [...c.kpis.filter((k) => k.cmi === id).map((k) => `KPI ${k.code}`), ...c.initiatives.filter((i) => i.cmi === id).map((i) => `iniciativa ${i.id}`)];
+  if (refs.length) return fail(422, `No se puede eliminar: lo usan ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}.`);
+  c.objectives = c.objectives.filter((o) => o.id !== id);
+  audit(user, "task", `cat:${id}`, "objetivo eliminado");
+  void persist("catálogo", (db) => dbDeleteObjective(db, cid(), id));
+  return { ok: true };
+}
+
+export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult & { code?: string } {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  const code = str(input.code, 20).toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9-]{1,19}$/.test(code)) return fail(422, "El código del KPI usa letras, números y guiones (p. ej. DIR-04).");
+  const name = str(input.name, 200), unit = str(input.unit, 20);
+  if (name.length < 5) return fail(422, "El nombre del KPI debe tener al menos 5 caracteres.");
+  if (!unit) return fail(422, "La unidad es obligatoria (%, número, días…).");
+  const line = int(input.line, 1, 4, 1);
+  const cmi = str(input.cmi, 10);
+  if (cmi && !c.objectives.some((o) => o.id === cmi)) return fail(422, "El objetivo del cuadro de mando no existe.");
+  const ownerId = str(input.ownerId, 10);
+  if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable del dato no existe en el catálogo.");
+  const frequency = (["Mensual", "Trimestral", "Semestral", "Anual"] as const).find((f) => f === input.frequency) ?? "Trimestral";
+  const goodDirection = input.goodDirection === "down" ? "down" : "up";
+  const series = (Array.isArray(input.series) ? input.series : [])
+    .map((v) => ({ period: str(v?.period, 12), value: num(v?.value, NaN), ...(str(v?.note, 200) ? { note: str(v?.note, 200) } : {}) }))
+    .filter((v) => v.period && Number.isFinite(v.value));
+  const badPeriod = series.find((v) => !isValidPeriod(v.period));
+  if (badPeriod) return fail(422, `Periodo inválido en la serie: ${badPeriod.period} (usa AAAA-Tn, AAAA-Sn o AAAA).`);
+  series.sort((x, y) => periodIndex(x.period) - periodIndex(y.period));
+  const k: KpiFull = {
+    code, line, cmi, name, definition: str(input.definition, 600), formula: str(input.formula, 300), unit, frequency,
+    source: str(input.source, 160), ownerId, baseline: num(input.baseline), target: num(input.target), goodDirection, series,
+  };
+  const idx = c.kpis.findIndex((x) => x.code === code);
+  if (idx >= 0) c.kpis[idx] = k; else c.kpis.push(k);
+  audit(user, "task", `cat:${code}`, `KPI ${idx >= 0 ? "actualizado" : "creado"} (${name})`);
+  void persist("catálogo", (db) => writeKpi(db, cid(), k));
+  return { ok: true, code };
+}
+
+export function removeKpi(user: SessionUser, code: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (!c.kpis.some((k) => k.code === code)) return fail(404, "El KPI no existe.");
+  const refs = [...c.objectives.filter((o) => o.kpis.includes(code)).map((o) => `objetivo ${o.id}`), ...c.initiatives.filter((i) => i.kpi === code).map((i) => `iniciativa ${i.id}`)];
+  if (refs.length) return fail(422, `No se puede eliminar: lo usan ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}.`);
+  c.kpis = c.kpis.filter((k) => k.code !== code);
+  kpiReports().delete(code);
+  audit(user, "task", `cat:${code}`, "KPI eliminado");
+  void persist("catálogo", (db) => dbDeleteKpi(db, cid(), code));
+  return { ok: true };
+}
+
+export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFull>): CatResult & { id?: string } {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  const name = str(input.name, 200);
+  if (name.length < 5) return fail(422, "El nombre de la iniciativa debe tener al menos 5 caracteres.");
+  const dim = DIMS.find((d) => d.code === str(input.capability, 10));
+  if (!dim) return fail(422, "La dimensión que instala (DIR-1 … MUL-5) es obligatoria.");
+  const cmi = str(input.cmi, 10);
+  if (!c.objectives.some((o) => o.id === cmi)) return fail(422, "El objetivo del cuadro de mando es obligatorio y debe existir.");
+  const ownerId = str(input.ownerId, 10);
+  if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable no existe en el catálogo.");
+  const kpi = str(input.kpi, 20).toUpperCase();
+  if (kpi && !c.kpis.some((k) => k.code === kpi)) return fail(422, "El KPI asociado no existe.");
+  const start = str(input.start, 8), end = str(input.end, 8);
+  if ((start && !QUARTER.test(start)) || (end && !QUARTER.test(end))) return fail(422, "Inicio y fin van en trimestres (AAAA-Tn).");
+  if (start && end && periodIndex(start) > periodIndex(end)) return fail(422, "El fin no puede ser anterior al inicio.");
+  const SUB: InitiativeFull["subsistema"][] = ["Dirección", "Comercial", "Operación", "Administración", "Talento"];
+  const STATUS: InitiativeFull["status"][] = ["PLANEADA", "EN_CURSO", "EN_RIESGO", "COMPLETADA"];
+  const ACT: ("HECHA" | "EN_CURSO" | "PENDIENTE")[] = ["HECHA", "EN_CURSO", "PENDIENTE"];
+  const FS = ["VERDE", "AMBAR", "ROJO"] as const;
+  const id = str(input.id, 10) || (() => { let n = 1; while (c.initiatives.some((i) => i.id === `i${n}`)) n++; return `i${n}`; })();
+  const prev = c.initiatives.find((i) => i.id === id);
+  const i: InitiativeFull = {
+    id, line: dim.line, subsistema: SUB.find((x) => x === input.subsistema) ?? "Dirección", cmi, name,
+    objetivo: str(input.objetivo, 600), horizon: input.horizon === "MEDIANO" ? "MEDIANO" : "CORTO",
+    impact: int(input.impact, 1, 5, 3), feasibility: int(input.feasibility, 1, 5, 3), urgency: int(input.urgency, 1, 5, 3), dependency: int(input.dependency, 1, 5, 3),
+    status: STATUS.find((x) => x === input.status) ?? "PLANEADA", start, end, ownerId, metaResultado: str(input.metaResultado, 400),
+    budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted),
+    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi,
+    actions: (Array.isArray(input.actions) ? input.actions : []).map((a) => ({ name: str(a?.name, 200), meta: str(a?.meta, 200), status: ACT.find((x) => x === a?.status) ?? "PENDIENTE", quarter: str(a?.quarter, 8) })).filter((a) => a.name),
+    log: Array.isArray(input.log) ? input.log.filter((l) => l && typeof l.text === "string") : (prev?.log ?? []),
+    nextMilestone: { date: str(input.nextMilestone?.date, 12), text: str(input.nextMilestone?.text, 200) },
+    factors: (Array.isArray(input.factors) ? input.factors : []).map((f) => ({ name: str(f?.name, 160), state: FS.find((x) => x === f?.state) ?? "VERDE", history: Array.isArray(f?.history) ? f.history.filter((h) => typeof h === "string") : [], ...(str(f?.note, 200) ? { note: str(f?.note, 200) } : {}) })).filter((f) => f.name),
+  };
+  const idx = c.initiatives.findIndex((x) => x.id === id);
+  if (idx >= 0) c.initiatives[idx] = i; else c.initiatives.push(i);
+  iniOverrides().delete(id);
+  audit(user, "task", `cat:${id}`, `iniciativa ${idx >= 0 ? "actualizada" : "creada"} (${name})`);
+  void persist("catálogo", async (db) => { await writeInitiative(db, cid(), i); await db.initiativeOverride.deleteMany({ where: { companyId: cid(), code: id } }); });
+  return { ok: true, id };
+}
+
+export function removeInitiative(user: SessionUser, id: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (!c.initiatives.some((i) => i.id === id)) return fail(404, "La iniciativa no existe.");
+  const n = tasks().filter((t) => t.iniId === id).length + archived().filter((t) => t.iniId === id).length;
+  if (n) return fail(422, `No se puede eliminar: tiene ${n} tarea${n === 1 ? "" : "s"} en el plan de trabajo.`);
+  c.initiatives = c.initiatives.filter((i) => i.id !== id);
+  iniOverrides().delete(id);
+  decisions().delete(id);
+  for (const k of [...evals().keys()]) if (k.startsWith(`${id}|`)) evals().delete(k);
+  audit(user, "task", `cat:${id}`, "iniciativa eliminada");
+  void persist("catálogo", async (db) => {
+    const companyId = cid();
+    await dbDeleteInitiative(db, companyId, id);
+    await db.initiativeOverride.deleteMany({ where: { companyId, code: id } });
+    await db.initiativeDecision.deleteMany({ where: { companyId, code: id } });
+    await db.initiativeEvaluation.deleteMany({ where: { companyId, iniCode: id } });
+  });
+  return { ok: true };
+}
+
+export function setFinancials(user: SessionUser, input: Partial<Financials> | null): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (input === null) { c.financials = null; }
+  else {
+    const f: Financials = {
+      year: int(input.year, 2000, 2100, new Date().getFullYear()), revenue: num(input.revenue), revenuePrev: num(input.revenuePrev),
+      grossProfit: num(input.grossProfit), operatingProfit: num(input.operatingProfit), netProfit: num(input.netProfit),
+      assets: num(input.assets), liabilities: num(input.liabilities), equity: num(input.equity),
+    };
+    if (f.revenue <= 0) return fail(422, "Los ingresos del año deben ser mayores que cero (COP millones).");
+    c.financials = f;
+  }
+  audit(user, "task", "cat:finanzas", "estados financieros actualizados");
+  void persist("catálogo", (db) => writeCompanyExtras(db, cid(), { financials: c.financials, territories: c.territories }));
+  return { ok: true };
+}
+
+export function setTerritories(user: SessionUser, input: unknown): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  if (!Array.isArray(input)) return fail(422, "Se esperaba una lista de departamentos.");
+  const list: Territory[] = [];
+  for (const t of input as Partial<Territory>[]) {
+    const name = str(t?.name, 60);
+    if (!name) continue;
+    const weight = ([1, 2, 3] as const).find((w) => w === num(t?.weight, 1)) ?? 1;
+    const presence = (["sede", "cobertura", "oportunidad"] as const).find((p) => p === t?.presence) ?? "cobertura";
+    if (list.some((x) => x.name === name)) return fail(422, `Departamento repetido: ${name}.`);
+    list.push({ name, weight, presence, reading: str(t?.reading, 300) });
+  }
+  c.territories = list;
+  audit(user, "task", "cat:territorio", `presencia territorial actualizada (${list.length} departamentos)`);
+  void persist("catálogo", (db) => writeCompanyExtras(db, cid(), { financials: c.financials, territories: c.territories }));
+  return { ok: true };
+}
 
 /* ═══ Vista de la empresa activa (para la UI y la lógica) ═══ */
 

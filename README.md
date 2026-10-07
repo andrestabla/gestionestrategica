@@ -48,6 +48,17 @@ personas, tareas), priorización, archivos, branding e integraciones.
   impide que la interfaz importe constantes de la empresa demo.
 - **Base de datos**: todas las tablas de datos de empresa llevan `companyId`
   con borrado en cascada; eliminar una empresa borra todo lo suyo.
+- **Editor del catálogo** (Administración → Catálogo; permiso
+  `manage_catalog`: advisor, líder y admin): responsables (cargos), personas,
+  objetivos del cuadro de mando, KPI con su serie, iniciativas (acciones,
+  factores, dimensión que instala y framework deducido), estados financieros
+  y presencia territorial. Los códigos se asignan en secuencia (R01, P01,
+  OE-01, i1); el KPI lleva código propio. No se elimina lo que otra entidad
+  referencia (un responsable con KPI a cargo, un objetivo con iniciativas, una
+  iniciativa con tareas…). API: `POST /api/td/catalogo` con
+  `{ entity, op, data }`. Una empresa vacía nace con las 68 evidencias del
+  mapa por verificar y se construye en este orden: cargos → personas →
+  objetivos → KPI → iniciativas → tareas (Proyectos).
 
 ## Fuente única de las definiciones
 

@@ -16,6 +16,7 @@ import { OD_RESPONSES } from "@/data/od-demo";
 import { EVALUATIONS_SEED, DECISIONS_SEED, type DecisionRecord } from "@/data/priorizacion-demo";
 import type { Response as OdResponse } from "@/lib/od";
 import type { Evaluation } from "@/lib/priorizacion";
+import { PRACTICES } from "@/data/mapa";
 
 export type CompanyInfo = {
   slug: string;
@@ -69,10 +70,30 @@ export const ANDINA_CATALOG: Catalog = {
   seedUsers: DEMO_USERS.filter((u) => u.role !== "ADMIN").map((u) => ({ email: u.email, name: u.name, role: u.role, line: "line" in u ? (u as { line?: number }).line : undefined })),
 };
 
-/** Catálogo vacío: la empresa arranca con el mapa 4Shine y sin portafolio. */
+/** Evidencias del mapa para una empresa nueva: una por práctica, pendiente de
+    verificación, con el título y el tipo deducidos de la evidencia esperada. */
+export function evidencesForMap(): EvidenceFull[] {
+  const kindOf = (text: string): EvidenceFull["kind"] => {
+    const t = text.toLowerCase();
+    if (/acta|memo/.test(t)) return "Acta";
+    if (/tablero|sistema|crm|reporte autom/.test(t)) return "Sistema";
+    if (/encuesta|medici[oó]n de clima/.test(t)) return "Encuesta";
+    if (/registro|inventario|calendario|matriz|mapa|lista/.test(t)) return "Registro";
+    if (/informe|an[aá]lisis|proyecci[oó]n/.test(t)) return "Informe";
+    return "Documento";
+  };
+  const firstSentence = (t: string) => { const m = t.match(/^[^.]+\./); return (m ? m[0] : t).replace(/\.$/, ""); };
+  return PRACTICES.map((p, i) => ({
+    id: `EV-${String(i + 1).padStart(2, "0")}`, line: p.line, dimension: p.dim, practice: p.code,
+    title: firstSentence(p.ev), kind: kindOf(p.ev), date: "", status: "PENDIENTE", sourceId: "",
+  }));
+}
+
+/** Catálogo vacío: la empresa arranca con el mapa 4Shine (y sus 68 evidencias
+    por verificar) y sin portafolio. */
 export function emptyCatalog(company: CompanyInfo): Catalog {
   return {
-    company, responsibles: [], objectives: [], kpis: [], evidences: [], initiatives: [], people: [], tasks: [],
+    company, responsibles: [], objectives: [], kpis: [], evidences: evidencesForMap(), initiatives: [], people: [], tasks: [],
     assessments: [], financials: null, territories: [], demoResponses: [], seedEvaluations: [], seedDecisions: [], seedUsers: [],
   };
 }

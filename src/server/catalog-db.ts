@@ -21,74 +21,112 @@ export function companyRow(c: CompanyInfo) {
   };
 }
 
+/* ── escritores por entidad (idempotentes: upsert por código) ── */
+
+export async function writeCompanyExtras(db: Db, companyId: string, cat: Pick<Catalog, "financials" | "territories">) {
+  await db.company.update({ where: { id: companyId }, data: { financials: (cat.financials ?? null) as never, territories: cat.territories as never } });
+}
+export async function writeResponsible(db: Db, companyId: string, r: Responsible) {
+  await db.responsible.upsert({ where: { companyId_id: { companyId, id: r.id } }, update: { cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }, create: { companyId, ...r } });
+}
+export const deleteResponsible = (db: Db, companyId: string, id: string) => db.responsible.deleteMany({ where: { companyId, id } });
+
+export async function writeObjective(db: Db, companyId: string, o: CmiObjective) {
+  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null };
+  await db.cmiObjective.upsert({ where: { companyId_id: { companyId, id: o.id } }, update: data, create: { companyId, id: o.id, ...data } });
+}
+export const deleteObjective = (db: Db, companyId: string, id: string) => db.cmiObjective.deleteMany({ where: { companyId, id } });
+
+export async function writeAssessment(db: Db, companyId: string, a: AssessmentRecord) {
+  await db.assessment.upsert({
+    where: { companyId_id: { companyId, id: a.id } },
+    update: { label: a.label, period: a.period, status: a.status, note: a.note },
+    create: { id: a.id, companyId, label: a.label, period: a.period, status: a.status, note: a.note, publishedAt: a.status === "PUBLICADA" ? new Date(`${a.period}-28`) : null },
+  });
+  if (!a.scores) return;
+  for (const [line, dims] of Object.entries(a.scores)) {
+    for (const [dimension, sc] of Object.entries(dims)) {
+      await db.dimensionScore.upsert({
+        where: { companyId_assessmentId_dimension: { companyId, assessmentId: a.id, dimension } },
+        update: { value: sc.value, target: sc.target },
+        create: { companyId, assessmentId: a.id, line: Number(line), dimension, value: sc.value, target: sc.target },
+      });
+    }
+  }
+}
+
+export async function writeEvidence(db: Db, companyId: string, e: EvidenceFull) {
+  await db.evidence.upsert({ where: { companyId_id: { companyId, id: e.id } }, update: { practice: e.practice, status: e.status, note: e.note ?? null }, create: { companyId, id: e.id, practice: e.practice, status: e.status, note: e.note ?? null } });
+}
+
+export async function writeKpi(db: Db, companyId: string, k: KpiFull): Promise<string> {
+  const data = {
+    line: k.line, name: k.name, unit: k.unit, source: k.source, ownerRole: k.ownerId, definition: k.definition, formula: k.formula,
+    cmiObjective: k.cmi, frequency: k.frequency.toUpperCase(), baseline: k.baseline, target: k.target, goodDirection: k.goodDirection,
+  };
+  const kpi = await db.kpi.upsert({ where: { companyId_code: { companyId, code: k.code } }, update: data, create: { companyId, code: k.code, ...data } });
+  await db.kpiValue.deleteMany({ where: { kpiId: kpi.id, period: { notIn: k.series.map((v) => v.period) } } });
+  for (const v of k.series) {
+    await db.kpiValue.upsert({ where: { kpiId_period: { kpiId: kpi.id, period: v.period } }, update: { value: v.value, note: v.note ?? null }, create: { kpiId: kpi.id, period: v.period, value: v.value, note: v.note ?? null } });
+  }
+  return kpi.id as string;
+}
+export async function deleteKpi(db: Db, companyId: string, code: string) {
+  const kpi = await db.kpi.findUnique({ where: { companyId_code: { companyId, code } } });
+  if (!kpi) return;
+  await db.initiative.updateMany({ where: { kpiId: kpi.id }, data: { kpiId: null } });
+  await db.kpiValue.deleteMany({ where: { kpiId: kpi.id } });
+  await db.kpi.delete({ where: { id: kpi.id } });
+}
+
+export async function writeInitiative(db: Db, companyId: string, i: InitiativeFull) {
+  const kpi = i.kpi ? await db.kpi.findUnique({ where: { companyId_code: { companyId, code: i.kpi } } }) : null;
+  const data = {
+    line: i.line, name: i.name, description: i.objetivo, subsistema: i.subsistema, cmiObjective: i.cmi, dimension: i.capability, framework: i.framework,
+    metaResultado: i.metaResultado, actions: i.actions as never, log: i.log as never, nextMilestone: i.nextMilestone as never, horizon: i.horizon,
+    impact: i.impact, feasibility: i.feasibility, urgency: i.urgency, dependency: i.dependency, status: i.status, ownerRole: i.ownerId,
+    startQuarter: i.start, endQuarter: i.end, budgetPlanned: i.budgetPlanned, budgetCommitted: i.budgetCommitted, budgetExecuted: i.budgetExecuted,
+    progress: i.progress, kpiId: kpi?.id ?? null,
+  };
+  const existing = await db.initiative.findUnique({ where: { companyId_code: { companyId, code: i.id } } });
+  const ini = existing
+    ? await db.initiative.update({ where: { id: existing.id }, data })
+    : await db.initiative.create({ data: { companyId, code: i.id, ...data } });
+  await db.successFactor.deleteMany({ where: { initiativeId: ini.id } });
+  for (const f of i.factors) await db.successFactor.create({ data: { initiativeId: ini.id, name: f.name, state: f.state, history: f.history as never, note: f.note ?? null } });
+}
+export async function deleteInitiative(db: Db, companyId: string, code: string) {
+  const ini = await db.initiative.findUnique({ where: { companyId_code: { companyId, code } } });
+  if (!ini) return;
+  await db.successFactor.deleteMany({ where: { initiativeId: ini.id } });
+  await db.initiative.delete({ where: { id: ini.id } });
+}
+
+export async function writePerson(db: Db, companyId: string, p: Person) {
+  await db.person.upsert({ where: { companyId_id: { companyId, id: p.id } }, update: { name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email, responsibleId: p.responsibleId }, create: { companyId, ...p } });
+}
+export const deletePerson = (db: Db, companyId: string, id: string) => db.person.deleteMany({ where: { companyId, id } });
+
+export async function writeTask(db: Db, companyId: string, t: Task) {
+  const data = {
+    iniCode: t.iniId, title: t.title, desc: t.desc, assigneeId: t.assigneeId, coAssigneeIds: (t.coAssigneeIds ?? []) as never,
+    start: new Date(t.start), due: new Date(t.due), status: t.status, requiresEvidence: t.requiresEvidence ?? false,
+    evidenceIds: (t.evidenceIds ?? []) as never, dependsOn: (t.dependsOn ?? []) as never, note: t.note ?? null,
+  };
+  await db.projectTask.upsert({ where: { companyId_id: { companyId, id: t.id } }, update: data, create: { companyId, id: t.id, baseStart: new Date(t.start), baseDue: new Date(t.due), ...data } });
+}
+
 /** Escribe el catálogo completo de una empresa (idempotente: upsert por código). */
 export async function writeCatalog(db: Db, companyId: string, cat: Catalog) {
-  await db.company.update({ where: { id: companyId }, data: { financials: cat.financials ?? undefined, territories: cat.territories as never } });
-  for (const r of cat.responsibles) {
-    await db.responsible.upsert({ where: { companyId_id: { companyId, id: r.id } }, update: { cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }, create: { companyId, ...r } });
-  }
-  for (const o of cat.objectives) {
-    const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null };
-    await db.cmiObjective.upsert({ where: { companyId_id: { companyId, id: o.id } }, update: data, create: { companyId, id: o.id, ...data } });
-  }
-  for (const a of cat.assessments) {
-    await db.assessment.upsert({
-      where: { companyId_id: { companyId, id: a.id } },
-      update: { label: a.label, period: a.period, status: a.status, note: a.note },
-      create: { id: a.id, companyId, label: a.label, period: a.period, status: a.status, note: a.note, publishedAt: a.status === "PUBLICADA" ? new Date(`${a.period}-28`) : null },
-    });
-    if (!a.scores) continue;
-    for (const [line, dims] of Object.entries(a.scores)) {
-      for (const [dimension, sc] of Object.entries(dims)) {
-        await db.dimensionScore.upsert({
-          where: { companyId_assessmentId_dimension: { companyId, assessmentId: a.id, dimension } },
-          update: { value: sc.value, target: sc.target },
-          create: { companyId, assessmentId: a.id, line: Number(line), dimension, value: sc.value, target: sc.target },
-        });
-      }
-    }
-  }
-  for (const e of cat.evidences) {
-    await db.evidence.upsert({ where: { companyId_id: { companyId, id: e.id } }, update: { practice: e.practice, status: e.status, note: e.note ?? null }, create: { companyId, id: e.id, practice: e.practice, status: e.status, note: e.note ?? null } });
-  }
-  const kpiIds = new Map<string, string>();
-  for (const k of cat.kpis) {
-    const data = {
-      line: k.line, name: k.name, unit: k.unit, source: k.source, ownerRole: k.ownerId, definition: k.definition, formula: k.formula,
-      cmiObjective: k.cmi, frequency: k.frequency.toUpperCase(), baseline: k.baseline, target: k.target, goodDirection: k.goodDirection,
-    };
-    const kpi = await db.kpi.upsert({ where: { companyId_code: { companyId, code: k.code } }, update: data, create: { companyId, code: k.code, ...data } });
-    kpiIds.set(k.code, kpi.id);
-    for (const v of k.series) {
-      await db.kpiValue.upsert({ where: { kpiId_period: { kpiId: kpi.id, period: v.period } }, update: { value: v.value, note: v.note ?? null }, create: { kpiId: kpi.id, period: v.period, value: v.value, note: v.note ?? null } });
-    }
-  }
-  for (const i of cat.initiatives) {
-    const data = {
-      line: i.line, name: i.name, description: i.objetivo, subsistema: i.subsistema, cmiObjective: i.cmi, dimension: i.capability, framework: i.framework,
-      metaResultado: i.metaResultado, actions: i.actions as never, log: i.log as never, nextMilestone: i.nextMilestone as never, horizon: i.horizon,
-      impact: i.impact, feasibility: i.feasibility, urgency: i.urgency, dependency: i.dependency, status: i.status, ownerRole: i.ownerId,
-      startQuarter: i.start, endQuarter: i.end, budgetPlanned: i.budgetPlanned, budgetCommitted: i.budgetCommitted, budgetExecuted: i.budgetExecuted,
-      progress: i.progress, kpiId: kpiIds.get(i.kpi) ?? null,
-    };
-    const existing = await db.initiative.findUnique({ where: { companyId_code: { companyId, code: i.id } } });
-    const ini = existing
-      ? await db.initiative.update({ where: { id: existing.id }, data })
-      : await db.initiative.create({ data: { companyId, code: i.id, ...data } });
-    await db.successFactor.deleteMany({ where: { initiativeId: ini.id } });
-    for (const f of i.factors) await db.successFactor.create({ data: { initiativeId: ini.id, name: f.name, state: f.state, history: f.history as never, note: f.note ?? null } });
-  }
-  for (const p of cat.people) {
-    await db.person.upsert({ where: { companyId_id: { companyId, id: p.id } }, update: { name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email, responsibleId: p.responsibleId }, create: { companyId, ...p } });
-  }
-  for (const t of cat.tasks) {
-    const data = {
-      iniCode: t.iniId, title: t.title, desc: t.desc, assigneeId: t.assigneeId, coAssigneeIds: (t.coAssigneeIds ?? []) as never,
-      start: new Date(t.start), due: new Date(t.due), status: t.status, requiresEvidence: t.requiresEvidence ?? false,
-      evidenceIds: (t.evidenceIds ?? []) as never, dependsOn: (t.dependsOn ?? []) as never, note: t.note ?? null,
-    };
-    await db.projectTask.upsert({ where: { companyId_id: { companyId, id: t.id } }, update: data, create: { companyId, id: t.id, baseStart: new Date(t.start), baseDue: new Date(t.due), ...data } });
-  }
+  await writeCompanyExtras(db, companyId, cat);
+  for (const r of cat.responsibles) await writeResponsible(db, companyId, r);
+  for (const o of cat.objectives) await writeObjective(db, companyId, o);
+  for (const a of cat.assessments) await writeAssessment(db, companyId, a);
+  for (const e of cat.evidences) await writeEvidence(db, companyId, e);
+  for (const k of cat.kpis) await writeKpi(db, companyId, k);
+  for (const i of cat.initiatives) await writeInitiative(db, companyId, i);
+  for (const p of cat.people) await writePerson(db, companyId, p);
+  for (const t of cat.tasks) await writeTask(db, companyId, t);
 }
 
 /** Reconstruye el catálogo de una empresa desde la base. */

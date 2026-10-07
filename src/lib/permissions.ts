@@ -35,6 +35,7 @@ export type Action =
   | "verify_evidence"   // marcar evidencia como VERIFICADA
   | "manage_users"      // administrar usuarios y roles de la empresa
   | "manage_companies"  // crear, editar, desactivar y eliminar empresas (tenants)
+  | "manage_catalog"    // editar el catálogo de la empresa: responsables, personas, objetivos, KPI, iniciativas, finanzas y territorio
   | "manage_platform";  // integraciones, branding y configuración de la plataforma
 
 export type Role = SessionUser["role"];
@@ -57,6 +58,7 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
   verify_evidence:  { ADMIN: false, CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   manage_users:     { ADMIN: true,  CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   manage_companies: { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
+  manage_catalog:   { ADMIN: true,  CONSULTOR: true, LIDER: true, RESPONSABLE: false, DIRECTIVO: false },
   manage_platform:  { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
 };
 
@@ -84,7 +86,7 @@ export const MODULE_ACTIONS: Record<ModuleKey, Action[]> = {
   proyectos:    ["view", "edit_tasks", "verify_evidence"],
   bi:           ["view"],
   metodologia:  ["view"],
-  admin:        ["view", "manage_users", "manage_platform", "manage_companies"],
+  admin:        ["view", "manage_users", "manage_platform", "manage_companies", "manage_catalog"],
 };
 
 /** Descripción del acceso del usuario a un módulo, para mostrar en la UI. */
