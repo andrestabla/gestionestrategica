@@ -111,6 +111,14 @@ npm run sector:fetch -- suministros-industriales G4659 G4663 G4669
 npm run sector:fetch -- --corte 2024-12-31 <clave> <CIIU…>
 ```
 
+Para el Ecuador, `scripts/sector_fetch_ec.py <clave> <CIIU…>` construye el
+mismo JSON desde el Ranking Empresarial de la Superintendencia de Compañías
+(`ranking_<año>.xlsx`, un libro por año; cifras en USD millones; sin ganancia
+bruta, el margen operacional se aproxima con la utilidad antes de impuestos).
+Registrado: `farmacias-ecuador` (CIIU G4772, ranking 2025 y 2024). Cada
+empresa declara `country` (CO | EC: mapa por departamentos o provincias) y
+`currency` (COP | USD).
+
 `src/data/sector.ts` tipa el JSON, elige el sector de la empresa
 (`INSTITUTION.sectorKey`) y calcula percentiles a partir de los estados
 financieros de la empresa (`FINANCIALS` en `demo.ts`). Los conceptos del

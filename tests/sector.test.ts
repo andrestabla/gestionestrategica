@@ -86,3 +86,19 @@ test("el mapa del Ecuador tiene sus provincias continentales", async () => {
   assert.ok(EC_VIEW.w === 300 && EC_VIEW.h > 200);
   for (const p of EC_PATHS) assert.match(p.d, /^M[\d.,\s L]+Z/);
 });
+
+test("el sector farmacias-ecuador (ranking SCVS) está registrado y es coherente", async () => {
+  const { SECTORS, sectorFor, sectorComparison } = await import("../src/data/sector");
+  const ec = SECTORS["farmacias-ecuador"];
+  assert.ok(ec && ec.n > 300, "cientos de compañías del CIIU G4772");
+  assert.equal(ec.units, "USD millones");
+  assert.ok(ec.peers.some((p) => p.name.startsWith("CRESIO")), "Cresio aparece en el ranking");
+  assert.equal(ec.dist.grossMargin.p50, null, "el ranking no publica ganancia bruta");
+  assert.ok(ec.departments.some((d) => d.name === "Guayas") && ec.departments.some((d) => d.name === "Pichincha"));
+  const cat = { ...ANDINA_CATALOG, company: { ...ANDINA_CATALOG.company, sectorKey: "farmacias-ecuador", country: "EC" as const, currency: "USD" as const }, financials: { year: 2025, revenue: 231.03, revenuePrev: 123.67, grossProfit: 0, operatingProfit: 13.63, netProfit: 11.09, assets: 105.95, liabilities: 59.51, equity: 46.44 } };
+  assert.equal(sectorFor(cat).key, "farmacias-ecuador");
+  const cmp = sectorComparison(cat);
+  assert.ok(!cmp.some((c) => c.key === "grossMargin"), "sin margen bruto no se compara");
+  const g = cmp.find((c) => c.key === "growth")!;
+  assert.ok(g.value > 80 && g.percentile > 80, "crece muy por encima de la mediana");
+});

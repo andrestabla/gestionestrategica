@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import suministros from "./sector/suministros-industriales.json";
+import farmaciasEc from "./sector/farmacias-ecuador.json";
 import type { Catalog, Financials } from "@/data/catalogo";
 
 export type Quantiles = { n: number; p10: number | null; p25: number | null; p50: number | null; p75: number | null; p90: number | null };
@@ -34,7 +35,8 @@ export type SectorData = {
 
 /** Sectores disponibles en la plataforma (uno por archivo JSON). */
 export const SECTORS: Record<string, SectorData> = {
-  "suministros-industriales": suministros as SectorData,
+  "suministros-industriales": suministros as SectorData,   // Colombia · Supersociedades
+  "farmacias-ecuador": farmaciasEc as SectorData,            // Ecuador · Ranking SCVS
 };
 
 export const sectorOf = (key: string): SectorData | null => SECTORS[key] ?? null;
@@ -107,7 +109,9 @@ export function sectorComparison(cat: Catalog): RatioComparison[] {
   if (!cat.financials) return [];
   const sector = sectorFor(cat);
   const mine = companyRatios(cat.financials);
-  return RATIOS.map((r) => {
+  // las razones que el sector no publica (p. ej. margen bruto en el ranking
+  // del Ecuador) se omiten: no hay con qué comparar
+  return RATIOS.filter((r) => sector.dist[r.key].p50 !== null).map((r) => {
     const q = sector.dist[r.key];
     const value = mine[r.key];
     const pct = percentileOf(q, value, r.lowerIsBetter);
