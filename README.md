@@ -156,6 +156,17 @@ el resto → último. La ficha muestra el sugerido y quien decide el tiempo
 (gerencia, advisor) puede mover la iniciativa con un clic. Los horizontes los
 define cada empresa (`Company.horizons`; por defecto corto y mediano).
 
+**Inteligencia (M7) por país.** Los observatorios y fuentes dependen del país
+de la empresa (`src/data/observatorios.ts`): Colombia enlaza con los
+observatorios de Algoritmo T (Supersociedades, DANE, DIAN); Ecuador, con las
+fuentes oficiales (ranking de la SCVS, INEC, ARCSA y precios techo del MSP,
+ENEMDU e IESS, BCE y SENAE). Para empresas ecuatorianas el módulo añade la
+lectura de demanda por provincia (población del censo INEC 2022 en
+`src/data/demanda-ec.ts` cruzada con las sociedades del sector y la presencia
+de la empresa: población cubierta, en oportunidad y sin presencia, ingresos
+del sector por habitante) y la competencia en cada territorio donde opera o
+planea abrir (`src/lib/demanda.ts`).
+
 El administrador de la plataforma elige la empresa con la que opera en la
 pantalla `/empresas` (una tarjeta por empresa con su sector, ciudad, moneda,
 iniciativas, KPI y cuentas; alta de empresa en modal). Es la primera pantalla
