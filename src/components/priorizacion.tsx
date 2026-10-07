@@ -7,6 +7,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useCan, useUser } from "@/components/user-context";
+import { useCatalog } from "@/components/catalog-context";
+import { horizonLabel } from "@/data/catalogo";
 import {
   CRITERIA, TYPE_CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf,
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeMarks,
@@ -63,6 +65,7 @@ export function PrioChip({ c, decision }: { c: Consolidated | undefined; decisio
 
 export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: number; horizon: string }) {
   const user = useUser();
+  const cv = useCatalog();
   const canEval = useCan("evaluate_initiatives", line);
   const canDecide = useCan("decide_initiatives");
   const { data, refetch } = usePriorizacion(iniId);
@@ -94,7 +97,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         </div>
         {c && c.n > 0 && row && (
           <span className="chip chip-cyan" title="Posición por puntaje entre las iniciativas del mismo horizonte">
-            {row.position}.º de {sameHorizon} · {horizon === "CORTO" ? "corto" : "mediano"} plazo
+            {row.position}.º de {sameHorizon} · {horizonLabel(cv.catalog.company, horizon).toLowerCase()}
           </span>
         )}
         {decision && <span className={DECISION_CLS[decision.decision]}>{decisionLabel(decision.decision)}</span>}

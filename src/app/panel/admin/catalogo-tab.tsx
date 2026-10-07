@@ -10,6 +10,7 @@
 import { useState, type ReactNode } from "react";
 import { Card, CardHeader, EmptyNote } from "@/components/ui";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
+import { horizonsOf, horizonLabel } from "@/data/catalogo";
 import type { TenantView } from "@/lib/vista";
 import type { Financials } from "@/data/catalogo";
 import {
@@ -582,7 +583,7 @@ function IniciativasSection({ v, saving, mutate }: SectionProps) {
             {list.map((i) => (
               <tr key={i.id} className={`border-b border-line last:border-0 ${editing?.id === i.id ? "bg-cyan-wash/40" : ""}`}>
                 <td className="num px-4 py-2.5 text-[11px] text-faint">{i.id}</td>
-                <td className="px-4 py-2.5 font-semibold text-ink">{i.name}<div className="text-[10.5px] font-normal text-faint">{i.subsistema} · {i.horizon === "CORTO" ? "corto" : "mediano"} plazo · {i.start} → {i.end}</div></td>
+                <td className="px-4 py-2.5 font-semibold text-ink">{i.name}<div className="text-[10.5px] font-normal text-faint">{i.subsistema} · {horizonLabel(v.catalog.company, i.horizon)} · {i.start} → {i.end}</div></td>
                 <td className="num px-4 py-2.5 text-[11px] text-muted">{i.cmi}{i.kpi ? ` · ${i.kpi}` : ""}</td>
                 <td className="px-4 py-2.5 text-muted"><span className="num text-[10.5px] text-faint">{i.capability}</span> {dimName(i.capability)}</td>
                 <td className="px-4 py-2.5 text-muted">{owner(i.ownerId)}</td>
@@ -624,7 +625,7 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
   const kpis = v.catalog.kpis;
   const empty = (): IniDraft => ({
     name: "", objetivo: "", line: String(DIMS[0]?.line ?? 1), subsistema: "Dirección", cmi: objs[0]?.id ?? "",
-    horizon: "CORTO", impact: "3", feasibility: "3", urgency: "3", dependency: "3", status: "PLANEADA",
+    horizon: horizonsOf(v.catalog.company)[0].id, impact: "3", feasibility: "3", urgency: "3", dependency: "3", status: "PLANEADA",
     start: currentQuarter(), end: currentQuarter(1), ownerId: resps[0]?.id ?? "", metaResultado: "",
     budgetPlanned: "0", budgetCommitted: "0", budgetExecuted: "0", progress: "0",
     capability: DIMS[0]?.code ?? "", kpi: kpis[0]?.code ?? "", actions: [], factors: [], milestoneDate: "", milestoneText: "",
@@ -745,8 +746,7 @@ function IniciativaForm({ v, saving, initial, onSubmit, onCancel }: {
           <div className="grid grid-cols-2 gap-2">
             <Field label="Horizonte">
               <select value={f.horizon} onChange={set("horizon")} className={INPUT}>
-                <option value="CORTO">Corto plazo</option>
-                <option value="MEDIANO">Mediano plazo</option>
+                {horizonsOf(v.catalog.company).map((h) => <option key={h.id} value={h.id}>{h.label} · {h.months} meses</option>)}
               </select>
             </Field>
             <Field label="Estado">

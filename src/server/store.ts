@@ -13,8 +13,7 @@ import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
-  type Catalog, type CompanyInfo,
-} from "@/data/catalogo";
+  type Catalog, type CompanyInfo, horizonsOf, type Horizon } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
@@ -293,6 +292,7 @@ export async function hydrateCompanies() {
         sector: c.sector ?? "", size: c.size ?? "", sectorKey: c.sectorKey ?? prev?.sectorKey ?? "suministros-industriales",
         ciiu: c.ciiu ?? "", active: c.active, template: (c.template as CompanyInfo["template"]) ?? "vacia",
         country: (c.country as CompanyInfo["country"]) ?? "CO", currency: (c.currency as CompanyInfo["currency"]) ?? "COP",
+        horizons: parseHorizons(c.horizons).ok ? (parseHorizons(c.horizons) as { horizons?: Horizon[] }).horizons : undefined,
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       const t = g.tenants.get(c.slug);
@@ -434,7 +434,29 @@ const slugify = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""
 export type CompanyInput = {
   name: string; shortName?: string; slug?: string; city?: string; department?: string; sector?: string; size?: string;
   sectorKey?: string; ciiu?: string; template?: "demo" | "vacia"; country?: "CO" | "EC"; currency?: "COP" | "USD";
+  horizons?: unknown;   // [{id, label, months}] · lista vacía o nula = corto/mediano
 };
+
+/** Valida los horizontes de una empresa: 1–6, id corto y único, etiqueta y meses crecientes. */
+export function parseHorizons(input: unknown): { ok: true; horizons?: Horizon[] } | { ok: false; error: string } {
+  if (input === undefined || input === null) return { ok: true, horizons: undefined };
+  if (!Array.isArray(input)) return { ok: false, error: "Los horizontes deben ser una lista." };
+  if (input.length === 0) return { ok: true, horizons: undefined };
+  if (input.length > 6) return { ok: false, error: "Máximo seis horizontes." };
+  const out: Horizon[] = [];
+  for (const raw of input as Record<string, unknown>[]) {
+    const id = str(raw?.id, 12).toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+    const label = str(raw?.label, 40);
+    const months = Math.round(num(raw?.months, 0));
+    if (!id) return { ok: false, error: "Cada horizonte necesita un identificador (p. ej. H1)." };
+    if (label.length < 2) return { ok: false, error: `El horizonte ${id} necesita una etiqueta.` };
+    if (!(months > 0 && months <= 240)) return { ok: false, error: `El horizonte ${id} necesita un plazo en meses (1–240).` };
+    if (out.some((h) => h.id === id)) return { ok: false, error: `Horizonte repetido: ${id}.` };
+    if (out.length && months <= out[out.length - 1].months) return { ok: false, error: "Los horizontes van de menor a mayor plazo." };
+    out.push({ id, label, months });
+  }
+  return { ok: true, horizons: out };
+}
 
 /** Crea una empresa (vacía o desde la plantilla demo) y, con base, la persiste con su catálogo. */
 export async function createCompany(actor: SessionUser, input: CompanyInput): Promise<{ ok: true; company: CompanyRecord } | { ok: false; status: number; error: string }> {
@@ -451,6 +473,9 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
     ciiu: input.ciiu?.trim() ?? "", active: true, template, createdBy: actor.name, createdAt: new Date().toISOString(),
     country: input.country === "EC" ? "EC" : "CO", currency: input.currency === "USD" ? "USD" : "COP",
   };
+  const hz = parseHorizons(input.horizons);
+  if (!hz.ok) return { ok: false, status: 422, error: hz.error };
+  if (hz.horizons) info.horizons = hz.horizons;
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
   if (hasDb()) {
@@ -483,6 +508,11 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
   for (const f of fields) if (patch[f] !== undefined) (c as Record<string, unknown>)[f] = String(patch[f]).trim();
   if (patch.country !== undefined) c.country = patch.country === "EC" ? "EC" : "CO";
   if (patch.currency !== undefined) c.currency = patch.currency === "USD" ? "USD" : "COP";
+  if (patch.horizons !== undefined) {
+    const hz = parseHorizons(patch.horizons);
+    if (!hz.ok) return { ok: false, status: 422, error: hz.error };
+    c.horizons = hz.horizons;
+  }
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(slug);
   if (t) t.catalog.company = { ...t.catalog.company, ...c };
@@ -1798,7 +1828,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   const prev = c.initiatives.find((i) => i.id === id);
   const i: InitiativeFull = {
     id, line: dim.line, subsistema: SUB.find((x) => x === input.subsistema) ?? "Dirección", cmi, name,
-    objetivo: str(input.objetivo, 600), horizon: input.horizon === "MEDIANO" ? "MEDIANO" : "CORTO",
+    objetivo: str(input.objetivo, 600), horizon: horizonsOf(c.company).some((h) => h.id === input.horizon) ? String(input.horizon) : horizonsOf(c.company)[0].id,
     impact: int(input.impact, 1, 5, 3), feasibility: int(input.feasibility, 1, 5, 3), urgency: int(input.urgency, 1, 5, 3), dependency: int(input.dependency, 1, 5, 3),
     status: STATUS.find((x) => x === input.status) ?? "PLANEADA", start, end, ownerId, metaResultado: str(input.metaResultado, 400),
     budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted),

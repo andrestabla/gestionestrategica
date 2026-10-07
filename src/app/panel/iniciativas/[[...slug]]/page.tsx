@@ -17,6 +17,7 @@ import { BudgetBar } from "@/components/charts";
 import { fmtCOP, LINES } from "@/data/demo";
 import type { ActionStatus, InitiativeFull } from "@/data/cmi";
 import { useCatalog } from "@/components/catalog-context";
+import { horizonsOf, horizonTitle } from "@/data/catalogo";
 import { initiativesOf, responsible, type InitiativeView } from "@/lib/vista";
 import { initiativeRisk } from "@/lib/logic";
 import { initiativeTaskStats } from "@/lib/proyectos";
@@ -478,6 +479,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
 /* ─── portafolio priorizado: la matriz aplicada a todas las iniciativas ─── */
 
 function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; onBack: () => void }) {
+  const pv = useCatalog();
   const { data } = usePriorizacion();
   const rows = data?.ranking ?? [];
   const evaluated = rows.filter((r) => r.c.n > 0);
@@ -499,11 +501,11 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
         <StatCard label="Backlog y renuncias" value={byDecision("BACKLOG") + byDecision("RENUNCIAR")} foot="pueden esperar o perdieron alineación" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
 
-      {(["CORTO", "MEDIANO"] as const).map((h, hi) => (
-        <Card key={h} className={`rise rise-${hi + 2} mb-5 overflow-hidden`}>
+      {horizonsOf(pv.catalog.company).map((hz, hi) => { const h = hz.id; return (
+        <Card key={h} className={`rise rise-${Math.min(hi + 2, 4)} mb-5 overflow-hidden`}>
           <div className="flex items-center gap-2 border-b border-line px-5 py-3">
             <ListChecks size={14} className="text-cyan-deep" />
-            <span className="text-[13px] font-extrabold text-ink">{h === "CORTO" ? "Corto plazo" : "Mediano plazo"}</span>
+            <span className="text-[13px] font-extrabold text-ink">{horizonTitle(hz)}</span>
             <span className="text-[11px] text-faint">· {rows.filter((r) => r.horizon === h).length} iniciativas, ordenadas por puntaje consolidado</span>
           </div>
           <div className="overflow-x-auto">
@@ -549,7 +551,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
             </table>
           </div>
         </Card>
-      ))}
+      ); })}
       <p className="text-center text-[11px] text-faint">La matriz ayuda a comparar. La priorización ocurre cuando se decide dónde comprometer recursos, qué debe esperar y a qué se renuncia.</p>
     </>
   );

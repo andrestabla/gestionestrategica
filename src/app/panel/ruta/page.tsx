@@ -10,6 +10,7 @@ import { AccessChip } from "@/components/user-context";
 import { GanttChart, PriorityMatrix } from "@/components/charts";
 import { LINES, fmtCOP } from "@/data/demo";
 import { useCatalog } from "@/components/catalog-context";
+import { horizonsOf, horizonColor, horizonTitle } from "@/data/catalogo";
 import { initiativesOf } from "@/lib/vista";
 import { usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
 import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
@@ -28,18 +29,20 @@ export default function RutaPage() {
   const selC = ini ? cOf(ini.id) : undefined;
   const selD = ini ? prio?.decisions[ini.id] : undefined;
 
-  const corto = inis.filter((i) => i.horizon === "CORTO");
-  const mediano = inis.filter((i) => i.horizon === "MEDIANO");
+  const horizons = horizonsOf(v.catalog.company);
+  const hColor = (id: string) => horizonColor(v.catalog.company, id);
+  const years = inis.flatMap((i) => [i.start, i.end]).map((s) => Number(s.slice(0, 4))).filter((y) => y > 2000);
+  const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "";
 
   return (
     <>
-      <PageHeader kicker="M5 · Mapa de ruta" title="Roadmap 2026–2028"
+      <PageHeader kicker="M5 · Mapa de ruta" title={`Roadmap ${span}`.trim()}
         desc="La ruta con pertinencia contextual: cada iniciativa declara horizonte, responsable, presupuesto, capacidad que fortalece e indicador que debe mover." actions={<AccessChip module="ruta" />} />
 
       <div className="mb-5 grid gap-5 lg:grid-cols-2">
         <Card className="rise rise-1">
           <CardHeader title="Cronograma por horizontes"
-            sub={`Corto plazo: ${corto.length} iniciativas · mediano plazo: ${mediano.length}`} />
+            sub={horizons.map((hz) => `${hz.label}: ${inis.filter((i) => i.horizon === hz.id).length}`).join(" · ") + " iniciativas"} />
           <div className="px-5 py-4">
             {inis.length === 0 && (
               <p className="mb-3 text-[12.5px] italic text-faint">Esta empresa aún no tiene iniciativas en su ruta.</p>
@@ -47,7 +50,7 @@ export default function RutaPage() {
             <GanttChart onSelect={setSel}
               items={inis.map((i) => ({
                 id: i.id, name: i.name, start: i.start, end: i.end,
-                horizon: i.horizon, progress: i.progress,
+                horizon: i.horizon, progress: i.progress, color: hColor(i.horizon),
               }))} />
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-line px-5 py-3 text-[11.5px] text-muted">
@@ -60,7 +63,7 @@ export default function RutaPage() {
           <CardHeader title="Matriz 4Shine de priorización" sub="capacidad de ejecución (L) × impacto en el resultado (D) del consolidado · tamaño: puntaje" />
           <div className="px-5 py-4">
             <PriorityMatrix onSelect={setSel} selected={sel}
-              items={evaluated.map((r) => ({ id: r.id, name: r.name, D: r.c.avg.D, L: r.c.avg.L, score: r.c.score, horizon: r.horizon }))} />
+              items={evaluated.map((r) => ({ id: r.id, name: r.name, D: r.c.avg.D, L: r.c.avg.L, score: r.c.score, horizon: r.horizon, color: hColor(r.horizon) }))} />
           </div>
           <div className="border-t border-line px-5 py-3 text-[11px] leading-relaxed text-muted">
             D ≥ 3 compite como prioridad crítica; con L en 1 o 2 se resuelve primero la capacidad. {rows.length - evaluated.length > 0 && <>{rows.length - evaluated.length} sin evaluar: no aparecen en la matriz.</>}
@@ -86,8 +89,8 @@ export default function RutaPage() {
               </tr>
             </thead>
             <tbody>
-              {(["CORTO", "MEDIANO"] as const).flatMap((h) => [
-                <tr key={`h-${h}`}><td colSpan={9} className="px-3 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-wider text-faint">{h === "CORTO" ? "Corto plazo" : "Mediano plazo"}</td></tr>,
+              {horizons.map((hz) => hz.id).flatMap((h) => [
+                <tr key={`h-${h}`}><td colSpan={9} className="px-3 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-wider text-faint">{horizonTitle(horizons.find((x) => x.id === h)!)}</td></tr>,
                 ...rows.filter((r) => r.horizon === h).map((r) => {
                   const d = prio?.decisions[r.id];
                   return (
@@ -175,9 +178,11 @@ export default function RutaPage() {
       )}
 
       {/* listas por horizonte */}
-      <div className="rise rise-3 grid gap-5 lg:grid-cols-2">
-        {[{ label: "Corto plazo · 0–12 meses", items: corto, color: "var(--cyan)" },
-          { label: "Mediano plazo · 12–36 meses", items: mediano, color: "var(--gold-fill)" }].map((g) => (
+      <div className={`rise rise-3 grid gap-5 ${horizons.length >= 3 ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+        {horizons.map((hz, k) => ({
+          label: `${horizonTitle(hz)}${k === 0 ? " (0–" : ` (${horizons[k - 1].months}–`}${hz.months} meses)`,
+          items: inis.filter((i) => i.horizon === hz.id), color: hColor(hz.id),
+        })).map((g) => (
           <Card key={g.label}>
             <CardHeader title={g.label} />
             <div className="divide-y divide-line">

@@ -18,6 +18,7 @@ export function companyRow(c: CompanyInfo) {
     slug: c.slug, name: c.name, shortName: c.shortName, city: c.city, department: c.department,
     sector: c.sector, size: c.size, sectorKey: c.sectorKey, ciiu: c.ciiu, template: c.template ?? "vacia",
     country: c.country ?? "CO", currency: c.currency ?? "COP",
+    horizons: (c.horizons?.length ? c.horizons : null) as never,
     active: c.active, createdBy: c.createdBy ?? null,
   };
 }
@@ -104,7 +105,7 @@ export async function deleteInitiative(db: Db, companyId: string, code: string) 
 }
 
 export async function writePerson(db: Db, companyId: string, p: Person) {
-  await db.person.upsert({ where: { companyId_id: { companyId, id: p.id } }, update: { name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email, responsibleId: p.responsibleId }, create: { companyId, ...p } });
+  await db.person.upsert({ where: { companyId_id: { companyId, id: p.id } }, update: { name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email || null, responsibleId: p.responsibleId }, create: { companyId, ...p, email: p.email || null } });
 }
 export const deletePerson = (db: Db, companyId: string, id: string) => db.person.deleteMany({ where: { companyId, id } });
 
@@ -187,7 +188,7 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
     factors: i.successFactors.map((f) => ({ name: f.name, state: f.state as "VERDE" | "AMBAR" | "ROJO", history: (f.history as string[]) ?? [], ...(f.note ? { note: f.note } : {}) })),
   }));
   const people: Person[] = (await db.person.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
-    .map((p: Person) => ({ id: p.id, name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email, responsibleId: p.responsibleId }));
+    .map((p: Person) => ({ id: p.id, name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email ?? "", responsibleId: p.responsibleId }));
   const tasks: Task[] = (await db.projectTask.findMany({ where: { companyId, archived: false }, orderBy: { id: "asc" } }))
     .map((t: Record<string, unknown>) => ({
       id: t.id as string, iniId: t.iniCode as string, title: t.title as string, desc: (t.desc as string) ?? "", assigneeId: t.assigneeId as string,

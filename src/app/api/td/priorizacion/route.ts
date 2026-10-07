@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
+import { horizonsOf } from "@/data/catalogo";
 import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, catalog } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz 4Shine, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const id = new URL(req.url).searchParams.get("id");
-  const ranking = rank(catalog().initiatives.map((i) => ({ id: i.id, horizon: i.horizon, line: i.line, name: i.name })), consolidatedOf);
+  const ranking = rank(catalog().initiatives.map((i) => ({ id: i.id, horizon: i.horizon, line: i.line, name: i.name })), consolidatedOf, horizonsOf(catalog().company).map((h) => h.id));
   return NextResponse.json({
     me: user?.email.toLowerCase(),
     evaluations: getEvaluations(id ?? undefined),

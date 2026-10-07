@@ -172,10 +172,11 @@ export function decisionCheck(decision: Decision, c: Consolidated, rationale?: s
 /** Orden del portafolio: dentro de cada horizonte, por puntaje consolidado;
     las no evaluadas al final. */
 export function rank<T extends { id: string; horizon: string }>(
-  items: T[], consolidatedOf: (id: string) => Consolidated,
+  items: T[], consolidatedOf: (id: string) => Consolidated, horizons: string[] = ["CORTO", "MEDIANO"],
 ): (T & { c: Consolidated; position: number })[] {
   const out: (T & { c: Consolidated; position: number })[] = [];
-  for (const h of ["CORTO", "MEDIANO"]) {
+  const extra = [...new Set(items.map((i) => i.horizon))].filter((h) => !horizons.includes(h));
+  for (const h of [...horizons, ...extra]) {
     const group = items.filter((i) => i.horizon === h).map((i) => ({ ...i, c: consolidatedOf(i.id), position: 0 }))
       .sort((a, b) => (b.c.n === 0 ? -1 : b.c.score) - (a.c.n === 0 ? -1 : a.c.score));
     group.forEach((g, i) => { g.position = i + 1; });

@@ -251,7 +251,7 @@ export type InitiativeFull = {
   cmi: string;                 // objetivo OE-xx
   name: string;
   objetivo: string;            // objetivo de la iniciativa
-  horizon: "CORTO" | "MEDIANO";
+  horizon: string;          // id de un horizonte de la empresa (CORTO | MEDIANO por defecto)
   impact: number; feasibility: number;
   urgency: number;     // 1–5: presión temporal
   dependency: number;  // 1–5: cuántas otras iniciativas habilita

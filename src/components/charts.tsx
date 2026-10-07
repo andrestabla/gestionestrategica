@@ -359,7 +359,7 @@ export function PeerBars({ peers, nationalAvg, refLabel = "media nacional" }:
    prioridad crítica y L ≥ 3 para implementar ahora. */
 
 export function PriorityMatrix({ items, onSelect, selected }: {
-  items: { id: string; name: string; D: number; L: number; score: number; horizon: string }[];
+  items: { id: string; name: string; D: number; L: number; score: number; horizon: string; color?: string }[];
   onSelect?: (id: string) => void;
   selected?: string | null;
 }) {
@@ -396,7 +396,7 @@ export function PriorityMatrix({ items, onSelect, selected }: {
                 stroke="var(--navy)" strokeWidth="1.5" opacity=".5" />
             )}
             <circle cx={px(it.L)} cy={py(it.D)} r={r}
-              fill={it.horizon === "CORTO" ? "var(--cyan)" : "var(--gold-fill)"}
+              fill={it.color ?? (it.horizon === "CORTO" ? "var(--cyan)" : "var(--gold-fill)")}
               opacity=".92" stroke="var(--surface)" strokeWidth="2"
               className="transition-transform hover:scale-110"
               style={{ transformOrigin: "center", transformBox: "fill-box" }}>
@@ -416,14 +416,26 @@ export function PriorityMatrix({ items, onSelect, selected }: {
 
 /* ─── Gantt por trimestres ──────────────────────────────────────────────── */
 
-const QUARTERS = ["2026-T3", "2026-T4", "2027-T1", "2027-T2", "2027-T3", "2027-T4", "2028-T1", "2028-T2", "2028-T3", "2028-T4"];
+const DEFAULT_QUARTERS = ["2026-T3", "2026-T4", "2027-T1", "2027-T2", "2027-T3", "2027-T4", "2028-T1", "2028-T2", "2028-T3", "2028-T4"];
+const MAX_QUARTERS = 32;
+const qIndex = (s: string) => { const m = /^(\d{4})-T([1-4])$/.exec(s); return m ? Number(m[1]) * 4 + Number(m[2]) - 1 : null; };
+const qLabel = (i: number) => `${Math.floor(i / 4)}-T${(i % 4) + 1}`;
+
+/** Eje de trimestres: del primer inicio al último fin de las iniciativas (acotado). */
+export function quartersFor(items: { start: string; end: string }[]): string[] {
+  const idx = items.flatMap((i) => [qIndex(i.start), qIndex(i.end)]).filter((x): x is number => x !== null);
+  if (!idx.length) return DEFAULT_QUARTERS;
+  const lo = Math.min(...idx), hi = Math.min(Math.max(...idx), lo + MAX_QUARTERS - 1);
+  return Array.from({ length: hi - lo + 1 }, (_, k) => qLabel(lo + k));
+}
 
 export function GanttChart({ items, onSelect, selected }: {
-  items: { id: string; name: string; start: string; end: string; horizon: string; progress: number }[];
+  items: { id: string; name: string; start: string; end: string; horizon: string; progress: number; color?: string }[];
   onSelect?: (id: string) => void;
   selected?: string | null;
 }) {
-  const q = (s: string) => Math.max(0, QUARTERS.indexOf(s));
+  const QUARTERS = quartersFor(items);
+  const q = (s: string) => { const i = QUARTERS.indexOf(s); return i >= 0 ? i : (qIndex(s) ?? 0) < (qIndex(QUARTERS[0]) ?? 0) ? 0 : QUARTERS.length - 1; };
   const rowH = 36, left = 210, colW = 44;
   const W = left + QUARTERS.length * colW, H = items.length * rowH + 30;
   return (
@@ -444,7 +456,7 @@ export function GanttChart({ items, onSelect, selected }: {
           const x0 = left + q(it.start) * colW;
           const x1 = left + (q(it.end) + 1) * colW;
           const y = 26 + r * rowH;
-          const color = it.horizon === "CORTO" ? "var(--cyan)" : "var(--gold-fill)";
+          const color = it.color ?? (it.horizon === "CORTO" ? "var(--cyan)" : "var(--gold-fill)");
           const isSel = selected === it.id;
           return (
             <g key={it.id} onClick={() => onSelect?.(it.id)}
