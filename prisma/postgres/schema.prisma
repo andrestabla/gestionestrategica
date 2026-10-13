@@ -49,6 +49,7 @@ model Company {
   country     String  @default("CO") // CO | EC: mapa territorial y fuente del benchmark
   currency    String  @default("COP") // COP | USD: unidad de las cifras financieras
   horizons    Json? // horizontes de planeación [{id, label, months}]; nulo = corto/mediano
+  levers      Json? // palancas estratégicas [{id, name, order, ownerId, indicator, desc}]
   financials  Json? // estados financieros de cierre (COP millones)
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia
@@ -103,6 +104,11 @@ model CmiObjective {
   name        String
   kpis        Json // códigos de KPI (resultados clave)
   line        Int? // capacidad dominante
+  lever       String? // palanca estratégica
+  horizon     String? // horizonte del objetivo
+  pillar      String? // pilar corporativo
+  desc        String? // aspiración
+  indicator   String? // indicador impulsor
 
   @@id([companyId, id])
 }
@@ -394,6 +400,7 @@ model Kpi {
   baseline      Float?
   target        Float?
   goodDirection String       @default("up")
+  due           String?      // plazo del resultado clave
   values        KpiValue[]
   initiatives   Initiative[]
 

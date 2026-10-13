@@ -13,7 +13,7 @@ import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
-  type Catalog, type CompanyInfo, horizonsOf, type Horizon } from "@/data/catalogo";
+  type Catalog, type CompanyInfo, horizonsOf, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
@@ -273,7 +273,7 @@ async function prisma(): Promise<AnyPrisma> {
    primera vez que una petición la activa. */
 
 import {
-  writeCatalog, readCatalog, companyRow, writeCompanyExtras, writeResponsible, deleteResponsible as dbDeleteResponsible,
+  writeCatalog, readCatalog, companyRow, writeCompanyExtras, writeLevers, writeResponsible, deleteResponsible as dbDeleteResponsible,
   writeObjective, deleteObjective as dbDeleteObjective, writeKpi, deleteKpi as dbDeleteKpi, writeInitiative,
   deleteInitiative as dbDeleteInitiative, writePerson, deletePerson as dbDeletePerson, clearCatalog as dbClearCatalog,
 } from "@/server/catalog-db";
@@ -302,6 +302,7 @@ export async function hydrateCompanies() {
         ciiu: c.ciiu ?? "", active: c.active, template: (c.template as CompanyInfo["template"]) ?? "vacia",
         country: (c.country as CompanyInfo["country"]) ?? "CO", currency: (c.currency as CompanyInfo["currency"]) ?? "COP",
         horizons: parseHorizons(c.horizons).ok ? (parseHorizons(c.horizons) as { horizons?: Horizon[] }).horizons : undefined,
+        levers: parseLevers(c.levers).ok ? (parseLevers(c.levers) as { levers?: Lever[] }).levers : undefined,
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       const t = g.tenants.get(c.slug);
@@ -450,8 +451,50 @@ export type CompanyInput = {
   name: string; shortName?: string; slug?: string; city?: string; department?: string; sector?: string; size?: string;
   sectorKey?: string; ciiu?: string; template?: "demo" | "vacia"; country?: "CO" | "EC"; currency?: "COP" | "USD";
   horizons?: unknown;   // [{id, label, months}] · lista vacía o nula = corto/mediano
+  levers?: unknown;     // [{id, name, order, ownerId, indicator, desc}] · palancas estratégicas
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
+
+/** Valida las palancas estratégicas: hasta ocho, id corto y único, nombre; orden 1..n. */
+export function parseLevers(input: unknown): { ok: true; levers?: Lever[] } | { ok: false; error: string } {
+  if (input === undefined || input === null) return { ok: true, levers: undefined };
+  if (!Array.isArray(input)) return { ok: false, error: "Las palancas deben ser una lista." };
+  if (input.length === 0) return { ok: true, levers: undefined };
+  if (input.length > 8) return { ok: false, error: "Máximo ocho palancas." };
+  const out: Lever[] = [];
+  for (const raw of input as Record<string, unknown>[]) {
+    const id = str(raw?.id, 12).toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+    const name = str(raw?.name, 80);
+    if (!id) return { ok: false, error: "Cada palanca necesita un identificador (p. ej. MS)." };
+    if (name.length < 3) return { ok: false, error: `La palanca ${id} necesita un nombre.` };
+    if (out.some((l) => l.id === id)) return { ok: false, error: `Palanca repetida: ${id}.` };
+    const ownerId = str(raw?.ownerId, 10) || undefined;
+    const indicator = str(raw?.indicator, 160) || undefined;
+    const desc = str(raw?.desc, 400) || undefined;
+    out.push({ id, name, order: out.length + 1, ...(ownerId ? { ownerId } : {}), ...(indicator ? { indicator } : {}), ...(desc ? { desc } : {}) });
+  }
+  return { ok: true, levers: out };
+}
+
+/** Palancas estratégicas de la empresa activa (manage_catalog): las guarda en
+    la empresa y las refleja en el catálogo y el registro. */
+export function setLevers(user: SessionUser, input: unknown): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const parsed = parseLevers(input);
+  if (!parsed.ok) return fail(422, parsed.error);
+  const c = cat();
+  const levers = parsed.levers;
+  if (levers) {
+    const bad = levers.filter((l) => l.ownerId && !c.responsibles.some((r) => r.id === l.ownerId));
+    if (bad.length) return fail(422, `Responsable inexistente en la palanca ${bad[0].id}.`);
+  }
+  c.company.levers = levers;
+  const rec = g.companies.get(currentTenant());
+  if (rec) rec.levers = levers;
+  audit(user, "task", "cat:palancas", `palancas: ${levers ? levers.map((l) => l.name).join(" · ") : "sin palancas"}`);
+  void persist("catálogo", (db) => writeLevers(db, cid(), levers));
+  return { ok: true };
+}
 
 /** Valida los horizontes de una empresa: 1–6, id corto y único, etiqueta y meses crecientes. */
 export function parseHorizons(input: unknown): { ok: true; horizons?: Horizon[] } | { ok: false; error: string } {
@@ -493,6 +536,9 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const hz = parseHorizons(input.horizons);
   if (!hz.ok) return { ok: false, status: 422, error: hz.error };
   if (hz.horizons) info.horizons = hz.horizons;
+  const lv = parseLevers(input.levers);
+  if (!lv.ok) return { ok: false, status: 422, error: lv.error };
+  if (lv.levers) info.levers = lv.levers;
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
   if (hasDb()) {
@@ -542,6 +588,11 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     const hz = parseHorizons(patch.horizons);
     if (!hz.ok) return { ok: false, status: 422, error: hz.error };
     c.horizons = hz.horizons;
+  }
+  if (patch.levers !== undefined) {
+    const lv = parseLevers(patch.levers);
+    if (!lv.ok) return { ok: false, status: 422, error: lv.error };
+    c.levers = lv.levers;
   }
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(c.slug);
@@ -1785,8 +1836,16 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   const missing = kpis.filter((k) => !c.kpis.some((x) => x.code === k));
   if (missing.length) return fail(422, `KPI inexistentes: ${missing.join(", ")}.`);
   const line = input.line === undefined || input.line === null ? undefined : int(input.line, 1, 4, 1);
+  const lever = str(input.lever, 12).toUpperCase() || undefined;
+  if (lever && !(c.company.levers ?? []).some((l) => l.id === lever)) return fail(422, "La palanca no existe en esta empresa.");
+  const horizon = str(input.horizon, 12).toUpperCase() || undefined;
+  if (horizon && !horizonsOf(c.company).some((h) => h.id === horizon)) return fail(422, "El horizonte no es de esta empresa.");
+  const pillar = str(input.pillar, 80) || undefined, desc = str(input.desc, 600) || undefined, indicator = str(input.indicator, 200) || undefined;
   const id = str(input.id, 10) || nextCode("OE-", c.objectives.map((o) => o.id), 2);
-  const o: CmiObjective = { id, perspective, name, kpis, ...(line ? { line } : {}) };
+  const o: CmiObjective = {
+    id, perspective, name, kpis, ...(line ? { line } : {}),
+    ...(lever ? { lever } : {}), ...(horizon ? { horizon } : {}), ...(pillar ? { pillar } : {}), ...(desc ? { desc } : {}), ...(indicator ? { indicator } : {}),
+  };
   const idx = c.objectives.findIndex((x) => x.id === id);
   if (idx >= 0) c.objectives[idx] = o; else c.objectives.push(o);
   audit(user, "task", `cat:${id}`, `objetivo ${idx >= 0 ? "actualizado" : "creado"}`);
@@ -1827,9 +1886,12 @@ export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult
   const badPeriod = series.find((v) => !isValidPeriod(v.period));
   if (badPeriod) return fail(422, `Periodo inválido en la serie: ${badPeriod.period} (usa AAAA-Tn, AAAA-Sn o AAAA).`);
   series.sort((x, y) => periodIndex(x.period) - periodIndex(y.period));
+  const due = str(input.due, 10).toUpperCase() || undefined;
+  if (due && !/^\d{4}(-T[1-4])?$/.test(due)) return fail(422, "El plazo del resultado clave es un año (2027) o un trimestre (2027-T4).");
   const k: KpiFull = {
     code, line, cmi, name, definition: str(input.definition, 600), formula: str(input.formula, 300), unit, frequency,
     source: str(input.source, 160), ownerId, baseline: num(input.baseline), target: num(input.target), goodDirection, series,
+    ...(due ? { due } : {}),
   };
   const idx = c.kpis.findIndex((x) => x.code === code);
   if (idx >= 0) c.kpis[idx] = k; else c.kpis.push(k);

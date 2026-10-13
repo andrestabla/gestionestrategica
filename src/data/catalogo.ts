@@ -31,6 +31,7 @@ export type CompanyInfo = {
   country?: "CO" | "EC";    // país: mapa territorial (departamentos/provincias) y benchmark
   currency?: "COP" | "USD"; // moneda de las cifras financieras
   horizons?: Horizon[];     // horizontes del roadmap y de la priorización (vacío = corto/mediano)
+  levers?: Lever[];         // palancas estratégicas (hilo conductor de objetivos, OKR e iniciativas)
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;
@@ -43,6 +44,13 @@ export type Financials = typeof FINANCIALS;
     Cada empresa define los suyos (p. ej. H1 · 12 meses, H2 · 36, H3 · 72);
     sin definición rigen los dos clásicos. */
 export type Horizon = { id: string; label: string; months: number };
+
+/** Palanca estratégica de la empresa (p. ej. Market Share, Fidelización,
+    Madurez, Margen): ordena la convención y agrupa objetivos e iniciativas. */
+export type Lever = { id: string; name: string; order: number; ownerId?: string; indicator?: string; desc?: string };
+
+export const leversOf = (c: Pick<CompanyInfo, "levers"> | null | undefined): Lever[] =>
+  [...(c?.levers ?? [])].sort((a, b) => a.order - b.order);
 
 export const DEFAULT_HORIZONS: Horizon[] = [
   { id: "CORTO", label: "Corto plazo", months: 12 },

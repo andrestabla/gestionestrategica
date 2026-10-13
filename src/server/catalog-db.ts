@@ -19,6 +19,7 @@ export function companyRow(c: CompanyInfo) {
     sector: c.sector, size: c.size, sectorKey: c.sectorKey, ciiu: c.ciiu, template: c.template ?? "vacia",
     country: c.country ?? "CO", currency: c.currency ?? "COP",
     horizons: (c.horizons?.length ? c.horizons : null) as never,
+    levers: (c.levers?.length ? c.levers : null) as never,
     active: c.active, createdBy: c.createdBy ?? null,
   };
 }
@@ -28,13 +29,16 @@ export function companyRow(c: CompanyInfo) {
 export async function writeCompanyExtras(db: Db, companyId: string, cat: Pick<Catalog, "financials" | "territories">) {
   await db.company.update({ where: { id: companyId }, data: { financials: (cat.financials ?? null) as never, territories: cat.territories as never } });
 }
+export async function writeLevers(db: Db, companyId: string, levers: CompanyInfo["levers"]) {
+  await db.company.update({ where: { id: companyId }, data: { levers: (levers?.length ? levers : null) as never } });
+}
 export async function writeResponsible(db: Db, companyId: string, r: Responsible) {
   await db.responsible.upsert({ where: { companyId_id: { companyId, id: r.id } }, update: { cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }, create: { companyId, ...r } });
 }
 export const deleteResponsible = (db: Db, companyId: string, id: string) => db.responsible.deleteMany({ where: { companyId, id } });
 
 export async function writeObjective(db: Db, companyId: string, o: CmiObjective) {
-  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null };
+  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null, lever: o.lever ?? null, horizon: o.horizon ?? null, pillar: o.pillar ?? null, desc: o.desc ?? null, indicator: o.indicator ?? null };
   await db.cmiObjective.upsert({ where: { companyId_id: { companyId, id: o.id } }, update: data, create: { companyId, id: o.id, ...data } });
 }
 export const deleteObjective = (db: Db, companyId: string, id: string) => db.cmiObjective.deleteMany({ where: { companyId, id } });
@@ -65,6 +69,7 @@ export async function writeKpi(db: Db, companyId: string, k: KpiFull): Promise<s
   const data = {
     line: k.line, name: k.name, unit: k.unit, source: k.source, ownerRole: k.ownerId, definition: k.definition, formula: k.formula,
     cmiObjective: k.cmi, frequency: k.frequency.toUpperCase(), baseline: k.baseline, target: k.target, goodDirection: k.goodDirection,
+    due: k.due ?? null,
   };
   const kpi = await db.kpi.upsert({ where: { companyId_code: { companyId, code: k.code } }, update: data, create: { companyId, code: k.code, ...data } });
   await db.kpiValue.deleteMany({ where: { kpiId: kpi.id, period: { notIn: k.series.map((v) => v.period) } } });
@@ -159,7 +164,10 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
   const responsibles: Responsible[] = (await db.responsible.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
     .map((r: Responsible) => ({ id: r.id, cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }));
   const objectives: CmiObjective[] = (await db.cmiObjective.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
-    .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null }) => ({ id: o.id, perspective: o.perspective, name: o.name, kpis: (o.kpis as string[]) ?? [], line: o.line ?? undefined }));
+    .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null; lever: string | null; horizon: string | null; pillar: string | null; desc: string | null; indicator: string | null }) => ({
+      id: o.id, perspective: o.perspective, name: o.name, kpis: (o.kpis as string[]) ?? [], line: o.line ?? undefined,
+      ...(o.lever ? { lever: o.lever } : {}), ...(o.horizon ? { horizon: o.horizon } : {}), ...(o.pillar ? { pillar: o.pillar } : {}), ...(o.desc ? { desc: o.desc } : {}), ...(o.indicator ? { indicator: o.indicator } : {}),
+    }));
   const kpiRows = await db.kpi.findMany({ where: { companyId }, include: { values: true }, orderBy: { code: "asc" } });
   const kpiCodeById = new Map<string, string>();
   const kpis: KpiFull[] = kpiRows.map((k: Record<string, unknown> & { values: { period: string; value: number; note: string | null }[] }) => {
@@ -169,6 +177,7 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
       definition: (k.definition as string) ?? "", formula: (k.formula as string) ?? "", unit: k.unit as string,
       frequency: FREQ[(k.frequency as string) ?? "TRIMESTRAL"] ?? "Trimestral", source: (k.source as string) ?? "",
       ownerId: (k.ownerRole as string) ?? "", baseline: (k.baseline as number) ?? 0, target: (k.target as number) ?? 0,
+      ...(k.due ? { due: k.due as string } : {}),
       goodDirection: (k.goodDirection as "up" | "down") ?? "up",
       series: k.values.map((v) => ({ period: v.period, value: v.value, ...(v.note ? { note: v.note } : {}) })).sort((a, b) => a.period.localeCompare(b.period)),
     };

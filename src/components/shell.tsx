@@ -11,7 +11,7 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, FlaskConical, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft,
+  FileText, Users2, ArrowRightLeft, Presentation,
 } from "lucide-react";
 import { AlgoritmoMark } from "@/components/logo";
 import { CommandPalette, SearchButton } from "@/components/command-palette";
@@ -168,6 +168,7 @@ const NAV = [
   { href: "/panel/kpi", label: "Indicadores", icon: Gauge, code: "M4" },
   { href: "/panel/ruta", label: "Ruta", icon: MapIcon, code: "M5" },
   { href: "/panel/iniciativas", label: "Iniciativas", icon: ListChecks, code: "M6" },
+  { href: "/panel/convencion", label: "Convención", icon: Presentation, code: "CV" },
   { href: "/panel/proyectos", label: "Proyectos", icon: KanbanSquare, code: "GP" },
   { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" },
   { href: "/panel/informe", label: "Informe", icon: FileText },

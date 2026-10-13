@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import {
   tenantView, upsertResponsible, removeResponsible, upsertPerson, removePerson, upsertObjective, removeObjective,
-  upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, evaluateInitiative,
+  upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, setLevers, evaluateInitiative,
 } from "@/server/store";
 
 // GET /api/td/catalogo — la vista completa de la empresa activa: catálogo
@@ -42,6 +42,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     case "initiative:delete": r = removeInitiative(user, String(data.id ?? "")); break;
     case "financials:upsert": r = setFinancials(user, data === null ? null : data); break;
     case "territories:upsert": r = setTerritories(user, data); break;
+    case "levers:upsert": r = setLevers(user, data); break;
     default: return NextResponse.json({ error: "Entidad u operación desconocida." }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

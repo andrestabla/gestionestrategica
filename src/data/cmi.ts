@@ -49,6 +49,11 @@ export type CmiObjective = {
   name: string;
   kpis: string[];      // códigos de KPI (resultados clave)
   line?: number;       // capacidad dominante 1..4
+  lever?: string;      // palanca estratégica (Company.levers)
+  horizon?: string;    // horizonte al que pertenece el objetivo (Company.horizons)
+  pillar?: string;     // pilar corporativo (texto libre: p. ej. «El ser humano»)
+  desc?: string;       // aspiración: qué se quiere lograr o dejar habilitado
+  indicator?: string;  // indicador impulsor (texto) propuesto para el objetivo
 };
 
 export const CMI_OBJECTIVES: CmiObjective[] = [
@@ -80,6 +85,7 @@ export type KpiFull = {
   baseline: number;
   target: number;
   goodDirection: "up" | "down";
+  due?: string;              // plazo del resultado clave (AAAA o AAAA-Tn)
   series: { period: string; value: number; note?: string }[];
 };
 

@@ -1,0 +1,597 @@
+"use client";
+
+// Convención de planeación: apoyo a la facilitación en vivo.
+//   Dirección   → objetivos por palanca y horizonte (mesa redonda, talleres 2027/2030/2033)
+//   OKR         → objetivos del primer horizonte con sus resultados clave y reglas de calidad
+//   Iniciativas → qué iniciativa mueve cada resultado clave; vinculación en vivo
+//   Priorización→ cobertura de la evaluación con la matriz, ranking y actividad por evaluador
+//   Portafolio  → por horizonte y decisión, renuncias con motivo, exportación CSV
+// Edita quien administra el catálogo (advisor, gerencia); los demás ven en vivo.
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote } from "@/components/ui";
+import { AccessChip, useCan, useBase } from "@/components/user-context";
+import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
+import { horizonsOf, horizonLabel, leversOf, type Lever } from "@/data/catalogo";
+import { PERSPECTIVES, type CmiObjective, type KpiFull } from "@/data/cmi";
+import { LINES } from "@/data/demo";
+import { objectivesMatrix, keyResultsOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
+import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
+import { CRITERIA, decisionLabel, type Decision } from "@/lib/priorizacion";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2 } from "lucide-react";
+
+type Tab = "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
+const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
+  { id: "direccion", label: "Dirección", icon: Target, agenda: "Día 1 · mesa redonda y talleres 2027 / 2030 / 2033" },
+  { id: "okr", label: "OKR", icon: Gauge, agenda: "Día 2 · laboratorio y validación cruzada de OKR" },
+  { id: "iniciativas", label: "Iniciativas → KR", icon: Rocket, agenda: "Día 2 · iniciativas críticas para mover resultados" },
+  { id: "priorizacion", label: "Priorización en vivo", icon: Scale, agenda: "Día 2 · priorización en herramienta" },
+  { id: "portafolio", label: "Portafolio", icon: Layers, agenda: "Día 2 · portafolio por horizonte, capacidad y ratificación" },
+];
+const INPUT = "input !py-2 text-[12px]";
+const SCORE_COLOR = (s: number) => s >= 80 ? "var(--ok)" : s >= 65 ? "var(--cyan-deep)" : s >= 50 ? "var(--warn)" : "var(--bad)";
+
+export default function ConvencionPage() {
+  const v = useCatalog();
+  const refetch = useCatalogRefetch();
+  const base = useBase();
+  const canEdit = useCan("manage_catalog");
+  const [tab, setTab] = useState<Tab>("direccion");
+  const [big, setBig] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { data: prio, refetch: refetchPrio } = usePriorizacion();
+
+  // en vivo: la priorización se refresca sola mientras se proyecta
+  useEffect(() => {
+    if (tab !== "priorizacion" && tab !== "portafolio") return;
+    const t = setInterval(() => { void refetchPrio(); }, 15_000);
+    return () => clearInterval(t);
+  }, [tab, refetchPrio]);
+
+  const mutate = async (entity: string, op: "upsert" | "delete", data: unknown) => {
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, op, data }) });
+      if (!res.ok) { setError((await res.json().catch(() => null))?.error ?? `Error ${res.status}`); setSaving(false); return false; }
+      await refetch(); setSaving(false); return true;
+    } catch { setError("No se pudo conectar con el servidor."); setSaving(false); return false; }
+  };
+
+  const cat = v.catalog;
+  const horizons = horizonsOf(cat.company);
+  const levers = leversOf(cat.company);
+  const first = horizons[0]?.id ?? "";
+
+  return (
+    <div className={big ? "text-[1.12em]" : ""}>
+      <PageHeader kicker="Convención de planeación" title={`Convención · ${cat.company.name}`}
+        desc="De los diagnósticos de las tribus a la dirección compartida, de los objetivos a OKR y prioridades ejecutables. Lo que se decide en sala queda registrado aquí, en vivo."
+        actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
+          <button type="button" onClick={() => setBig((b) => !b)} className="btn-ghost !py-1.5 text-[11.5px]" title="Tamaño para proyectar">{big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? "Normal" : "Proyector"}</button></span>} />
+
+      {error && (
+        <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3" style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} /><p className="flex-1 text-[12.5px] text-ink-soft">{error}</p><button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
+        </div>
+      )}
+
+      <div className="rise mb-5 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)} title={t.agenda}
+            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12px] font-bold transition-all ${tab === t.id ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
+            <t.icon size={13} className={tab === t.id ? "text-cyan-deep" : ""} /> {t.label}
+          </button>
+        ))}
+        <span className="ml-auto hidden text-[10.5px] text-faint sm:block">{TABS.find((t) => t.id === tab)?.agenda}</span>
+      </div>
+
+      {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit} saving={saving} mutate={mutate} />}
+      {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
+      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
+      {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} />}
+      {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} />}
+    </div>
+  );
+}
+
+type Mutate = (entity: string, op: "upsert" | "delete", data: unknown) => Promise<boolean>;
+type Cat = ReturnType<typeof useCatalog>["catalog"];
+
+/* ═══ Dirección: palanca × horizonte ═══ */
+
+function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; horizons: { id: string; label: string; months: number }[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
+  const m = objectivesMatrix(cat);
+  const [open, setOpen] = useState<CmiObjective | { lever?: string; horizon?: string } | null>(null);
+  const [leversOpen, setLeversOpen] = useState(false);
+  const owner = (id?: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "";
+  const editing = open && "id" in open ? (open as CmiObjective) : null;
+  const hz = [...horizons].reverse();   // del más lejano (2033) al más cercano (2027): así trabaja la mesa redonda
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>
+        {canEdit && <span className="ml-auto flex gap-2">
+          <button onClick={() => setLeversOpen(true)} className="btn-ghost !py-1.5 text-[11.5px]"><Pencil size={12} /> Palancas</button>
+          <button onClick={() => setOpen({})} className="btn-primary !py-1.5 text-[11.5px]"><Plus size={12} /> Nuevo objetivo</button>
+        </span>}
+      </div>
+      {levers.length === 0 ? (
+        <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus palancas estratégicas. {canEdit ? "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
+      ) : (
+        <div className="rise overflow-x-auto">
+          <table className="w-full min-w-[820px] border-separate border-spacing-2">
+            <thead>
+              <tr>
+                <th className="w-[200px] text-left align-bottom"><span className="label">Palanca</span></th>
+                {hz.map((h) => <th key={h.id} className="text-left"><div className="rounded-xl bg-surface-2 px-3 py-2 text-[12px] font-extrabold text-ink">{h.label} <span className="num font-semibold text-faint">· {h.months} meses</span></div></th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {levers.map((l) => (
+                <tr key={l.id} className="align-top">
+                  <td className="rounded-xl bg-surface-2/60 px-3 py-3">
+                    <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+                    <div className="text-[13.5px] font-extrabold leading-tight text-ink">{l.name}</div>
+                    {l.indicator && <div className="mt-1 text-[10.5px] leading-snug text-muted">{l.indicator}</div>}
+                    {l.ownerId && <div className="mt-1 text-[10px] text-faint">{owner(l.ownerId)}</div>}
+                  </td>
+                  {hz.map((h) => {
+                    const objs = m.cell(l.id, h.id);
+                    return (
+                      <td key={h.id} className="min-w-[200px]">
+                        <div className="space-y-2">
+                          {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} />)}
+                          {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2 text-[11px] font-semibold text-faint hover:border-cyan-deep hover:text-cyan-deep">+ objetivo</button>}
+                          {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[10.5px] italic text-faint">por definir</div>}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {m.orphan.length > 0 && (
+        <Card className="rise rise-2 mt-5">
+          <CardHeader title={`Objetivos sin palanca u horizonte (${m.orphan.length})`} sub="siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención" />
+          <div className="flex flex-wrap gap-2 px-5 pb-5">
+            {m.orphan.map((o) => <button key={o.id} onClick={canEdit ? () => setOpen(o) : undefined} className="chip !py-1 text-[11px]">{o.id} · {o.name.slice(0, 60)}{o.name.length > 60 ? "…" : ""}</button>)}
+          </div>
+        </Card>
+      )}
+      {open && <ObjectiveForm cat={cat} levers={levers} horizons={horizons} initial={editing} preset={editing ? undefined : (open as { lever?: string; horizon?: string })} saving={saving}
+        onCancel={() => setOpen(null)} onSubmit={async (d) => { const ok = await mutate("objective", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setOpen(null); return ok; }}
+        onDelete={editing ? async () => { if (window.confirm(`¿Eliminar el objetivo ${editing.id}?`)) { const ok = await mutate("objective", "delete", { id: editing.id }); if (ok) setOpen(null); } } : undefined} />}
+      {leversOpen && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setLeversOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setLeversOpen(false); return ok; }} />}
+    </>
+  );
+}
+
+function ObjectiveCard({ o, cat, onEdit }: { o: CmiObjective; cat: Cat; onEdit?: () => void }) {
+  const krs = keyResultsOf(cat, o);
+  return (
+    <div className="panel group px-3.5 py-3">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
+          <div className="text-[12.5px] font-bold leading-snug text-ink">{o.name}</div>
+          {o.desc && <p className="mt-1 text-[11px] leading-snug text-muted">{o.desc}</p>}
+          {o.indicator && <p className="mt-1 text-[10.5px] text-ink-soft"><span className="font-semibold">Indicador:</span> {o.indicator}</p>}
+        </div>
+        {onEdit && <button onClick={onEdit} className="shrink-0 rounded-lg p-1.5 text-faint opacity-0 transition-opacity hover:bg-surface-2 hover:text-ink group-hover:opacity-100" title="Editar"><Pencil size={12} /></button>}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1">
+        <span className={`chip !py-0 text-[9.5px] ${krs.length ? "chip-cyan" : ""}`}>{krs.length} KR</span>
+        {krs.slice(0, 3).map((k) => <span key={k.code} className="num chip !py-0 text-[9px]" title={k.name}>{k.code}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCancel, onSubmit, onDelete }: {
+  cat: Cat; levers: Lever[]; horizons: { id: string; label: string }[]; initial: CmiObjective | null; preset?: { lever?: string; horizon?: string }; saving: boolean;
+  onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void;
+}) {
+  const [f, setF] = useState({
+    name: initial?.name ?? "", desc: initial?.desc ?? "", indicator: initial?.indicator ?? "", pillar: initial?.pillar ?? "",
+    lever: initial?.lever ?? preset?.lever ?? levers[0]?.id ?? "", horizon: initial?.horizon ?? preset?.horizon ?? horizons[0]?.id ?? "",
+    perspective: initial?.perspective ?? "clientes", line: String(initial?.line ?? ""),
+  });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const pillars = [...new Set(cat.objectives.map((o) => o.pillar).filter(Boolean))] as string[];
+  return (
+    <Modal title={initial ? `Objetivo · ${initial.id}` : "Nuevo objetivo"} sub="aspiración, indicador impulsor, palanca y horizonte" onClose={onCancel}
+      footer={<>
+        {onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}
+        <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" disabled={saving || f.name.trim().length < 5} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
+          onClick={() => onSubmit({ name: f.name.trim(), desc: f.desc.trim(), indicator: f.indicator.trim(), pillar: f.pillar.trim(), lever: f.lever, horizon: f.horizon, perspective: f.perspective, kpis: initial?.kpis ?? [], ...(f.line ? { line: Number(f.line) } : {}) })}>
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} {initial ? "Guardar" : "Crear"}
+        </button>
+      </>}>
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Palanca"><select value={f.lever} onChange={set("lever")} className={INPUT}><option value="">— sin palanca —</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select></Field>
+          <Field label="Horizonte"><select value={f.horizon} onChange={set("horizon")} className={INPUT}><option value="">— sin horizonte —</option>{horizons.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></Field>
+        </div>
+        <Field label="Objetivo"><input value={f.name} onChange={set("name")} placeholder="Qué se logra o queda habilitado" className={INPUT} /></Field>
+        <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
+        <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder="¿Cómo mediremos ese avance? (complementa el indicador de la palanca)" className={INPUT} /></Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Pilar corporativo"><input list="pilares" value={f.pillar} onChange={set("pillar")} placeholder="p. ej. El ser humano" className={INPUT} /><datalist id="pilares">{pillars.map((p) => <option key={p} value={p} />)}</datalist></Field>
+          <Field label="Perspectiva del cuadro de mando"><select value={f.perspective} onChange={set("perspective")} className={INPUT}>{PERSPECTIVES.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+        </div>
+        <Field label="Capacidad 4Shine dominante (opcional)"><select value={f.line} onChange={set("line")} className={INPUT}><option value="">—</option>{LINES.map((l) => <option key={l.n} value={l.n}>{l.code} · {l.name}</option>)}</select></Field>
+      </div>
+    </Modal>
+  );
+}
+
+function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; initial: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean> }) {
+  const [rows, setRows] = useState<{ id: string; name: string; ownerId: string; indicator: string; desc: string }[]>(initial.map((l) => ({ id: l.id, name: l.name, ownerId: l.ownerId ?? "", indicator: l.indicator ?? "", desc: l.desc ?? "" })));
+  const upd = (i: number, k: string, v: string) => setRows(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= rows.length) return; const c = [...rows]; [c[i], c[j]] = [c[j], c[i]]; setRows(c); };
+  return (
+    <Modal title="Palancas estratégicas" sub="el orden es la jerarquía acordada por la dirección; cada tribu trabaja una palanca" onClose={onCancel} wide
+      footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" disabled={saving || rows.some((r) => !r.id.trim() || r.name.trim().length < 3)} onClick={() => onSubmit(rows)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar palancas</button></>}>
+      <div className="space-y-2">
+        {rows.map((r, i) => (
+          <div key={i} className="grid grid-cols-[28px_80px_1fr_1fr_1fr_60px] items-start gap-1.5">
+            <div className="flex flex-col pt-1"><button onClick={() => move(i, -1)} className="text-[10px] text-faint hover:text-ink">▲</button><button onClick={() => move(i, 1)} className="text-[10px] text-faint hover:text-ink">▼</button></div>
+            <input value={r.id} onChange={(e) => upd(i, "id", e.target.value.toUpperCase())} placeholder="MS" className="input num !py-1.5 !text-[11px]" />
+            <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)} placeholder="Nombre de la palanca" className="input !py-1.5 !text-[11px]" />
+            <input value={r.indicator} onChange={(e) => upd(i, "indicator", e.target.value)} placeholder="Indicador principal" className="input !py-1.5 !text-[11px]" />
+            <select value={r.ownerId} onChange={(e) => upd(i, "ownerId", e.target.value)} className="input !py-1.5 !text-[11px]"><option value="">Tribu / responsable</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}</option>)}</select>
+            <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="pt-1.5 text-[11px] text-faint hover:text-bad">Quitar</button>
+          </div>
+        ))}
+        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "", indicator: "", desc: "" }])} className="text-[11px] font-bold text-cyan-deep hover:underline">+ añadir palanca</button>}
+      </div>
+    </Modal>
+  );
+}
+
+/* ═══ OKR del primer horizonte ═══ */
+
+function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; saving: boolean; mutate: Mutate; base: string }) {
+  const objectives = cat.objectives.filter((o) => o.horizon === horizon);
+  const issues = okrChecks(cat, horizon);
+  const [kr, setKr] = useState<{ obj: CmiObjective; kpi: KpiFull | null } | null>(null);
+  const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
+  const byLever = [...levers.map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length);
+  const high = issues.filter((i) => i.level === "alto").length;
+  return (
+    <>
+      <div className="mb-5 grid gap-4 sm:grid-cols-4">
+        <StatCard label={`Objetivos ${horizonLabel(cat.company, horizon)}`} value={objectives.length} foot={`${objectives.filter((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 4).length} con 2 a 4 resultados clave`} />
+        <StatCard label="Resultados clave" value={objectives.reduce((a, o) => a + keyResultsOf(cat, o).length, 0)} foot="indicador, base, meta, dueño y plazo" />
+        <StatCard label="Alertas de calidad" value={issues.length} foot={`${high} de nivel alto`} accent={issues.length ? "linear-gradient(90deg, var(--warn), var(--bad))" : "linear-gradient(90deg, var(--ok), #2f8f5b)"} />
+        <StatCard label="Iniciativas vinculadas" value={cat.initiatives.filter((i) => i.horizon === horizon && i.kpi).length} unit={`de ${cat.initiatives.filter((i) => i.horizon === horizon).length}`} foot="mueven un resultado clave" />
+      </div>
+      {objectives.length === 0 && <Card className="rise p-6"><EmptyNote>No hay objetivos en {horizonLabel(cat.company, horizon)}. Créalos en «Dirección» y vuelve aquí para sus resultados clave.</EmptyNote></Card>}
+      {byLever.map((g) => (
+        <Card key={g.key} className="rise mb-5 overflow-hidden">
+          <CardHeader title={g.label} sub={`${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}`} />
+          <div className="divide-y divide-line">
+            {g.objs.map((o) => {
+              const krs = keyResultsOf(cat, o);
+              const mine = issues.filter((i) => i.ref === o.id || krs.some((k) => k.code === i.ref));
+              return (
+                <div key={o.id} className="px-5 py-4">
+                  <div className="flex flex-wrap items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{o.id}</div>
+                      <div className="text-[14px] font-extrabold leading-snug text-ink">{o.name}</div>
+                      {o.indicator && <div className="mt-0.5 text-[11px] text-muted">Indicador impulsor: {o.indicator}</div>}
+                    </div>
+                    {canEdit && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary !py-1.5 text-[11px]"><Plus size={12} /> Resultado clave</button>}
+                  </div>
+                  {krs.length > 0 && (
+                    <div className="mt-3 overflow-x-auto">
+                      <table className="w-full min-w-[640px] text-[12px]">
+                        <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="py-1 pr-2">KR</th><th className="py-1 pr-2">Resultado clave</th><th className="num py-1 pr-2 text-right">Base</th><th className="num py-1 pr-2 text-right">Meta</th><th className="py-1 pr-2">Unidad</th><th className="py-1 pr-2">Dueño</th><th className="py-1 pr-2">Plazo</th><th className="num py-1 pr-2 text-right">Inic.</th><th /></tr></thead>
+                        <tbody>
+                          {krs.map((k) => {
+                            const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code);
+                            return (
+                              <tr key={k.code} className="border-t border-line">
+                                <td className="num py-1.5 pr-2 font-bold text-cyan-deep">{k.code}</td>
+                                <td className="py-1.5 pr-2 font-semibold text-ink">{k.name}{bad && <span className="ml-1 chip chip-warn !py-0 text-[9px]" title={bad.text}>incompleto</span>}</td>
+                                <td className="num py-1.5 pr-2 text-right text-muted">{k.baseline || "—"}</td>
+                                <td className="num py-1.5 pr-2 text-right font-bold text-ink">{k.target || "—"}</td>
+                                <td className="py-1.5 pr-2 text-muted">{k.unit}</td>
+                                <td className="py-1.5 pr-2 text-muted">{k.ownerId ? owner(k.ownerId) : <span className="text-warn">sin dueño</span>}</td>
+                                <td className="num py-1.5 pr-2 text-muted">{k.due ?? <span className="text-warn">sin plazo</span>}</td>
+                                <td className="num py-1.5 pr-2 text-right text-muted">{initiativesOfKr(cat, k.code).length}</td>
+                                <td className="py-1.5 text-right">{canEdit && <button onClick={() => setKr({ obj: o, kpi: k })} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar"><Pencil size={12} /></button>}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {mine.filter((i) => i.kind !== "kr-incompleto").length > 0 && (
+                    <ul className="mt-2 space-y-0.5">{mine.filter((i) => i.kind !== "kr-incompleto").map((i, n) => <li key={n} className={`text-[11px] ${i.level === "alto" ? "text-bad" : "text-warn"}`}>• {i.text}</li>)}</ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ))}
+      <p className="text-[11px] text-faint">Regla de calidad: cada objetivo con 2 a 4 resultados clave; cada resultado clave con línea base, meta, dueño y plazo, y al menos una iniciativa que lo mueva. Los valores de los KR se reportan en <Link href={`${base}/panel/kpi`} className="text-cyan-deep hover:underline">Indicadores</Link>.</p>
+      {kr && <KrForm cat={cat} obj={kr.obj} initial={kr.kpi} saving={saving} onCancel={() => setKr(null)}
+        onSubmit={async (d) => { const ok = await mutate("kpi", "upsert", d); if (ok) setKr(null); return ok; }}
+        onDelete={kr.kpi ? async () => { if (window.confirm(`¿Eliminar el resultado clave ${kr.kpi!.code}?`)) { const ok = await mutate("kpi", "delete", { code: kr.kpi!.code }); if (ok) setKr(null); } } : undefined} />}
+    </>
+  );
+}
+
+function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { cat: Cat; obj: CmiObjective; initial: KpiFull | null; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
+  const prefix = (obj.lever ?? "KR").slice(0, 4);
+  const next = (() => { let n = 1; while (cat.kpis.some((k) => k.code === `${prefix}-${String(n).padStart(2, "0")}`)) n++; return `${prefix}-${String(n).padStart(2, "0")}`; })();
+  const [f, setF] = useState({
+    code: initial?.code ?? next, name: initial?.name ?? "", unit: initial?.unit ?? "%", baseline: String(initial?.baseline ?? ""), target: String(initial?.target ?? ""),
+    ownerId: initial?.ownerId ?? (cat.company.levers?.find((l) => l.id === obj.lever)?.ownerId ?? ""), due: initial?.due ?? `${new Date().getFullYear() + 1}-T4`,
+    goodDirection: initial?.goodDirection ?? "up", frequency: initial?.frequency ?? "Trimestral", definition: initial?.definition ?? "", source: initial?.source ?? "",
+  });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const num = (s: string) => { const n = Number(String(s).replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+  const ok = f.code.trim().length >= 2 && f.name.trim().length >= 3 && f.unit.trim() && /^\d{4}(-T[1-4])?$/.test(f.due.trim().toUpperCase());
+  return (
+    <Modal title={initial ? `Resultado clave · ${initial.code}` : `Nuevo resultado clave · ${obj.id}`} sub={obj.name} onClose={onCancel}
+      footer={<>
+        {onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}
+        <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
+          onClick={() => onSubmit({ code: f.code.trim().toUpperCase(), name: f.name.trim(), unit: f.unit.trim(), baseline: num(f.baseline), target: num(f.target), ownerId: f.ownerId, due: f.due.trim().toUpperCase(), goodDirection: f.goodDirection, frequency: f.frequency, definition: f.definition.trim(), source: f.source.trim(), cmi: obj.id, line: obj.line ?? 1, series: initial?.series ?? [], formula: initial?.formula ?? "" })}>
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} {initial ? "Guardar" : "Crear"}
+        </button>
+      </>}>
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-[110px_1fr] gap-2">
+          <Field label="Código"><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} disabled={!!initial} className={`${INPUT} num`} /></Field>
+          <Field label="Resultado clave"><input value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <Field label="Línea base"><input type="number" step="any" value={f.baseline} onChange={set("baseline")} className={`${INPUT} num`} /></Field>
+          <Field label="Meta"><input type="number" step="any" value={f.target} onChange={set("target")} className={`${INPUT} num`} /></Field>
+          <Field label="Unidad"><input value={f.unit} onChange={set("unit")} className={INPUT} /></Field>
+          <Field label="Mejor si"><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option></select></Field>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Field label="Dueño"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{cat.responsibles.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
+          <Field label="Plazo (AAAA o AAAA-Tn)"><input value={f.due} onChange={set("due")} className={`${INPUT} num`} /></Field>
+          <Field label="Frecuencia"><select value={f.frequency} onChange={set("frequency")} className={INPUT}>{["Mensual", "Trimestral", "Semestral", "Anual"].map((x) => <option key={x} value={x}>{x}</option>)}</select></Field>
+        </div>
+        <Field label="Definición y fuente (opcional)"><input value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula y de dónde sale el dato" className={INPUT} /></Field>
+      </div>
+    </Modal>
+  );
+}
+
+/* ═══ Iniciativas → resultado clave ═══ */
+
+function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; saving: boolean; mutate: Mutate; base: string }) {
+  const objectives = cat.objectives.filter((o) => o.horizon === horizon);
+  const krs = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
+  const unlinked = cat.initiatives.filter((i) => !i.kpi || !krs.some((x) => x.k.code === i.kpi));
+  const [link, setLink] = useState<string | null>(null);
+  const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
+  const leverName = (o: CmiObjective) => levers.find((l) => l.id === o.lever)?.name ?? "";
+  return (
+    <>
+      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Resultados clave" value={krs.length} foot={`en ${horizonLabel(cat.company, horizon)}`} />
+        <StatCard label="KR con iniciativa" value={krs.filter((x) => initiativesOfKr(cat, x.k.code).length > 0).length} unit={`de ${krs.length}`} foot="al menos una iniciativa los mueve" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
+        <StatCard label="Iniciativas sin KR" value={unlinked.length} unit={`de ${cat.initiatives.length}`} foot="no mueven un resultado clave del horizonte" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+      </div>
+      <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
+        <Card className="rise overflow-hidden">
+          <CardHeader title="Qué mueve cada resultado clave" sub="depurar: solo las iniciativas que efectivamente alteran el KR" />
+          <div className="divide-y divide-line">
+            {krs.map(({ k, o }) => {
+              const inis = initiativesOfKr(cat, k.code);
+              return (
+                <div key={k.code} className="px-5 py-3">
+                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className="ml-auto text-[10px] text-faint">{o.id} · {leverName(o)}</span></div>
+                  {inis.length === 0 ? <p className="mt-1 text-[11px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
+                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num ml-auto shrink-0 text-[10px] text-faint">{i.id} · {owner(i.ownerId)}</span></li>)}</ul>
+                  )}
+                </div>
+              );
+            })}
+            {krs.length === 0 && <div className="px-5 py-4"><EmptyNote>Sin resultados clave en {horizonLabel(cat.company, horizon)}: defínelos en «OKR».</EmptyNote></div>}
+          </div>
+        </Card>
+        <Card className="rise rise-1 overflow-hidden">
+          <CardHeader title={`Iniciativas sin resultado clave (${unlinked.length})`} sub="vincúlalas a un KR o déjalas fuera del portafolio" />
+          <div className="divide-y divide-line">
+            {unlinked.map((i) => (
+              <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
+                <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
+                {canEdit && <button onClick={() => setLink(i.id)} className="btn-ghost !py-1 text-[10.5px]"><Link2 size={11} /> Vincular</button>}
+              </div>
+            ))}
+            {unlinked.length === 0 && <div className="px-5 py-4 text-[12px] text-muted"><CheckCircle2 size={14} className="mr-1 inline text-ok" /> Todas las iniciativas mueven un resultado clave.</div>}
+          </div>
+        </Card>
+      </div>
+      {link && (() => {
+        const ini = cat.initiatives.find((i) => i.id === link)!;
+        return (
+          <LinkForm ini={ini} krs={krs} saving={saving} onCancel={() => setLink(null)}
+            onSubmit={async (code, cmi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi: code, cmi }); if (ok) setLink(null); return ok; }} />
+        );
+      })()}
+    </>
+  );
+}
+
+function LinkForm({ ini, krs, saving, onCancel, onSubmit }: { ini: { id: string; name: string; kpi: string; cmi: string }; krs: { k: KpiFull; o: CmiObjective }[]; saving: boolean; onCancel: () => void; onSubmit: (code: string, cmi: string) => Promise<boolean> }) {
+  const [code, setCode] = useState(krs[0]?.k.code ?? "");
+  const sel = krs.find((x) => x.k.code === code);
+  return (
+    <Modal title={`Vincular · ${ini.id}`} sub={ini.name} onClose={onCancel}
+      footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" disabled={saving || !sel} onClick={() => sel && onSubmit(sel.k.code, sel.o.id)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
+      <Field label="Resultado clave que mueve">
+        <select value={code} onChange={(e) => setCode(e.target.value)} className={INPUT}>{krs.map((x) => <option key={x.k.code} value={x.k.code}>{x.k.code} · {x.k.name} ({x.o.id})</option>)}</select>
+      </Field>
+      <p className="mt-2 text-[11px] text-faint">Al vincular, la iniciativa queda asociada también al objetivo del resultado clave.</p>
+    </Modal>
+  );
+}
+
+/* ═══ Priorización en vivo ═══ */
+
+function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void }) {
+  const [lever, setLever] = useState("");
+  const [expected, setExpected] = useState(3);
+  const rows = prio?.ranking ?? [];
+  const objLever = (i: { cmi: string }) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
+  const list = cat.initiatives.filter((i) => !lever || objLever(i) === lever);
+  const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
+  const ranked = list.map((i) => ({ i, r: rows.find((r) => r.id === i.id) })).sort((a, b) => ((b.r?.c.n ? b.r.c.score : -1) - (a.r?.c.n ? a.r.c.score : -1)));
+  const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <select value={lever} onChange={(e) => setLever(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[11.5px]"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+        <label className="flex items-center gap-1.5 text-[11.5px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[11.5px]" /></label>
+        <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><RefreshCw size={12} /> Actualizar</button>
+        <span className="text-[10.5px] text-faint">se refresca cada 15 s</span>
+      </div>
+      <div className="mb-5 grid gap-4 sm:grid-cols-4">
+        <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
+        <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
+        <StatCard label="Evaluaciones registradas" value={(prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)).length} foot={`${cov.evaluators.length} evaluadores activos`} />
+        <StatCard label="Elegibles con capacidad" value={ranked.filter((x) => x.r && x.r.c.n > 0 && x.r.c.eligible && !x.r.c.capacityFirst).length} foot="D ≥ 3 y L ≥ 3 en el consolidado" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+      </div>
+      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+        <Card className="rise overflow-hidden">
+          <CardHeader title="Ranking en vivo" sub="puntaje consolidado · elegibilidad y capacidad · horizonte sugerido · decisión" />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-[12px]">
+              <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Horizonte</th><th className="px-2 py-2">Decisión</th></tr></thead>
+              <tbody>
+                {ranked.map(({ i, r }, n) => {
+                  const d = prio?.decisions[i.id];
+                  const c = r?.c;
+                  return (
+                    <tr key={i.id} className="border-t border-line">
+                      <td className="num px-4 py-2 font-extrabold text-faint">{c && c.n ? n + 1 : "—"}</td>
+                      <td className="px-2 py-2"><Link href={`${base}/panel/iniciativas/${i.id}`} className="font-bold text-ink hover:text-cyan-deep">{i.name}</Link><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)}</div></td>
+                      <td className="num px-2 py-2 text-center"><span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected}</span></td>
+                      {CRITERIA.map((cr) => <td key={cr.key} className="num px-2 py-2 text-center">{c && c.n ? <span className={`font-bold ${c.rounded[cr.key] >= 3 ? "text-ink" : "text-muted"}`}>{c.avg[cr.key]}</span> : <span className="text-faint">—</span>}</td>)}
+                      <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
+                      <td className="px-2 py-2"><span className="flex flex-wrap gap-1">
+                        {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
+                        {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
+                        {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
+                        {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
+                      </span></td>
+                      <td className="px-2 py-2"><span className="num text-[10.5px] text-muted">{horizonLabel(cat.company, i.horizon)}</span> {r && <HorizonHint compact current={i.horizon} suggested={r.suggested} company={cat.company} />}</td>
+                      <td className="px-2 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <Card className="rise rise-1 self-start">
+          <CardHeader title="Actividad por evaluador" sub="quién ha calificado cuántas iniciativas" />
+          <div className="space-y-1.5 px-5 pb-5">
+            {cov.evaluators.length === 0 && <p className="text-[12px] italic text-faint">Aún nadie ha calificado.</p>}
+            {cov.evaluators.map((e) => (
+              <div key={e.by} className="flex items-center gap-2 text-[12px]">
+                <Users size={12} className="shrink-0 text-faint" /><span className="truncate font-semibold text-ink">{e.name}</span><span className="chip !py-0 text-[9px]">{e.role.toLowerCase()}</span>
+                <div className="ml-auto h-[7px] w-24 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${Math.min(100, (e.count / Math.max(1, list.length)) * 100)}%`, background: "var(--grad-brand)" }} /></div>
+                <span className="num w-10 text-right font-bold text-ink">{e.count}</span>
+              </div>
+            ))}
+            <p className="pt-2 text-[10.5px] leading-snug text-faint">Cada evaluador califica desde la ficha de la iniciativa (Iniciativas → matriz 4Shine). El comité revisa elegibilidad y consistencia aquí.</p>
+          </div>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+/* ═══ Portafolio por horizonte y decisión ═══ */
+
+function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers: Lever[]; horizons: string[]; prio: PriorizacionData | null; base: string }) {
+  const rows: PortfolioRow[] = useMemo(() => (prio?.ranking ?? []).map((r) => {
+    const i = cat.initiatives.find((x) => x.id === r.id);
+    const d = prio?.decisions[r.id];
+    const o = cat.objectives.find((x) => x.id === i?.cmi);
+    return { id: r.id, name: r.name, horizon: r.horizon, suggested: r.suggested, c: r.c, decision: d?.decision ?? null, rationale: d?.rationale, lever: levers.find((l) => l.id === o?.lever)?.name, owner: cat.responsibles.find((x) => x.id === i?.ownerId)?.dependencia };
+  }), [prio, cat, levers]);
+  const sum = portfolioSummary(rows, horizons);
+  const DEC: (Decision | "PENDIENTE")[] = ["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR", "PENDIENTE"];
+  const label = (d: Decision | "PENDIENTE") => d === "PENDIENTE" ? "Pendiente" : decisionLabel(d);
+  const download = () => {
+    const blob = new Blob(["﻿" + portfolioCsv(rows)], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `portafolio-${cat.company.slug}-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  };
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <p className="text-[12.5px] text-muted">Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa.</p>
+        <button onClick={download} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><Download size={12} /> Exportar CSV</button>
+      </div>
+      <Card className="rise mb-5 overflow-hidden">
+        <CardHeader title="Resumen por horizonte y decisión" />
+        <div className="overflow-x-auto px-2 pb-3">
+          <table className="w-full min-w-[560px] text-[12px]">
+            <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Horizonte</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
+            <tbody>
+              {horizons.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{horizonLabel(cat.company, h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      {horizons.map((h) => {
+        const hr = rows.filter((r) => r.horizon === h);
+        return (
+          <Card key={h} className="rise rise-1 mb-5 overflow-hidden">
+            <CardHeader title={horizonLabel(cat.company, h)} sub={`${hr.length} iniciativas · ordenadas por puntaje consolidado`} />
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-[12px]">
+                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Sugerido</th><th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
+                <tbody>
+                  {hr.map((r) => (
+                    <tr key={r.id} className="border-t border-line">
+                      <td className="px-4 py-2"><Link href={`${base}/panel/iniciativas/${r.id}`} className="font-bold text-ink hover:text-cyan-deep">{r.name}</Link><div className="num text-[10px] text-faint">{r.id} · {r.owner ?? "—"}</div></td>
+                      <td className="px-2 py-2 text-[11px] text-muted">{r.lever ?? "—"}</td>
+                      <td className="num px-2 py-2 text-right font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
+                      <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>
+                      <td className="px-2 py-2">{r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
+                      <td className="px-2 py-2 text-[11px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
+                    </tr>
+                  ))}
+                  {hr.length === 0 && <tr><td colSpan={6} className="px-4 py-3 text-[12px] italic text-faint">Sin iniciativas en este horizonte.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        );
+      })}
+      <div className="rise rise-2 flex items-start gap-2 rounded-xl bg-cyan-wash/50 px-4 py-3 text-[12px] leading-relaxed text-ink-soft">
+        <Presentation size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
+        <span>Ratificación ejecutiva: las renuncias exigen motivo registrado; lo no resuelto queda explícitamente pendiente. El seguimiento posterior sigue el ritmo de la empresa (trimestres y sprints) desde <Link href={`${base}/panel/proyectos`} className="font-semibold text-cyan-deep hover:underline">Proyectos</Link>.</span>
+      </div>
+    </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return <label className="block min-w-0"><span className="label !text-[8.5px]">{label}</span><div className="mt-1">{children}</div></label>;
+}
