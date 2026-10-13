@@ -12,8 +12,8 @@ import { Card, CardHeader, EmptyNote, Modal } from "@/components/ui";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { useCan, useUser } from "@/components/user-context";
 import { usePriorizacion } from "@/components/priorizacion";
-import { CRITERIA, TYPE_CRITERIA, LEVEL_NAMES, score as matrixScore, typeOf, type CriterionKey, type Level, type TypeMarks, type Evaluation } from "@/lib/priorizacion";
-import { horizonsOf, horizonLabel } from "@/data/catalogo";
+import { CRITERIA, LEVEL_NAMES, score as matrixScore, typeOf, typeRuleLabel, type CriterionKey, type Level, type TypeMarks, type Evaluation } from "@/lib/priorizacion";
+import { horizonsOf, typeRuleOf, horizonLabel } from "@/data/catalogo";
 import type { TenantView } from "@/lib/vista";
 import type { Financials } from "@/data/catalogo";
 import {
@@ -673,8 +673,9 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
 
   const fw = frameworkOfCapability(f.capability);
   const datesOk = QUARTER_RE.test(f.start.trim().toUpperCase()) && QUARTER_RE.test(f.end.trim().toUpperCase());
-  const evalComplete = CRITERIA.every((c) => f.scores[c.key]) && TYPE_CRITERIA.every((t) => f.type[t.key]);
-  const evalStarted = CRITERIA.some((c) => f.scores[c.key]) || TYPE_CRITERIA.some((t) => f.type[t.key]);
+  const typeRule = typeRuleOf(v.catalog.company);
+  const evalComplete = CRITERIA.every((c) => f.scores[c.key]) && typeRule.criteria.every((t) => f.type[t.key]);
+  const evalStarted = CRITERIA.some((c) => f.scores[c.key]) || typeRule.criteria.some((t) => f.type[t.key]);
   const preview = evalComplete ? matrixScore(f.scores as Record<CriterionKey, Level>) : null;
   const canSave = f.name.trim().length > 0 && f.capability.length > 0 && f.cmi.length > 0 && datesOk && (!evalStarted || evalComplete);
 
@@ -763,7 +764,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
               <div className="text-[12px] font-bold text-ink">Matriz 4Shine · {mine ? "tu calificación" : "calificación"}</div>
               <div className="num text-[11px] text-muted">
                 {preview !== null
-                  ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
+                  ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type, typeRule) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
                   : "D · E · M · L de 1 a 4, y el tipo"}
               </div>
             </div>
@@ -781,7 +782,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
                   ))}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {TYPE_CRITERIA.map((t) => (
+                  {typeRule.criteria.map((t) => (
                     <Field key={t.key} label={t.name}>
                       <select value={f.type[t.key] ?? ""} className={INPUT} title={`Estratégico: ${t.strategic} · Táctico: ${t.tactical}`}
                         onChange={(e) => setF({ ...f, type: { ...f.type, [t.key]: (e.target.value || undefined) as TypeMarks[keyof TypeMarks] } })}>
@@ -793,7 +794,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
                   ))}
                 </div>
                 <p className="mt-1.5 text-[10px] leading-snug text-faint">
-                  Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Se registra como tu evaluación en la matriz; el consolidado del comité ordena el portafolio y sugiere el horizonte.
+                  Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Tipo: {typeRuleLabel(typeRule)}. Se registra como tu evaluación en la matriz; el consolidado del comité ordena el portafolio y sugiere el horizonte.
                   {evalStarted && !evalComplete && <b className="text-warn"> Completa los cuatro criterios y el tipo, o déjalos vacíos.</b>}
                 </p>
               </>

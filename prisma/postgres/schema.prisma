@@ -50,6 +50,7 @@ model Company {
   currency    String  @default("COP") // COP | USD: unidad de las cifras financieras
   horizons    Json? // horizontes de planeación [{id, label, months}]; nulo = corto/mediano
   levers      Json? // palancas estratégicas [{id, name, order, ownerId, indicator, desc}]
+  typeRule    Json? // regla estratégica/táctica de la matriz {id, criteria, min}; nulo = regla 4Shine
   financials  Json? // estados financieros de cierre (COP millones)
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia

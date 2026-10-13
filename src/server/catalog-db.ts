@@ -20,6 +20,7 @@ export function companyRow(c: CompanyInfo) {
     country: c.country ?? "CO", currency: c.currency ?? "COP",
     horizons: (c.horizons?.length ? c.horizons : null) as never,
     levers: (c.levers?.length ? c.levers : null) as never,
+    typeRule: (c.typeRule?.criteria?.length ? c.typeRule : null) as never,
     active: c.active, createdBy: c.createdBy ?? null,
   };
 }

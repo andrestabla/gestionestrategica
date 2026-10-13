@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui";
 import { Loader2, Save, Building2, X } from "lucide-react";
 
 export type HorizonLite = { id: string; label: string; months: number };
-export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[] };
+export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null };
 export const DEFAULT_HZ: HorizonLite[] = [{ id: "CORTO", label: "Corto plazo", months: 12 }, { id: "MEDIANO", label: "Mediano plazo", months: 36 }];
 
 /** Horizontes de planeación de la empresa (ordenan el roadmap y la priorización). */
@@ -46,6 +46,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
     name: initial?.name ?? "", shortName: initial?.shortName ?? "", city: initial?.city ?? "", department: initial?.department ?? "",
     sector: initial?.sector ?? "", size: initial?.size ?? "", ciiu: initial?.ciiu ?? "", sectorKey: initial?.sectorKey ?? "suministros-industriales", template: "vacia",
     country: initial?.country ?? "CO", currency: initial?.currency ?? "COP",
+    typeRule: initial?.typeRule?.id ?? (initial?.typeRule?.criteria?.length ? "propia" : "4shine"),
     slug: initial?.slug ?? "",
   });
   const [horizons, setHorizons] = useState<HorizonLite[]>(initial?.horizons?.length ? initial.horizons : DEFAULT_HZ);
@@ -55,8 +56,9 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
       footer={<>
         <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" onClick={async () => {
-            const { slug: slugField, ...rest } = f;
-            const input = initial ? { ...rest, horizons, newSlug: slugField } : { ...rest, horizons, slug: slugField || undefined };
+            const { slug: slugField, typeRule, ...rest } = f;
+            const tr = typeRule === "propia" ? undefined : typeRule;   // «propia» (regla definida por API) se conserva tal cual
+            const input = initial ? { ...rest, horizons, ...(tr ? { typeRule: tr } : {}), newSlug: slugField } : { ...rest, horizons, typeRule: tr ?? "4shine", slug: slugField || undefined };
             if (await onSubmit(input) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "", slug: "" });
           }}
           disabled={saving || f.name.trim().length < 3}
@@ -92,6 +94,14 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         <input value={f.sector} onChange={set("sector")} placeholder="Sector (p. ej. Distribución de suministros)" className="input !py-2 text-[12px]" />
         <input value={f.size} onChange={set("size")} placeholder="Tamaño (p. ej. 85 colaboradores · 3 sedes)" className="input !py-2 text-[12px]" />
         <HorizonsEditor value={horizons} onChange={setHorizons} />
+        <div>
+          <select value={f.typeRule} onChange={set("typeRule")} className="input !py-2 text-[12px]" title="Regla con la que la matriz clasifica cada iniciativa como estratégica o táctica">
+            <option value="4shine">Tipo estratégica/táctica · regla 4Shine (4 marcas: contribución, profundidad, alcance, permanencia; 3 o más = estratégica)</option>
+            <option value="cresio">Tipo estratégica/táctica · regla Cresio (3 criterios obligatorios: impacto, transversalidad, potencial y madurez)</option>
+            {f.typeRule === "propia" && <option value="propia">Tipo estratégica/táctica · regla propia (definida por API)</option>}
+          </select>
+          <p className="mt-1 text-[10px] leading-snug text-faint">Con la regla Cresio, lo táctico se transfiere al área de mayor responsabilidad y no admite «implementar» ni «preparar». Cambiar la regla no borra evaluaciones, pero las marcas de criterios que ya no existen dejan de contar.</p>
+        </div>
         {!initial && (
           <select value={f.template} onChange={set("template")} className="input !py-2 text-[12px]">
             <option value="vacia">Empezar vacía (solo el mapa 4Shine)</option>

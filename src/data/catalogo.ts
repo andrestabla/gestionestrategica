@@ -6,6 +6,7 @@
 // definición del sistema y es igual para todas las empresas.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { DEFAULT_TYPE_RULE, type TypeRule } from "@/lib/priorizacion";
 import {
   RESPONSIBLES, CMI_OBJECTIVES, KPI_CATALOG, EVIDENCE_CATALOG, INITIATIVES_FULL, SCORES_HISTORY,
   type Responsible, type CmiObjective, type KpiFull, type EvidenceFull, type InitiativeFull, type AssessmentRecord,
@@ -32,6 +33,7 @@ export type CompanyInfo = {
   currency?: "COP" | "USD"; // moneda de las cifras financieras
   horizons?: Horizon[];     // horizontes del roadmap y de la priorización (vacío = corto/mediano)
   levers?: Lever[];         // palancas estratégicas (hilo conductor de objetivos, OKR e iniciativas)
+  typeRule?: TypeRule;      // regla estratégica/táctica de la matriz (vacío = regla 4Shine: 3 de 4 marcas)
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;
@@ -48,6 +50,10 @@ export type Horizon = { id: string; label: string; months: number };
 /** Palanca estratégica de la empresa (p. ej. Market Share, Fidelización,
     Madurez, Margen): ordena la convención y agrupa objetivos e iniciativas. */
 export type Lever = { id: string; name: string; order: number; ownerId?: string; indicator?: string; desc?: string };
+
+/** Regla de tipo (estratégica o táctica) de la empresa; sin definición rige la de 4Shine. */
+export const typeRuleOf = (c: Pick<CompanyInfo, "typeRule"> | null | undefined): TypeRule =>
+  c?.typeRule?.criteria?.length ? c.typeRule : DEFAULT_TYPE_RULE;
 
 export const leversOf = (c: Pick<CompanyInfo, "levers"> | null | undefined): Lever[] =>
   [...(c?.levers ?? [])].sort((a, b) => a.order - b.order);

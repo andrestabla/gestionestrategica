@@ -13,12 +13,12 @@ import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
-  type Catalog, type CompanyInfo, horizonsOf, type Horizon, type Lever } from "@/data/catalogo";
+  type Catalog, type CompanyInfo, horizonsOf, typeRuleOf, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
-import { consolidate, decisionCheck, isLevel, TYPE_CRITERIA, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
+import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import { RESERVED } from "@/lib/tenant-url";
@@ -303,6 +303,7 @@ export async function hydrateCompanies() {
         country: (c.country as CompanyInfo["country"]) ?? "CO", currency: (c.currency as CompanyInfo["currency"]) ?? "COP",
         horizons: parseHorizons(c.horizons).ok ? (parseHorizons(c.horizons) as { horizons?: Horizon[] }).horizons : undefined,
         levers: parseLevers(c.levers).ok ? (parseLevers(c.levers) as { levers?: Lever[] }).levers : undefined,
+        typeRule: parseTypeRule(c.typeRule).ok ? (parseTypeRule(c.typeRule) as { rule?: TypeRule }).rule : undefined,
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       const t = g.tenants.get(c.slug);
@@ -452,8 +453,37 @@ export type CompanyInput = {
   sectorKey?: string; ciiu?: string; template?: "demo" | "vacia"; country?: "CO" | "EC"; currency?: "COP" | "USD";
   horizons?: unknown;   // [{id, label, months}] · lista vacía o nula = corto/mediano
   levers?: unknown;     // [{id, name, order, ownerId, indicator, desc}] · palancas estratégicas
+  typeRule?: unknown;   // "4shine" | "cresio" | {criteria: [{key, name, strategic, tactical}], min} · regla estratégica/táctica
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
+
+/** Valida la regla de tipo: un identificador de regla predefinida («4shine»,
+    «cresio»), o una regla propia con 2 a 6 criterios y un mínimo de marcas. */
+export function parseTypeRule(input: unknown): { ok: true; rule?: TypeRule } | { ok: false; error: string } {
+  if (input === undefined || input === null || input === "") return { ok: true, rule: undefined };
+  if (typeof input === "string") {
+    const preset = TYPE_RULES[input.trim().toLowerCase() as keyof typeof TYPE_RULES];
+    if (!preset) return { ok: false, error: `Regla de tipo desconocida: «${input}». Opciones: ${Object.keys(TYPE_RULES).join(", ")}.` };
+    return { ok: true, rule: preset.id === "4shine" ? undefined : preset };
+  }
+  if (typeof input !== "object") return { ok: false, error: "La regla de tipo debe ser un identificador o un objeto {criteria, min}." };
+  const raw = input as Record<string, unknown>;
+  if (typeof raw.id === "string" && TYPE_RULES[raw.id as keyof typeof TYPE_RULES] && !Array.isArray(raw.criteria)) return parseTypeRule(raw.id);
+  if (!Array.isArray(raw.criteria)) return { ok: false, error: "La regla de tipo necesita una lista de criterios." };
+  if (raw.criteria.length < 2 || raw.criteria.length > 6) return { ok: false, error: "La regla de tipo admite de dos a seis criterios." };
+  const criteria: TypeRule["criteria"] = [];
+  for (const c of raw.criteria as Record<string, unknown>[]) {
+    const key = str(c?.key, 24).toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    const name = str(c?.name, 80), strategic = str(c?.strategic, 400), tactical = str(c?.tactical, 400);
+    if (!key || name.length < 3) return { ok: false, error: "Cada criterio de tipo necesita clave y nombre." };
+    if (criteria.some((x) => x.key === key)) return { ok: false, error: `Criterio de tipo repetido: ${key}.` };
+    criteria.push({ key, name, strategic, tactical });
+  }
+  const min = Math.round(num(raw.min, criteria.length));
+  if (!(min >= 1 && min <= criteria.length)) return { ok: false, error: `El mínimo de marcas estratégicas va de 1 a ${criteria.length}.` };
+  const id = typeof raw.id === "string" ? str(raw.id, 24) : undefined;
+  return { ok: true, rule: { ...(id ? { id } : {}), criteria, min, ...(raw.excludeTactical ? { excludeTactical: true } : {}) } };
+}
 
 /** Valida las palancas estratégicas: hasta ocho, id corto y único, nombre; orden 1..n. */
 export function parseLevers(input: unknown): { ok: true; levers?: Lever[] } | { ok: false; error: string } {
@@ -539,6 +569,9 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const lv = parseLevers(input.levers);
   if (!lv.ok) return { ok: false, status: 422, error: lv.error };
   if (lv.levers) info.levers = lv.levers;
+  const tr = parseTypeRule(input.typeRule);
+  if (!tr.ok) return { ok: false, status: 422, error: tr.error };
+  if (tr.rule) info.typeRule = tr.rule;
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
   if (hasDb()) {
@@ -593,6 +626,12 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     const lv = parseLevers(patch.levers);
     if (!lv.ok) return { ok: false, status: 422, error: lv.error };
     c.levers = lv.levers;
+  }
+  if (patch.typeRule !== undefined) {
+    const tr = parseTypeRule(patch.typeRule);
+    if (!tr.ok) return { ok: false, status: 422, error: tr.error };
+    c.typeRule = tr.rule;
+    audit(actor, "task", `empresa:${c.slug}`, `regla de tipo estratégica/táctica: ${tr.rule ? (tr.rule.id ?? "propia") : "4shine"}`);
   }
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(c.slug);
@@ -1633,7 +1672,7 @@ export const getEvaluations = (iniId?: string): Evaluation[] =>
 export const getDecision = (iniId: string): DecisionRecord | null => decisions().get(iniId) ?? null;
 export const getDecisions = (): Record<string, DecisionRecord> => Object.fromEntries(decisions());
 
-export const consolidatedOf = (iniId: string): Consolidated => consolidate(getEvaluations(iniId));
+export const consolidatedOf = (iniId: string): Consolidated => consolidate(getEvaluations(iniId), typeRuleOf(cat().company));
 
 /** Ubica una iniciativa en otro horizonte de la empresa (p. ej. el que sugiere
     el puntaje). Es parte de la decisión de tiempo: la registra quien decide. */
@@ -1676,7 +1715,7 @@ export function evaluateInitiative(
     scores[k] = v;
   }
   const type: Record<string, "ESTRATEGICO" | "TACTICO"> = {};
-  for (const c of TYPE_CRITERIA) {
+  for (const c of typeRuleOf(cat().company).criteria) {
     const v = input.type?.[c.key];
     if (v !== "ESTRATEGICO" && v !== "TACTICO") return { ok: false, status: 422, error: `Marca «${c.name}» como estratégico o táctico.` };
     type[c.key] = v;

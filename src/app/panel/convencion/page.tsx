@@ -13,12 +13,12 @@ import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote } from "@/components/ui";
 import { AccessChip, useCan, useBase } from "@/components/user-context";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
-import { horizonsOf, horizonLabel, leversOf, type Lever } from "@/data/catalogo";
+import { horizonsOf, horizonLabel, leversOf, typeRuleOf, type Lever } from "@/data/catalogo";
 import { PERSPECTIVES, type CmiObjective, type KpiFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
-import { CRITERIA, decisionLabel, type Decision } from "@/lib/priorizacion";
+import { CRITERIA, decisionLabel, typeRuleLabel, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2 } from "lucide-react";
 
 type Tab = "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
@@ -538,6 +538,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     return { id: r.id, name: r.name, horizon: r.horizon, suggested: r.suggested, c: r.c, decision: d?.decision ?? null, rationale: d?.rationale, lever: levers.find((l) => l.id === o?.lever)?.name, owner: cat.responsibles.find((x) => x.id === i?.ownerId)?.dependencia };
   }), [prio, cat, levers]);
   const sum = portfolioSummary(rows, horizons);
+  const tactical = rows.filter((r) => r.c.transfer);
   const DEC: (Decision | "PENDIENTE")[] = ["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR", "PENDIENTE"];
   const label = (d: Decision | "PENDIENTE") => d === "PENDIENTE" ? "Pendiente" : decisionLabel(d);
   const download = () => {
@@ -559,6 +560,9 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
               {horizons.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{horizonLabel(cat.company, h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
             </tbody>
           </table>
+          <p className="px-3 pt-2 text-[11px] text-muted">
+            Regla de tipo: {typeRuleLabel(typeRuleOf(cat.company))}. {tactical.length ? <>Tácticas según el consolidado (se transfieren al área responsable y no compiten en el portafolio): <b className="text-ink">{tactical.length}</b> · {tactical.map((t) => t.id).join(", ")}.</> : typeRuleOf(cat.company).excludeTactical ? "Ninguna iniciativa evaluada quedó como táctica." : ""}
+          </p>
         </div>
       </Card>
       {horizons.map((h) => {

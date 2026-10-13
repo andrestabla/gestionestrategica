@@ -8,10 +8,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
-import { horizonLabel } from "@/data/catalogo";
+import { horizonLabel, typeRuleOf } from "@/data/catalogo";
 import {
-  CRITERIA, TYPE_CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf,
-  type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeMarks,
+  CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel,
+  type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
 } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
 import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2 } from "lucide-react";
@@ -160,8 +160,8 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
                   <span className={c.capacityFirst ? "chip chip-warn" : "chip chip-ok"} title="Con L = 1 o 2 se resuelve primero la capacidad de la siguiente etapa">
                     {c.capacityFirst ? `Capacidad primero · L = ${c.rounded.L}` : "Capacidad · L ≥ 3"}
                   </span>
-                  <span className="chip" title={`${c.strategicVotes} de ${c.n} evaluadores la ven estratégica`}>
-                    {c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica"} · {c.strategicVotes}/{c.n}
+                  <span className={c.transfer ? "chip chip-warn" : "chip"} title={`${c.strategicVotes} de ${c.n} evaluadores la ven estratégica · ${typeRuleLabel(typeRuleOf(cv.catalog.company))}`}>
+                    {c.type === "ESTRATEGICO" ? "Estratégica" : c.transfer ? "Táctica · transferir al área" : "Táctica"} · {c.strategicVotes}/{c.n}
                   </span>
                   {c.lowConsensus && <span className="chip chip-bad" title={`Diferencia de ${c.spread} puntos entre evaluadores`}>Consenso bajo · ±{c.spread}</span>}
                 </div>
@@ -215,7 +215,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         <div>
           <div className="label mb-3">{mine ? "Tu evaluación" : "Evaluar con la matriz"}</div>
           {canEval ? (
-            <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} onSave={(ev) => post({ evaluation: ev })} />
+            <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} onSave={(ev) => post({ evaluation: ev })} />
           ) : (
             <p className="rounded-xl bg-surface-2/60 px-4 py-4 text-[12px] leading-relaxed text-muted">
               {user.role === "RESPONSABLE"
@@ -229,8 +229,8 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   );
 }
 
-function EvaluationForm({ initial, saving, onSave }: {
-  initial?: Evaluation; saving: boolean;
+function EvaluationForm({ initial, saving, rule, onSave }: {
+  initial?: Evaluation; saving: boolean; rule: TypeRule;
   onSave: (ev: { scores: Record<CriterionKey, Level>; type: TypeMarks; notes: Partial<Record<CriterionKey, string>> }) => Promise<boolean>;
 }) {
   const [scores, setScores] = useState<Partial<Record<CriterionKey, Level>>>(initial?.scores ?? {});
@@ -238,9 +238,9 @@ function EvaluationForm({ initial, saving, onSave }: {
   const [notes, setNotes] = useState<Partial<Record<CriterionKey, string>>>(initial?.notes ?? {});
   const [openNote, setOpenNote] = useState<CriterionKey | null>(null);
   const [saved, setSaved] = useState(false);
-  const complete = CRITERIA.every((c) => scores[c.key]) && TYPE_CRITERIA.every((t) => type[t.key]);
+  const complete = CRITERIA.every((c) => scores[c.key]) && rule.criteria.every((t) => type[t.key]);
   const preview = complete ? Math.round(((40 * scores.D! + 30 * scores.E! + 20 * scores.M! + 10 * scores.L!) / 4) * 10) / 10 : null;
-  const previewType: TypeMark | null = TYPE_CRITERIA.every((t) => type[t.key]) ? typeOf(type) : null;
+  const previewType: TypeMark | null = rule.criteria.every((t) => type[t.key]) ? typeOf(type, rule) : null;
 
   return (
     <div className="space-y-3">
@@ -278,9 +278,9 @@ function EvaluationForm({ initial, saving, onSave }: {
 
       <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
         <div className="text-[12.5px] font-bold text-ink">¿Estratégica o táctica?</div>
-        <div className="text-[11px] leading-snug text-muted">Marca cada criterio común; con tres o más marcas estratégicas, la iniciativa es estratégica.</div>
+        <div className="text-[11px] leading-snug text-muted">Marca cada criterio; {typeRuleLabel(rule)}.{rule.excludeTactical ? " Lo táctico se transfiere al área de mayor responsabilidad y no compite en el portafolio estratégico." : ""}</div>
         <div className="mt-2 space-y-1.5">
-          {TYPE_CRITERIA.map((t) => (
+          {rule.criteria.map((t) => (
             <div key={t.key} className="grid gap-1.5 sm:grid-cols-[120px_1fr_1fr]">
               <span className="pt-1.5 text-[11px] font-semibold text-ink">{t.name}</span>
               {(["ESTRATEGICO", "TACTICO"] as TypeMark[]).map((m) => {
@@ -300,7 +300,7 @@ function EvaluationForm({ initial, saving, onSave }: {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="num text-[12px] text-muted">
-          {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : "Califica los cuatro criterios y marca el tipo."}
+          {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : `Califica los cuatro criterios y marca el tipo (${rule.criteria.length} criterios).`}
         </div>
         <button type="button" disabled={!complete || saving}
           onClick={async () => { setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
