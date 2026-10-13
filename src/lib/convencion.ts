@@ -27,10 +27,25 @@ export function objectivesMatrix(cat: Catalog): { levers: Lever[]; horizons: str
   return { levers, horizons, cell, orphan };
 }
 
-/** Resultados clave de un objetivo: los KPI que declara más los que lo apuntan. */
-export const keyResultsOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
+/** KPI de un objetivo: los que declara más los que lo apuntan. */
+export const kpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
   const codes = new Set(o.kpis);
   return cat.kpis.filter((k) => codes.has(k.code) || k.cmi === o.id);
+};
+
+/** Resultados clave de un objetivo. Regla: si el objetivo tiene KPI con plazo,
+    esos son sus resultados clave y los demás son KPI de salud; si ninguno tiene
+    plazo, todos cuentan como resultados clave (catálogo sin convención). */
+export const keyResultsOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
+  const all = kpisOf(cat, o);
+  const withDue = all.filter((k) => k.due);
+  return withDue.length ? withDue : all;
+};
+
+/** KPI de salud: los del objetivo que no son resultados clave. */
+export const healthKpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
+  const krs = new Set(keyResultsOf(cat, o).map((k) => k.code));
+  return kpisOf(cat, o).filter((k) => !krs.has(k.code));
 };
 
 /** Iniciativas que mueven un resultado clave. */

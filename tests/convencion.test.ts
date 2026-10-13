@@ -44,11 +44,18 @@ test("objetivos: palanca y horizonte válidos; matriz palanca × horizonte y che
     assert.ok(upsertKpi(actor, { code: "KR-1", line: 1, cmi: "OE-01", name: "Participación de mercado", unit: "%", frequency: "Trimestral", ownerId: resp.id, baseline: 8, target: 10, goodDirection: "up", series: [], due: "2027-T4" } as never).ok, "KR completo");
     assert.ok(!upsertKpi(actor, { code: "KR-X", line: 1, cmi: "OE-01", name: "Plazo malo", unit: "%", frequency: "Trimestral", ownerId: resp.id, baseline: 1, target: 2, goodDirection: "up", series: [], due: "mañana" } as never).ok, "plazo inválido");
     assert.ok(upsertKpi(actor, { code: "KR-2", line: 1, cmi: "OE-01", name: "Sin meta ni plazo", unit: "%", frequency: "Trimestral", ownerId: "", baseline: 0, target: 0, goodDirection: "up", series: [] } as never).ok);
+    // KR-2 sin plazo pasa a KPI de salud en cuanto el objetivo tiene un KR con plazo (KR-1)
+    const { healthKpisOf, keyResultsOf } = await import("../src/lib/convencion");
+    const o1 = catalog().objectives.find((x) => x.id === "OE-01")!;
+    assert.deepEqual(keyResultsOf(catalog(), o1).map((k) => k.code), ["KR-1"]);
+    assert.deepEqual(healthKpisOf(catalog(), o1).map((k) => k.code), ["KR-2"]);
+    assert.ok(upsertKpi(actor, { code: "KR-2", line: 1, cmi: "OE-01", name: "Sin meta ni plazo", unit: "%", frequency: "Trimestral", ownerId: "", baseline: 0, target: 0, goodDirection: "up", series: [], due: "2027" } as never).ok);
     const issues = okrChecks(catalog(), "H1");
     assert.ok(issues.some((i) => i.kind === "objetivo-sin-kr" && i.ref === "OE-02"));
     assert.ok(issues.some((i) => i.kind === "objetivo-sin-palanca" && i.ref === "OE-02"));
-    assert.ok(issues.some((i) => i.kind === "kr-incompleto" && i.ref === "KR-2" && /meta/.test(i.text) && /dueño/.test(i.text) && /plazo/.test(i.text)));
+    assert.ok(issues.some((i) => i.kind === "kr-incompleto" && i.ref === "KR-2" && /meta/.test(i.text) && /dueño/.test(i.text)));
     assert.ok(!issues.some((i) => i.kind === "kr-incompleto" && i.ref === "KR-1"));
+    assert.ok(issues.some((i) => i.kind === "objetivo-pocos-kr" && i.ref === "OE-01") === false, "con dos KR con plazo ya no es «pocos»");
     assert.ok(issues.some((i) => i.kind === "kr-sin-iniciativa" && i.ref === "KR-1"));
   });
   resetStore();
