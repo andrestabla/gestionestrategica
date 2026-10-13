@@ -167,6 +167,14 @@ de la empresa: población cubierta, en oportunidad y sin presencia, ingresos
 del sector por habitante) y la competencia en cada territorio donde opera o
 planea abrir (`src/lib/demanda.ts`).
 
+**Convención de planeación (`/panel/convencion`).** Apoyo a la facilitación
+en sala: Dirección (matriz palanca × horizonte con aspiración, indicador
+impulsor y pilar), OKR (resultados clave con base, meta, dueño y plazo y
+reglas de calidad), Iniciativas → KR, Priorización en vivo (cobertura de la
+evaluación, actividad por evaluador, ranking) y Portafolio por horizonte y
+decisión con exportación CSV. Las palancas estratégicas se definen por
+empresa (`Company.levers`) y ordenan objetivos e iniciativas.
+
 **Rutas únicas por empresa.** Cada empresa vive bajo su identificador en la
 URL: `/<empresa>/login` es el acceso que se comparte a sus usuarios y
 `/<empresa>/panel/…` su panel. El proxy (`src/proxy.ts`) reescribe esas rutas
