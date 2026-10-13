@@ -253,15 +253,15 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
               <div className="text-[11px] leading-snug text-muted">{cr.question}</div>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-4 gap-1.5">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {([1, 2, 3, 4] as Level[]).map((lv) => {
               const on = scores[cr.key] === lv;
               return (
                 <button key={lv} type="button" onClick={() => setScores({ ...scores, [cr.key]: lv })} title={cr.levels[lv]}
-                  className={`rounded-lg px-2 py-1.5 text-left transition-all ${on ? "text-white shadow-sm" : "bg-surface text-ink-soft hover:bg-cyan-wash"}`}
+                  className={`min-h-[44px] rounded-lg px-2 py-2 text-left transition-all sm:py-1.5 ${on ? "text-white shadow-sm" : "bg-surface text-ink-soft hover:bg-cyan-wash"}`}
                   style={on ? { background: "var(--grad-brand)" } : undefined}>
                   <div className="num text-[11px] font-extrabold">{lv} · {LEVEL_NAMES[lv]}</div>
-                  <div className={`mt-0.5 text-[9.5px] leading-snug ${on ? "text-white/85" : "text-faint"}`}>{cr.levels[lv]}</div>
+                  <div className={`mt-0.5 text-[10.5px] leading-snug sm:text-[9.5px] ${on ? "text-white/85" : "text-faint"}`}>{cr.levels[lv]}</div>
                 </button>
               );
             })}
@@ -287,7 +287,7 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
                 const on = type[t.key] === m;
                 return (
                   <button key={m} type="button" onClick={() => setType({ ...type, [t.key]: m })}
-                    className={`rounded-lg px-2.5 py-1.5 text-left text-[10px] leading-snug transition-all ${on ? "text-white shadow-sm" : "bg-surface text-ink-soft hover:bg-cyan-wash"}`}
+                    className={`min-h-[44px] rounded-lg px-2.5 py-2 text-left text-[10.5px] leading-snug transition-all sm:py-1.5 sm:text-[10px] ${on ? "text-white shadow-sm" : "bg-surface text-ink-soft hover:bg-cyan-wash"}`}
                     style={on ? { background: m === "ESTRATEGICO" ? "var(--navy)" : "var(--cyan-deep)" } : undefined}>
                     <b className="text-[10.5px]">{m === "ESTRATEGICO" ? "Estratégico" : "Táctico"}</b> · {m === "ESTRATEGICO" ? t.strategic : t.tactical}
                   </button>
@@ -304,7 +304,7 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
         </div>
         <button type="button" disabled={!complete || saving}
           onClick={async () => { setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
-          className="btn-primary ml-auto !py-1.5 text-[11.5px] disabled:opacity-40">
+          className="btn-primary ml-auto w-full justify-center !py-2.5 text-[12.5px] disabled:opacity-40 sm:w-auto sm:!py-1.5 sm:text-[11.5px]">
           {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12} /> : <Save size={12} />} {initial ? "Actualizar evaluación" : "Registrar evaluación"}
         </button>
       </div>

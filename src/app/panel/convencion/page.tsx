@@ -89,6 +89,7 @@ export default function ConvencionPage() {
       )}
 
       {qr && <AccesoQrModal section={tab} onClose={() => setQr(false)} />}
+      {/* en móvil la lámina de sección reemplaza la descripción larga del encabezado */}
       {convencion ? (
         <div className="rise mb-5 flex items-center gap-2 text-[12.5px] text-muted">
           {(() => { const t = TABS.find((x) => x.id === tab)!; return <><t.icon size={14} className="text-cyan-deep" /><b className="text-ink">{t.label}</b><span>· {t.agenda}</span></>; })()}
@@ -130,15 +131,38 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>
-        {canEdit && <span className="ml-auto flex gap-2">
-          <button onClick={() => setLeversOpen(true)} className="btn-ghost !py-1.5 text-[11.5px]"><Pencil size={12} /> Palancas</button>
-          <button onClick={() => setOpen({})} className="btn-primary !py-1.5 text-[11.5px]"><Plus size={12} /> Nuevo objetivo</button>
+        {canEdit && <span className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+          <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Pencil size={12} /> Palancas</button>
+          <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
         </span>}
       </div>
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus palancas estratégicas. {canEdit ? "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
-      ) : (
-        <div className="rise overflow-x-auto">
+      ) : (<>
+        {/* móvil: una tarjeta por palanca con sus horizontes apilados */}
+        <div className="rise space-y-4 sm:hidden">
+          {levers.map((l) => (
+            <div key={l.id} className="rounded-2xl bg-surface-2/60 p-3">
+              <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+              <div className="text-[15px] font-extrabold leading-tight text-ink">{l.name}</div>
+              {l.indicator && <div className="mt-1 text-[11px] leading-snug text-muted">{l.indicator}</div>}
+              {hz.map((h) => {
+                const objs = m.cell(l.id, h.id);
+                return (
+                  <div key={h.id} className="mt-3">
+                    <div className="mb-1.5 text-[11.5px] font-extrabold text-ink">{h.label} <span className="num font-semibold text-faint">· {h.months} meses</span></div>
+                    <div className="space-y-2">
+                      {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} />)}
+                      {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2.5 text-[12px] font-semibold text-faint">+ objetivo</button>}
+                      {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[11px] italic text-faint">por definir</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="rise hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[820px] border-separate border-spacing-2">
             <thead>
               <tr>
@@ -172,7 +196,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
             </tbody>
           </table>
         </div>
-      )}
+      </>)}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
           <CardHeader title={`Objetivos sin palanca u horizonte (${m.orphan.length})`} sub="siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención" />
@@ -200,7 +224,7 @@ function ObjectiveCard({ o, cat, onEdit }: { o: CmiObjective; cat: Cat; onEdit?:
           {o.desc && <p className="mt-1 text-[11px] leading-snug text-muted">{o.desc}</p>}
           {o.indicator && <p className="mt-1 text-[10.5px] text-ink-soft"><span className="font-semibold">Indicador:</span> {o.indicator}</p>}
         </div>
-        {onEdit && <button onClick={onEdit} className="shrink-0 rounded-lg p-1.5 text-faint opacity-0 transition-opacity hover:bg-surface-2 hover:text-ink group-hover:opacity-100" title="Editar"><Pencil size={12} /></button>}
+        {onEdit && <button onClick={onEdit} className="shrink-0 rounded-lg p-2 text-faint transition-opacity hover:bg-surface-2 hover:text-ink sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100" title="Editar"><Pencil size={13} /></button>}
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         <span className={`chip !py-0 text-[9.5px] ${krs.length ? "chip-cyan" : ""}`}>{krs.length} KR</span>
@@ -285,7 +309,7 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
   const high = issues.filter((i) => i.level === "alto").length;
   return (
     <>
-      <div className="mb-5 grid gap-4 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <StatCard label={`Objetivos ${horizonLabel(cat.company, horizon)}`} value={objectives.length} foot={`${objectives.filter((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 4).length} con 2 a 4 resultados clave`} />
         <StatCard label="Resultados clave" value={objectives.reduce((a, o) => a + keyResultsOf(cat, o).length, 0)} foot="indicador, base, meta, dueño y plazo" />
         <StatCard label="Alertas de calidad" value={issues.length} foot={`${high} de nivel alto`} accent={issues.length ? "linear-gradient(90deg, var(--warn), var(--bad))" : "linear-gradient(90deg, var(--ok), #2f8f5b)"} />
@@ -307,10 +331,36 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
                       <div className="text-[14px] font-extrabold leading-snug text-ink">{o.name}</div>
                       {o.indicator && <div className="mt-0.5 text-[11px] text-muted">Indicador impulsor: {o.indicator}</div>}
                     </div>
-                    {canEdit && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary !py-1.5 text-[11px]"><Plus size={12} /> Resultado clave</button>}
+                    {canEdit && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:!py-1.5 sm:text-[11px]"><Plus size={12} /> Resultado clave</button>}
                   </div>
                   {krs.length > 0 && (
-                    <div className="mt-3 overflow-x-auto">
+                    <div className="mt-3 space-y-2 sm:hidden">
+                      {krs.map((k) => {
+                        const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code);
+                        const body = (
+                          <>
+                            <div className="flex items-start gap-2">
+                              <span className="num shrink-0 text-[11px] font-extrabold text-cyan-deep">{k.code}</span>
+                              <span className="min-w-0 flex-1 text-[13px] font-semibold leading-snug text-ink">{k.name}</span>
+                              {canEdit && <Pencil size={13} className="mt-0.5 shrink-0 text-faint" />}
+                            </div>
+                            <div className="num mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-muted">
+                              <span>Base <b className="text-ink">{k.baseline || "—"}</b> → Meta <b className="text-ink">{k.target || "—"}</b> {k.unit}</span>
+                              <span>{k.ownerId ? owner(k.ownerId) : <span className="text-warn">sin dueño</span>}</span>
+                              <span>{k.due ?? <span className="text-warn">sin plazo</span>}</span>
+                              <span>{initiativesOfKr(cat, k.code).length} inic.</span>
+                              {bad && <span className="chip chip-warn !py-0 text-[9.5px]" title={bad.text}>incompleto</span>}
+                            </div>
+                          </>
+                        );
+                        return canEdit
+                          ? <button key={k.code} type="button" onClick={() => setKr({ obj: o, kpi: k })} className="block w-full rounded-xl bg-surface-2/60 px-3 py-2.5 text-left active:bg-cyan-wash">{body}</button>
+                          : <div key={k.code} className="rounded-xl bg-surface-2/60 px-3 py-2.5">{body}</div>;
+                      })}
+                    </div>
+                  )}
+                  {krs.length > 0 && (
+                    <div className="mt-3 hidden overflow-x-auto sm:block">
                       <table className="w-full min-w-[640px] text-[12px]">
                         <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="py-1 pr-2">KR</th><th className="py-1 pr-2">Resultado clave</th><th className="num py-1 pr-2 text-right">Base</th><th className="num py-1 pr-2 text-right">Meta</th><th className="py-1 pr-2">Unidad</th><th className="py-1 pr-2">Dueño</th><th className="py-1 pr-2">Plazo</th><th className="num py-1 pr-2 text-right">Inic.</th><th /></tr></thead>
                         <tbody>
@@ -376,17 +426,17 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
         </button>
       </>}>
       <div className="space-y-2.5">
-        <div className="grid grid-cols-[110px_1fr] gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
           <Field label="Código"><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} disabled={!!initial} className={`${INPUT} num`} /></Field>
           <Field label="Resultado clave"><input value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Field label="Línea base"><input type="number" step="any" value={f.baseline} onChange={set("baseline")} className={`${INPUT} num`} /></Field>
           <Field label="Meta"><input type="number" step="any" value={f.target} onChange={set("target")} className={`${INPUT} num`} /></Field>
           <Field label="Unidad"><input value={f.unit} onChange={set("unit")} className={INPUT} /></Field>
           <Field label="Mejor si"><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option></select></Field>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Dueño"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{cat.responsibles.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
           <Field label="Plazo (AAAA o AAAA-Tn)"><input value={f.due} onChange={set("due")} className={`${INPUT} num`} /></Field>
           <Field label="Frecuencia"><select value={f.frequency} onChange={set("frequency")} className={INPUT}>{["Mensual", "Trimestral", "Semestral", "Anual"].map((x) => <option key={x} value={x}>{x}</option>)}</select></Field>
@@ -408,7 +458,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base }:
   const leverName = (o: CmiObjective) => levers.find((l) => l.id === o.lever)?.name ?? "";
   return (
     <>
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <StatCard label="Resultados clave" value={krs.length} foot={`en ${horizonLabel(cat.company, horizon)}`} />
         <StatCard label="KR con iniciativa" value={krs.filter((x) => initiativesOfKr(cat, x.k.code).length > 0).length} unit={`de ${krs.length}`} foot="al menos una iniciativa los mueve" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Iniciativas sin KR" value={unlinked.length} unit={`de ${cat.initiatives.length}`} foot="no mueven un resultado clave del horizonte" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
@@ -421,9 +471,9 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base }:
               const inis = initiativesOfKr(cat, k.code);
               return (
                 <div key={k.code} className="px-5 py-3">
-                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className="ml-auto text-[10px] text-faint">{o.id} · {leverName(o)}</span></div>
+                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className="text-[10px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
                   {inis.length === 0 ? <p className="mt-1 text-[11px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
-                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num ml-auto shrink-0 text-[10px] text-faint">{i.id} · {owner(i.ownerId)}</span></li>)}</ul>
+                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[10px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span></li>)}</ul>
                   )}
                 </div>
               );
@@ -437,7 +487,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base }:
             {unlinked.map((i) => (
               <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
                 <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
-                {canEdit && <button onClick={() => setLink(i.id)} className="btn-ghost !py-1 text-[10.5px]"><Link2 size={11} /> Vincular</button>}
+                {canEdit && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 !py-1.5 text-[11px] sm:!py-1 sm:text-[10.5px]"><Link2 size={11} /> Vincular</button>}
               </div>
             ))}
             {unlinked.length === 0 && <div className="px-5 py-4 text-[12px] text-muted"><CheckCircle2 size={14} className="mr-1 inline text-ok" /> Todas las iniciativas mueven un resultado clave.</div>}
@@ -484,12 +534,12 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <select value={lever} onChange={(e) => setLever(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[11.5px]"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+        <select value={lever} onChange={(e) => setLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
         <label className="flex items-center gap-1.5 text-[11.5px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[11.5px]" /></label>
         <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[10.5px] text-faint">se refresca cada 15 s</span>
       </div>
-      <div className="mb-5 grid gap-4 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Evaluaciones registradas" value={(prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)).length} foot={`${cov.evaluators.length} evaluadores activos`} />
@@ -498,7 +548,32 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="rise overflow-hidden">
           <CardHeader title="Ranking en vivo" sub="puntaje consolidado · elegibilidad y capacidad · horizonte sugerido · decisión" />
-          <div className="overflow-x-auto">
+          <div className="divide-y divide-line sm:hidden">
+            {ranked.map(({ i, r }, n) => {
+              const d = prio?.decisions[i.id]; const c = r?.c;
+              return (
+                <Link key={i.id} href={`${base}/panel/iniciativas/${i.id}`} className="flex items-start gap-3 px-4 py-3 active:bg-cyan-wash">
+                  <span className="num w-6 shrink-0 pt-0.5 text-[13px] font-extrabold text-faint">{c && c.n ? n + 1 : "—"}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-bold leading-snug text-ink">{i.name}</span>
+                    <span className="num block text-[10.5px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}</span>
+                    <span className="mt-1.5 flex flex-wrap gap-1">
+                      <span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
+                      {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
+                      {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
+                      {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
+                      {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
+                      {c && c.transfer && <span className="chip chip-warn !py-0 text-[9.5px]">táctica</span>}
+                      {d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : null}
+                    </span>
+                  </span>
+                  <span className="num shrink-0 text-[20px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</span>
+                </Link>
+              );
+            })}
+            {ranked.length === 0 && <p className="px-4 py-4 text-[12px] italic text-faint">Sin iniciativas.</p>}
+          </div>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[720px] text-[12px]">
               <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Horizonte</th><th className="px-2 py-2">Decisión</th></tr></thead>
               <tbody>
@@ -567,11 +642,19 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa.</p>
-        <button onClick={download} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><Download size={12} /> Exportar CSV</button>
+        <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[11.5px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV</button>
       </div>
       <Card className="rise mb-5 overflow-hidden">
         <CardHeader title="Resumen por horizonte y decisión" />
-        <div className="overflow-x-auto px-2 pb-3">
+        <div className="space-y-2 px-4 pb-3 sm:hidden">
+          {horizons.map((h) => (
+            <div key={h} className="rounded-xl bg-surface-2/60 px-3 py-2">
+              <div className="flex items-baseline justify-between text-[12.5px]"><b className="text-ink">{horizonLabel(cat.company, h)}</b><span className="num text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)} iniciativas</span></div>
+              <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto px-2 pb-3 sm:block">
           <table className="w-full min-w-[560px] text-[12px]">
             <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Horizonte</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
             <tbody>
@@ -588,7 +671,26 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         return (
           <Card key={h} className="rise rise-1 mb-5 overflow-hidden">
             <CardHeader title={horizonLabel(cat.company, h)} sub={`${hr.length} iniciativas · ordenadas por puntaje consolidado`} />
-            <div className="overflow-x-auto">
+            <div className="divide-y divide-line sm:hidden">
+              {hr.map((r) => (
+                <Link key={r.id} href={`${base}/panel/iniciativas/${r.id}`} className="block px-4 py-3 active:bg-cyan-wash">
+                  <div className="flex items-start gap-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-bold leading-snug text-ink">{r.name}</span>
+                      <span className="num block text-[10.5px] text-faint">{r.id} · {r.lever ?? "—"} · {r.owner ?? "—"}</span>
+                    </span>
+                    <span className="num shrink-0 text-[18px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />
+                    {r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}
+                  </div>
+                  {r.rationale && <p className="mt-1 text-[11px] leading-snug text-ink-soft">{r.rationale}</p>}
+                </Link>
+              ))}
+              {hr.length === 0 && <p className="px-4 py-3 text-[12px] italic text-faint">Sin iniciativas en este horizonte.</p>}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] text-[12px]">
                 <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Sugerido</th><th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
                 <tbody>

@@ -47,13 +47,13 @@ function CountUp({ value, decimals = 0, suffix = "" }:
 export function PageHeader({ kicker, title, desc, actions }:
   { kicker: string; title: string; desc?: string; actions?: ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-8 sm:gap-4">
       <div className="max-w-2xl">
-        <div className="kicker mb-2">{kicker}</div>
-        <h1 className="text-[27px] font-extrabold leading-[1.15] tracking-[-0.028em] text-ink">
+        <div className="kicker mb-1.5 sm:mb-2">{kicker}</div>
+        <h1 className="text-[22px] font-extrabold leading-[1.15] tracking-[-0.028em] text-ink sm:text-[27px]">
           {title}
         </h1>
-        {desc && <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{desc}</p>}
+        {desc && <p className="mt-2 hidden text-[13.5px] leading-relaxed text-muted sm:block">{desc}</p>}
       </div>
       {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -102,20 +102,20 @@ export function Modal({ title, sub, onClose, children, footer, wide = false }: {
   }, [onClose]);
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+    <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto p-0 sm:items-start sm:p-6"
       style={{ background: "color-mix(in srgb, var(--ink) 45%, transparent)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={title}
-        className={`panel rise my-auto flex w-full flex-col ${wide ? "max-w-[1080px]" : "max-w-[600px]"}`}>
-        <div className="flex items-start gap-3 border-b border-line px-6 py-4">
+        className={`panel rise mt-auto flex max-h-[96dvh] w-full flex-col rounded-b-none sm:my-auto sm:max-h-none sm:rounded-b-2xl ${wide ? "max-w-[1080px]" : "max-w-[600px]"}`}>
+        <div className="flex items-start gap-3 border-b border-line px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="min-w-0 flex-1">
             <div className="p-title">{title}</div>
             {sub && <div className="p-sub">{sub}</div>}
           </div>
           <button type="button" onClick={onClose} title="Cerrar (Esc)" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>
         </div>
-        <div className="px-6 py-5">{children}</div>
-        {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-3.5">{footer}</div>}
+        <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+        {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-4 py-3 sm:px-6 sm:py-3.5">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -130,12 +130,12 @@ export function StatCard({ label, value, decimals = 0, prefix = "", unit, delta,
 }) {
   const DeltaIcon = delta !== undefined && delta >= 0 ? ArrowUpRight : ArrowDownRight;
   return (
-    <div className="panel relative overflow-hidden px-5 pb-4 pt-4">
+    <div className="panel relative overflow-hidden px-4 pb-3 pt-3.5 sm:px-5 sm:pb-4 sm:pt-4">
       <div className="absolute inset-x-0 top-0 h-[3px] opacity-90"
         style={{ background: accent ?? "var(--grad-brand)" }} />
       <div className="text-[11.5px] font-medium leading-snug text-muted">{label}</div>
       <div className="mt-2 flex items-baseline gap-1.5">
-        <span className="num text-[30px] font-extrabold text-ink">
+        <span className="num text-[26px] font-extrabold text-ink sm:text-[30px]">
           {prefix}<CountUp value={value} decimals={decimals} />
         </span>
         {unit && <span className="text-[12px] font-medium text-faint">{unit}</span>}

@@ -305,3 +305,10 @@ body {
   }
   .draw { stroke-dasharray: none; }
 }
+
+/* móvil: objetivos táctiles de 40 px y entradas de 16 px (evita el zoom de iOS al enfocar) */
+@media (max-width: 640px) {
+  .btn-primary, .btn-ghost { min-height: 40px; }
+  .input, select.input, textarea.input { min-height: 42px; font-size: 16px !important; }
+  table.w-full { font-size: 12px; }
+}

@@ -187,11 +187,12 @@ const ROLE_LABEL: Record<string, string> = {
 const RAIL_W = 232;
 const RAIL_W_MIN = 76;
 
-export function AppShell({ children, user, companies = [], mode = "completa" }: {
+export function AppShell({ children, user, companies = [], mode = "completa", demo = false }: {
   children: ReactNode;
   user: SessionUser;
   companies?: { slug: string; name: string; shortName: string; active: boolean }[];
   mode?: "completa" | "convencion";
+  demo?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -386,21 +387,21 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
 
           <div className="flex min-w-0 items-baseline gap-2.5">
             <span className="truncate text-[13.5px] font-bold tracking-tight text-ink">
-              {current?.label ?? "Panel"}
+              {convencion && path.startsWith("/panel/convencion") ? (ACCESS_SECTIONS.find((x) => x.id === (searchParams.get("t") ?? "direccion"))?.label ?? "Convención") : (current?.label ?? "Panel")}
             </span>
             {current?.code && (
               <span className="num text-[10px] font-bold tracking-wider text-faint">{current.code}</span>
             )}
           </div>
 
-          <span className="chip chip-gold ml-1 hidden md:inline-flex" title="Datos ilustrativos de Andina Suministros. La información real se produce con el diagnóstico.">
+          {demo && <span className="chip chip-gold ml-1 hidden md:inline-flex" title="Datos ilustrativos de Andina Suministros. La información real se produce con el diagnóstico.">
             <FlaskConical size={11} /> Datos demo
-          </span>
+          </span>}
 
           <div className="ml-auto flex items-center gap-2.5">
-            <SearchButton />
+            <span className="hidden sm:inline-flex"><SearchButton /></span>
             <NotificationsBell />
-            <PublicLinkButton />
+            <span className="hidden sm:inline-flex"><PublicLinkButton /></span>
             <div className="flex items-center gap-2.5 pl-1">
               <div className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold text-white shadow-md"
                 style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>
@@ -414,7 +415,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-8 sm:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8">{children}</main>
 
         <footer className="px-8 pb-6 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">
           Sistema 4Shine® · 4Shine Empresas · Plataforma de gestión estratégica · Algoritmo T
