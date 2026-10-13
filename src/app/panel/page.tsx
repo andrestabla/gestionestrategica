@@ -4,6 +4,9 @@
 // feed de atención y módulos.
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { isConvencion } from "@/data/catalogo";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
@@ -21,6 +24,16 @@ const SEV_META = {
 } as const;
 
 export default function Panel() {
+  const base = useBase();
+  const v = useCatalog();
+  const router = useRouter();
+  const convencion = isConvencion(v.catalog.company);
+  // modo convención: el inicio es Dirección
+  useEffect(() => { if (convencion) router.replace(`${base}/panel/convencion?t=direccion`); }, [convencion, base, router]);
+  return convencion ? null : <PanelHome />;
+}
+
+function PanelHome() {
   const base = useBase();
   const v = useCatalog();
   // medición vigente efectiva (si A3 se publicó desde la plataforma, manda A3)

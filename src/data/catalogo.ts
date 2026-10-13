@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_TYPE_RULE, type TypeRule } from "@/lib/priorizacion";
+import type { AccessConfig, CompanyMode } from "@/lib/acceso";
 import {
   RESPONSIBLES, CMI_OBJECTIVES, KPI_CATALOG, EVIDENCE_CATALOG, INITIATIVES_FULL, SCORES_HISTORY,
   type Responsible, type CmiObjective, type KpiFull, type EvidenceFull, type InitiativeFull, type AssessmentRecord,
@@ -34,6 +35,8 @@ export type CompanyInfo = {
   horizons?: Horizon[];     // horizontes del roadmap y de la priorización (vacío = corto/mediano)
   levers?: Lever[];         // palancas estratégicas (hilo conductor de objetivos, OKR e iniciativas)
   typeRule?: TypeRule;      // regla estratégica/táctica de la matriz (vacío = regla 4Shine: 3 de 4 marcas)
+  mode?: CompanyMode;       // completa (todos los módulos) o convencion (solo Dirección, OKR, Iniciativas → KR, Priorización y Portafolio)
+  access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;
@@ -50,6 +53,9 @@ export type Horizon = { id: string; label: string; months: number };
 /** Palanca estratégica de la empresa (p. ej. Market Share, Fidelización,
     Madurez, Margen): ordena la convención y agrupa objetivos e iniciativas. */
 export type Lever = { id: string; name: string; order: number; ownerId?: string; indicator?: string; desc?: string };
+
+/** ¿La empresa opera en modo convención (menú reducido a las cinco secciones)? */
+export const isConvencion = (c: Pick<CompanyInfo, "mode"> | null | undefined): boolean => c?.mode === "convencion";
 
 /** Regla de tipo (estratégica o táctica) de la empresa; sin definición rige la de 4Shine. */
 export const typeRuleOf = (c: Pick<CompanyInfo, "typeRule"> | null | undefined): TypeRule =>

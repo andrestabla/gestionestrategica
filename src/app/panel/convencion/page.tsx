@@ -9,17 +9,18 @@
 // Edita quien administra el catálogo (advisor, gerencia); los demás ven en vivo.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote } from "@/components/ui";
 import { AccessChip, useCan, useBase } from "@/components/user-context";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
-import { horizonsOf, horizonLabel, leversOf, typeRuleOf, type Lever } from "@/data/catalogo";
+import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Lever } from "@/data/catalogo";
 import { PERSPECTIVES, type CmiObjective, type KpiFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, typeRuleLabel, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2 } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2, QrCode, Copy } from "lucide-react";
 
 type Tab = "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
@@ -37,7 +38,16 @@ export default function ConvencionPage() {
   const refetch = useCatalogRefetch();
   const base = useBase();
   const canEdit = useCan("manage_catalog");
-  const [tab, setTab] = useState<Tab>("direccion");
+  const canAccess = useCan("manage_users");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // la sección vive en la URL (?t=okr): el menú lateral en modo convención y los enlaces QR apuntan a ella
+  const tParam = searchParams.get("t");
+  const tab: Tab = TABS.some((x) => x.id === tParam) ? (tParam as Tab) : "direccion";
+  const setTab = (t: Tab) => router.replace(`${pathname}?t=${t}`);
+  const convencion = isConvencion(v.catalog.company);
+  const [qr, setQr] = useState(false);
   const [big, setBig] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +79,7 @@ export default function ConvencionPage() {
       <PageHeader kicker="Convención de planeación" title={`Convención · ${cat.company.name}`}
         desc="De los diagnósticos de las tribus a la dirección compartida, de los objetivos a OKR y prioridades ejecutables. Lo que se decide en sala queda registrado aquí, en vivo."
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
+          {canAccess && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR de acceso a esta sección"><QrCode size={13} /> QR de acceso</button>}
           <button type="button" onClick={() => setBig((b) => !b)} className="btn-ghost !py-1.5 text-[11.5px]" title="Tamaño para proyectar">{big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? "Normal" : "Proyector"}</button></span>} />
 
       {error && (
@@ -77,6 +88,12 @@ export default function ConvencionPage() {
         </div>
       )}
 
+      {qr && <AccesoQrModal section={tab} onClose={() => setQr(false)} />}
+      {convencion ? (
+        <div className="rise mb-5 flex items-center gap-2 text-[12.5px] text-muted">
+          {(() => { const t = TABS.find((x) => x.id === tab)!; return <><t.icon size={14} className="text-cyan-deep" /><b className="text-ink">{t.label}</b><span>· {t.agenda}</span></>; })()}
+        </div>
+      ) : (
       <div className="rise mb-5 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} title={t.agenda}
@@ -86,6 +103,7 @@ export default function ConvencionPage() {
         ))}
         <span className="ml-auto hidden text-[10.5px] text-faint sm:block">{TABS.find((t) => t.id === tab)?.agenda}</span>
       </div>
+      )}
 
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
@@ -601,4 +619,56 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block min-w-0"><span className="label !text-[8.5px]">{label}</span><div className="mt-1">{children}</div></label>;
+}
+
+/* ═══ QR de acceso por sección ═══ */
+
+type AccessRow = { section: Tab; label: string; role: "LIDER" | "DIRECTIVO"; token: string; url: string; what: string };
+
+function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void }) {
+  const [rows, setRows] = useState<AccessRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let on = true;
+    fetch("/api/td/convencion/acceso").then(async (res) => { const j = await res.json().catch(() => null); if (!on) return; if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setRows(j.access); }).catch(() => { if (on) setError("No se pudo conectar con el servidor."); });
+    return () => { on = false; };
+  }, []);
+  const post = async (body: Record<string, unknown>) => {
+    setBusy(true); setError(null);
+    const res = await fetch("/api/td/convencion/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, ...body }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setRows(j.access);
+    setBusy(false);
+  };
+  const row = rows?.find((r) => r.section === section);
+  const meta = TABS.find((t) => t.id === section)!;
+  return (
+    <Modal title={`QR de acceso · ${meta.label}`} sub="Quien lo escanea escribe su nombre y correo y entra directo a esta sección. El correo identifica: la cuenta se crea una sola vez y se reutiliza." onClose={onClose}
+      footer={<>
+        <button type="button" onClick={() => { if (row && confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post({ regenerate: true }); }} disabled={!row || busy} className="btn-ghost !py-2 text-[12px] disabled:opacity-40"><RefreshCw size={13} /> Regenerar</button>
+        <a href={row ? `/api/td/convencion/acceso/qr?section=${section}&v=${row.token}` : "#"} download={`qr-${section}.svg`} className="btn-ghost !py-2 text-[12px]"><Download size={13} /> Descargar SVG</a>
+        <button type="button" onClick={async () => { if (row) { await navigator.clipboard.writeText(row.url); setCopied(true); setTimeout(() => setCopied(false), 1500); } }} disabled={!row} className="btn-primary !py-2 text-[12px] disabled:opacity-40">{copied ? <CheckCircle2 size={13} /> : <Copy size={13} />} {copied ? "Copiado" : "Copiar enlace"}</button>
+      </>}>
+      {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+      {!row ? <p className="text-[12px] text-muted">Cargando…</p> : (
+        <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/api/td/convencion/acceso/qr?section=${section}&v=${row.token}`} alt={`QR de acceso a ${meta.label}`} className="w-[220px] rounded-xl border border-line bg-white p-2" />
+          <div className="space-y-3 text-[12.5px]">
+            <div><div className="label !text-[9px]">Enlace</div><div className="num mt-1 break-all rounded-lg bg-surface-2 px-3 py-2 text-[11.5px] text-ink">{row.url}</div></div>
+            <div><div className="label !text-[9px]">Rol de quien entra por este QR</div>
+              <select value={row.role} onChange={(e) => void post({ role: e.target.value })} disabled={busy} className="input mt-1 !py-2 text-[12px]">
+                <option value="DIRECTIVO">Consulta y evalúa · ve todo y califica con la matriz; no edita</option>
+                <option value="LIDER">Edita · además edita objetivos, KR e iniciativas y decide el tiempo</option>
+              </select>
+              <p className="mt-1 text-[10.5px] leading-snug text-faint">Quien ya tiene cuenta en la empresa conserva su rol. Las cuentas creadas por QR aparecen en Administración → Usuarios.</p>
+            </div>
+            <p className="text-[11px] text-muted">{meta.agenda}. Imprime el QR o proyéctalo al abrir el bloque; con «Regenerar» el enlace anterior deja de valer.</p>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
 }

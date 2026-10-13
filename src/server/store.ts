@@ -19,6 +19,8 @@ import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
+import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode } from "@/lib/acceso";
+import { randomBytes } from "crypto";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import { RESERVED } from "@/lib/tenant-url";
@@ -304,6 +306,8 @@ export async function hydrateCompanies() {
         horizons: parseHorizons(c.horizons).ok ? (parseHorizons(c.horizons) as { horizons?: Horizon[] }).horizons : undefined,
         levers: parseLevers(c.levers).ok ? (parseLevers(c.levers) as { levers?: Lever[] }).levers : undefined,
         typeRule: parseTypeRule(c.typeRule).ok ? (parseTypeRule(c.typeRule) as { rule?: TypeRule }).rule : undefined,
+        mode: isCompanyMode(c.mode) ? c.mode : "completa",
+        access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       const t = g.tenants.get(c.slug);
@@ -454,6 +458,7 @@ export type CompanyInput = {
   horizons?: unknown;   // [{id, label, months}] · lista vacía o nula = corto/mediano
   levers?: unknown;     // [{id, name, order, ownerId, indicator, desc}] · palancas estratégicas
   typeRule?: unknown;   // "4shine" | "cresio" | {criteria: [{key, name, strategic, tactical}], min} · regla estratégica/táctica
+  mode?: unknown;       // "completa" | "convencion" · menú completo o solo las cinco secciones de la convención
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
 
@@ -572,6 +577,8 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const tr = parseTypeRule(input.typeRule);
   if (!tr.ok) return { ok: false, status: 422, error: tr.error };
   if (tr.rule) info.typeRule = tr.rule;
+  if (input.mode !== undefined && !isCompanyMode(input.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
+  if (isCompanyMode(input.mode)) info.mode = input.mode;
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
   if (hasDb()) {
@@ -632,6 +639,11 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     if (!tr.ok) return { ok: false, status: 422, error: tr.error };
     c.typeRule = tr.rule;
     audit(actor, "task", `empresa:${c.slug}`, `regla de tipo estratégica/táctica: ${tr.rule ? (tr.rule.id ?? "propia") : "4shine"}`);
+  }
+  if (patch.mode !== undefined) {
+    if (!isCompanyMode(patch.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
+    c.mode = patch.mode;
+    audit(actor, "task", `empresa:${c.slug}`, `modo ${patch.mode}`);
   }
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(c.slug);
@@ -1761,6 +1773,89 @@ export function decideInitiative(
   audit(user, "task", iniId, `decisión de tiempo → ${d}`);
   void persist("decisión", (db) => db.initiativeDecision.upsert({ where: { companyId_code: { companyId: cid(), code: iniId } }, update: { data: rec }, create: { companyId: cid(), code: iniId, data: rec } }));
   return { ok: true, decision: rec };
+}
+
+
+/* ═══ Acceso por sección de la convención (QR) ═══ */
+
+const newToken = () => randomBytes(18).toString("base64url");
+const companyRec = () => g.companies.get(currentTenant());
+function saveAccess(actor: SessionUser, access: AccessConfig | undefined, what: string) {
+  const rec = companyRec(); if (!rec) return;
+  rec.access = access;
+  const t = g.tenants.get(rec.slug);
+  if (t) t.catalog.company = { ...t.catalog.company, access };
+  audit(actor, "task", `empresa:${rec.slug}`, what);
+  if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("acceso", (db) => db.company.update({ where: { id: dbId }, data: { access: (access && Object.keys(access).length ? access : null) as never } })); }
+}
+
+export type AccessInfo = { section: AccessSection; label: string; role: AccessRole; token: string; at: string; what: string };
+
+/** Enlaces de acceso de las cinco secciones (manage_users). Crea el token de
+    cada sección la primera vez; después lo conserva hasta que se regenere. */
+export function accessLinks(actor: SessionUser): { ok: true; access: AccessInfo[] } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Los enlaces de acceso los administra el advisor o el administrador." };
+  const rec = companyRec(); if (!rec) return { ok: false, status: 404, error: "Sin empresa activa." };
+  const access: AccessConfig = { ...(rec.access ?? {}) };
+  let changed = false;
+  for (const s of ACCESS_SECTIONS) {
+    if (!access[s.id]) { access[s.id] = { token: newToken(), role: s.role, at: new Date().toISOString() }; changed = true; }
+  }
+  if (changed) saveAccess(actor, access, "enlaces de acceso por sección creados");
+  return { ok: true, access: ACCESS_SECTIONS.map((s) => ({ section: s.id, label: s.label, role: access[s.id]!.role, token: access[s.id]!.token, at: access[s.id]!.at, what: s.what })) };
+}
+
+/** Regenera el token de una sección (los QR impresos con el anterior dejan de valer)
+    o cambia el rol que reciben quienes entran por ella. */
+export function updateAccess(actor: SessionUser, section: unknown, patch: { regenerate?: boolean; role?: unknown }): { ok: true; access: AccessInfo[] } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Los enlaces de acceso los administra el advisor o el administrador." };
+  if (!isAccessSection(section)) return { ok: false, status: 422, error: "Sección desconocida." };
+  const cur = accessLinks(actor); if (!cur.ok) return cur;
+  const rec = companyRec()!;
+  const access: AccessConfig = { ...(rec.access ?? {}) };
+  const e = { ...access[section]! };
+  if (patch.role !== undefined) { if (!isAccessRole(patch.role)) return { ok: false, status: 422, error: "Rol inválido: DIRECTIVO (consulta y evalúa) o LIDER (edita)." }; e.role = patch.role; }
+  if (patch.regenerate) { e.token = newToken(); e.at = new Date().toISOString(); }
+  access[section] = e;
+  saveAccess(actor, access, `acceso ${accessSection(section).label}: ${patch.regenerate ? "token regenerado" : ""}${patch.role ? ` rol ${e.role}` : ""}`.trim());
+  return accessLinks(actor);
+}
+
+/** Sección a la que da acceso un token de la empresa activa. */
+export const accessSectionOf = (token: string): AccessSection | null => sectionOfToken(companyRec()?.access, token);
+
+/** Entra por el enlace de una sección: identifica a la persona por su correo,
+    la crea en la empresa la primera vez (con el rol de la sección) y después
+    reutiliza su cuenta. Nunca duplica: el correo es único en la base. */
+export async function accessUser(token: string, input: { name?: unknown; email?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
+  const rec = companyRec();
+  if (!rec || !rec.active) return { ok: false, status: 404, error: "La empresa no está activa." };
+  const section = accessSectionOf(String(token ?? ""));
+  if (!section) return { ok: false, status: 404, error: "Este enlace de acceso ya no es válido. Pide el QR vigente de la sección." };
+  const email = String(input.email ?? "").trim().toLowerCase();
+  const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "Escribe un correo válido: es tu identificación en la plataforma." };
+  if (name.length < 5) return { ok: false, status: 422, error: "Escribe tu nombre completo." };
+  if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) return { ok: false, status: 403, error: "Ese correo es de un administrador de la plataforma: entra por /login." };
+  let user = users().find((u) => u.email.toLowerCase() === email);
+  let created = false;
+  if (!user) {
+    // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
+    const elsewhere = await findUserForLogin(email);
+    if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
+    const role = rec.access?.[section]?.role ?? accessSection(section).role;
+    user = { email, name, role, active: true, seeded: false, createdBy: `acceso QR · ${accessSection(section).label}`, at: new Date().toISOString() };
+    users().push(user);
+    created = true;
+    void persist("usuario", async (db) => {
+      const companyId = cid();
+      await db.user.upsert({ where: { email }, update: { name, active: true, companyId }, create: { email, name, role, passwordHash: "", companyId } });
+    });
+  }
+  if (!user.active) return { ok: false, status: 403, error: "Tu cuenta está desactivada en esta empresa." };
+  const session: SessionUser = { email: user.email, name: user.name, role: user.role, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
+  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR · ${accessSection(section).label}`);
+  return { ok: true, user: session, section, created };
 }
 
 /* ── medición efectiva: la publicada en el store manda sobre el seed ── */

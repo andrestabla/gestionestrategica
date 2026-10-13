@@ -6,14 +6,15 @@
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, FlaskConical, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation,
-} from "lucide-react";
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers } from "lucide-react";
 import { AlgoritmoMark } from "@/components/logo";
+import { ACCESS_SECTIONS } from "@/lib/acceso";
+const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
 import { CommandPalette, SearchButton } from "@/components/command-palette";
 import type { SessionUser } from "@/lib/session";
 import { applyTheme } from "@/lib/branding";
@@ -186,12 +187,15 @@ const ROLE_LABEL: Record<string, string> = {
 const RAIL_W = 232;
 const RAIL_W_MIN = 76;
 
-export function AppShell({ children, user, companies = [] }: {
+export function AppShell({ children, user, companies = [], mode = "completa" }: {
   children: ReactNode;
   user: SessionUser;
   companies?: { slug: string; name: string; shortName: string; active: boolean }[];
+  mode?: "completa" | "convencion";
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const convencion = mode === "convencion";
   const router = useRouter();
   const company = user.company;
   const base = company ? `/${company.slug}` : "";
@@ -231,9 +235,17 @@ export function AppShell({ children, user, companies = [] }: {
     router.refresh();
   };
 
+  // modo convención: solo las cinco secciones (y Administración para quien administra)
+  const NAV_CV = ACCESS_SECTIONS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }));
+  const baseNav = convencion ? NAV_CV : NAV;
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
-    ? [...NAV, { href: "/panel/admin", label: "Administración", icon: Users2 }]
-    : NAV;
+    ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2 }]
+    : baseNav;
+  const isActive = (href: string) => {
+    if (href.includes("?t=")) return path.startsWith("/panel/convencion") && (searchParams.get("t") ?? "direccion") === href.split("?t=")[1];
+    if (convencion && href === "/panel/admin") return path.startsWith("/panel/admin");
+    return href === "/panel" ? path === "/panel" : path.startsWith(href);
+  };
 
   // bloque de empresa: nombre de la activa y, para el admin, el paso a la pantalla de elección
   const companyBlock = (
@@ -252,11 +264,9 @@ export function AppShell({ children, user, companies = [] }: {
 
   const navItems = (mini: boolean) => (
     <nav className={`flex flex-col gap-1 ${mini ? "px-2.5" : "px-3"}`}>
-      {!mini && <div className="label mb-1 px-3 !text-white/30">Módulos</div>}
+      {!mini && <div className="label mb-1 px-3 !text-white/30">{convencion ? "Convención" : "Módulos"}</div>}
       {navList.map((item) => {
-        const active = item.href === "/panel"
-          ? path === "/panel"
-          : path.startsWith(item.href);
+        const active = isActive(item.href);
         return (
           <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
             title={mini ? item.label : undefined}
