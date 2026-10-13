@@ -4,9 +4,9 @@ import { findUserForLogin, verifyPassword, companyBySlug } from "@/server/store"
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
-// En producción: DEMO_LOGIN=off desactiva la contraseña demo; entonces solo
-// entra quien tiene contraseña fijada en la base (bcrypt).
-const demoAllowed = () => process.env.DEMO_LOGIN !== "off";
+// La contraseña demo solo vale con DEMO_LOGIN=on (desarrollo local). En
+// producción entra únicamente quien tiene contraseña fijada en la base (bcrypt).
+const demoAllowed = () => process.env.DEMO_LOGIN === "on";
 
 const Body = z.object({ email: z.string().email(), password: z.string().min(4), tenant: z.string().max(40).optional() });
 
@@ -34,6 +34,10 @@ export async function POST(req: Request) {
   // la cuenta de una empresa solo entra por la ruta de su empresa
   if (tenant && found.user.role !== "ADMIN" && found.company?.slug !== tenant) {
     return NextResponse.json({ error: "Esta cuenta no pertenece a esta empresa. Entra por el enlace de la tuya." }, { status: 401 });
+  }
+  // el acceso genérico (/login) es solo del administrador de la plataforma
+  if (!tenant && found.user.role !== "ADMIN") {
+    return NextResponse.json({ error: `Este acceso es del administrador. Entra por el enlace de tu empresa${found.company ? ` (/${found.company.slug}/login)` : ""}.` }, { status: 401 });
   }
   // el admin de plataforma no tiene empresa propia: la elige en /empresas tras
   // entrar, o queda activa la de la URL por la que entró

@@ -10,14 +10,6 @@ import { useRouter } from "next/navigation";
 import { AlgoritmoMark } from "@/components/logo";
 import { LogIn, Loader2 } from "lucide-react";
 
-const DEMO_ACCOUNTS = [
-  { label: "Admin de la plataforma", email: "admin@algoritmot.com" },
-  { label: "Advisor 4Shine", email: "advisor@4shine.co" },
-  { label: "Líder de la empresa (gerencia)", email: "gerencia@andina.example" },
-  { label: "Responsable de capacidad (operaciones)", email: "operaciones@andina.example" },
-  { label: "Junta o directivo (solo lectura)", email: "junta@andina.example" },
-];
-
 type Branding = {
   platformName: string; showPlatformName: boolean;
   institutionName: string; shortName: string; tagline: string;
@@ -42,9 +34,8 @@ export type LoginCompany = { slug: string; name: string; shortName: string };
 
 export function LoginClient({ tenant, company }: { tenant: string | null; company: LoginCompany | null }) {
   const router = useRouter();
-  const demo = !tenant || tenant === "andina";
-  const [email, setEmail] = useState(demo ? "advisor@4shine.co" : "");
-  const [password, setPassword] = useState(demo ? "4shine-demo-2026" : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [b, setB] = useState<Branding | null>(null);
@@ -230,22 +221,9 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
         <p className="mt-4 text-[11.5px] text-faint">{b.loginSupport}</p>
       ) : null}
 
-      <div className="panel mt-8 p-4">
-        <div className="label mb-2.5">Cuentas de demostración</div>
-        <div className="space-y-1">
-          {(demo ? DEMO_ACCOUNTS : []).map((a) => (
-            <button key={a.email} type="button"
-              onClick={() => { setEmail(a.email); setPassword("4shine-demo-2026"); }}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2">
-              <span className="font-medium text-ink-soft">{a.label}</span>
-              <span className="truncate font-mono text-[10.5px] text-faint">{a.email}</span>
-            </button>
-          ))}
-        </div>
-        <div className="mt-2.5 border-t border-line pt-2 font-mono text-[10px] text-faint">
-          contraseña común · 4shine-demo-2026
-        </div>
-      </div>
+      {!tenant && (
+        <p className="mt-6 text-[11.5px] leading-snug text-faint">Acceso del administrador de la plataforma. Las cuentas de cada empresa entran por el enlace de su empresa (/empresa/login) o por el QR de su sección.</p>
+      )}
     </div>
   );
 

@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
-  BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, FlaskConical, KanbanSquare, BookOpen,
+  BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
   FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers } from "lucide-react";
 import { AlgoritmoMark } from "@/components/logo";
@@ -187,12 +187,11 @@ const ROLE_LABEL: Record<string, string> = {
 const RAIL_W = 232;
 const RAIL_W_MIN = 76;
 
-export function AppShell({ children, user, companies = [], mode = "completa", demo = false }: {
+export function AppShell({ children, user, companies = [], mode = "completa" }: {
   children: ReactNode;
   user: SessionUser;
   companies?: { slug: string; name: string; shortName: string; active: boolean }[];
   mode?: "completa" | "convencion";
-  demo?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -394,9 +393,6 @@ export function AppShell({ children, user, companies = [], mode = "completa", de
             )}
           </div>
 
-          {demo && <span className="chip chip-gold ml-1 hidden md:inline-flex" title="Datos ilustrativos de Andina Suministros. La información real se produce con el diagnóstico.">
-            <FlaskConical size={11} /> Datos demo
-          </span>}
 
           <div className="ml-auto flex items-center gap-2.5">
             <span className="hidden sm:inline-flex"><SearchButton /></span>
