@@ -9,7 +9,7 @@ import {
 } from "../src/server/store";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Admin", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 const lider: SessionUser = { email: "g@a.co", name: "Gerencia", role: "LIDER", company: { slug: "andina", name: "Andina", shortName: "Andina" } };
 
 test("fuera de una petición rige la empresa demo; dentro, la del contexto", async () => {
@@ -80,7 +80,7 @@ test("los roles son de la empresa: no se crean admins dentro de una empresa y lo
   await runWithTenant("empresa-plantilla", async () => {
     assert.equal(getUsers().length, 1);
   });
-  const adminFound = await findUserForLogin("admin@algoritmot.com");
+  const adminFound = await findUserForLogin("andrestablarico@gmail.com");
   assert.equal(adminFound?.company, null, "el admin de plataforma no tiene empresa");
   const andina = await findUserForLogin("gerencia@andina.example");
   assert.equal(andina?.company?.slug, "andina");

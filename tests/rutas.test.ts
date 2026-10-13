@@ -7,7 +7,7 @@ import { encodeSession } from "../src/lib/session";
 import { resetStore, createCompany, updateCompany, companyBySlug, listCompanies } from "../src/server/store";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Admin", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 
 test("rutas: el primer segmento es la empresa y el resto la ruta interna", () => {
   assert.deepEqual(splitTenantPath("/cresio/login"), { tenant: "cresio", path: "/login" });

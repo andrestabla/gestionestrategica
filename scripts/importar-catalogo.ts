@@ -29,7 +29,7 @@ const crear = args.includes("--crear");
 const vaciar = args.includes("--vaciar");
 const data = JSON.parse(readFileSync(file, "utf8"));
 const slug: string = slugArg ?? data.company?.slug;
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Importación de catálogo", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Importación de catálogo", role: "ADMIN" };
 
 async function main() {
   await hydrateCompanies();

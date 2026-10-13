@@ -11,7 +11,7 @@ import {
 import { ANDINA_CATALOG } from "../src/data/catalogo";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Admin", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 const advisor: SessionUser = { email: "a@a.co", name: "Advisor", role: "CONSULTOR", company: { slug: "nueva-sa", name: "Nueva", shortName: "Nueva" } };
 const junta: SessionUser = { email: "j@a.co", name: "Junta", role: "DIRECTIVO" };
 

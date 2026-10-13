@@ -9,7 +9,7 @@ import { resetStore, parseHorizons, createCompany, updateCompany, catalog, upser
 import { runWithTenant } from "../src/server/tenant";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Admin", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 const CRESIO = [{ id: "H1", label: "H1 · 2027", months: 12 }, { id: "H2", label: "H2 · 2030", months: 36 }, { id: "H3", label: "H3 · 2033", months: 72 }];
 
 test("horizontes: sin definición rigen corto y mediano; con definición, los de la empresa", () => {

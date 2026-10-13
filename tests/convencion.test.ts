@@ -8,7 +8,7 @@ import { resetStore, catalog, setLevers, parseLevers, upsertObjective, upsertKpi
 import { runWithTenant } from "../src/server/tenant";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Admin", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 const LEVERS = [{ id: "MS", name: "Market Share" }, { id: "FID", name: "Fidelización del cliente" }, { id: "MAD", name: "Madurez organizacional" }, { id: "MAR", name: "Margen (GMROI)", indicator: "GMROI" }];
 
 test("palancas: hasta ocho, con id y nombre; el orden lo da la lista", () => {

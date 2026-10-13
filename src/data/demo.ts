@@ -136,7 +136,7 @@ export const TERRITORIES: Territory[] = [
 // financieros ilustrativos de Andina (FINANCIALS) que la ubican en el sector.
 
 export const DEMO_USERS = [
-  { email: "admin@algoritmot.com", name: "Andrés Tabla", role: "ADMIN", password: "4shine-demo-2026" },
+  { email: "andrestablarico@gmail.com", name: "Andrés Tabla Rico", role: "ADMIN", password: "4shine-demo-2026" },
   { email: "advisor@4shine.co", name: "Advisor 4Shine", role: "CONSULTOR", password: "4shine-demo-2026" },
   { email: "gerencia@andina.example", name: "Laura Restrepo", role: "LIDER", password: "4shine-demo-2026" },
   { email: "operaciones@andina.example", name: "Carolina Vélez", role: "RESPONSABLE", line: 3, password: "4shine-demo-2026" },

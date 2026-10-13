@@ -9,7 +9,7 @@ import {
 } from "../src/server/store";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@algoritmot.com", name: "Admin", role: "ADMIN" };
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 const consultor: SessionUser = { email: "consultor@algoritmot.com", name: "Consultor", role: "CONSULTOR" };
 const lider: SessionUser = { email: "l@u.co", name: "Líder", role: "LIDER" };
 
