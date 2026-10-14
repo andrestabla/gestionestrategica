@@ -16,6 +16,8 @@ async function main() {
   const actor: SessionUser = { email: "andrestablarico@gmail.com", name: "Andrés Tabla Rico", role: "CONSULTOR", company: { slug: c.slug, name: c.name, shortName: c.shortName } };
   await inTenant(c.slug, async () => {
     if (archivo) { const r = setItinerary(actor, JSON.parse(readFileSync(archivo, "utf8"))); if (!r.ok) throw new Error(r.error); console.log(`itinerario cargado: ${r.itinerary.items.length} momentos`); }
+    // las escrituras a la base son asíncronas: dejar que la carga termine antes de publicar, para que no la pise
+    if (archivo && publicar) await new Promise((r) => setTimeout(r, 2500));
     if (publicar) { const r = publishItinerary(actor, true); if (!r.ok) throw new Error(r.error); }
     const it = itineraryOf();
     if (it) console.log(`público: ${it.public ? "sí" : "no"}${it.token ? ` · ${origen}${itineraryPublicPath(c.slug, it.token)}` : ""}`);
