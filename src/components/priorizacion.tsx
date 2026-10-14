@@ -64,7 +64,7 @@ export const DECISION_CLS: Record<Decision, string> = { IMPLEMENTAR: "chip chip-
 
 /** Chip compacto para listados: puntaje consolidado + decisión. */
 export function PrioChip({ c, decision }: { c: Consolidated | undefined; decision?: Decision | null }) {
-  if (!c || c.n === 0) return <span className="chip" title="Sin evaluación con la matriz 4Shine">Sin priorizar</span>;
+  if (!c || c.n === 0) return <span className="chip" title="Sin validación con los criterios de tipo y la matriz 4Shine">Sin priorizar</span>;
   return (
     <>
       <span className="chip" title={`Matriz 4Shine · D ${c.avg.D} · E ${c.avg.E} · M ${c.avg.M} · L ${c.avg.L} · ${c.n} evaluador${c.n > 1 ? "es" : ""}`}
@@ -145,7 +145,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
           <div className="label mb-3 flex items-center gap-2"><Users size={12} /> Consolidado del comité</div>
           {!c || c.n === 0 ? (
             <p className="rounded-xl bg-surface-2/60 px-4 py-4 text-[12px] leading-relaxed text-muted">
-              Nadie ha evaluado esta iniciativa con la matriz. Sin evaluación no puede competir como prioridad ni aprobarse para implementar.
+              Nadie ha validado esta iniciativa con los criterios. Sin evaluación no puede competir como prioridad ni aprobarse para implementar.
             </p>
           ) : (
             <>
@@ -214,7 +214,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
 
         {/* evaluación propia */}
         <div>
-          <div className="label mb-3">{mine ? "Tu evaluación" : "Evaluar con la matriz"}</div>
+          <div className="label mb-3">{mine ? "Tu evaluación" : `Evaluar con los ${validationCriteriaCount(rule)} criterios`}</div>
           {canEval ? (
             <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} onSave={(ev) => post({ evaluation: ev })} />
           ) : (
