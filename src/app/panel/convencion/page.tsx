@@ -814,6 +814,7 @@ function ItinerarioTab() {
       onComment={(momentId, kind, text) => post({ op: "comment", momentId, kind, text })}
       onPublish={async (on, regenerate) => { await post({ op: "publish", on, regenerate }); }}
       onUpload={async (json) => { await post({ op: "set", itinerary: json }); }}
+      onSave={(it) => post({ op: "set", itinerary: it })}
       onResolve={async (id, resolved) => { await post({ op: "resolve", id, resolved }); }}
       onDelete={async (id) => { await post({ op: "delete", id }); }} />
   );

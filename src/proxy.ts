@@ -16,7 +16,7 @@ export function proxy(req: NextRequest) {
     url.pathname = path;
     const headers = new Headers(req.headers);
     headers.set("x-tenant", tenant);
-    headers.set("x-tenant-path", pathname);
+    headers.set("x-tenant-path", pathname + search);   // con la consulta (?t=…) para que la activación del admin vuelva a la misma sección
     return NextResponse.rewrite(url, { request: { headers } });
   }
   if (pathname === "/panel" || pathname.startsWith("/panel/")) {

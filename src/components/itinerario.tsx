@@ -7,7 +7,7 @@
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui";
 import { ITINERARY_KINDS, COMMENT_KINDS, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind } from "@/lib/itinerario";
-import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown } from "lucide-react";
 
 const KIND_CLS: Record<ItineraryKind, string> = {
   conferencia: "bg-[#8A6D1F] text-white", mesa: "bg-[#D4AF37] text-[#0D1B2A]", taller: "bg-[#0B6F88] text-white", plenaria: "bg-[#0D1B2A] text-white",
@@ -16,7 +16,7 @@ const KIND_CLS: Record<ItineraryKind, string> = {
 const DOT: Record<ItineraryKind, string> = { conferencia: "#8A6D1F", mesa: "#D4AF37", taller: "#0B6F88", plenaria: "#0D1B2A", break: "#B6BDC7", energizacion: "#B6BDC7", logistica: "#4C078C" };
 const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", label: "Todo" }, { k: "mesa", label: "Mesa redonda" }, { k: "taller", label: "Talleres" }, { k: "conferencia", label: "Conferencias" }, { k: "plenaria", label: "Plenarias" }];
 
-export function ItinerarioView({ itinerary, comments, mode, company, canManage = false, publicUrl = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete }: {
+export function ItinerarioView({ itinerary, comments, mode, company, canManage = false, publicUrl = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave }: {
   itinerary: Omit<Itinerary, "token">; comments: ItineraryComment[]; mode: "sesion" | "publico"; company?: { name: string; shortName: string };
   canManage?: boolean; publicUrl?: string | null; error?: string | null; busy?: boolean;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => Promise<boolean>;
@@ -24,15 +24,28 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
   onUpload?: (json: unknown) => Promise<void>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  onSave?: (itinerary: Omit<Itinerary, "token">) => Promise<boolean>;   // edición de textos (advisor o gerencia)
 }) {
   const [filter, setFilter] = useState<ItineraryKind | "all">("all");
+  const [editHeader, setEditHeader] = useState(false);
+  const [editDay, setEditDay] = useState<string | null>(null);
+  const editable = !pubMode(mode) && canManage && !!onSave;
+  const save = (patch: Partial<Omit<Itinerary, "token">>) => onSave ? onSave({ ...itinerary, ...patch }) : Promise.resolve(false);
+  const newId = (day: string) => { let n = 1; while (itinerary.items.some((x) => x.id === `${day}-${String(n).padStart(2, "0")}`)) n++; return `${day}-${String(n).padStart(2, "0")}`; };
+  const addMoment = (day: string) => {
+    const last = [...itinerary.items].reverse().find((x) => x.day === day);
+    const it: ItineraryItem = { id: newId(day), day, time: last?.time ?? "8:00", minutes: 15, title: "Nuevo momento", kind: "plenaria", who: "", method: "", materials: [], platform: "", output: "" };
+    const idx = last ? itinerary.items.indexOf(last) + 1 : itinerary.items.length;
+    const items = [...itinerary.items]; items.splice(idx, 0, it);
+    return save({ items }).then((ok) => { if (ok) setOpen(idx); });
+  };
   const [open, setOpen] = useState<number>(-1);
   const [copied, setCopied] = useState(false);
   const items = useMemo(() => itinerary.items, [itinerary]);
   const byMoment = useMemo(() => { const m = new Map<string, ItineraryComment[]>(); for (const c of comments) { const l = m.get(c.momentId) ?? []; l.push(c); m.set(c.momentId, l); } return m; }, [comments]);
   const pending = comments.filter((c) => !c.resolvedAt).length;
   const cur = open >= 0 ? items[open] : null;
-  const pub = mode === "publico";
+  const pub = pubMode(mode);
 
   return (
     <div className={pub ? "mx-auto max-w-[960px] px-4 py-6 sm:px-6" : ""}>
@@ -49,6 +62,7 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
           <p className="text-[12.5px] text-muted">{itinerary.sub ?? "Ruta de la convención, momento a momento: metodología, materiales, plataforma y salida."}{pending ? <> · <b className="text-ink">{pending}</b> comentario{pending === 1 ? "" : "s"} por atender</> : null}</p>
           {canManage && (
             <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
+              {editable && <button type="button" onClick={() => setEditHeader(true)} className="btn-ghost !py-1.5 text-[11.5px]"><Pencil size={12} /> Encabezado</button>}
               <label className="btn-ghost cursor-pointer !py-1.5 text-[11.5px]"><Upload size={12} /> Cargar JSON<input type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f || !onUpload) return; try { await onUpload(JSON.parse(await f.text())); } catch { alert("El archivo no es un JSON válido."); } e.target.value = ""; }} /></label>
               {itinerary.public
                 ? <button type="button" onClick={() => onPublish?.(false)} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]"><Lock size={12} /> Retirar del público</button>
@@ -72,7 +86,13 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
         const total = items.filter((it) => it.day === d.id).reduce((a, it) => a + it.minutes, 0);
         return (
           <section key={d.id} id={`dia-${d.id}`} className="mb-7 scroll-mt-24">
-            <h2 className="text-[18px] font-extrabold text-ink">{d.title}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-[18px] font-extrabold text-ink">{d.title}</h2>
+              {editable && <span className="flex gap-1.5">
+                <button type="button" onClick={() => setEditDay(d.id)} className="rounded-lg p-1.5 text-faint hover:bg-surface hover:text-ink" title="Editar el día"><Pencil size={13} /></button>
+                <button type="button" onClick={() => void addMoment(d.id)} disabled={busy} className="btn-ghost !py-1 text-[11px]"><Plus size={11} /> Momento</button>
+              </span>}
+            </div>
             <p className="mb-3 text-[12.5px] text-muted">{d.sub ? `${d.sub} · ` : ""}{items.filter((it) => it.day === d.id).length} momentos · {Math.round(total / 6) / 10} horas de agenda</p>
             <div className="relative pl-7 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-[2px] before:bg-gradient-to-b before:from-[#D4AF37] before:to-[#0D1B2A]">
               {list.map(({ it, i }) => {
@@ -98,18 +118,36 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
         );
       })}
 
-      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy}
+      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy}
         onClose={() => setOpen(-1)} onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined}
-        onComment={onComment} onResolve={onResolve} onDelete={onDelete} />}
+        onComment={onComment} onResolve={onResolve} onDelete={onDelete}
+        onEdit={editable ? async (next) => { const items = itinerary.items.map((x) => (x.id === cur.id ? next : x)); return save({ items }); } : undefined}
+        onRemove={editable ? async () => { const ok = await save({ items: itinerary.items.filter((x) => x.id !== cur.id) }); if (ok) setOpen(-1); return ok; } : undefined}
+        onMove={editable ? async (dir) => { const i = itinerary.items.indexOf(cur), j = i + dir; if (j < 0 || j >= itinerary.items.length) return false; const items = [...itinerary.items]; [items[i], items[j]] = [items[j], items[i]]; const ok = await save({ items }); if (ok) setOpen(j); return ok; } : undefined} />}
+      {editHeader && <HeaderForm itinerary={itinerary} busy={busy} onClose={() => setEditHeader(false)} onSave={async (title, sub) => { const ok = await save({ title, sub }); if (ok) setEditHeader(false); }} />}
+      {editDay && <DayForm day={itinerary.days.find((d) => d.id === editDay)!} busy={busy} onClose={() => setEditDay(null)} onSave={async (title, sub) => { const ok = await save({ days: itinerary.days.map((d) => (d.id === editDay ? { ...d, title, ...(sub ? { sub } : {}) } : d)) }); if (ok) setEditDay(null); }} />}
     </div>
   );
 }
 
-function MomentModal({ it, day, comments, pub, canManage, busy, onClose, onPrev, onNext, onComment, onResolve, onDelete }: {
-  it: ItineraryItem; day: string; comments: ItineraryComment[]; pub: boolean; canManage: boolean; busy: boolean; onClose: () => void; onPrev?: () => void; onNext?: () => void;
+const pubMode = (m: "sesion" | "publico") => m === "publico";
+
+function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove }: {
+  it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; canManage: boolean; busy: boolean; onClose: () => void; onPrev?: () => void; onNext?: () => void;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => Promise<boolean>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>; onDelete?: (id: string) => Promise<void>;
+  onEdit?: (next: ItineraryItem) => Promise<boolean>; onRemove?: () => Promise<boolean>; onMove?: (dir: -1 | 1) => Promise<boolean>;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState(() => ({ ...it, materialsText: it.materials.join("\n") }));
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const startEdit = () => { setF({ ...it, materialsText: it.materials.join("\n") }); setEditing(true); };
+  const commitEdit = async () => {
+    if (!onEdit) return;
+    const { materialsText, ...rest } = f;
+    const ok = await onEdit({ ...rest, minutes: Math.max(0, Math.round(Number(f.minutes) || 0)), materials: materialsText.split("\n").map((m) => m.trim()).filter(Boolean) });
+    if (ok) setEditing(false);
+  };
   const [kind, setKind] = useState<CommentKind>("metodologico");
   const [text, setText] = useState("");
   const [author, setAuthor] = useState(() => { try { return localStorage.getItem("itin-autor") ?? ""; } catch { return ""; } });
@@ -130,12 +168,45 @@ function MomentModal({ it, day, comments, pub, canManage, busy, onClose, onPrev,
         <button type="button" onClick={onNext} disabled={!onNext} className="btn-ghost !py-2 text-[12px] disabled:opacity-40">Siguiente <ChevronRight size={13} /></button>
       </>}>
       <div className="space-y-4 text-[13.5px]">
+        {onEdit && !editing && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button type="button" onClick={startEdit} className="btn-ghost !py-1.5 text-[11.5px]"><Pencil size={12} /> Editar textos</button>
+            {onMove && <button type="button" onClick={() => void onMove(-1)} disabled={busy || !onPrev} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title="Mover antes"><ArrowUp size={12} /></button>}
+            {onMove && <button type="button" onClick={() => void onMove(1)} disabled={busy || !onNext} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title="Mover después"><ArrowDown size={12} /></button>}
+            {onRemove && <button type="button" onClick={() => { if (confirm(`¿Eliminar el momento «${it.title}»?`)) void onRemove(); }} disabled={busy} className="btn-ghost ml-auto !py-1.5 text-[11.5px] text-bad"><Trash2 size={12} /> Eliminar</button>}
+          </div>
+        )}
+        {editing ? (
+          <div className="space-y-2.5 rounded-xl border border-line px-3.5 py-3">
+            <div className="grid gap-2 sm:grid-cols-[1fr_90px_90px]">
+              <label className="block"><span className="label !text-[9px]">Título</span><input value={f.title} onChange={set("title")} className="input mt-1 !py-2 text-[13px]" /></label>
+              <label className="block"><span className="label !text-[9px]">Hora</span><input value={f.time} onChange={set("time")} className="input mt-1 !py-2 text-[13px]" placeholder="8:05" /></label>
+              <label className="block"><span className="label !text-[9px]">Minutos</span><input type="number" min={0} value={f.minutes} onChange={set("minutes")} className="input mt-1 !py-2 text-[13px]" /></label>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="block"><span className="label !text-[9px]">Tipo</span><select value={f.kind} onChange={set("kind")} className="input mt-1 !py-2 text-[13px]">{(Object.keys(ITINERARY_KINDS) as ItineraryKind[]).map((k) => <option key={k} value={k}>{ITINERARY_KINDS[k]}</option>)}</select></label>
+              <label className="block"><span className="label !text-[9px]">Día</span><select value={f.day} onChange={set("day")} className="input mt-1 !py-2 text-[13px]">{days.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</select></label>
+              <label className="block"><span className="label !text-[9px]">Quién conduce</span><input value={f.who} onChange={set("who")} className="input mt-1 !py-2 text-[13px]" /></label>
+            </div>
+            <label className="block"><span className="label !text-[9px]">Metodología · dinámica y resultado</span><textarea value={f.method} onChange={set("method")} rows={5} maxLength={1200} className="input mt-1 !py-2 text-[13px]" /></label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="block"><span className="label !text-[9px]">Materiales físicos (uno por línea)</span><textarea value={f.materialsText} onChange={set("materialsText")} rows={4} className="input mt-1 !py-2 text-[13px]" /></label>
+              <label className="block"><span className="label !text-[9px]">Plataforma y pantalla</span><textarea value={f.platform} onChange={set("platform")} rows={4} maxLength={400} className="input mt-1 !py-2 text-[13px]" /></label>
+            </div>
+            <label className="block"><span className="label !text-[9px]">Salida del momento</span><input value={f.output} onChange={set("output")} maxLength={300} className="input mt-1 !py-2 text-[13px]" /></label>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setEditing(false)} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+              <button type="button" onClick={() => void commitEdit()} disabled={busy || f.title.trim().length < 3 || !f.time.trim()} className="btn-primary ml-auto !py-2 text-[12px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Guardar</button>
+            </div>
+          </div>
+        ) : (<>
         <div><div className="label !text-[9px]">Metodología · dinámica y resultado</div><p className="mt-1 leading-relaxed text-ink">{it.method || "—"}</p></div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-[#FAF4E3] px-3.5 py-3"><div className="label !text-[9px]">Materiales físicos</div>{it.materials.length ? <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-ink">{it.materials.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="mt-1 text-[13px] text-muted">—</p>}</div>
           <div className="rounded-xl bg-cyan-wash/60 px-3.5 py-3"><div className="label !text-[9px]">Plataforma y pantalla</div><p className="mt-1 text-[13px] text-ink">{it.platform || "—"}</p></div>
         </div>
         <div><div className="label !text-[9px]">Salida del momento</div><p className="mt-1 text-ink">{it.output || "—"}</p></div>
+        </>)}
 
         <div className="border-t border-line pt-3">
           <div className="label !text-[9px]">Comentarios del equipo organizador ({comments.length})</div>
@@ -172,6 +243,30 @@ function MomentModal({ it, day, comments, pub, canManage, busy, onClose, onPrev,
             </div>
           </div>
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+function HeaderForm({ itinerary, busy, onClose, onSave }: { itinerary: Omit<Itinerary, "token">; busy: boolean; onClose: () => void; onSave: (title: string, sub?: string) => Promise<void> }) {
+  const [title, setTitle] = useState(itinerary.title); const [sub, setSub] = useState(itinerary.sub ?? "");
+  return (
+    <Modal title="Encabezado del itinerario" onClose={onClose} footer={<><button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button><button type="button" disabled={busy || title.trim().length < 3} onClick={() => void onSave(title.trim(), sub.trim() || undefined)} className="btn-primary !py-2 text-[12px] disabled:opacity-40">Guardar</button></>}>
+      <div className="space-y-2.5">
+        <label className="block"><span className="label !text-[9px]">Título</span><input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} className="input mt-1 !py-2 text-[13px]" /></label>
+        <label className="block"><span className="label !text-[9px]">Subtítulo</span><input value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
+      </div>
+    </Modal>
+  );
+}
+
+function DayForm({ day, busy, onClose, onSave }: { day: { id: string; title: string; sub?: string }; busy: boolean; onClose: () => void; onSave: (title: string, sub?: string) => Promise<void> }) {
+  const [title, setTitle] = useState(day.title); const [sub, setSub] = useState(day.sub ?? "");
+  return (
+    <Modal title={`Día · ${day.id}`} onClose={onClose} footer={<><button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button><button type="button" disabled={busy || title.trim().length < 3} onClick={() => void onSave(title.trim(), sub.trim() || undefined)} className="btn-primary !py-2 text-[12px] disabled:opacity-40">Guardar</button></>}>
+      <div className="space-y-2.5">
+        <label className="block"><span className="label !text-[9px]">Título del día</span><input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className="input mt-1 !py-2 text-[13px]" placeholder="Día 1 · miércoles 22 de octubre" /></label>
+        <label className="block"><span className="label !text-[9px]">Subtítulo</span><input value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
       </div>
     </Modal>
   );
