@@ -2,7 +2,7 @@
 // (tres de cuatro marcas) y regla Cresio (tres criterios obligatorios).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { typeOf, consolidate, decisionCheck, typeRuleLabel, TYPE_RULES, DEFAULT_TYPE_RULE, type Evaluation } from "../src/lib/priorizacion";
+import { typeOf, consolidate, decisionCheck, typeRuleLabel, validationLabel, validationCriteriaCount, TYPE_RULES, DEFAULT_TYPE_RULE, type Evaluation } from "../src/lib/priorizacion";
 import { typeRuleOf } from "../src/data/catalogo";
 import { parseTypeRule } from "../src/server/store";
 
@@ -28,6 +28,10 @@ test("regla Cresio: impacto, transversalidad y potencial, los tres obligatorios"
   assert.equal(typeOf({ contribucion: "ESTRATEGICO", profundidad: "ESTRATEGICO", alcance: "ESTRATEGICO", permanencia: "ESTRATEGICO" }, CR), "TACTICO");
   assert.match(typeRuleLabel(CR), /obligatorios/);
   assert.match(typeRuleLabel(), /3 o más/);
+  // la validación completa de Cresio son siete criterios: 1 a 3 de tipo y 4 a 7 de la matriz
+  assert.equal(validationCriteriaCount(CR), 7);
+  assert.match(validationLabel(CR), /^7 criterios: 1 a 3 de tipo .*; 4 a 7 de priorización/);
+  assert.equal(validationCriteriaCount(), 8);
 });
 
 test("consolidación con regla de empresa y bloqueo de lo táctico", () => {

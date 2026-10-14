@@ -1888,6 +1888,13 @@ export function setItinerary(actor: SessionUser, input: unknown): { ok: true; it
   const p = parseItinerary(input); if (!p.ok) return { ok: false, status: 422, error: p.error };
   const prev = itineraryOf();
   const it: Itinerary = { ...p.itinerary, public: prev?.public ?? false, ...(prev?.token ? { token: prev.token } : {}) };
+  // sin la clave «files» en la carga, se conservan los materiales ya subidos y los vínculos de cada momento
+  const raw = input as { files?: unknown } | null;
+  if (prev?.files?.length && (raw === null || typeof raw !== "object" || raw.files === undefined)) {
+    it.files = prev.files;
+    const known = new Set(prev.files.map((f) => f.id));
+    it.items = it.items.map((x) => { const f = prev.items.find((y) => y.id === x.id)?.files?.filter((id) => known.has(id)); return x.files?.length ? x : f?.length ? { ...x, files: f } : x; });
+  }
   saveItinerary(actor, it, `itinerario cargado: ${it.items.length} momentos`);
   return { ok: true, itinerary: it };
 }

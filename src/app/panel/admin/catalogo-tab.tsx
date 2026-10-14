@@ -12,7 +12,7 @@ import { Card, CardHeader, EmptyNote, Modal } from "@/components/ui";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { useCan, useUser } from "@/components/user-context";
 import { usePriorizacion } from "@/components/priorizacion";
-import { CRITERIA, LEVEL_NAMES, score as matrixScore, typeOf, typeRuleLabel, type CriterionKey, type Level, type TypeMarks, type Evaluation } from "@/lib/priorizacion";
+import { CRITERIA, LEVEL_NAMES, score as matrixScore, typeOf, validationCriteriaCount, validationLabel, type CriterionKey, type Level, type TypeMarks, type Evaluation } from "@/lib/priorizacion";
 import { horizonsOf, typeRuleOf, horizonLabel } from "@/data/catalogo";
 import type { TenantView } from "@/lib/vista";
 import type { Financials } from "@/data/catalogo";
@@ -761,7 +761,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
         <div className="space-y-2.5">
           <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div className="text-[12px] font-bold text-ink">Matriz 4Shine · {mine ? "tu calificación" : "calificación"}</div>
+              <div className="text-[12px] font-bold text-ink">Validación con {validationCriteriaCount(typeRule)} criterios · {mine ? "tu calificación" : "calificación"}</div>
               <div className="num text-[11px] text-muted">
                 {preview !== null
                   ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type, typeRule) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
@@ -794,8 +794,8 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
                   ))}
                 </div>
                 <p className="mt-1.5 text-[10px] leading-snug text-faint">
-                  Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Tipo: {typeRuleLabel(typeRule)}. Se registra como tu evaluación en la matriz; el consolidado del comité ordena el portafolio y sugiere el horizonte.
-                  {evalStarted && !evalComplete && <b className="text-warn"> Completa los cuatro criterios y el tipo, o déjalos vacíos.</b>}
+                  {validationLabel(typeRule)}. Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Se registra como tu evaluación; el consolidado del comité ordena el portafolio y sugiere el horizonte.
+                  {evalStarted && !evalComplete && <b className="text-warn"> Completa los {validationCriteriaCount(typeRule)} criterios, o déjalos vacíos.</b>}
                 </p>
               </>
             ) : (

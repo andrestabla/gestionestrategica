@@ -19,7 +19,7 @@ export const ACCESS_SECTIONS: { id: AccessSection; label: string; role: AccessRo
   { id: "direccion", label: "Dirección", role: "DIRECTIVO", what: "Consultar la matriz de palancas por horizonte." },
   { id: "okr", label: "OKR", role: "LIDER", what: "Fijar línea base, meta, dueño y plazo de los resultados clave; añadir o retirar." },
   { id: "iniciativas", label: "Iniciativas → KR", role: "LIDER", what: "Vincular cada iniciativa al resultado clave que mueve." },
-  { id: "priorizacion", label: "Priorización en vivo", role: "DIRECTIVO", what: "Calificar con la matriz 4Shine y ver el ranking." },
+  { id: "priorizacion", label: "Priorización en vivo", role: "DIRECTIVO", what: "Validar cada iniciativa criterio por criterio (tipo y matriz 4Shine) y ver el ranking." },
   { id: "portafolio", label: "Portafolio", role: "DIRECTIVO", what: "Consultar el portafolio por horizonte y decisión." },
 ];
 export const ACCESS_ROLES: { id: AccessRole; label: string; what: string }[] = [

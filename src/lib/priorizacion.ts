@@ -120,6 +120,14 @@ export function typeRuleLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
   return rule.min >= n ? `los ${n} criterios son obligatorios: con uno que falle, es táctica` : `con ${rule.min} o más marcas estratégicas de ${n}, es estratégica`;
 }
 
+/** Cuántos criterios valida una iniciativa: los de tipo de la regla de la empresa más los cuatro de la matriz. */
+export function validationCriteriaCount(rule: TypeRule = DEFAULT_TYPE_RULE): number { return rule.criteria.length + CRITERIA.length; }
+/** Texto de la validación completa: «7 criterios: 1 a 3 de tipo (…); 4 a 7 de priorización (matriz 4Shine)». */
+export function validationLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
+  const k = rule.criteria.length, n = validationCriteriaCount(rule);
+  return `${n} criterios: 1 a ${k} de tipo (${typeRuleLabel(rule)}); ${k + 1} a ${n} de priorización con la matriz 4Shine, de 1 a 4`;
+}
+
 export type Decision = "IMPLEMENTAR" | "PREPARAR" | "BACKLOG" | "RENUNCIAR";
 export const DECISIONS: { key: Decision; label: string; when: string; rule: string }[] = [
   { key: "IMPLEMENTAR", label: "Ahora: implementar", when: "Ahora",

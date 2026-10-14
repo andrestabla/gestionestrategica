@@ -10,7 +10,7 @@ import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { horizonLabel, typeRuleOf } from "@/data/catalogo";
 import {
-  CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel,
+  CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount,
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
 } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
@@ -99,14 +99,15 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const mine = data?.evaluations.find((e) => e.by === user.email.toLowerCase());
   const decision = data?.decisions[iniId] ?? null;
   const sameHorizon = data?.ranking.filter((r) => r.horizon === horizon).length ?? 0;
+  const rule = typeRuleOf(cv.catalog.company);
 
   return (
     <div className="rise rise-3 panel mb-5 overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-6 py-4">
         <Scale size={16} className="text-cyan-deep" />
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-extrabold tracking-tight text-ink">Matriz 4Shine de priorización</div>
-          <div className="text-[11.5px] text-muted">Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 · ordena dentro del horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia</div>
+          <div className="text-[14px] font-extrabold tracking-tight text-ink">Validación con {validationCriteriaCount(rule)} criterios</div>
+          <div className="text-[11.5px] text-muted">Criterios 1 a {rule.criteria.length}: tipo, {typeRuleLabel(rule)} · criterios {rule.criteria.length + 1} a {validationCriteriaCount(rule)}: matriz 4Shine, puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4, ordena dentro del horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia</div>
         </div>
         {c && c.n > 0 && row && (
           <span className="chip chip-cyan" title="Posición por puntaje entre las iniciativas del mismo horizonte">
@@ -244,10 +245,32 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
 
   return (
     <div className="space-y-3">
-      {CRITERIA.map((cr) => (
+      <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
+        <div className="text-[12.5px] font-bold text-ink">Criterios 1 a {rule.criteria.length} · tipo: ¿estratégica o táctica?</div>
+        <div className="text-[11px] leading-snug text-muted">Marca cada criterio; {typeRuleLabel(rule)}.{rule.excludeTactical ? " Lo táctico se transfiere al área de mayor responsabilidad y no compite en el portafolio estratégico." : ""}</div>
+        <div className="mt-2 space-y-1.5">
+          {rule.criteria.map((t, i) => (
+            <div key={t.key} className="grid gap-1.5 sm:grid-cols-[120px_1fr_1fr]">
+              <span className="pt-1.5 text-[11px] font-semibold text-ink"><span className="num text-cyan-deep">{i + 1}.</span> {t.name}</span>
+              {(["ESTRATEGICO", "TACTICO"] as TypeMark[]).map((m) => {
+                const on = type[t.key] === m;
+                return (
+                  <button key={m} type="button" onClick={() => setType({ ...type, [t.key]: m })}
+                    className={`min-h-[44px] rounded-lg px-2.5 py-2 text-left text-[10.5px] leading-snug transition-all sm:py-1.5 sm:text-[10px] ${on ? "text-white shadow-sm" : "bg-surface text-ink-soft hover:bg-cyan-wash"}`}
+                    style={on ? { background: m === "ESTRATEGICO" ? "var(--navy)" : "var(--cyan-deep)" } : undefined}>
+                    <b className="text-[10.5px]">{m === "ESTRATEGICO" ? "Estratégico" : "Táctico"}</b> · {m === "ESTRATEGICO" ? t.strategic : t.tactical}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="px-1 text-[11px] font-bold text-ink">Criterios {rule.criteria.length + 1} a {validationCriteriaCount(rule)} · matriz 4Shine de priorización, de 1 a 4</div>
+      {CRITERIA.map((cr, i) => (
         <div key={cr.key} className="rounded-xl bg-surface-2/60 px-3.5 py-3">
           <div className="flex items-start gap-2">
-            <span className="num mt-0.5 text-[12px] font-extrabold text-cyan-deep">{cr.key}</span>
+            <span className="num mt-0.5 text-[12px] font-extrabold text-cyan-deep">{rule.criteria.length + i + 1}. {cr.key}</span>
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-bold text-ink">{cr.name} <span className="num text-[10px] font-semibold text-faint">· {cr.weight} %</span></div>
               <div className="text-[11px] leading-snug text-muted">{cr.question}</div>
@@ -276,31 +299,9 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
         </div>
       ))}
 
-      <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
-        <div className="text-[12.5px] font-bold text-ink">¿Estratégica o táctica?</div>
-        <div className="text-[11px] leading-snug text-muted">Marca cada criterio; {typeRuleLabel(rule)}.{rule.excludeTactical ? " Lo táctico se transfiere al área de mayor responsabilidad y no compite en el portafolio estratégico." : ""}</div>
-        <div className="mt-2 space-y-1.5">
-          {rule.criteria.map((t) => (
-            <div key={t.key} className="grid gap-1.5 sm:grid-cols-[120px_1fr_1fr]">
-              <span className="pt-1.5 text-[11px] font-semibold text-ink">{t.name}</span>
-              {(["ESTRATEGICO", "TACTICO"] as TypeMark[]).map((m) => {
-                const on = type[t.key] === m;
-                return (
-                  <button key={m} type="button" onClick={() => setType({ ...type, [t.key]: m })}
-                    className={`min-h-[44px] rounded-lg px-2.5 py-2 text-left text-[10.5px] leading-snug transition-all sm:py-1.5 sm:text-[10px] ${on ? "text-white shadow-sm" : "bg-surface text-ink-soft hover:bg-cyan-wash"}`}
-                    style={on ? { background: m === "ESTRATEGICO" ? "var(--navy)" : "var(--cyan-deep)" } : undefined}>
-                    <b className="text-[10.5px]">{m === "ESTRATEGICO" ? "Estratégico" : "Táctico"}</b> · {m === "ESTRATEGICO" ? t.strategic : t.tactical}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center gap-3">
         <div className="num text-[12px] text-muted">
-          {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : `Califica los cuatro criterios y marca el tipo (${rule.criteria.length} criterios).`}
+          {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : `Completa los ${validationCriteriaCount(rule)} criterios: tipo (1 a ${rule.criteria.length}) y matriz (${rule.criteria.length + 1} a ${validationCriteriaCount(rule)}).`}
         </div>
         <button type="button" disabled={!complete || saving}
           onClick={async () => { setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}

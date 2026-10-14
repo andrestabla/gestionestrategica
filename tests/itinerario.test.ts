@@ -89,6 +89,10 @@ test("materiales: registro, vínculo por momento y retiro", async () => {
     // recargar el itinerario desde JSON conserva archivos y vínculos válidos
     const again = setItinerary(advisor, { ...IT, files: itineraryOf()!.files, items: IT.items.map((x) => (x.id === "d1-02" ? { ...x, files: ["deck-01", "fantasma"] } : x)) });
     assert.equal(again.ok, true); assert.deepEqual(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, ["deck-01"]);
+    // una carga nueva sin la clave «files» (p. ej. scripts/itinerario.ts) conserva los materiales y los vínculos
+    const reload = setItinerary(advisor, { ...IT, items: IT.items.map((x) => ({ ...x })) }); assert.equal(reload.ok, true);
+    assert.equal(itineraryOf()?.files?.length, 2);
+    assert.deepEqual(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, ["deck-01"]);
     const r = removeItineraryFile(advisor, "deck-01"); assert.equal(r.ok, true);
     assert.equal(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, undefined);
     assert.equal(removeItineraryFile(advisor, "deck-01").ok, false);

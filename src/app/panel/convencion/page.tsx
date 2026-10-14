@@ -21,7 +21,7 @@ import { PERSPECTIVES, type CmiObjective, type KpiFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
-import { CRITERIA, decisionLabel, typeRuleLabel, type Decision } from "@/lib/priorizacion";
+import { CRITERIA, decisionLabel, validationLabel, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload } from "lucide-react";
 
 type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
@@ -615,7 +615,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
                 <span className="num w-10 text-right font-bold text-ink">{e.count}</span>
               </div>
             ))}
-            <p className="pt-2 text-[10.5px] leading-snug text-faint">Cada evaluador califica desde la ficha de la iniciativa (Iniciativas → matriz 4Shine). El comité revisa elegibilidad y consistencia aquí.</p>
+            <p className="pt-2 text-[10.5px] leading-snug text-faint">Cada evaluador valida desde la ficha de la iniciativa (Iniciativas → «Validación con siete criterios»: tipo y matriz 4Shine). El comité revisa elegibilidad y consistencia aquí.</p>
           </div>
         </Card>
       </div>
@@ -664,7 +664,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
             </tbody>
           </table>
           <p className="px-3 pt-2 text-[11px] text-muted">
-            Regla de tipo: {typeRuleLabel(typeRuleOf(cat.company))}. {tactical.length ? <>Tácticas según el consolidado (se transfieren al área responsable y no compiten en el portafolio): <b className="text-ink">{tactical.length}</b> · {tactical.map((t) => t.id).join(", ")}.</> : typeRuleOf(cat.company).excludeTactical ? "Ninguna iniciativa evaluada quedó como táctica." : ""}
+            Validación con {validationLabel(typeRuleOf(cat.company))}. {tactical.length ? <>Tácticas según el consolidado (se transfieren al área responsable y no compiten en el portafolio): <b className="text-ink">{tactical.length}</b> · {tactical.map((t) => t.id).join(", ")}.</> : typeRuleOf(cat.company).excludeTactical ? "Ninguna iniciativa evaluada quedó como táctica." : ""}
           </p>
         </div>
       </Card>

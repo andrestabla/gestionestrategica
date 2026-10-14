@@ -3,6 +3,7 @@
 // del itinerario. La contraseña se lee de la variable CONTRASENA (nunca por argumento):
 //   read -rs "p?Contraseña del admin: "; echo; CONTRASENA="$p" npx tsx scripts/subir-materiales.ts --slug cresio --origen https://gestionestrategica.io
 // --solo-vincular: no sube archivos, solo aplica los vínculos.
+// --ids a,b,c: sube solo esos materiales (por id) y luego aplica los vínculos.
 import { readFileSync, existsSync } from "fs";
 import { basename } from "path";
 
@@ -10,6 +11,7 @@ const arg = (k: string) => { const i = process.argv.indexOf(k); return i > 0 ? p
 const slug = arg("--slug") ?? "cresio", origen = (arg("--origen") ?? "http://localhost:3000").replace(/\/$/, "");
 const email = arg("--email") ?? "andrestablarico@gmail.com", password = process.env.CONTRASENA ?? "";
 const soloVincular = process.argv.includes("--solo-vincular");
+const soloIds = (arg("--ids") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 if (!password && !soloVincular) { console.error("Falta CONTRASENA (contraseña del administrador)."); process.exit(1); }
 
 const BASE = "Cresio/Convención";
@@ -19,7 +21,7 @@ const MATERIALES: { path: string; id: string; name: string; group: string }[] = 
   { path: `${BASE}/plantillas-imprimibles/02-lienzo-maestro-A2.pdf`, id: "plantilla-02-lienzo-maestro", name: "Plantilla 02 · Lienzo maestro (A2)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/03-tarjetas-resultados-clave.pdf`, id: "plantilla-03-tarjetas-kr", name: "Plantilla 03 · Tarjetas de resultados clave", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/04-fichas-iniciativa.pdf`, id: "plantilla-04-fichas-iniciativa", name: "Plantilla 04 · Fichas de iniciativa", group: "plantilla" },
-  { path: `${BASE}/plantillas-imprimibles/05-tarjeta-matriz-4shine.pdf`, id: "plantilla-05-tarjeta-matriz", name: "Plantilla 05 · Tarjeta de bolsillo de la matriz 4Shine", group: "plantilla" },
+  { path: `${BASE}/plantillas-imprimibles/05-tarjeta-matriz-4shine.pdf`, id: "plantilla-05-tarjeta-matriz", name: "Plantilla 05 · Tarjeta de bolsillo · siete criterios de validación", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/06-plantilla-okr-por-tribu-A3.pdf`, id: "plantilla-06-okr-por-tribu", name: "Plantilla 06 · OKR por tribu (A3)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/07-pliego-portafolio-A2.pdf`, id: "plantilla-07-pliego-portafolio", name: "Plantilla 07 · Pliego de portafolio (A2)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/08-fichas-de-apoyo.pdf`, id: "plantilla-08-fichas-de-apoyo", name: "Plantilla 08 · Fichas de apoyo (preguntas, renuncia, observaciones, acta)", group: "plantilla" },
@@ -61,6 +63,7 @@ async function main() {
   const h = { cookie };
   if (!soloVincular) {
     for (const m of MATERIALES) {
+      if (soloIds.length && !soloIds.includes(m.id)) continue;
       if (!existsSync(m.path)) { console.log(`· falta ${m.path}, se omite`); continue; }
       const fd = new FormData();
       fd.append("file", new Blob([readFileSync(m.path)], { type: "application/pdf" }), basename(m.path));
