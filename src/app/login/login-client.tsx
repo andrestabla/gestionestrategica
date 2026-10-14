@@ -58,8 +58,8 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
   }, []);
 
   // imágenes y mensaje en rotación aleatoria (una por carga)
-  const panelImg = useMemo(() => (b ? pick(b.panelImages) ?? "/back.jpg" : "/back.jpg"), [b]);
-  const bgImg = useMemo(() => (b ? pick(b.backgroundImages) ?? pick(b.panelImages) ?? "/back.jpg" : "/back.jpg"), [b]);
+  const panelImg = useMemo(() => (b ? pick(b.panelImages) ?? "/login.jpg" : "/login.jpg"), [b]);
+  const bgImg = useMemo(() => (b ? pick(b.backgroundImages) ?? pick(b.panelImages) ?? "/login.jpg" : "/login.jpg"), [b]);
   const heroMsg = useMemo(() => (b?.showHeroMessages ? pick(b.heroMessages) : null), [b]);
 
   const submit = async (e: React.FormEvent) => {

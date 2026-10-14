@@ -2692,8 +2692,8 @@ export const DEFAULT_BRANDING: Branding = {
   heroTitle: "Plataforma de gestión estratégica 4Shine Empresas", showHeroTitle: true,
   heroMessages: [], showHeroMessages: true,
   heroSupport: "", showHeroSupport: false,
-  overlayColor: "#0d1830", overlayOpacity: 72,
-  backgroundImages: [], panelImages: ["/back.jpg"],
+  overlayColor: "#0d1830", overlayOpacity: 55,
+  backgroundImages: [], panelImages: ["/login.jpg"],
   loader: null, loaderText: "Cargando experiencia", showLoaderText: true,
   customCss: "",
 };

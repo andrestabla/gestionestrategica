@@ -22,7 +22,7 @@ import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, typeRuleLabel, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload } from "lucide-react";
 
 type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
@@ -51,7 +51,6 @@ export default function ConvencionPage() {
   const setTab = (t: Tab) => router.replace(`${pathname}?t=${t}`);
   const convencion = isConvencion(v.catalog.company);
   const [qr, setQr] = useState(false);
-  const [big, setBig] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: prio, refetch: refetchPrio } = usePriorizacion();
@@ -78,12 +77,11 @@ export default function ConvencionPage() {
   const first = horizons[0]?.id ?? "";
 
   return (
-    <div className={big ? "text-[1.12em]" : ""}>
+    <div>
       <PageHeader kicker="Convención de planeación" title={`Convención · ${cat.company.name}`}
         desc="De los diagnósticos de las tribus a la dirección compartida, de los objetivos a OKR y prioridades ejecutables. Lo que se decide en sala queda registrado aquí, en vivo."
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
-          {canAccess && tab !== "itinerario" && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR de acceso a esta sección"><QrCode size={13} /> QR de acceso</button>}
-          <button type="button" onClick={() => setBig((b) => !b)} className="btn-ghost !py-1.5 text-[11.5px]" title="Tamaño para proyectar">{big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? "Normal" : "Proyector"}</button></span>} />
+          {canAccess && tab !== "itinerario" && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR de acceso a esta sección"><QrCode size={13} /> QR de acceso</button>}</span>} />
 
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3" style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
