@@ -38,6 +38,17 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [recover, setRecover] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
+  const recoverNow = async () => {
+    setBusy(true); setError(null); setRecoverMsg(null);
+    try {
+      const res = await fetch("/api/auth/recuperar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, tenant: tenant ?? undefined }) });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setRecoverMsg(j.message);
+    } catch { setError("No se pudo conectar con el servidor."); }
+    setBusy(false);
+  };
   const [b, setB] = useState<Branding | null>(null);
 
   useEffect(() => {
@@ -224,6 +235,19 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       {!tenant && (
         <p className="mt-6 text-[11.5px] leading-snug text-faint">Acceso del administrador de la plataforma. Las cuentas de cada empresa entran por el enlace de su empresa (/empresa/login) o por el QR de su sección.</p>
       )}
+      <div className="mt-4 text-[12px]">
+        {!recover ? (
+          <button type="button" onClick={() => { setRecover(true); setRecoverMsg(null); }} className="font-semibold text-cyan-deep hover:underline">¿Olvidaste tu contraseña?</button>
+        ) : (
+          <div className="rounded-xl bg-surface-2 px-3.5 py-3">
+            <p className="text-[12px] text-ink-soft">Escribe arriba tu correo y te enviamos un enlace para crear una contraseña nueva (vale 60 minutos).</p>
+            {recoverMsg ? <p className="mt-2 text-[12px] font-semibold text-ok">{recoverMsg}</p> : (
+              <button type="button" onClick={recoverNow} disabled={busy || !email.includes("@")} className="btn-primary mt-2 !py-2 text-[12px] disabled:opacity-40">{busy ? "Enviando…" : "Enviar enlace"}</button>
+            )}
+            <button type="button" onClick={() => setRecover(false)} className="ml-3 text-[11.5px] text-faint hover:underline">Cancelar</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 

@@ -21,6 +21,7 @@ import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode } from "@/lib/acceso";
 import { randomBytes } from "crypto";
+import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, type Itinerary, type ItineraryComment } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
@@ -1945,6 +1946,44 @@ export function deleteItineraryComment(actor: SessionUser, id: unknown): { ok: t
   S().itinComments.delete(key);
   void persist("comentario del itinerario", (db) => db.itineraryComment.deleteMany({ where: { id: key, companyId: cid() } }));
   return { ok: true };
+}
+
+
+/* ═══ Recuperación de contraseña ═══ */
+
+/** Emite un enlace de restablecimiento para una cuenta activa (de empresa o de
+    plataforma). Devuelve null si el correo no tiene cuenta: la respuesta al
+    usuario es la misma en ambos casos. Con empresa indicada, solo su cuenta. */
+export async function requestPasswordReset(email: string, tenant: string | null): Promise<{ email: string; name: string; slug: string | null; token: string } | null> {
+  if (!hasDb()) return null;
+  const found = await findUserForLogin(email);
+  if (!found || !found.user.active) return null;
+  if (tenant && found.user.role !== "ADMIN" && found.company?.slug !== tenant) return null;
+  const token = randomBytes(32).toString("base64url");
+  const expires = new Date(Date.now() + RESET_MINUTES * 60_000);
+  try {
+    const db = await prisma();
+    await db.user.update({ where: { email: found.user.email.toLowerCase() }, data: { resetToken: token, resetExpires: expires } });
+  } catch (e) { console.error("[4shine] recuperación:", (e as Error).message); return null; }
+  return { email: found.user.email, name: found.user.name, slug: found.company?.slug ?? null, token };
+}
+
+/** Consume el enlace: fija la contraseña nueva, limpia el token y el bloqueo, y devuelve la sesión. */
+export async function resetPassword(token: string, password: unknown): Promise<{ ok: true; user: SessionUser } | { ok: false; status: number; error: string }> {
+  if (!hasDb()) return { ok: false, status: 503, error: "Sin base de datos no se puede restablecer la contraseña." };
+  if (!passwordOk(password)) return { ok: false, status: 422, error: "La contraseña debe tener al menos 10 caracteres." };
+  const db = await prisma();
+  const u = await db.user.findUnique({ where: { resetToken: token }, include: { company: true } });
+  if (!u || !u.active) return { ok: false, status: 404, error: "El enlace no es válido o ya se usó. Pide uno nuevo desde «¿Olvidaste tu contraseña?»." };
+  if (isExpired(u.resetExpires)) { await db.user.update({ where: { id: u.id }, data: { resetToken: null, resetExpires: null } }); return { ok: false, status: 410, error: `El enlace venció (vale ${RESET_MINUTES} minutos). Pide uno nuevo.` }; }
+  const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
+  const hash = await (bcrypt.default ?? bcrypt).hash(password, 10);
+  await db.user.update({ where: { id: u.id }, data: { passwordHash: hash, resetToken: null, resetExpires: null, failedLogins: 0, lockedUntil: null } });
+  await hydrateCompanies();
+  const company = u.company ? g.companies.get(u.company.slug) ?? null : null;
+  const user: SessionUser = { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, company: company ? { slug: company.slug, name: company.name, shortName: company.shortName } : undefined };
+  audit(user, "task", u.email, "contraseña restablecida por correo");
+  return { ok: true, user };
 }
 
 /* ── medición efectiva: la publicada en el store manda sobre el seed ── */

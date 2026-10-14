@@ -4,13 +4,13 @@
 // (proxy) y en el servidor.
 
 export const RESERVED = new Set([
-  "api", "login", "panel", "empresas", "acceso", "p", "e", "_next", "favicon.ico", "robots.txt", "sitemap.xml",
+  "api", "login", "panel", "empresas", "acceso", "restablecer", "p", "e", "_next", "favicon.ico", "robots.txt", "sitemap.xml",
   "img", "fonts", "uploads", "static", "admin", "www", "4shine", "algoritmot",
 ]);
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
 /** Secciones de la aplicación que admiten prefijo de empresa. */
-const SECTIONS = new Set(["login", "panel", "api", "acceso", "p", "e"]);
+const SECTIONS = new Set(["login", "panel", "api", "acceso", "restablecer", "p", "e"]);
 
 /** Separa el identificador de empresa del resto de la ruta. Sin prefijo
     reconocible devuelve tenant null y la ruta intacta. «/cresio» equivale a
