@@ -90,6 +90,7 @@ export type TypeCriterion = { key: string; name: string; strategic: string; tact
 export type TypeRule = {
   id?: string; criteria: TypeCriterion[]; min: number;
   excludeTactical?: boolean;  // lo táctico se transfiere al área y no admite implementar ni preparar (regla Cresio)
+  notes?: Partial<Record<CriterionKey, string>>;  // criterios de la empresa incluidos dentro de D, E, M o L (sin marcas aparte)
 };
 
 /** Reglas predefinidas. 4Shine: cuatro marcas comunes, tres o más = estratégica.
@@ -97,19 +98,16 @@ export type TypeRule = {
     mejora continua pasa como táctico al área de mayor responsabilidad. */
 export const TYPE_RULES: Record<"4shine" | "cresio", TypeRule> = {
   "4shine": { id: "4shine", criteria: TYPE_CRITERIA, min: 3 },
+  // Cresio: sin marcas de tipo aparte; sus criterios van dentro de la calificación
+  // (impacto en los objetivos → D, transversalidad → E, potencial y madurez → E y M).
+  // Tipo: estratégica con D de 3 o 4; con D de 1 o 2 es táctica y se transfiere al área.
   "cresio": {
-    id: "cresio", min: 3, excludeTactical: true,
-    criteria: [
-      { key: "impacto", name: "Impacto en los objetivos estratégicos",
-        strategic: "Cambia materialmente un objetivo o un resultado clave del horizonte, o habilita una condición indispensable para los siguientes.",
-        tactical: "Mejora un indicador de ejecución sin cambiar un objetivo ni habilitar una condición indispensable." },
-      { key: "transversalidad", name: "Transversalidad",
-        strategic: "Depende de al menos tres áreas y ninguna concentra más del 75 % de la ejecución.",
-        tactical: "Depende en más del 75 % de una sola área o de menos de tres áreas: es de esa área." },
-      { key: "potencial", name: "Potencial y madurez",
-        strategic: "Es nueva o disruptiva; o es de continuidad pero aún no tiene indicadores, pilotos, prototipos o MVP que validen su implementación y escalamiento.",
-        tactical: "Es de continuidad o mejora continua con implementación ya validada: se transfiere al área responsable." },
-    ],
+    id: "cresio", min: 0, excludeTactical: true, criteria: [],
+    notes: {
+      D: "Impacto en los objetivos estratégicos: cambia materialmente un objetivo o un resultado clave 2027, o habilita una condición indispensable para 2030 y 2033. Mejorar solo un indicador de ejecución es nivel 1 o 2.",
+      E: "Transversalidad: depende de al menos tres áreas y ninguna concentra más del 75 % de la ejecución. Madurez: indicadores, pilotos, prototipos o MVP con los que se comprobará la siguiente etapa.",
+      M: "Potencial: lo nuevo sobre la continuidad y lo disruptivo sobre la mejora continua; lo de continuidad ya validado no instala una capacidad nueva que permanezca o se replique.",
+    },
   },
 };
 export const DEFAULT_TYPE_RULE: TypeRule = TYPE_RULES["4shine"];
@@ -117,6 +115,7 @@ export const DEFAULT_TYPE_RULE: TypeRule = TYPE_RULES["4shine"];
 /** Texto corto de la regla, para formularios y fichas. */
 export function typeRuleLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
   const n = rule.criteria.length;
+  if (n === 0) return "sin marcas de tipo aparte: estratégica cuando el impacto en los objetivos (D) es 3 o 4; con D de 1 o 2 es táctica";
   return rule.min >= n ? `los ${n} criterios son obligatorios: con uno que falle, es táctica` : `con ${rule.min} o más marcas estratégicas de ${n}, es estratégica`;
 }
 
@@ -125,6 +124,7 @@ export function validationCriteriaCount(rule: TypeRule = DEFAULT_TYPE_RULE): num
 /** Texto de la validación completa: «7 criterios: 1 a 3 de tipo (…); 4 a 7 de priorización (matriz 4Shine)». */
 export function validationLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
   const k = rule.criteria.length, n = validationCriteriaCount(rule);
+  if (k === 0) return "4 criterios de la matriz 4Shine (D, E, M y L, de 1 a 4); los criterios de Cresio van dentro: impacto en los objetivos → D, transversalidad → E, potencial y madurez → E y M";
   return `${n} criterios: 1 a ${k} de tipo (${typeRuleLabel(rule)}); ${k + 1} a ${n} de priorización con la matriz 4Shine, de 1 a 4`;
 }
 
@@ -162,7 +162,9 @@ export function score(s: Record<CriterionKey, number>): number {
 /** Tipo de iniciativa a partir de las marcas según la regla de la empresa:
     estratégica cuando al menos `min` de sus criterios apuntan a estratégico
     (regla 4Shine: tres de cuatro; regla Cresio: los tres). */
-export function typeOf(marks: TypeMarks, rule: TypeRule = DEFAULT_TYPE_RULE): TypeMark {
+export function typeOf(marks: TypeMarks, rule: TypeRule = DEFAULT_TYPE_RULE, scores?: Partial<Record<CriterionKey, number>>): TypeMark {
+  // sin criterios de tipo, el tipo sale del impacto en los objetivos (D): 3 o 4 = estratégica
+  if (rule.criteria.length === 0) return (scores?.D ?? 0) >= 3 ? "ESTRATEGICO" : "TACTICO";
   const n = rule.criteria.filter((c) => marks[c.key] === "ESTRATEGICO").length;
   return n >= rule.min ? "ESTRATEGICO" : "TACTICO";
 }
@@ -194,7 +196,7 @@ export function consolidate(evals: Evaluation[], rule: TypeRule = DEFAULT_TYPE_R
   for (const k of ["D", "E", "M", "L"] as CriterionKey[]) avg[k] = r1(evals.reduce((a, e) => a + e.scores[k], 0) / n);
   const rounded = { D: toLevel(avg.D), E: toLevel(avg.E), M: toLevel(avg.M), L: toLevel(avg.L) };
   const individual = evals.map((e) => score(e.scores));
-  const strategicVotes = evals.filter((e) => typeOf(e.type, rule) === "ESTRATEGICO").length;
+  const strategicVotes = evals.filter((e) => typeOf(e.type, rule, e.scores) === "ESTRATEGICO").length;
   const spread = r1(Math.max(...individual) - Math.min(...individual));
   return {
     n, avg, rounded, score: score(avg),
@@ -204,7 +206,7 @@ export function consolidate(evals: Evaluation[], rule: TypeRule = DEFAULT_TYPE_R
     transfer: !!rule.excludeTactical && strategicVotes * 2 < n,
     strategicVotes,
     spread, lowConsensus: spread > 15,
-    evaluators: evals.map((e, i) => ({ by: e.by, name: e.name, role: e.role, score: individual[i], type: typeOf(e.type, rule), at: e.at })),
+    evaluators: evals.map((e, i) => ({ by: e.by, name: e.name, role: e.role, score: individual[i], type: typeOf(e.type, rule, e.scores), at: e.at })),
   };
 }
 
@@ -213,6 +215,7 @@ export function consolidate(evals: Evaluation[], rule: TypeRule = DEFAULT_TYPE_R
 export function decisionCheck(decision: Decision, c: Consolidated, rationale?: string): { ok: true } | { ok: false; reason: string } {
   if (decision === "IMPLEMENTAR") {
     if (c.n === 0) return { ok: false, reason: "Implementar exige al menos una evaluación con la matriz." };
+    if (c.transfer) return { ok: false, reason: `El consolidado la clasifica como táctica (${c.strategicVotes} de ${c.n} evaluadores la ven estratégica): se transfiere al área de mayor responsabilidad y no compite en el portafolio estratégico. Si debe seguir, revisa la calificación; si no, déjala en backlog o renuncia.` };
     if (!c.eligible) return { ok: false, reason: `Para implementar ahora, el impacto (D) debe ser 3 o 4; el consolidado es ${c.rounded.D}. Corresponde preparar, dejar en backlog o renunciar.` };
     if (c.capacityFirst) return { ok: false, reason: `Con capacidad (L) en ${c.rounded.L} se resuelve primero la capacidad de la siguiente etapa: la decisión admisible es «preparar o validar».` };
   }

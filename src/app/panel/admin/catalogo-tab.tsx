@@ -764,7 +764,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
               <div className="text-[12px] font-bold text-ink">Validación con {validationCriteriaCount(typeRule)} criterios · {mine ? "tu calificación" : "calificación"}</div>
               <div className="num text-[11px] text-muted">
                 {preview !== null
-                  ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type, typeRule) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
+                  ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type, typeRule, f.scores) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
                   : "D · E · M · L de 1 a 4, y el tipo"}
               </div>
             </div>

@@ -19,28 +19,29 @@ test("regla 4Shine por defecto: tres de cuatro marcas", () => {
   assert.equal(typeRuleOf({ typeRule: undefined }), DEFAULT_TYPE_RULE);
 });
 
-test("regla Cresio: impacto, transversalidad y potencial, los tres obligatorios", () => {
-  assert.deepEqual(CR.criteria.map((c) => c.key), ["impacto", "transversalidad", "potencial"]);
-  assert.equal(CR.min, 3);
-  assert.equal(typeOf({ impacto: "ESTRATEGICO", transversalidad: "ESTRATEGICO", potencial: "ESTRATEGICO" }, CR), "ESTRATEGICO");
-  assert.equal(typeOf({ impacto: "ESTRATEGICO", transversalidad: "TACTICO", potencial: "ESTRATEGICO" }, CR), "TACTICO");
+test("regla Cresio: sin marcas aparte; sus criterios van dentro de D, E y M y el tipo sale de D", () => {
+  assert.deepEqual(CR.criteria, []);
+  assert.equal(CR.excludeTactical, true);
+  assert.ok(CR.notes?.D?.includes("Impacto") && CR.notes?.E?.includes("Transversalidad") && CR.notes?.M?.includes("Potencial"));
+  assert.equal(typeOf({}, CR, { D: 3, E: 2, M: 2, L: 1 }), "ESTRATEGICO");
+  assert.equal(typeOf({}, CR, { D: 2, E: 4, M: 4, L: 4 }), "TACTICO");
   // las marcas de la regla 4Shine no cuentan bajo la regla Cresio
   assert.equal(typeOf({ contribucion: "ESTRATEGICO", profundidad: "ESTRATEGICO", alcance: "ESTRATEGICO", permanencia: "ESTRATEGICO" }, CR), "TACTICO");
-  assert.match(typeRuleLabel(CR), /obligatorios/);
+  assert.match(typeRuleLabel(CR), /D de 1 o 2 es táctica/);
   assert.match(typeRuleLabel(), /3 o más/);
-  // la validación completa de Cresio son siete criterios: 1 a 3 de tipo y 4 a 7 de la matriz
-  assert.equal(validationCriteriaCount(CR), 7);
-  assert.match(validationLabel(CR), /^7 criterios: 1 a 3 de tipo .*; 4 a 7 de priorización/);
+  // la validación de Cresio son los cuatro criterios de la matriz
+  assert.equal(validationCriteriaCount(CR), 4);
+  assert.match(validationLabel(CR), /^4 criterios .*impacto en los objetivos → D, transversalidad → E, potencial y madurez → E y M/);
   assert.equal(validationCriteriaCount(), 8);
 });
 
 test("consolidación con regla de empresa y bloqueo de lo táctico", () => {
-  const all = { impacto: "ESTRATEGICO", transversalidad: "ESTRATEGICO", potencial: "ESTRATEGICO" } as const;
-  const c = consolidate([ev(all), ev({ ...all, transversalidad: "TACTICO" })], CR);
+  const all = {} as const;
+  const c = consolidate([ev(all), ev(all, { D: 2, E: 3, M: 3, L: 4 })], CR);   // el tipo sale de D
   assert.equal(c.strategicVotes, 1);
   assert.equal(c.type, "ESTRATEGICO");          // mayoría no estricta: 1 de 2
   assert.equal(c.evaluators[1].type, "TACTICO");
-  const t = consolidate([ev({ ...all, potencial: "TACTICO" })], CR);
+  const t = consolidate([ev(all, { D: 2, E: 4, M: 4, L: 4 })], CR);
   assert.equal(t.type, "TACTICO");
   assert.equal(t.transfer, true);
   // bajo la regla 4Shine lo táctico no se bloquea
@@ -60,8 +61,9 @@ test("parseTypeRule: identificadores, regla propia y errores", () => {
   assert.deepEqual(parseTypeRule(undefined), { ok: true, rule: undefined });
   assert.deepEqual(parseTypeRule("4shine"), { ok: true, rule: undefined });      // la regla por defecto no se guarda
   const c = parseTypeRule("cresio"); assert.equal(c.ok, true); assert.equal((c as { rule?: { id?: string } }).rule?.id, "cresio");
-  const stored = parseTypeRule(JSON.parse(JSON.stringify(CR)));                 // como vuelve de la base
-  assert.equal(stored.ok, true); assert.equal((stored as { rule?: { criteria: unknown[] } }).rule?.criteria.length, 3);
+  // como vuelve de la base, incluso una copia anterior con tres criterios de tipo: se resuelve a la regla predefinida vigente
+  const stored = parseTypeRule({ id: "cresio", min: 3, excludeTactical: true, criteria: [{ key: "impacto", name: "Impacto" }, { key: "transversalidad", name: "Transversalidad" }, { key: "potencial", name: "Potencial" }] });
+  assert.equal(stored.ok, true); assert.equal((stored as { rule?: { criteria: unknown[] } }).rule?.criteria.length, 0);
   assert.equal(parseTypeRule("otra").ok, false);
   assert.equal(parseTypeRule({ criteria: [{ key: "a", name: "Uno solo" }], min: 1 }).ok, false);
   const own = parseTypeRule({ criteria: [{ key: "A", name: "Impacto" }, { key: "b", name: "Alcance" }], min: 5 });

@@ -10,7 +10,7 @@ import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { horizonLabel, typeRuleOf } from "@/data/catalogo";
 import {
-  CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount,
+  CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount, validationLabel,
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
 } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
@@ -107,7 +107,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         <Scale size={16} className="text-cyan-deep" />
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-extrabold tracking-tight text-ink">Validación con {validationCriteriaCount(rule)} criterios</div>
-          <div className="text-[11.5px] text-muted">Criterios 1 a {rule.criteria.length}: tipo, {typeRuleLabel(rule)} · criterios {rule.criteria.length + 1} a {validationCriteriaCount(rule)}: matriz 4Shine, puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4, ordena dentro del horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia</div>
+          <div className="text-[11.5px] text-muted">{validationLabel(rule)} · tipo: {typeRuleLabel(rule)} · puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4, ordena dentro del horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia</div>
         </div>
         {c && c.n > 0 && row && (
           <span className="chip chip-cyan" title="Posición por puntaje entre las iniciativas del mismo horizonte">
@@ -241,11 +241,11 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
   const [saved, setSaved] = useState(false);
   const complete = CRITERIA.every((c) => scores[c.key]) && rule.criteria.every((t) => type[t.key]);
   const preview = complete ? Math.round(((40 * scores.D! + 30 * scores.E! + 20 * scores.M! + 10 * scores.L!) / 4) * 10) / 10 : null;
-  const previewType: TypeMark | null = rule.criteria.every((t) => type[t.key]) ? typeOf(type, rule) : null;
+  const previewType: TypeMark | null = complete ? typeOf(type, rule, scores) : null;
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
+      {rule.criteria.length > 0 && <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
         <div className="text-[12.5px] font-bold text-ink">Criterios 1 a {rule.criteria.length} · tipo: ¿estratégica o táctica?</div>
         <div className="text-[11px] leading-snug text-muted">Marca cada criterio; {typeRuleLabel(rule)}.{rule.excludeTactical ? " Lo táctico se transfiere al área de mayor responsabilidad y no compite en el portafolio estratégico." : ""}</div>
         <div className="mt-2 space-y-1.5">
@@ -265,8 +265,8 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
             </div>
           ))}
         </div>
-      </div>
-      <div className="px-1 text-[11px] font-bold text-ink">Criterios {rule.criteria.length + 1} a {validationCriteriaCount(rule)} · matriz 4Shine de priorización, de 1 a 4</div>
+      </div>}
+      <div className="px-1 text-[11px] font-bold text-ink">{rule.criteria.length ? `Criterios ${rule.criteria.length + 1} a ${validationCriteriaCount(rule)} · matriz 4Shine de priorización, de 1 a 4` : "Cuatro criterios de la matriz 4Shine, de 1 a 4 · los criterios de Cresio van dentro de D, E y M"}</div>
       {CRITERIA.map((cr, i) => (
         <div key={cr.key} className="rounded-xl bg-surface-2/60 px-3.5 py-3">
           <div className="flex items-start gap-2">
@@ -274,6 +274,7 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-bold text-ink">{cr.name} <span className="num text-[10px] font-semibold text-faint">· {cr.weight} %</span></div>
               <div className="text-[11px] leading-snug text-muted">{cr.question}</div>
+              {rule.notes?.[cr.key] && <div className="mt-1 text-[10.5px] leading-snug text-cyan-deep">{rule.notes[cr.key]}</div>}
             </div>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
@@ -301,7 +302,7 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="num text-[12px] text-muted">
-          {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : `Completa los ${validationCriteriaCount(rule)} criterios: tipo (1 a ${rule.criteria.length}) y matriz (${rule.criteria.length + 1} a ${validationCriteriaCount(rule)}).`}
+          {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : (rule.criteria.length ? `Completa los ${validationCriteriaCount(rule)} criterios: tipo (1 a ${rule.criteria.length}) y matriz (${rule.criteria.length + 1} a ${validationCriteriaCount(rule)}).` : "Califica los cuatro criterios de 1 a 4.")}
         </div>
         <button type="button" disabled={!complete || saving}
           onClick={async () => { setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}

@@ -479,7 +479,8 @@ export function parseTypeRule(input: unknown): { ok: true; rule?: TypeRule } | {
   }
   if (typeof input !== "object") return { ok: false, error: "La regla de tipo debe ser un identificador o un objeto {criteria, min}." };
   const raw = input as Record<string, unknown>;
-  if (typeof raw.id === "string" && TYPE_RULES[raw.id as keyof typeof TYPE_RULES] && !Array.isArray(raw.criteria)) return parseTypeRule(raw.id);
+  // las reglas predefinidas se resuelven siempre a su versión vigente, aunque la base guarde una copia anterior
+  if (typeof raw.id === "string" && TYPE_RULES[raw.id as keyof typeof TYPE_RULES]) return parseTypeRule(raw.id);
   if (!Array.isArray(raw.criteria)) return { ok: false, error: "La regla de tipo necesita una lista de criterios." };
   if (raw.criteria.length < 2 || raw.criteria.length > 6) return { ok: false, error: "La regla de tipo admite de dos a seis criterios." };
   const criteria: TypeRule["criteria"] = [];
