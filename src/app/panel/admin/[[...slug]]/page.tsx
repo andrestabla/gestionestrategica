@@ -21,8 +21,7 @@ import { BrandingTab } from "./branding-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen,
-} from "lucide-react";
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send } from "lucide-react"
 
 /* ═══ pestañas con ruta propia ═══ */
 
@@ -472,7 +471,7 @@ function PermisosTab() {
 
 type IntegrationUi = {
   key: string; name: string; purpose: string;
-  enabled: boolean; configured: boolean; updatedBy?: string; at?: string;
+  enabled: boolean; configured: boolean; source?: "entorno" | "plataforma" | null; updatedBy?: string; at?: string;
   fields: { key: string; label: string; secret: boolean; placeholder: string; value: string }[];
 };
 
@@ -515,7 +514,15 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
 }) {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
   useEffect(() => { setDraft({}); }, [it.at]);
+  const testSend = async () => {
+    setSaving(true); onError(null); setTestMsg(null);
+    const res = await fetch("/api/td/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ integration: { key: it.key, test: true } }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) onError(j?.error ?? `Error ${res.status}`); else setTestMsg(j.message);
+    setSaving(false);
+  };
 
   const post = async (body: Record<string, unknown>) => {
     setSaving(true);
@@ -537,6 +544,7 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
         <div>
           <div className="text-[14px] font-extrabold text-ink">{it.name}</div>
           <p className="mt-0.5 text-[11px] leading-snug text-muted">{it.purpose}</p>
+          {it.source === "entorno" && <p className="mt-1 text-[10.5px] font-semibold text-ok">Configurada por variables de entorno del despliegue; los valores guardados aquí la sustituyen.</p>}
         </div>
         <span className={`chip shrink-0 ${it.enabled ? "chip-ok" : it.configured ? "chip-cyan" : ""}`}>
           {it.enabled ? "Activa" : it.configured ? "Configurada" : "Sin configurar"}
@@ -560,13 +568,17 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
             className="btn-primary flex-1 !py-1.5 text-[11.5px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
           </button>
+          {it.key === "ses" && it.configured && (
+            <button onClick={testSend} disabled={saving} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title="Envía un correo de prueba a tu propia dirección"><Send size={12} /> Probar</button>
+          )}
           <button onClick={() => post({ enabled: !it.enabled })}
-            disabled={saving || (!it.enabled && !it.configured)}
-            title={!it.configured && !it.enabled ? "Completa la configuración primero" : undefined}
+            disabled={saving || (!it.enabled && !it.configured) || it.source === "entorno"}
+            title={it.source === "entorno" ? "Rige la configuración del entorno; para cambiarla, guarda valores propios" : !it.configured && !it.enabled ? "Completa la configuración primero" : undefined}
             className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40">
             {it.enabled ? "Desactivar" : "Activar"}
           </button>
         </div>
+        {testMsg && <p className="text-[11px] font-semibold text-ok">{testMsg}</p>}
         {it.updatedBy && (
           <p className="num text-[9px] text-faint">
             Última edición: {it.updatedBy} · {it.at ? new Date(it.at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}

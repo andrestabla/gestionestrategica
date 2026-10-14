@@ -2574,16 +2574,41 @@ const integrations = () => S().integrations;
 const maskSecret = (v: string) => (v.length <= 4 ? "••••" : "•".repeat(Math.min(12, v.length - 4)) + v.slice(-4));
 
 /** Estado para el cliente: secretos enmascarados, nunca completos. */
+/** SES configurado por variables de entorno del despliegue (Vercel): remitente,
+    región y credenciales del usuario IAM de solo envío. */
+export function sesFromEnv(): IntegrationConfig | null {
+  const from = process.env.SES_FROM ?? "", id = process.env.AWS_ACCESS_KEY_ID ?? "", secret = process.env.AWS_SECRET_ACCESS_KEY ?? "";
+  if (!from || !id || !secret) return null;
+  const sender = (from.match(/<([^>]+)>/)?.[1] ?? from).trim();
+  return { enabled: true, fields: { region: process.env.AWS_REGION ?? "us-east-1", accessKeyId: id, secretAccessKey: secret, sender }, updatedBy: "Variables de entorno del despliegue" };
+}
+
+/** Configuración de SES que rige: la guardada en la plataforma si está activa y
+    completa; si no, la del entorno. Sirve también fuera de una empresa activa. */
+export function effectiveSes(): IntegrationConfig | null {
+  try {
+    if (hasTenantContext()) {
+      const cfg = integrations().get("ses");
+      if (cfg?.enabled && INTEGRATION_SPECS.ses.fields.every((f) => cfg.fields[f.key]?.trim())) return cfg;
+    }
+  } catch { /* sin empresa activa */ }
+  return sesFromEnv();
+}
+
 export function getIntegrationsMasked() {
   return (Object.keys(INTEGRATION_SPECS) as IntegrationKey[]).map((key) => {
     const spec = INTEGRATION_SPECS[key];
-    const cfg = integrations().get(key);
+    const stored = integrations().get(key);
+    // SES: si no hay configuración propia, rige la del entorno y se muestra activa
+    const env = key === "ses" && !(stored?.enabled) ? sesFromEnv() : null;
+    const cfg = stored?.enabled ? stored : (env ?? stored);
     return {
       key,
       name: spec.name,
       purpose: spec.purpose,
       enabled: cfg?.enabled ?? false,
       configured: Boolean(cfg && spec.fields.every((f) => cfg.fields[f.key]?.trim())),
+      source: env ? "entorno" as const : stored ? "plataforma" as const : null,
       updatedBy: cfg?.updatedBy,
       at: cfg?.at,
       fields: spec.fields.map((f) => ({
