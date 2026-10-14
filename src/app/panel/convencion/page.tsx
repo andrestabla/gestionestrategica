@@ -22,7 +22,7 @@ import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter } from "lucide-react";
 
 type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
@@ -648,14 +648,34 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
 
 /* ═══ Portafolio por horizonte y decisión ═══ */
 
+type PortRow = PortfolioRow & { oe: string; ownerId: string; leverId: string; kpi: string };
+type PortStatus = "" | "PENDIENTE" | "IMPLEMENTAR" | "PREPARAR" | "BACKLOG" | "RENUNCIAR" | "TACTICA" | "SIN_DUENO" | "SIN_KR" | "SIN_EVAL";
+const PORT_STATUS: { key: PortStatus; label: string }[] = [
+  { key: "", label: "Todas" }, { key: "PENDIENTE", label: "Pendientes (sin decisión)" }, { key: "IMPLEMENTAR", label: "Implementar" }, { key: "PREPARAR", label: "Preparar o validar" },
+  { key: "BACKLOG", label: "Backlog" }, { key: "RENUNCIAR", label: "Renunciadas" }, { key: "TACTICA", label: "Tácticas (transferidas al área)" }, { key: "SIN_DUENO", label: "Sin dueño" },
+  { key: "SIN_KR", label: "Sin resultado clave" }, { key: "SIN_EVAL", label: "Sin evaluación" },
+];
+const matchStatus = (r: PortRow, st: PortStatus) =>
+  st === "" ? true : st === "PENDIENTE" ? !r.decision : st === "TACTICA" ? r.c.transfer : st === "SIN_DUENO" ? !r.ownerId : st === "SIN_KR" ? !r.kpi : st === "SIN_EVAL" ? r.c.n === 0 : r.decision === st;
+
 function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers: Lever[]; horizons: string[]; prio: PriorizacionData | null; base: string }) {
-  const rows: PortfolioRow[] = useMemo(() => (prio?.ranking ?? []).map((r) => {
-    const i = cat.initiatives.find((x) => x.id === r.id);
-    const d = prio?.decisions[r.id];
-    const o = cat.objectives.find((x) => x.id === i?.cmi);
-    return { id: r.id, name: r.name, horizon: r.horizon, suggested: r.suggested, c: r.c, decision: d?.decision ?? null, rationale: d?.rationale, lever: levers.find((l) => l.id === o?.lever)?.name, owner: cat.responsibles.find((x) => x.id === i?.ownerId)?.dependencia };
+  // el portafolio parte del 100 % de las iniciativas del catálogo; el ranking consolidado se superpone cuando llega
+  const all: PortRow[] = useMemo(() => cat.initiatives.map((i) => {
+    const r = prio?.ranking.find((x) => x.id === i.id);
+    const d = prio?.decisions[i.id];
+    const o = cat.objectives.find((x) => x.id === i.cmi);
+    const c = r?.c ?? { n: 0, avg: { D: 0, E: 0, M: 0, L: 0 }, rounded: { D: 1, E: 1, M: 1, L: 1 }, score: 0, eligible: false, capacityFirst: true, type: null, transfer: false, strategicVotes: 0, spread: 0, lowConsensus: false, evaluators: [] } as PortfolioRow["c"];
+    return { id: i.id, name: i.name, horizon: i.horizon, suggested: r?.suggested ?? null, c, decision: d?.decision ?? null, rationale: d?.rationale, lever: levers.find((l) => l.id === o?.lever)?.name, owner: cat.responsibles.find((x) => x.id === i.ownerId)?.dependencia, oe: o?.id ?? "", ownerId: i.ownerId ?? "", leverId: o?.lever ?? "", kpi: i.kpi ?? "" };
   }), [prio, cat, levers]);
-  const sum = portfolioSummary(rows, horizons);
+  // filtros: objetivo estratégico, tribu (responsable), palanca y estado
+  const [fOe, setFOe] = useState(""); const [fTribe, setFTribe] = useState(""); const [fLever, setFLever] = useState(""); const [fStatus, setFStatus] = useState<PortStatus>("");
+  const oes = useMemo(() => cat.objectives.filter((o) => all.some((r) => r.oe === o.id)), [cat, all]);
+  const tribes = useMemo(() => cat.responsibles.filter((t) => all.some((r) => r.ownerId === t.id)), [cat, all]);
+  const rows = useMemo(() => all.filter((r) => (!fOe || r.oe === fOe) && (!fTribe || r.ownerId === fTribe) && (!fLever || r.leverId === fLever) && matchStatus(r, fStatus)), [all, fOe, fTribe, fLever, fStatus]);
+  const filtered = !!(fOe || fTribe || fLever || fStatus);
+  const count = (st: PortStatus) => all.filter((r) => matchStatus(r, st)).length;
+  const hzAll = useMemo(() => [...horizons, ...[...new Set(all.map((r) => r.horizon))].filter((h) => !horizons.includes(h))], [horizons, all]);   // «sin horizonte» o valores fuera del catálogo también se muestran
+  const sum = portfolioSummary(rows, hzAll);
   const tactical = rows.filter((r) => r.c.transfer);
   const DEC: (Decision | "PENDIENTE")[] = ["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR", "PENDIENTE"];
   const label = (d: Decision | "PENDIENTE") => d === "PENDIENTE" ? "Pendiente" : decisionLabel(d);
@@ -667,12 +687,28 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa.</p>
-        <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[11.5px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV</button>
+        <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[11.5px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
       </div>
+      <Card className="rise mb-5 overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+          <Filter size={13} className="shrink-0 text-cyan-deep" />
+          <span className="num text-[12px] font-bold text-ink">{rows.length} de {all.length} iniciativas{filtered ? "" : " · 100 %"}</span>
+          <select value={fOe} onChange={(e) => setFOe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[300px]" title="Objetivo estratégico"><option value="">Todos los objetivos (OE)</option>{oes.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select>
+          <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu o área responsable"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+          <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title="Palanca"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value as PortStatus)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title="Estado"><option value="">Todos los estados</option>{PORT_STATUS.filter((x) => x.key).map((x) => <option key={x.key} value={x.key}>{x.label} ({count(x.key)})</option>)}</select>
+          {filtered && <button type="button" onClick={() => { setFOe(""); setFTribe(""); setFLever(""); setFStatus(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
+        </div>
+        <div className="flex flex-wrap gap-1.5 border-t border-line px-4 py-2">
+          {(["PENDIENTE", "RENUNCIAR", "SIN_DUENO", "SIN_KR", "TACTICA", "SIN_EVAL"] as PortStatus[]).map((st) => (
+            <button key={st} type="button" onClick={() => setFStatus(fStatus === st ? "" : st)} className={`chip !py-0.5 text-[10.5px] ${fStatus === st ? "chip-cyan" : ""}`} title="Filtrar por este estado">{PORT_STATUS.find((x) => x.key === st)!.label} · {count(st)}</button>
+          ))}
+        </div>
+      </Card>
       <Card className="rise mb-5 overflow-hidden">
         <CardHeader title="Resumen por horizonte y decisión" />
         <div className="space-y-2 px-4 pb-3 sm:hidden">
-          {horizons.map((h) => (
+          {hzAll.map((h) => (
             <div key={h} className="rounded-xl bg-surface-2/60 px-3 py-2">
               <div className="flex items-baseline justify-between text-[12.5px]"><b className="text-ink">{horizonLabel(cat.company, h)}</b><span className="num text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)} iniciativas</span></div>
               <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
@@ -683,7 +719,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           <table className="w-full min-w-[560px] text-[12px]">
             <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Horizonte</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
             <tbody>
-              {horizons.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{horizonLabel(cat.company, h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
+              {hzAll.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{h ? horizonLabel(cat.company, h) : "Sin horizonte"}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
             </tbody>
           </table>
           <p className="px-3 pt-2 text-[11px] text-muted">
@@ -691,11 +727,12 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           </p>
         </div>
       </Card>
-      {horizons.map((h) => {
-        const hr = rows.filter((r) => r.horizon === h);
+      {hzAll.map((h) => {
+        const hr = rows.filter((r) => r.horizon === h).sort((a, b) => (b.c.n ? b.c.score : -1) - (a.c.n ? a.c.score : -1));
+        if (filtered && hr.length === 0) return null;
         return (
           <Card key={h} className="rise rise-1 mb-5 overflow-hidden">
-            <CardHeader title={horizonLabel(cat.company, h)} sub={`${hr.length} iniciativas · ordenadas por puntaje consolidado`} />
+            <CardHeader title={h ? horizonLabel(cat.company, h) : "Sin horizonte"} sub={`${hr.length} iniciativas · ordenadas por puntaje consolidado`} />
             <div className="divide-y divide-line sm:hidden">
               {hr.map((r) => (
                 <Link key={r.id} href={`${base}/panel/iniciativas/${r.id}`} className="block px-4 py-3 active:bg-cyan-wash">
