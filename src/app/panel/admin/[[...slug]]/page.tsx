@@ -21,7 +21,7 @@ import { BrandingTab } from "./branding-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send } from "lucide-react"
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck } from "lucide-react"
 
 /* ═══ pestañas con ruta propia ═══ */
 
@@ -219,6 +219,8 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ name: string; email: string; password?: string; mailed: boolean; mailError?: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     const res = await fetch("/api/td/users");
@@ -243,9 +245,43 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
     return ok;
   };
 
+  // crear la cuenta: devuelve la contraseña generada (una sola vez) y si se envió el correo de bienvenida
+  const createAccount = async (body: Record<string, unknown>) => {
+    setSaving(true); setError(null); setCreated(null);
+    const res = await fetch("/api/td/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); setSaving(false); return false; }
+    if (j?.error) setError(j.error);
+    setCreated({ name: j.user.name, email: j.user.email, password: j.password, mailed: !!j.mailed, mailError: j.mailError });
+    await refetch(); setSaving(false); return true;
+  };
+  const sendReset = async (u: ManagedUser) => {
+    if (!window.confirm(`¿Enviar a ${u.name} (${u.email}) un enlace para restablecer su contraseña?`)) return;
+    setSaving(true); setError(null); setNotice(null);
+    const res = await fetch("/api/td/users/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: u.email }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setNotice(j?.message ?? "Enlace enviado.");
+    setSaving(false);
+  };
+
   return (
     <>
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
+      {notice && <div className="mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, white)" }}><MailCheck size={14} className="shrink-0" style={{ color: "var(--ok)" }} />{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto text-[11px] text-faint hover:text-ink">Cerrar</button></div>}
+      {created && (
+        <div className="mb-4 rounded-xl border border-line bg-surface px-4 py-3 text-[12px] text-ink" style={{ boxShadow: "var(--e1)" }}>
+          <div className="font-bold">Cuenta creada: {created.name} · <span className="num font-normal text-muted">{created.email}</span></div>
+          {created.password && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="text-muted">Contraseña generada (se muestra una sola vez):</span>
+              <code className="num rounded-md bg-surface-2 px-2 py-0.5 text-[12.5px] font-bold tracking-wide">{created.password}</code>
+              <button type="button" onClick={() => { void navigator.clipboard?.writeText(created.password!); }} className="btn-ghost !py-1 text-[11px]"><Copy size={12} /> Copiar</button>
+            </div>
+          )}
+          <div className="mt-1 text-[11px] text-faint">{created.mailed ? "Correo de bienvenida enviado con el enlace de entrada, el correo y la contraseña." : created.mailError ? `No se envió el correo: ${created.mailError}` : "Sin correo de bienvenida: comparte el acceso por otro medio."}</div>
+          <button type="button" onClick={() => setCreated(null)} className="mt-1.5 text-[11px] text-faint hover:text-ink">Cerrar</button>
+        </div>
+      )}
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
@@ -297,6 +333,11 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                           {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
                         </select>
                       )}
+                      <button disabled={saving || !u.active} onClick={() => void sendReset(u)}
+                        title="Enviar por correo un enlace para restablecer la contraseña (vale 60 minutos)"
+                        className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">
+                        <KeyRound size={14} />
+                      </button>
                       <button disabled={saving}
                         onClick={() => mutate("PATCH", { email: u.email, active: !u.active })}
                         title={u.active ? "Desactivar" : "Reactivar"}
@@ -313,15 +354,15 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
 
         {newOpen && (
           <NewUserCard saving={saving} responsibles={responsibles} onClose={() => setNewOpen(false)}
-            onCreate={async (input) => { const ok = await mutate("POST", input); if (ok) setNewOpen(false); return ok; }} />
+            onCreate={async (input) => { const ok = await createAccount(input); if (ok) setNewOpen(false); return ok; }} />
         )}
       </div>
 
       <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
         <ShieldCheck size={12} className="mt-0.5 shrink-0" />
         Reglas del servidor: no puedes desactivar tu propia cuenta y debe quedar al menos un
-        administrador activo. Contraseña demo compartida (pgtd-demo-2026) — con Auth.js pasa a
-        invitación por correo.
+        administrador activo. Contraseñas: al crear la cuenta se fija manual o automática y puede enviarse por correo;
+        la llave de cada fila envía un enlace de restablecimiento de un solo uso (vale 60 minutos).
       </p>
     </>
   );
@@ -338,18 +379,25 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
   const [role, setRole] = useState<ManagedUser["role"]>("RESPONSABLE");
   const [line, setLine] = useState<number | undefined>(1);
   const [responsibleId, setResponsibleId] = useState<string | undefined>(undefined);
+  const [pwdMode, setPwdMode] = useState<"auto" | "manual" | "none">("auto");
+  const [password, setPassword] = useState("");
+  const [sendWelcome, setSendWelcome] = useState(true);
 
   const submit = async () => {
-    if (await onCreate({ name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined })) {
-      setName(""); setEmail("");
+    if (await onCreate({
+      name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined,
+      ...(pwdMode === "auto" ? { password: "auto" } : pwdMode === "manual" ? { password } : {}), sendWelcome: pwdMode !== "none" && sendWelcome,
+    })) {
+      setName(""); setEmail(""); setPassword("");
     }
   };
+  const pwdBad = pwdMode === "manual" && password.length < 10;
   return (
-    <Modal title="Nueva cuenta" sub="nace activa; fija su contraseña desde esta misma pestaña" onClose={onClose}
+    <Modal title="Nueva cuenta" sub="nace activa; con contraseña manual o automática y, si quieres, correo de bienvenida con el acceso" onClose={onClose}
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" onClick={submit}
-          disabled={saving || !name.trim() || !email.trim() || (role === "RESPONSABLE" && !line && !responsibleId)}
+          disabled={saving || !name.trim() || !email.trim() || pwdBad || (role === "RESPONSABLE" && !line && !responsibleId)}
           className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
           {saving ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
           Crear cuenta
@@ -375,6 +423,24 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
             </p>
           </>
         )}
+        <div className="rounded-xl bg-surface-2/60 px-3 py-2.5">
+          <div className="label !text-[9px]">Contraseña</div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11.5px]">
+            {([["auto", "Automática (generada)"], ["manual", "Manual"], ["none", "Sin contraseña (entra por QR o la fija con «¿Olvidaste tu contraseña?»)"]] as const).map(([k, l]) => (
+              <label key={k} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-2 py-1" style={pwdMode === k ? { background: "var(--navy)", color: "white", borderColor: "var(--navy)" } : undefined}>
+                <input type="radio" name="pwd" checked={pwdMode === k} onChange={() => setPwdMode(k)} className="hidden" />{l}
+              </label>
+            ))}
+          </div>
+          {pwdMode === "manual" && <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 10 caracteres" autoComplete="new-password" className="input mt-2 !py-2 text-[12px]" />}
+          {pwdMode !== "none" && (
+            <label className="mt-2 flex items-start gap-2 text-[11.5px] text-ink-soft">
+              <input type="checkbox" checked={sendWelcome} onChange={(e) => setSendWelcome(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[var(--navy)]" />
+              <span>Enviar correo de bienvenida con el acceso (enlace de entrada, correo y contraseña). Requiere AWS SES configurado.</span>
+            </label>
+          )}
+          {pwdMode === "auto" && <p className="mt-1.5 text-[10.5px] leading-snug text-faint">La contraseña generada se muestra una sola vez al crear la cuenta.</p>}
+        </div>
       </div>
     </Modal>
   );

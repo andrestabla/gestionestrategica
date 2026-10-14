@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { inScope } from "@/lib/permissions";
 import { buildAlerts } from "@/lib/logic";
-import { getComments, getTask, getNotifRead, markNotifRead, tenantView, catalog } from "@/server/store";
+import { getComments, getTask, getNotifRead, markNotifRead, tenantView, catalog, itineraryComments, itineraryOf } from "@/server/store";
+import { isConvencion } from "@/data/catalogo";
+import { can } from "@/lib/permissions";
 
 // GET /api/td/notifications — el buzón del usuario: alertas del motor
 // dirigidas a su rol/línea + comentarios de su ámbito (las menciones llegan
@@ -24,8 +26,9 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   const read = getNotifRead(user.email);
   const items: Notification[] = [];
 
-  // 1 · alertas del motor, dirigidas por rol y línea
-  for (const a of buildAlerts(tenantView())) {
+  // 1 · alertas del motor, dirigidas por rol y línea (no en modo convención: ahí solo cuentan los hechos registrados por personas)
+  const convencion = isConvencion(catalog().company);
+  for (const a of convencion ? [] : buildAlerts(tenantView())) {
     const mine =
       user.role === "ADMIN" || user.role === "CONSULTOR" || user.role === "LIDER" ? true
       : user.role === "RESPONSABLE" ? inScope(user, { line: a.line })
@@ -60,6 +63,23 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
       read: read.has(id),
       mention,
     });
+  }
+
+  // 3 · comentarios del itinerario sin resolver, para quien lo administra (advisor, gerencia)
+  if (can(user, "manage_catalog")) {
+    const it = itineraryOf();
+    for (const c of itineraryComments()) {
+      if (c.resolvedAt || c.email?.toLowerCase() === user.email.toLowerCase()) continue;
+      const moment = it?.items.find((x) => x.id === c.momentId);
+      const id = `itin-${c.id}`;
+      items.push({
+        id, kind: "ITINERARIO", severity: 2,
+        title: `${c.author} comentó el itinerario${moment ? ` · ${moment.time} ${moment.title}` : ""}`,
+        detail: `${c.kind === "logistico" ? "Logístico" : "Metodológico"}: ${c.text.length > 140 ? c.text.slice(0, 139) + "…" : c.text}`,
+        href: "/panel/convencion?t=itinerario",
+        read: read.has(id),
+      });
+    }
   }
 
   items.sort((a, b) => Number(a.read) - Number(b.read) || a.severity - b.severity);
