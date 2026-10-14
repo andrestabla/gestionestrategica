@@ -306,6 +306,16 @@ body {
   .draw { stroke-dasharray: none; }
 }
 
+/* escritorio: las tablas se ajustan al ancho disponible (el ancho mínimo y el no-ajuste de línea
+   quedan solo para pantallas pequeñas, donde sí hace falta desplazar); los selectores no
+   crecen hasta el ancho de su opción más larga */
+@media (min-width: 1024px) {
+  .overflow-x-auto > table[class*="min-w-"], .overflow-x-auto > table[style*="min-width"] { min-width: 0 !important; }
+  .overflow-x-auto td.whitespace-nowrap:not(:last-child) { white-space: normal; }
+  table select.input:not([class*="max-w-"]) { max-width: 260px; }
+}
+select.input { text-overflow: ellipsis; }
+
 /* móvil: objetivos táctiles de 40 px y entradas de 16 px (evita el zoom de iOS al enfocar) */
 @media (max-width: 640px) {
   .btn-primary, .btn-ghost { min-height: 40px; }

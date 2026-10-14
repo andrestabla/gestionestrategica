@@ -411,7 +411,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px]">{children}</main>
 
         <footer className="px-8 pb-6 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">
           Sistema 4Shine® · 4Shine Empresas · Plataforma de gestión estratégica · Algoritmo T

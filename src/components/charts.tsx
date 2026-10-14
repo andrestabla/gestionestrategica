@@ -440,7 +440,7 @@ export function GanttChart({ items, onSelect, selected }: {
   const W = left + QUARTERS.length * colW, H = items.length * rowH + 30;
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 640 }} className="w-full h-auto"
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[640px] lg:min-w-0"
         role="img" aria-label="Cronograma de iniciativas">
         {QUARTERS.map((qt, i) => (
           <g key={qt}>

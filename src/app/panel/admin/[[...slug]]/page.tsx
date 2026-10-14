@@ -103,7 +103,7 @@ function ScopeSelects({ line, responsibleId, responsibles, disabled, compact, on
   line?: number; responsibleId?: string; responsibles: ResponsibleLite[]; disabled?: boolean; compact?: boolean;
   onChange: (patch: { line?: number | null; responsibleId?: string | null }) => void;
 }) {
-  const cls = compact ? "input w-auto !py-1 pr-7 !text-[11.5px]" : "input !py-2 text-[12px]";
+  const cls = compact ? "input w-auto max-w-[230px] !py-1 pr-7 !text-[11.5px]" : "input !py-2 text-[12px]";
   return (
     <div className={compact ? "flex flex-wrap gap-1.5" : "space-y-2"}>
       <select value={line ?? ""} disabled={disabled} title="Capacidad (rige las prácticas del diagnóstico y lo que no tiene responsable)"
@@ -299,11 +299,11 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
               <tbody>
                 {users.map((u) => (
                   <tr key={u.email} className={`border-b border-line last:border-0 ${u.active ? "" : "opacity-45"}`}>
-                    <td className="px-4 py-2.5">
+                    <td className="min-w-[180px] px-4 py-2.5">
                       <div className="font-semibold text-ink">{u.name}</div>
-                      <div className="num text-[10px] text-faint">{u.email}{u.seeded ? " · seed" : ` · creado por ${u.createdBy}`}</div>
+                      <div className="num break-all text-[10px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="px-4 py-2.5">
                       <select value={u.role} disabled={saving}
                         onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })}
                         className="input w-auto !py-1 pr-7 !text-[11.5px]">
@@ -312,7 +312,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                         ))}
                       </select>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="px-4 py-2.5">
                       {u.role === "RESPONSABLE" ? (
                         <ScopeSelects compact line={u.line} responsibleId={u.responsibleId} responsibles={responsibles} disabled={saving}
                           onChange={(patch) => mutate("PATCH", { email: u.email, ...patch })} />
@@ -320,7 +320,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                         <span className="text-faint">—</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="px-4 py-2.5">
                       <span className={`chip ${u.active ? "chip-ok" : "chip-bad"}`}>
                         {u.active ? "Activo" : "Desactivado"}
                       </span>
@@ -329,7 +329,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                       {canCompanies && companies.length > 1 && (
                         <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa"
                           onChange={(e) => { if (e.target.value && e.target.value !== me.company?.slug && window.confirm(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
-                          className="input mr-1 w-auto !py-1 pr-6 !text-[11px]">
+                          className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[11px]">
                           {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
                         </select>
                       )}
