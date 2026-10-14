@@ -20,7 +20,7 @@ export function companyRow(c: CompanyInfo) {
     country: c.country ?? "CO", currency: c.currency ?? "COP",
     horizons: (c.horizons?.length ? c.horizons : null) as never,
     levers: (c.levers?.length ? c.levers : null) as never,
-    typeRule: (c.typeRule?.criteria?.length ? c.typeRule : null) as never,
+    typeRule: (Array.isArray(c.typeRule?.criteria) ? c.typeRule : null) as never,
     mode: c.mode ?? "completa",
     access: (c.access && Object.keys(c.access).length ? c.access : null) as never,
     itinerary: (c.itinerary ?? null) as never,

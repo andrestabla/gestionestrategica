@@ -61,7 +61,7 @@ export const isConvencion = (c: Pick<CompanyInfo, "mode"> | null | undefined): b
 
 /** Regla de tipo (estratégica o táctica) de la empresa; sin definición rige la de 4Shine. */
 export const typeRuleOf = (c: Pick<CompanyInfo, "typeRule"> | null | undefined): TypeRule =>
-  c?.typeRule?.criteria?.length ? c.typeRule : DEFAULT_TYPE_RULE;
+  Array.isArray(c?.typeRule?.criteria) ? c!.typeRule! : DEFAULT_TYPE_RULE;
 
 export const leversOf = (c: Pick<CompanyInfo, "levers"> | null | undefined): Lever[] =>
   [...(c?.levers ?? [])].sort((a, b) => a.order - b.order);
