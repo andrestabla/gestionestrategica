@@ -10,6 +10,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ItinerarioView } from "@/components/itinerario";
+import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
 import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote } from "@/components/ui";
 import { AccessChip, useCan, useBase } from "@/components/user-context";
@@ -20,10 +22,11 @@ import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, typeRuleLabel, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2, QrCode, Copy } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, Maximize2, Minimize2, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload } from "lucide-react";
 
-type Tab = "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
+type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
+  { id: "itinerario", label: "Itinerario", icon: CalendarDays, agenda: "Ruta de los dos días: metodología, materiales, plataforma y comentarios del equipo organizador" },
   { id: "direccion", label: "Dirección", icon: Target, agenda: "Día 1 · mesa redonda y talleres 2027 / 2030 / 2033" },
   { id: "okr", label: "OKR", icon: Gauge, agenda: "Día 2 · laboratorio y validación cruzada de OKR" },
   { id: "iniciativas", label: "Iniciativas → KR", icon: Rocket, agenda: "Día 2 · iniciativas críticas para mover resultados" },
@@ -79,7 +82,7 @@ export default function ConvencionPage() {
       <PageHeader kicker="Convención de planeación" title={`Convención · ${cat.company.name}`}
         desc="De los diagnósticos de las tribus a la dirección compartida, de los objetivos a OKR y prioridades ejecutables. Lo que se decide en sala queda registrado aquí, en vivo."
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
-          {canAccess && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR de acceso a esta sección"><QrCode size={13} /> QR de acceso</button>}
+          {canAccess && tab !== "itinerario" && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR de acceso a esta sección"><QrCode size={13} /> QR de acceso</button>}
           <button type="button" onClick={() => setBig((b) => !b)} className="btn-ghost !py-1.5 text-[11.5px]" title="Tamaño para proyectar">{big ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {big ? "Normal" : "Proyector"}</button></span>} />
 
       {error && (
@@ -106,6 +109,7 @@ export default function ConvencionPage() {
       </div>
       )}
 
+      {tab === "itinerario" && <ItinerarioTab />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
@@ -772,5 +776,47 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
         </div>
       )}
     </Modal>
+  );
+}
+
+/* ═══ Itinerario de la convención (modo sesión) ═══ */
+
+type ItinData = { itinerary: ItineraryT | null; comments: ItineraryComment[]; publicUrl: string | null; canManage: boolean };
+
+function ItinerarioTab() {
+  const [data, setData] = useState<ItinData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let on = true;
+    fetch("/api/td/itinerario").then(async (res) => { const j = await res.json().catch(() => null); if (!on) return; if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setData(j); }).catch(() => { if (on) setError("No se pudo conectar con el servidor."); });
+    return () => { on = false; };
+  }, []);
+  const post = async (body: Record<string, unknown>) => {
+    setBusy(true); setError(null);
+    const res = await fetch("/api/td/itinerario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await res.json().catch(() => null);
+    setBusy(false);
+    if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
+    setData((d) => ({ itinerary: j.itinerary, comments: j.comments, publicUrl: j.publicUrl, canManage: d?.canManage ?? false }));
+    return true;
+  };
+  if (!data && !error) return <p className="text-[12.5px] text-muted">Cargando el itinerario…</p>;
+  if (!data?.itinerary) {
+    return (
+      <Card className="rise p-6">
+        <EmptyNote>Esta empresa aún no tiene itinerario cargado. {data?.canManage ? "Carga el JSON generado desde la guía de facilitación (Cresio/Convención/itinerario.json)." : "Lo carga el advisor o la gerencia."}</EmptyNote>
+        {data?.canManage && <label className="btn-primary mt-3 inline-flex cursor-pointer !py-2 text-[12px]"><Upload size={12} /> Cargar JSON<input type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { await post({ op: "set", itinerary: JSON.parse(await f.text()) }); } catch { setError("El archivo no es un JSON válido."); } }} /></label>}
+        {error && <p className="mt-3 text-[12px] text-bad">{error}</p>}
+      </Card>
+    );
+  }
+  return (
+    <ItinerarioView itinerary={data.itinerary} comments={data.comments} mode="sesion" canManage={data.canManage} publicUrl={data.publicUrl} error={error} busy={busy}
+      onComment={(momentId, kind, text) => post({ op: "comment", momentId, kind, text })}
+      onPublish={async (on, regenerate) => { await post({ op: "publish", on, regenerate }); }}
+      onUpload={async (json) => { await post({ op: "set", itinerary: json }); }}
+      onResolve={async (id, resolved) => { await post({ op: "resolve", id, resolved }); }}
+      onDelete={async (id) => { await post({ op: "delete", id }); }} />
   );
 }

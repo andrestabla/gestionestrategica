@@ -8,6 +8,7 @@
 
 import { DEFAULT_TYPE_RULE, type TypeRule } from "@/lib/priorizacion";
 import type { AccessConfig, CompanyMode } from "@/lib/acceso";
+import type { Itinerary } from "@/lib/itinerario";
 import {
   RESPONSIBLES, CMI_OBJECTIVES, KPI_CATALOG, EVIDENCE_CATALOG, INITIATIVES_FULL, SCORES_HISTORY,
   type Responsible, type CmiObjective, type KpiFull, type EvidenceFull, type InitiativeFull, type AssessmentRecord,
@@ -37,6 +38,7 @@ export type CompanyInfo = {
   typeRule?: TypeRule;      // regla estratégica/táctica de la matriz (vacío = regla 4Shine: 3 de 4 marcas)
   mode?: CompanyMode;       // completa (todos los módulos) o convencion (solo Dirección, OKR, Iniciativas → KR, Priorización y Portafolio)
   access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
+  itinerary?: Itinerary;    // itinerario de la convención (momentos, publicación y enlace público)
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;

@@ -53,6 +53,7 @@ model Company {
   typeRule    Json? // regla estratégica/táctica de la matriz {id, criteria, min}; nulo = regla 4Shine
   mode        String  @default("completa") // completa | convencion (menú reducido a las cinco secciones)
   access      Json? // acceso por sección de la convención con QR: {seccion: {token, role, at}}
+  itinerary   Json? // itinerario de la convención {title, days, items, public, token}
   financials  Json? // estados financieros de cierre (COP millones)
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia
@@ -76,6 +77,7 @@ model Company {
   iniOverrides    InitiativeOverride[]
   evaluations     InitiativeEvaluation[]
   decisions       InitiativeDecision[]
+  itineraryComments ItineraryComment[]
   integrations    Integration[]
   branding        Branding?
   notifReads      NotifRead[]
@@ -351,6 +353,18 @@ model InitiativeDecision {
   at        DateTime @updatedAt
 
   @@id([companyId, code])
+}
+
+/// Comentarios metodológicos o logísticos del equipo organizador sobre el itinerario.
+model ItineraryComment {
+  id        String   @id
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  momentId  String
+  data      Json
+  at        DateTime @default(now())
+
+  @@index([companyId, momentId])
 }
 
 /// Configuración de integraciones (claves en texto plano: solo para la base local).

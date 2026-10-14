@@ -11,7 +11,7 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers } from "lucide-react";
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_SECTIONS } from "@/lib/acceso";
 const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
@@ -236,7 +236,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   };
 
   // modo convención: solo las cinco secciones (y Administración para quien administra)
-  const NAV_CV = ACCESS_SECTIONS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }));
+  const NAV_CV = [{ href: "/panel/convencion?t=itinerario", label: "Itinerario", icon: CalendarDays, code: undefined as string | undefined }, ...ACCESS_SECTIONS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }))];
   const baseNav = convencion ? NAV_CV : NAV;
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
     ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2 }]
@@ -386,7 +386,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
 
           <div className="flex min-w-0 items-baseline gap-2.5">
             <span className="truncate text-[13.5px] font-bold tracking-tight text-ink">
-              {convencion && path.startsWith("/panel/convencion") ? (ACCESS_SECTIONS.find((x) => x.id === (searchParams.get("t") ?? "direccion"))?.label ?? "Convención") : (current?.label ?? "Panel")}
+              {convencion && path.startsWith("/panel/convencion") ? ((searchParams.get("t") === "itinerario" ? "Itinerario" : ACCESS_SECTIONS.find((x) => x.id === (searchParams.get("t") ?? "direccion"))?.label) ?? "Convención") : (current?.label ?? "Panel")}
             </span>
             {current?.code && (
               <span className="num text-[10px] font-bold tracking-wider text-faint">{current.code}</span>

@@ -23,6 +23,7 @@ export function companyRow(c: CompanyInfo) {
     typeRule: (c.typeRule?.criteria?.length ? c.typeRule : null) as never,
     mode: c.mode ?? "completa",
     access: (c.access && Object.keys(c.access).length ? c.access : null) as never,
+    itinerary: (c.itinerary ?? null) as never,
     active: c.active, createdBy: c.createdBy ?? null,
   };
 }

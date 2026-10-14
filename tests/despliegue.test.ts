@@ -3,7 +3,7 @@
 // configuración de Vercel apunta al build con Prisma/PostgreSQL.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 const norm = (s: string) => s.split("\n").filter((l) => !l.trim().startsWith("//")).map((l) => l.replace(/provider\s*=\s*"(sqlite|postgresql)"/, 'provider = "DB"')).join("\n").trim();
 
@@ -13,10 +13,11 @@ test("los dos esquemas Prisma solo difieren en el proveedor", () => {
   assert.equal(pg, sqlite);
 });
 
-test("la migración inicial de PostgreSQL crea todos los modelos", () => {
+test("las migraciones de PostgreSQL crean todos los modelos", () => {
   const schema = readFileSync("prisma/postgres/schema.prisma", "utf8");
   const models = [...schema.matchAll(/^model (\w+) \{/gm)].map((m) => m[1]);
-  const sql = readFileSync("prisma/postgres/migrations/0001_inicial/migration.sql", "utf8");
+  // cada tabla nace en la migración inicial o en una posterior (p. ej. ItineraryComment en 0010)
+  const sql = readdirSync("prisma/postgres/migrations").filter((d) => /^\d{4}_/.test(d)).map((d) => readFileSync(`prisma/postgres/migrations/${d}/migration.sql`, "utf8")).join("\n");
   assert.ok(models.length >= 26);
   for (const m of models) assert.ok(sql.includes(`CREATE TABLE "${m}"`), `tabla ${m}`);
   assert.match(readFileSync("prisma/postgres/migrations/migration_lock.toml", "utf8"), /provider = "postgresql"/);

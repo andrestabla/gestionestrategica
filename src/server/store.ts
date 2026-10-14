@@ -21,6 +21,7 @@ import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode } from "@/lib/acceso";
 import { randomBytes } from "crypto";
+import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, type Itinerary, type ItineraryComment } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import { RESERVED } from "@/lib/tenant-url";
@@ -147,6 +148,7 @@ export type TenantState = {
   integrations: Map<IntegrationKey, IntegrationConfig>;
   branding?: Branding;
   notifRead: Map<string, Set<string>>;
+  itinComments: Map<string, ItineraryComment>;   // comentarios al itinerario de la convención
   hydrated: boolean;
 };
 
@@ -192,7 +194,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
     users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, responsibleId: u.responsibleId, active: true, seeded: true })),
-    integrations: new Map(), notifRead: new Map(), hydrated: false,
+    integrations: new Map(), notifRead: new Map(), itinComments: new Map(), hydrated: false,
   };
 }
 
@@ -308,6 +310,7 @@ export async function hydrateCompanies() {
         typeRule: parseTypeRule(c.typeRule).ok ? (parseTypeRule(c.typeRule) as { rule?: TypeRule }).rule : undefined,
         mode: isCompanyMode(c.mode) ? c.mode : "completa",
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
+        itinerary: readItinerary(c.itinerary),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       const t = g.tenants.get(c.slug);
@@ -398,6 +401,7 @@ export async function hydrateFromDb() {
     // priorización: evaluaciones de la matriz y decisiones de tiempo
     for (const e of await db.initiativeEvaluation.findMany(W)) evals().set(e.id, e.data as Evaluation);
     for (const d of await db.initiativeDecision.findMany(W)) decisions().set(d.code, d.data as DecisionRecord);
+    for (const c of await db.itineraryComment.findMany(W)) S().itinComments.set(c.id, c.data as ItineraryComment);
     // usuarios de la empresa, integraciones, branding y notificaciones leídas
     const dbUsers = await db.user.findMany(W);
     if (dbUsers.length) {
@@ -1856,6 +1860,91 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   const session: SessionUser = { email: user.email, name: user.name, role: user.role, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
   audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR · ${accessSection(section).label}`);
   return { ok: true, user: session, section, created };
+}
+
+
+/* ═══ Itinerario de la convención: publicación y comentarios ═══ */
+
+function readItinerary(raw: unknown): Itinerary | undefined {
+  const p = parseItinerary(raw); if (!p.ok) return undefined;
+  const r = raw as Record<string, unknown>;
+  const token = typeof r.token === "string" && ITIN_TOKEN_RE.test(r.token) ? r.token : undefined;
+  return { ...p.itinerary, public: r.public === true && !!token, ...(token ? { token } : {}) };
+}
+function saveItinerary(actor: SessionUser, it: Itinerary | undefined, what: string) {
+  const rec = companyRec(); if (!rec) return;
+  rec.itinerary = it;
+  const t = g.tenants.get(rec.slug);
+  if (t) t.catalog.company = { ...t.catalog.company, itinerary: it };
+  audit(actor, "task", `empresa:${rec.slug}`, what);
+  if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("itinerario", (db) => db.company.update({ where: { id: dbId }, data: { itinerary: (it ?? null) as never } })); }
+}
+export const itineraryOf = (): Itinerary | undefined => companyRec()?.itinerary;
+
+/** Carga o reemplaza el itinerario (manage_catalog); conserva publicación y enlace. */
+export function setItinerary(actor: SessionUser, input: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "El itinerario lo carga el advisor o la gerencia." };
+  const p = parseItinerary(input); if (!p.ok) return { ok: false, status: 422, error: p.error };
+  const prev = itineraryOf();
+  const it: Itinerary = { ...p.itinerary, public: prev?.public ?? false, ...(prev?.token ? { token: prev.token } : {}) };
+  saveItinerary(actor, it, `itinerario cargado: ${it.items.length} momentos`);
+  return { ok: true, itinerary: it };
+}
+
+/** Publica o retira el enlace público; `regenerate` cambia el enlace (el anterior deja de valer). */
+export function publishItinerary(actor: SessionUser, on: boolean, regenerate = false): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "El enlace público lo administra el advisor o la gerencia." };
+  const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
+  const token = regenerate || !prev.token ? newToken() : prev.token;
+  const it: Itinerary = { ...prev, public: on, token };
+  saveItinerary(actor, it, `itinerario ${on ? "publicado" : "retirado del acceso público"}${regenerate ? " (enlace regenerado)" : ""}`);
+  return { ok: true, itinerary: it };
+}
+
+/** Itinerario público de la empresa activa si el token es el vigente y está publicado. */
+export function publicItineraryOf(token: string): Itinerary | null {
+  const it = itineraryOf();
+  return it && it.public && it.token && token === it.token ? it : null;
+}
+
+export const itineraryComments = (): ItineraryComment[] => [...S().itinComments.values()].sort((a, b) => a.at.localeCompare(b.at));
+
+/** Comentario metodológico o logístico sobre un momento. Desde la sesión firma
+    el usuario; desde el enlace público firma quien escribe su nombre. */
+export function addItineraryComment(input: { momentId?: unknown; kind?: unknown; text?: unknown; author?: unknown; email?: unknown }, by: SessionUser | { public: true }): { ok: true; comment: ItineraryComment } | { ok: false; status: number; error: string } {
+  const it = itineraryOf(); if (!it) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
+  const momentId = str(input.momentId, 24).toLowerCase();
+  if (!it.items.some((x) => x.id === momentId)) return { ok: false, status: 422, error: "El momento no existe en el itinerario." };
+  if (!isCommentKind(input.kind)) return { ok: false, status: 422, error: "Indica si el comentario es metodológico o logístico." };
+  const text = str(input.text, 1200);
+  if (text.length < 3) return { ok: false, status: 422, error: "Escribe el comentario." };
+  const pub = "public" in by;
+  const author = pub ? str(input.author, 80) : by.name;
+  if (author.length < 3) return { ok: false, status: 422, error: "Escribe tu nombre." };
+  const email = pub ? str(input.email, 160).toLowerCase() : by.email;
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "El correo no es válido." };
+  const c: ItineraryComment = { id: `${momentId}-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`, momentId, kind: input.kind, author, ...(email ? { email } : {}), text, at: new Date().toISOString(), via: pub ? "publico" : "sesion" };
+  S().itinComments.set(c.id, c);
+  void persist("comentario del itinerario", (db) => db.itineraryComment.upsert({ where: { id: c.id }, update: { data: c }, create: { id: c.id, companyId: cid(), momentId, data: c } }));
+  return { ok: true, comment: c };
+}
+
+/** Marca un comentario como atendido (manage_catalog) o lo elimina. */
+export function resolveItineraryComment(actor: SessionUser, id: unknown, resolved: boolean): { ok: true; comment: ItineraryComment } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los comentarios los atiende el advisor o la gerencia." };
+  const c = S().itinComments.get(String(id ?? "")); if (!c) return { ok: false, status: 404, error: "El comentario no existe." };
+  const next: ItineraryComment = { ...c, ...(resolved ? { resolvedAt: new Date().toISOString(), resolvedBy: actor.name } : { resolvedAt: undefined, resolvedBy: undefined }) };
+  if (!resolved) { delete next.resolvedAt; delete next.resolvedBy; }
+  S().itinComments.set(c.id, next);
+  void persist("comentario del itinerario", (db) => db.itineraryComment.update({ where: { id: c.id }, data: { data: next } }));
+  return { ok: true, comment: next };
+}
+export function deleteItineraryComment(actor: SessionUser, id: unknown): { ok: true } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los comentarios los elimina el advisor o la gerencia." };
+  const key = String(id ?? ""); if (!S().itinComments.has(key)) return { ok: false, status: 404, error: "El comentario no existe." };
+  S().itinComments.delete(key);
+  void persist("comentario del itinerario", (db) => db.itineraryComment.deleteMany({ where: { id: key, companyId: cid() } }));
+  return { ok: true };
 }
 
 /* ── medición efectiva: la publicada en el store manda sobre el seed ── */
