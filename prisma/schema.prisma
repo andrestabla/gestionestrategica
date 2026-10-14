@@ -31,6 +31,8 @@ model User {
   lockedUntil  DateTime?
   resetToken   String?   @unique // enlace de restablecimiento de contraseña (un solo uso)
   resetExpires DateTime?
+  consentAt    DateTime? // aceptación del tratamiento de datos personales (acceso por QR)
+  consentVersion String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }

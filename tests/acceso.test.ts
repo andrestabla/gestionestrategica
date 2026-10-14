@@ -42,13 +42,16 @@ test("entrada por QR: crea la cuenta una sola vez, la reutiliza por correo y rec
     const links = accessLinks(advisor) as { ok: true; access: { section: string; token: string }[] };
     const tok = links.access.find((x) => x.section === "priorizacion")!.token;
     const n0 = getUsers().length;
-    const r1 = await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec" });
+    // sin aceptar el tratamiento de datos no se crea la cuenta
+    assert.equal((await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec" })).ok, false);
+    const r1 = await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", consent: true });
     assert.equal(r1.ok, true);
     const u1 = (r1 as { user: SessionUser; created: boolean; section: string });
     assert.equal(u1.created, true); assert.equal(u1.section, "priorizacion");
     assert.equal(u1.user.email, "mishell@cresio.ec"); assert.equal(u1.user.role, "DIRECTIVO");
     assert.equal(u1.user.company?.slug, "andina");
     assert.equal(getUsers().length, n0 + 1);
+    // con la aceptación ya registrada, las siguientes entradas no la exigen
     const r2 = await accessUser(tok, { name: "Mishell M.", email: "  mishell@cresio.ec " });
     assert.equal(r2.ok, true);
     assert.equal((r2 as { created: boolean }).created, false);
@@ -59,7 +62,7 @@ test("entrada por QR: crea la cuenta una sola vez, la reutiliza por correo y rec
     const r3 = await accessUser(okrTok, { name: "Mishell Mendieta", email: "mishell@cresio.ec" });
     assert.equal((r3 as { user: SessionUser }).user.role, "DIRECTIVO");
     assert.equal((await accessUser("token-que-no-existe-xx", { name: "Alguien Más", email: "x@y.co" })).ok, false);
-    assert.equal((await accessUser(tok, { name: "Sin", email: "x@y.co" })).ok, false);
+    assert.equal((await accessUser(tok, { name: "Sin", email: "x@y.co", consent: true })).ok, false);
     assert.equal((await accessUser(tok, { name: "Sin Correo Válido", email: "no-es-correo" })).ok, false);
   });
 });

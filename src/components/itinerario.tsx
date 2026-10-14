@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui";
 import { ITINERARY_KINDS, COMMENT_KINDS, materialPath, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind, type ItineraryFile } from "@/lib/itinerario";
+import { consentSummary } from "@/lib/consentimiento";
 import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown, FileText } from "lucide-react";
 
 const KIND_CLS: Record<ItineraryKind, string> = {
@@ -19,7 +20,7 @@ const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", labe
 export function ItinerarioView({ itinerary, comments, mode, company, canManage = false, publicUrl = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, publicRef }: {
   itinerary: Omit<Itinerary, "token">; comments: ItineraryComment[]; mode: "sesion" | "publico"; company?: { name: string; shortName: string };
   canManage?: boolean; publicUrl?: string | null; error?: string | null; busy?: boolean;
-  onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => Promise<boolean>;
+  onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
   onPublish?: (on: boolean, regenerate?: boolean) => Promise<void>;
   onUpload?: (json: unknown) => Promise<void>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>;
@@ -142,7 +143,7 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
         );
       })}
 
-      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy} files={files} href={fileHref}
+      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy} companyName={company?.name ?? "la empresa"} files={files} href={fileHref}
         onFiles={editable && onMomentFiles ? (ids) => onMomentFiles(cur.id, ids) : undefined}
         onClose={() => setOpen(-1)} onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined}
         onComment={onComment} onResolve={onResolve} onDelete={onDelete}
@@ -157,9 +158,9 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
 
 const pubMode = (m: "sesion" | "publico") => m === "publico";
 
-function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles }: {
-  it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; canManage: boolean; busy: boolean; onClose: () => void; onPrev?: () => void; onNext?: () => void;
-  onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => Promise<boolean>;
+function MomentModal({ it, day, days, comments, pub, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles }: {
+  it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; canManage: boolean; busy: boolean; companyName: string; onClose: () => void; onPrev?: () => void; onNext?: () => void;
+  onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>; onDelete?: (id: string) => Promise<void>;
   onEdit?: (next: ItineraryItem) => Promise<boolean>; onRemove?: () => Promise<boolean>; onMove?: (dir: -1 | 1) => Promise<boolean>;
   files: ItineraryFile[]; href: (id: string) => string; onFiles?: (ids: string[]) => Promise<boolean>;
@@ -181,10 +182,11 @@ function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, o
   const [email, setEmail] = useState(() => { try { return localStorage.getItem("itin-correo") ?? ""; } catch { return ""; } });
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [consent, setConsent] = useState(false);
   const send = async () => {
     setSending(true); setDone(false);
     try { localStorage.setItem("itin-autor", author); localStorage.setItem("itin-correo", email); } catch { /* sin almacenamiento */ }
-    const ok = await onComment(it.id, kind, text, pub ? author : undefined, pub ? email : undefined);
+    const ok = await onComment(it.id, kind, text, pub ? author : undefined, pub ? email : undefined, pub ? consent : undefined);
     if (ok) { setText(""); setDone(true); }
     setSending(false);
   };
@@ -276,9 +278,13 @@ function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, o
               <select value={kind} onChange={(e) => setKind(e.target.value as CommentKind)} className="input !py-2 text-[13px]"><option value="metodologico">Metodológico</option><option value="logistico">Logístico</option></select>
               <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={1200} placeholder="Qué cambiarías, qué falta, qué hay que prever…" className="input !py-2 text-[13px]" />
             </div>
+            {pub && <label className="mt-2 flex items-start gap-2 text-[11px] leading-snug text-muted">
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--navy)]" />
+              <span>{consentSummary(companyName)}</span>
+            </label>}
             <div className="mt-2 flex items-center gap-2">
               {done && <span className="text-[11.5px] text-ok"><CheckCircle2 size={12} className="mr-1 inline" />Comentario registrado</span>}
-              <button type="button" onClick={send} disabled={sending || text.trim().length < 3 || (pub && author.trim().length < 3)} className="btn-primary ml-auto !py-2 text-[12px] disabled:opacity-40">{sending ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />} Enviar</button>
+              <button type="button" onClick={send} disabled={sending || text.trim().length < 3 || (pub && (author.trim().length < 3 || !consent))} className="btn-primary ml-auto !py-2 text-[12px] disabled:opacity-40">{sending ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />} Enviar</button>
             </div>
           </div>
         </div>

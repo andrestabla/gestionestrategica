@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight } from "lucide-react";
+import { consentSummary, consentText } from "@/lib/consentimiento";
 
 export function AccesoClient({ tenant, token, company, section }: {
   tenant: string; token: string; company: { name: string; shortName: string }; section: { id: string; label: string; what: string };
@@ -11,12 +12,13 @@ export function AccesoClient({ tenant, token, company, section }: {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(null);
     try {
-      const res = await fetch("/api/auth/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenant, token, name, email }) });
+      const res = await fetch("/api/auth/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenant, token, name, email, consent }) });
       const j = await res.json().catch(() => null);
       if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); setBusy(false); return; }
       router.push(j.next); router.refresh();
@@ -33,8 +35,16 @@ export function AccesoClient({ tenant, token, company, section }: {
         <label className="mt-3 block"><span className="label !text-[9px]">Correo</span>
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" autoCapitalize="none" inputMode="email" required className="input mt-1 !py-2.5 text-[14px]" placeholder="tu@correo.com" /></label>
         <p className="mt-2 text-[11px] leading-snug text-faint">El correo te identifica: si ya entraste antes, se usa tu misma cuenta.</p>
+        <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-surface-2/70 px-3 py-2.5">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--navy)]" />
+          <span className="text-[11.5px] leading-snug text-ink-soft">{consentSummary(company.name)}</span>
+        </label>
+        <details className="mt-1.5 px-1 text-[11px] text-faint">
+          <summary className="cursor-pointer font-bold text-cyan-deep">Leer la autorización completa</summary>
+          <div className="mt-1.5 space-y-1.5 leading-snug">{consentText(company.name).map((p, i) => <p key={i}>{p}</p>)}</div>
+        </details>
         {error && <p className="mt-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
-        <button type="submit" disabled={busy} className="btn-primary mt-4 w-full justify-center !py-2.5 text-[13.5px] disabled:opacity-50">
+        <button type="submit" disabled={busy || !consent} className="btn-primary mt-4 w-full justify-center !py-2.5 text-[13.5px] disabled:opacity-50">
           {busy ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />} Entrar a {section.label}
         </button>
       </form>

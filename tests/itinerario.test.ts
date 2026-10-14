@@ -55,12 +55,14 @@ test("comentarios: desde la sesión y desde el enlace público; atender y elimin
     resetStore(); setItinerary(advisor, IT); publishItinerary(advisor, true);
     const c1 = addItineraryComment({ momentId: "d1-02", kind: "logistico", text: "Faltan adhesivos de tres colores." }, junta);
     assert.equal(c1.ok, true); assert.equal((c1 as { comment: { author: string; via: string } }).comment.author, "Junta Directiva");
-    const c2 = addItineraryComment({ momentId: "d1-02", kind: "metodologico", text: "Reducir H3 a 45 segundos.", author: "Yorman Nieto", email: "Yorman@Cresio.ec" }, { public: true });
+    // el comentario público exige aceptar el tratamiento de datos
+    assert.equal(addItineraryComment({ momentId: "d1-02", kind: "metodologico", text: "Reducir H3 a 45 segundos.", author: "Yorman Nieto" }, { public: true }).ok, false);
+    const c2 = addItineraryComment({ momentId: "d1-02", kind: "metodologico", text: "Reducir H3 a 45 segundos.", author: "Yorman Nieto", email: "Yorman@Cresio.ec", consent: true }, { public: true });
     assert.equal(c2.ok, true); assert.equal((c2 as { comment: { via: string; email?: string } }).comment.via, "publico");
     assert.equal((c2 as { comment: { email?: string } }).comment.email, "yorman@cresio.ec");
     assert.equal(addItineraryComment({ momentId: "d1-09", kind: "logistico", text: "x" }, junta).ok, false);
     assert.equal(addItineraryComment({ momentId: "d1-02", kind: "otro", text: "xxx" }, junta).ok, false);
-    assert.equal(addItineraryComment({ momentId: "d1-02", kind: "logistico", text: "sin nombre" }, { public: true }).ok, false);
+    assert.equal(addItineraryComment({ momentId: "d1-02", kind: "logistico", text: "sin nombre", consent: true }, { public: true }).ok, false);
     assert.equal(itineraryComments().length, 2);
     const id = (c1 as { comment: { id: string } }).comment.id;
     assert.equal(resolveItineraryComment(junta, id, true).ok, false);

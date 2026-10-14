@@ -11,9 +11,9 @@ export function PublicItinerario({ tenant, token, company, itinerary, comments: 
 }) {
   const [comments, setComments] = useState(initial);
   const [error, setError] = useState<string | null>(null);
-  const comment = async (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => {
+  const comment = async (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => {
     setError(null);
-    const res = await fetch("/api/public/itinerario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenant, token, momentId, kind, text, author, email }) });
+    const res = await fetch("/api/public/itinerario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenant, token, momentId, kind, text, author, email, consent }) });
     const j = await res.json().catch(() => null);
     if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
     setComments(j.comments); return true;

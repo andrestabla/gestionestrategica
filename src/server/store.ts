@@ -9,6 +9,7 @@
 // Todas las mutaciones validan reglas de negocio y escriben auditoría.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { CONSENT_VERSION } from "@/lib/consentimiento";
 import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
@@ -410,8 +411,8 @@ export async function hydrateFromDb() {
       const list = users();
       for (const u of dbUsers) {
         const existing = list.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
-        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; }
-        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString() });
+        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; existing.consentAt = u.consentAt?.toISOString(); }
+        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString() } : {}) });
       }
     }
     for (const i of await db.integration.findMany(W)) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
@@ -1832,7 +1833,7 @@ export const accessSectionOf = (token: string): AccessSection | null => sectionO
 /** Entra por el enlace de una sección: identifica a la persona por su correo,
     la crea en la empresa la primera vez (con el rol de la sección) y después
     reutiliza su cuenta. Nunca duplica: el correo es único en la base. */
-export async function accessUser(token: string, input: { name?: unknown; email?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
+export async function accessUser(token: string, input: { name?: unknown; email?: unknown; consent?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
   const rec = companyRec();
   if (!rec || !rec.active) return { ok: false, status: 404, error: "La empresa no está activa." };
   const section = accessSectionOf(String(token ?? ""));
@@ -1841,21 +1842,28 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "Escribe un correo válido: es tu identificación en la plataforma." };
   if (name.length < 5) return { ok: false, status: 422, error: "Escribe tu nombre completo." };
+  const consent = input.consent === true;
   if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) return { ok: false, status: 403, error: "Ese correo es de un administrador de la plataforma: entra por /login." };
   let user = users().find((u) => u.email.toLowerCase() === email);
   let created = false;
+  // el tratamiento de datos se acepta la primera vez (o si aún no consta la aceptación)
+  if (!consent && (!user || !user.consentAt)) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
+  const consentAt = new Date();
   if (!user) {
     // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
     const elsewhere = await findUserForLogin(email);
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
     const role = rec.access?.[section]?.role ?? accessSection(section).role;
-    user = { email, name, role, active: true, seeded: false, createdBy: `acceso QR · ${accessSection(section).label}`, at: new Date().toISOString() };
+    user = { email, name, role, active: true, seeded: false, createdBy: `acceso QR · ${accessSection(section).label}`, at: new Date().toISOString(), consentAt: consentAt.toISOString() };
     users().push(user);
     created = true;
     void persist("usuario", async (db) => {
       const companyId = cid();
-      await db.user.upsert({ where: { email }, update: { name, active: true, companyId }, create: { email, name, role, passwordHash: "", companyId } });
+      await db.user.upsert({ where: { email }, update: { name, active: true, companyId, consentAt, consentVersion: CONSENT_VERSION }, create: { email, name, role, passwordHash: "", companyId, consentAt, consentVersion: CONSENT_VERSION } });
     });
+  } else if (!user.consentAt) {
+    user.consentAt = consentAt.toISOString();
+    void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { consentAt, consentVersion: CONSENT_VERSION } }); });
   }
   if (!user.active) return { ok: false, status: 403, error: "Tu cuenta está desactivada en esta empresa." };
   const session: SessionUser = { email: user.email, name: user.name, role: user.role, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
@@ -1919,7 +1927,7 @@ export const itineraryComments = (): ItineraryComment[] => [...S().itinComments.
 
 /** Comentario metodológico o logístico sobre un momento. Desde la sesión firma
     el usuario; desde el enlace público firma quien escribe su nombre. */
-export function addItineraryComment(input: { momentId?: unknown; kind?: unknown; text?: unknown; author?: unknown; email?: unknown }, by: SessionUser | { public: true }): { ok: true; comment: ItineraryComment } | { ok: false; status: number; error: string } {
+export function addItineraryComment(input: { momentId?: unknown; kind?: unknown; text?: unknown; author?: unknown; email?: unknown; consent?: unknown }, by: SessionUser | { public: true }): { ok: true; comment: ItineraryComment } | { ok: false; status: number; error: string } {
   const it = itineraryOf(); if (!it) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
   const momentId = str(input.momentId, 24).toLowerCase();
   if (!it.items.some((x) => x.id === momentId)) return { ok: false, status: 422, error: "El momento no existe en el itinerario." };
@@ -1931,7 +1939,8 @@ export function addItineraryComment(input: { momentId?: unknown; kind?: unknown;
   if (author.length < 3) return { ok: false, status: 422, error: "Escribe tu nombre." };
   const email = pub ? str(input.email, 160).toLowerCase() : by.email;
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "El correo no es válido." };
-  const c: ItineraryComment = { id: `${momentId}-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`, momentId, kind: input.kind, author, ...(email ? { email } : {}), text, at: new Date().toISOString(), via: pub ? "publico" : "sesion" };
+  if (pub && input.consent !== true) return { ok: false, status: 422, error: "Para comentar debes aceptar el tratamiento de tus datos personales." };
+  const c: ItineraryComment = { id: `${momentId}-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`, momentId, kind: input.kind, author, ...(email ? { email } : {}), text, at: new Date().toISOString(), ...(pub ? { consentAt: new Date().toISOString() } : {}), via: pub ? "publico" : "sesion" };
   S().itinComments.set(c.id, c);
   void persist("comentario del itinerario", (db) => db.itineraryComment.upsert({ where: { id: c.id }, update: { data: c }, create: { id: c.id, companyId: cid(), momentId, data: c } }));
   return { ok: true, comment: c };
@@ -2376,6 +2385,7 @@ export type ManagedUser = {
   seeded: boolean;             // vino del seed (no se elimina, solo se desactiva)
   createdBy?: string;
   at?: string;
+  consentAt?: string;          // aceptación del tratamiento de datos personales
 };
 
 

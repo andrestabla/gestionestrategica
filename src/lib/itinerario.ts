@@ -29,7 +29,7 @@ export type CommentKind = "metodologico" | "logistico";
 export const COMMENT_KINDS: Record<CommentKind, string> = { metodologico: "Metodológico", logistico: "Logístico" };
 export type ItineraryComment = {
   id: string; momentId: string; kind: CommentKind; author: string; email?: string; text: string; at: string;
-  via: "sesion" | "publico"; resolvedAt?: string; resolvedBy?: string;
+  via: "sesion" | "publico"; resolvedAt?: string; resolvedBy?: string; consentAt?: string;
 };
 
 export const isKind = (k: unknown): k is ItineraryKind => typeof k === "string" && k in ITINERARY_KINDS;

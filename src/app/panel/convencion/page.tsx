@@ -525,18 +525,36 @@ function LinkForm({ ini, krs, saving, onCancel, onSubmit }: { ini: { id: string;
 /* ═══ Priorización en vivo ═══ */
 
 function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void }) {
-  const [lever, setLever] = useState("");
+  // el ranking se agrupa por tribu (palanca, por defecto) o por resultado clave; el selector filtra un grupo
+  const [mode, setMode] = useState<"tribu" | "resultado">("tribu");
+  const [sel, setSel] = useState("");
   const [expected, setExpected] = useState(3);
   const rows = prio?.ranking ?? [];
-  const objLever = (i: { cmi: string }) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
-  const list = cat.initiatives.filter((i) => !lever || objLever(i) === lever);
-  const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
-  const ranked = list.map((i) => ({ i, r: rows.find((r) => r.id === i.id) })).sort((a, b) => ((b.r?.c.n ? b.r.c.score : -1) - (a.r?.c.n ? a.r.c.score : -1)));
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
+  type Ini = Cat["initiatives"][number];
+  const objLever = (i: { cmi: string }) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
+  const tribe = (id?: string) => (id ? cat.responsibles.find((r) => r.id === id)?.dependencia : undefined);
+  const leverLabel = (l: Lever) => { const t = tribe(l.ownerId); return t ? `${t} · ${l.name}` : `${l.order}. ${l.name}`; };
+  const krs = cat.kpis.filter((k) => cat.initiatives.some((i) => i.kpi === k.code));
+  const groupKey = (i: Ini) => (mode === "tribu" ? objLever(i) : i.kpi && krs.some((k) => k.code === i.kpi) ? i.kpi : "");
+  const groupDefs: { key: string; label: string }[] = mode === "tribu"
+    ? [...levers.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: "Sin palanca" }]
+    : [...krs.map((k) => ({ key: k.code, label: `${k.code} · ${k.name}` })), { key: "", label: "Sin resultado clave" }];
+  const list = cat.initiatives.filter((i) => !sel || groupKey(i) === sel);
+  const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
+  const rank = (items: Ini[]) => items.map((i) => ({ i, r: rows.find((r) => r.id === i.id) })).sort((a, b) => ((b.r?.c.n ? b.r.c.score : -1) - (a.r?.c.n ? a.r.c.score : -1)));
+  const groups = groupDefs.map((g) => ({ ...g, items: rank(list.filter((i) => groupKey(i) === g.key)) })).filter((g) => g.items.length > 0);
+  const ranked = groups.flatMap((g) => g.items);
+  const sub = (i: Ini) => (mode === "tribu" ? (i.kpi ? `KR ${i.kpi}` : "sin KR") : owner(i.ownerId));
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <select value={lever} onChange={(e) => setLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[11px]" role="group" aria-label="Agrupar el ranking">
+          {(["tribu", "resultado"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => { setMode(m); setSel(""); }} className={`rounded-md px-2.5 py-1 font-bold transition-colors ${mode === m ? "text-white" : "text-muted hover:text-ink"}`} style={mode === m ? { background: "var(--navy)" } : undefined}>{m === "tribu" ? "Por tribu" : "Por resultado"}</button>
+          ))}
+        </div>
+        <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? "Todas las tribus" : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
         <label className="flex items-center gap-1.5 text-[11.5px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[11.5px]" /></label>
         <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[10.5px] text-faint">se refresca cada 15 s</span>
@@ -551,14 +569,16 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
         <Card className="rise overflow-hidden">
           <CardHeader title="Ranking en vivo" sub="puntaje consolidado · elegibilidad y capacidad · horizonte sugerido · decisión" />
           <div className="divide-y divide-line sm:hidden">
-            {ranked.map(({ i, r }, n) => {
+            {groups.map((g) => (<div key={g.key || "sin"}>
+              <div className="bg-surface-2/70 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</div>
+              {g.items.map(({ i, r }, n) => {
               const d = prio?.decisions[i.id]; const c = r?.c;
               return (
                 <Link key={i.id} href={`${base}/panel/iniciativas/${i.id}`} className="flex items-start gap-3 px-4 py-3 active:bg-cyan-wash">
                   <span className="num w-6 shrink-0 pt-0.5 text-[13px] font-extrabold text-faint">{c && c.n ? n + 1 : "—"}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-bold leading-snug text-ink">{i.name}</span>
-                    <span className="num block text-[10.5px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}</span>
+                    <span className="num block text-[10.5px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">
                       <span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
                       {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
@@ -573,19 +593,22 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
                 </Link>
               );
             })}
+            </div>))}
             {ranked.length === 0 && <p className="px-4 py-4 text-[12px] italic text-faint">Sin iniciativas.</p>}
           </div>
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[720px] text-[12px]">
               <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Horizonte</th><th className="px-2 py-2">Decisión</th></tr></thead>
               <tbody>
-                {ranked.map(({ i, r }, n) => {
+                {groups.map((g) => [
+                  <tr key={`g-${g.key}`}><td colSpan={CRITERIA.length + 7} className="bg-surface-2/70 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</td></tr>,
+                  ...g.items.map(({ i, r }, n) => {
                   const d = prio?.decisions[i.id];
                   const c = r?.c;
                   return (
                     <tr key={i.id} className="border-t border-line">
                       <td className="num px-4 py-2 font-extrabold text-faint">{c && c.n ? n + 1 : "—"}</td>
-                      <td className="px-2 py-2"><Link href={`${base}/panel/iniciativas/${i.id}`} className="font-bold text-ink hover:text-cyan-deep">{i.name}</Link><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)}</div></td>
+                      <td className="px-2 py-2"><Link href={`${base}/panel/iniciativas/${i.id}`} className="font-bold text-ink hover:text-cyan-deep">{i.name}</Link><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)}{i.kpi ? ` · KR ${i.kpi}` : ""}</div></td>
                       <td className="num px-2 py-2 text-center"><span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected}</span></td>
                       {CRITERIA.map((cr) => <td key={cr.key} className="num px-2 py-2 text-center">{c && c.n ? <span className={`font-bold ${c.rounded[cr.key] >= 3 ? "text-ink" : "text-muted"}`}>{c.avg[cr.key]}</span> : <span className="text-faint">—</span>}</td>)}
                       <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
@@ -599,7 +622,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
                       <td className="px-2 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
-                })}
+                })])}
               </tbody>
             </table>
           </div>
