@@ -815,6 +815,16 @@ function ItinerarioTab() {
       onPublish={async (on, regenerate) => { await post({ op: "publish", on, regenerate }); }}
       onUpload={async (json) => { await post({ op: "set", itinerary: json }); }}
       onSave={(it) => post({ op: "set", itinerary: it })}
+      onUploadFile={async (file, group) => {
+        setBusy(true); setError(null);
+        const fd = new FormData(); fd.append("file", file); fd.append("group", group);
+        const res = await fetch("/api/td/itinerario/material", { method: "POST", body: fd });
+        const j = await res.json().catch(() => null); setBusy(false);
+        if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
+        setData((d) => d ? { ...d, itinerary: j.itinerary } : d); return true;
+      }}
+      onRemoveFile={(id) => post({ op: "removeFile", id })}
+      onMomentFiles={(momentId, fileIds) => post({ op: "files", momentId, fileIds })}
       onResolve={async (id, resolved) => { await post({ op: "resolve", id, resolved }); }}
       onDelete={async (id) => { await post({ op: "delete", id }); }} />
   );

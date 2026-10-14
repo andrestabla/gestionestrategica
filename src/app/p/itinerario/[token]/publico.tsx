@@ -20,7 +20,7 @@ export function PublicItinerario({ tenant, token, company, itinerary, comments: 
   };
   return (
     <main className="min-h-screen bg-surface-2">
-      <ItinerarioView itinerary={itinerary} comments={comments} mode="publico" company={company} error={error} onComment={comment} />
+      <ItinerarioView itinerary={itinerary} comments={comments} mode="publico" company={company} error={error} onComment={comment} publicRef={{ slug: tenant, token }} />
     </main>
   );
 }

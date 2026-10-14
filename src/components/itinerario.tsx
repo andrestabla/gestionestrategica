@@ -6,8 +6,8 @@
 // plataforma (modo sesión) y en el enlace público (modo público).
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui";
-import { ITINERARY_KINDS, COMMENT_KINDS, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind } from "@/lib/itinerario";
-import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown } from "lucide-react";
+import { ITINERARY_KINDS, COMMENT_KINDS, materialPath, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind, type ItineraryFile } from "@/lib/itinerario";
+import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown, FileText } from "lucide-react";
 
 const KIND_CLS: Record<ItineraryKind, string> = {
   conferencia: "bg-[#8A6D1F] text-white", mesa: "bg-[#D4AF37] text-[#0D1B2A]", taller: "bg-[#0B6F88] text-white", plenaria: "bg-[#0D1B2A] text-white",
@@ -16,7 +16,7 @@ const KIND_CLS: Record<ItineraryKind, string> = {
 const DOT: Record<ItineraryKind, string> = { conferencia: "#8A6D1F", mesa: "#D4AF37", taller: "#0B6F88", plenaria: "#0D1B2A", break: "#B6BDC7", energizacion: "#B6BDC7", logistica: "#4C078C" };
 const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", label: "Todo" }, { k: "mesa", label: "Mesa redonda" }, { k: "taller", label: "Talleres" }, { k: "conferencia", label: "Conferencias" }, { k: "plenaria", label: "Plenarias" }];
 
-export function ItinerarioView({ itinerary, comments, mode, company, canManage = false, publicUrl = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave }: {
+export function ItinerarioView({ itinerary, comments, mode, company, canManage = false, publicUrl = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, publicRef }: {
   itinerary: Omit<Itinerary, "token">; comments: ItineraryComment[]; mode: "sesion" | "publico"; company?: { name: string; shortName: string };
   canManage?: boolean; publicUrl?: string | null; error?: string | null; busy?: boolean;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => Promise<boolean>;
@@ -25,9 +25,16 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
   onResolve?: (id: string, resolved: boolean) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
   onSave?: (itinerary: Omit<Itinerary, "token">) => Promise<boolean>;   // edición de textos (advisor o gerencia)
+  onUploadFile?: (file: File, group: string) => Promise<boolean>;         // sube un PDF a los materiales
+  onRemoveFile?: (id: string) => Promise<boolean>;
+  onMomentFiles?: (momentId: string, fileIds: string[]) => Promise<boolean>;
+  publicRef?: { slug: string; token: string };                             // en el enlace público, para abrir los PDF
 }) {
   const [filter, setFilter] = useState<ItineraryKind | "all">("all");
   const [editHeader, setEditHeader] = useState(false);
+  const [showFiles, setShowFiles] = useState(false);
+  const files = itinerary.files ?? [];
+  const fileHref = (id: string) => materialPath(id, publicRef);
   const [editDay, setEditDay] = useState<string | null>(null);
   const editable = !pubMode(mode) && canManage && !!onSave;
   const save = (patch: Partial<Omit<Itinerary, "token">>) => onSave ? onSave({ ...itinerary, ...patch }) : Promise.resolve(false);
@@ -63,6 +70,7 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
           {canManage && (
             <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
               {editable && <button type="button" onClick={() => setEditHeader(true)} className="btn-ghost !py-1.5 text-[11.5px]"><Pencil size={12} /> Encabezado</button>}
+              {editable && onUploadFile && <button type="button" onClick={() => setShowFiles((v) => !v)} className="btn-ghost !py-1.5 text-[11.5px]"><FileText size={12} /> Materiales ({files.length})</button>}
               <label className="btn-ghost cursor-pointer !py-1.5 text-[11.5px]"><Upload size={12} /> Cargar JSON<input type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f || !onUpload) return; try { await onUpload(JSON.parse(await f.text())); } catch { alert("El archivo no es un JSON válido."); } e.target.value = ""; }} /></label>
               {itinerary.public
                 ? <button type="button" onClick={() => onPublish?.(false)} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]"><Lock size={12} /> Retirar del público</button>
@@ -75,6 +83,22 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
       )}
       {!pub && itinerary.public && publicUrl && <p className="num mb-4 break-all rounded-xl bg-cyan-wash/60 px-3 py-2 text-[11.5px] text-ink"><Globe size={12} className="mr-1 inline text-cyan-deep" /> Público en {publicUrl}</p>}
       {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+      {!pub && showFiles && onUploadFile && (
+        <div className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[13px] font-bold text-ink">Materiales en PDF</div>
+            <span className="text-[11px] text-muted">Se guardan en el almacenamiento (R2) y se abren en línea; vincúlalos a cada momento con «Editar textos».</span>
+            <label className="btn-primary ml-auto cursor-pointer !py-1.5 text-[11.5px]"><Upload size={12} /> Subir PDF<input type="file" accept="application/pdf" multiple className="hidden" onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) await onUploadFile(f, "material"); e.target.value = ""; }} /></label>
+          </div>
+          <FileList files={files} href={fileHref} onRemove={onRemoveFile} busy={busy} />
+        </div>
+      )}
+      {pub && files.length > 0 && (
+        <details className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
+          <summary className="cursor-pointer text-[13px] font-bold text-ink">Materiales de la convención ({files.length} PDF)</summary>
+          <FileList files={files} href={fileHref} busy={false} />
+        </details>
+      )}
 
       <div className="sticky top-[54px] z-10 -mx-1 mb-4 flex flex-wrap gap-1.5 bg-surface-2/90 px-1 py-2 backdrop-blur sm:top-0">
         {itinerary.days.map((d) => <a key={d.id} href={`#dia-${d.id}`} className="chip !py-1 text-[11px] font-bold">{d.title.split(" · ")[0]}</a>)}
@@ -118,7 +142,8 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
         );
       })}
 
-      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy}
+      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy} files={files} href={fileHref}
+        onFiles={editable && onMomentFiles ? (ids) => onMomentFiles(cur.id, ids) : undefined}
         onClose={() => setOpen(-1)} onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined}
         onComment={onComment} onResolve={onResolve} onDelete={onDelete}
         onEdit={editable ? async (next) => { const items = itinerary.items.map((x) => (x.id === cur.id ? next : x)); return save({ items }); } : undefined}
@@ -132,13 +157,15 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
 
 const pubMode = (m: "sesion" | "publico") => m === "publico";
 
-function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove }: {
+function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles }: {
   it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; canManage: boolean; busy: boolean; onClose: () => void; onPrev?: () => void; onNext?: () => void;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string) => Promise<boolean>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>; onDelete?: (id: string) => Promise<void>;
   onEdit?: (next: ItineraryItem) => Promise<boolean>; onRemove?: () => Promise<boolean>; onMove?: (dir: -1 | 1) => Promise<boolean>;
+  files: ItineraryFile[]; href: (id: string) => string; onFiles?: (ids: string[]) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
+  const linked = (it.files ?? []).map((id) => files.find((f) => f.id === id)).filter((f): f is ItineraryFile => !!f);
   const [f, setF] = useState(() => ({ ...it, materialsText: it.materials.join("\n") }));
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const startEdit = () => { setF({ ...it, materialsText: it.materials.join("\n") }); setEditing(true); };
@@ -206,6 +233,18 @@ function MomentModal({ it, day, days, comments, pub, canManage, busy, onClose, o
           <div className="rounded-xl bg-cyan-wash/60 px-3.5 py-3"><div className="label !text-[9px]">Plataforma y pantalla</div><p className="mt-1 text-[13px] text-ink">{it.platform || "—"}</p></div>
         </div>
         <div><div className="label !text-[9px]">Salida del momento</div><p className="mt-1 text-ink">{it.output || "—"}</p></div>
+        {(linked.length > 0 || onFiles) && (
+          <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
+            <div className="label !text-[9px]">Materiales en PDF de este momento</div>
+            {linked.length ? <ul className="mt-1.5 space-y-1">{linked.map((f) => <li key={f.id}><a href={href(f.id)} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-cyan-deep hover:underline"><FileText size={13} /> {f.name}<span className="num text-[10.5px] font-normal text-faint">· {Math.max(1, Math.round(f.size / 1024))} KB</span></a></li>)}</ul> : <p className="mt-1 text-[12px] italic text-faint">Sin materiales vinculados.</p>}
+            {onFiles && files.length > 0 && (
+              <details className="mt-2"><summary className="cursor-pointer text-[11.5px] font-bold text-ink">Vincular materiales</summary>
+                <div className="mt-1.5 grid gap-1 sm:grid-cols-2">{files.map((f) => { const on = (it.files ?? []).includes(f.id); return (
+                  <label key={f.id} className="flex items-center gap-2 text-[12px] text-ink"><input type="checkbox" checked={on} disabled={busy} onChange={() => void onFiles(on ? (it.files ?? []).filter((x) => x !== f.id) : [...(it.files ?? []), f.id])} /> {f.name}</label>); })}</div>
+              </details>
+            )}
+          </div>
+        )}
         </>)}
 
         <div className="border-t border-line pt-3">
@@ -269,5 +308,22 @@ function DayForm({ day, busy, onClose, onSave }: { day: { id: string; title: str
         <label className="block"><span className="label !text-[9px]">Subtítulo</span><input value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
       </div>
     </Modal>
+  );
+}
+
+function FileList({ files, href, onRemove, busy }: { files: ItineraryFile[]; href: (id: string) => string; onRemove?: (id: string) => Promise<boolean>; busy: boolean }) {
+  if (!files.length) return <p className="mt-2 text-[12px] italic text-faint">Aún no hay materiales. Sube las plantillas y presentaciones en PDF.</p>;
+  const groups = [...new Set(files.map((f) => f.group ?? "material"))];
+  return (
+    <div className="mt-2 grid gap-1 sm:grid-cols-2">
+      {groups.map((g) => files.filter((f) => (f.group ?? "material") === g).map((f) => (
+        <div key={f.id} className="flex items-center gap-2 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-[12px]">
+          <FileText size={13} className="shrink-0 text-cyan-deep" />
+          <a href={href(f.id)} target="_blank" rel="noopener" className="min-w-0 flex-1 break-words font-semibold leading-snug text-ink hover:text-cyan-deep">{f.name}</a>
+          <span className="num shrink-0 text-[10.5px] text-faint">{Math.max(1, Math.round(f.size / 1024))} KB</span>
+          {onRemove && <button type="button" disabled={busy} onClick={() => { if (confirm(`¿Quitar «${f.name}» de los materiales?`)) void onRemove(f.id); }} className="rounded-md p-1 text-faint hover:text-bad" title="Quitar"><Trash2 size={12} /></button>}
+        </div>
+      )))}
+    </div>
   );
 }

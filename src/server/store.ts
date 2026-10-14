@@ -22,7 +22,7 @@ import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Ev
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
-import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, type Itinerary, type ItineraryComment } from "@/lib/itinerario";
+import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import { RESERVED } from "@/lib/tenant-url";
@@ -1984,6 +1984,51 @@ export async function resetPassword(token: string, password: unknown): Promise<{
   const user: SessionUser = { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, company: company ? { slug: company.slug, name: company.name, shortName: company.shortName } : undefined };
   audit(user, "task", u.email, "contraseña restablecida por correo");
   return { ok: true, user };
+}
+
+
+/** Registra un material (PDF ya guardado en el almacenamiento) en el itinerario. */
+export function addItineraryFile(actor: SessionUser, file: { id: string; name: string; size: number; group?: string }): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
+  const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
+  if (!FILE_ID_RE.test(file.id)) return { ok: false, status: 422, error: "Identificador de archivo inválido." };
+  const entry: ItineraryFile = { id: file.id, name: str(file.name, 160), size: file.size, at: new Date().toISOString(), by: actor.name, ...(file.group ? { group: str(file.group, 40) } : {}) };
+  const files = [...(prev.files ?? []).filter((f) => f.id !== file.id), entry].sort((a, b) => a.name.localeCompare(b.name));
+  const it: Itinerary = { ...prev, files };
+  saveItinerary(actor, it, `material del itinerario: ${entry.name}`);
+  return { ok: true, itinerary: it };
+}
+/** Quita un material del itinerario y de los momentos que lo enlazan (el objeto se borra aparte). */
+export function removeItineraryFile(actor: SessionUser, id: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
+  const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
+  const key = String(id ?? "");
+  if (!(prev.files ?? []).some((f) => f.id === key)) return { ok: false, status: 404, error: "El material no existe." };
+  const it: Itinerary = { ...prev, files: (prev.files ?? []).filter((f) => f.id !== key), items: prev.items.map((x) => {
+    if (!x.files?.includes(key)) return x;
+    const rest = x.files.filter((f) => f !== key);
+    if (rest.length) return { ...x, files: rest };
+    const { files: _f, ...sin } = x; void _f; return sin;   // sin vínculos → sin la clave
+  }) };
+  saveItinerary(actor, it, `material retirado: ${key}`);
+  return { ok: true, itinerary: it };
+}
+/** Vincula materiales a un momento (lista completa de ids). */
+export function setMomentFiles(actor: SessionUser, momentId: unknown, fileIds: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
+  const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
+  const mid = str(momentId, 24).toLowerCase();
+  if (!prev.items.some((x) => x.id === mid)) return { ok: false, status: 422, error: "El momento no existe." };
+  const known = new Set((prev.files ?? []).map((f) => f.id));
+  const ids = Array.isArray(fileIds) ? [...new Set((fileIds as unknown[]).map((f) => String(f)).filter((f) => known.has(f)))] : [];
+  const it: Itinerary = { ...prev, items: prev.items.map((x) => (x.id === mid ? (ids.length ? { ...x, files: ids } : (({ files: _f, ...rest }) => { void _f; return rest; })(x)) : x)) };
+  saveItinerary(actor, it, `materiales del momento ${mid}: ${ids.length}`);
+  return { ok: true, itinerary: it };
+}
+/** Material del itinerario de la empresa activa, con el token público si aplica. */
+export function itineraryFileOf(id: string, token?: string): ItineraryFile | null {
+  const it = token !== undefined ? publicItineraryOf(token) : itineraryOf();
+  return it?.files?.find((f) => f.id === id) ?? null;
 }
 
 /* ── medición efectiva: la publicada en el store manda sobre el seed ── */

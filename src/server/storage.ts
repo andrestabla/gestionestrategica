@@ -3,12 +3,12 @@
 // están definidas R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY y
 // R2_BUCKET. Misma interfaz en ambos casos: cambia el destino, no el contrato.
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { unlink, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { effectiveR2 } from "@/server/store";
 
-export type Folder = "uploads" | "branding";
+export type Folder = "uploads" | "branding" | "materiales";
 
 const r2Config = () => {
   // rige la integración guardada en la plataforma (Administración → Integraciones) si está activa y completa; si no, el entorno
@@ -65,12 +65,25 @@ export async function putObject(folder: Folder, key: string, body: Buffer, mime:
     await (await s3()).send(new PutObjectCommand({ Bucket: cfg.bucket, Key: `${folder}/${key}`, Body: body, ContentType: mime }));
     return;
   }
-  const dir = path.join(process.cwd(), "var", folder);
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, key), body);
+  const file = path.join(process.cwd(), "var", folder, key);   // la clave puede llevar subcarpeta (p. ej. materiales/<empresa>/…)
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, body);
 }
 
 /** Lee un objeto; null si no existe. */
+/** Borra un objeto (sin error si no existe). */
+export async function deleteObject(folder: Folder, key: string): Promise<void> {
+  const cfg = r2Config();
+  try {
+    if (cfg) {
+      const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      await (await s3()).send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: `${folder}/${key}` }));
+      return;
+    }
+    await unlink(path.join(process.cwd(), "var", folder, key));
+  } catch { /* ya no existe */ }
+}
+
 export async function getObject(folder: Folder, key: string): Promise<Buffer | null> {
   const cfg = r2Config();
   try {
@@ -84,4 +97,11 @@ export async function getObject(folder: Folder, key: string): Promise<Buffer | n
   } catch {
     return null;
   }
+}
+
+/** Content-Disposition con nombre ASCII de respaldo y nombre UTF-8 (RFC 5987), siempre con extensión .pdf. */
+export function pdfDisposition(name: string): string {
+  const base = name.replace(/\.pdf$/i, "");
+  const ascii = base.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "").replace(/["\\]/g, "").trim() || "material";
+  return `inline; filename="${ascii}.pdf"; filename*=UTF-8''${encodeURIComponent(base + ".pdf")}`;
 }

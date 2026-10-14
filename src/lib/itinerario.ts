@@ -14,9 +14,13 @@ export type ItineraryDay = { id: string; title: string; sub?: string };
 export type ItineraryItem = {
   id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string;
   method: string; materials: string[]; platform: string; output: string;
+  files?: string[];     // ids de archivos (PDF) vinculados a este momento
 };
+/** Archivo del itinerario guardado en el almacenamiento (R2 o local), siempre PDF. */
+export type ItineraryFile = { id: string; name: string; size: number; at: string; by?: string; group?: string };
 export type Itinerary = {
   title: string; sub?: string; days: ItineraryDay[]; items: ItineraryItem[];
+  files?: ItineraryFile[];   // materiales en PDF (plantillas, presentaciones, guía)
   public: boolean;      // visible sin sesión en /<empresa>/p/itinerario/<token>
   token?: string;       // enlace público; se conserva al despublicar y cambia al regenerar
 };
@@ -35,6 +39,8 @@ export const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const s = (v: unknown, max = 400) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 /** Valida el itinerario recibido (JSON del generador o de la interfaz). */
+export const FILE_ID_RE = /^[a-z0-9][a-z0-9-]{3,60}$/;
+
 export function parseItinerary(input: unknown): { ok: true; itinerary: Omit<Itinerary, "public" | "token"> } | { ok: false; error: string } {
   if (!input || typeof input !== "object") return { ok: false, error: "El itinerario debe ser un objeto con días e ítems." };
   const raw = input as Record<string, unknown>;
@@ -58,12 +64,26 @@ export function parseItinerary(input: unknown): { ok: true; itinerary: Omit<Itin
     const minutes = Math.max(0, Math.min(600, Math.round(Number(it?.minutes) || 0)));
     const kind = isKind(it?.kind) ? it.kind : "plenaria";
     const materials = Array.isArray(it?.materials) ? (it.materials as unknown[]).map((m) => s(m, 160)).filter(Boolean).slice(0, 12) : [];
-    items.push({ id, day, time, minutes, title, kind, who: s(it?.who, 200), method: s(it?.method, 1200), materials, platform: s(it?.platform, 400), output: s(it?.output, 300) });
+    const files = Array.isArray(it?.files) ? (it.files as unknown[]).map((f) => s(f, 60)).filter((f) => FILE_ID_RE.test(f)).slice(0, 20) : [];
+    items.push({ id, day, time, minutes, title, kind, who: s(it?.who, 200), method: s(it?.method, 1200), materials, platform: s(it?.platform, 400), output: s(it?.output, 300), ...(files.length ? { files } : {}) });
   }
-  return { ok: true, itinerary: { title, ...(s(raw.sub, 200) ? { sub: s(raw.sub, 200) } : {}), days, items } };
+  const files: ItineraryFile[] = [];
+  if (Array.isArray(raw.files)) {
+    for (const f of raw.files as Record<string, unknown>[]) {
+      const id = s(f?.id, 60); const name = s(f?.name, 160);
+      if (!FILE_ID_RE.test(id) || !name || files.some((x) => x.id === id)) continue;
+      files.push({ id, name, size: Math.max(0, Math.round(Number(f?.size) || 0)), at: s(f?.at, 40) || new Date().toISOString(), ...(s(f?.by, 80) ? { by: s(f?.by, 80) } : {}), ...(s(f?.group, 40) ? { group: s(f?.group, 40) } : {}) });
+    }
+  }
+  const known = new Set(files.map((f) => f.id));
+  for (const it of items) if (it.files) { it.files = it.files.filter((f) => known.has(f)); if (!it.files.length) delete it.files; }
+  return { ok: true, itinerary: { title, ...(s(raw.sub, 200) ? { sub: s(raw.sub, 200) } : {}), days, items, ...(files.length ? { files } : {}) } };
 }
 
 /** Lo que ve el público: sin el token. */
 export const publicItinerary = (it: Itinerary): Omit<Itinerary, "token"> => { const { token: _t, ...rest } = it; void _t; return rest; };
 
 export const itineraryPublicPath = (slug: string, token: string) => `/${slug}/p/itinerario/${token}`;
+/** Ruta de lectura en línea de un material: con sesión o, en el enlace público, con el token. */
+export const materialPath = (fileId: string, pub?: { slug: string; token: string }) => pub ? `/${pub.slug}/api/public/itinerario/material?token=${pub.token}&id=${fileId}` : `/api/td/itinerario/material/${fileId}`;
+export const fileIdFrom = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\.pdf$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);

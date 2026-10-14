@@ -71,3 +71,26 @@ test("comentarios: desde la sesión y desde el enlace público; atender y elimin
     assert.equal(itineraryComments().length, 1);
   });
 });
+
+test("materiales: registro, vínculo por momento y retiro", async () => {
+  const { addItineraryFile, removeItineraryFile, setMomentFiles, itineraryFileOf } = await import("../src/server/store");
+  await inAndina(() => {
+    resetStore(); setItinerary(advisor, IT);
+    assert.equal(addItineraryFile(junta, { id: "deck-01", name: "Deck 01", size: 10 }).ok, false);
+    const a = addItineraryFile(advisor, { id: "deck-01", name: "Deck 01", size: 1024, group: "presentacion" }); assert.equal(a.ok, true);
+    addItineraryFile(advisor, { id: "plantilla-01", name: "Plantilla 01", size: 2048 });
+    assert.equal(itineraryOf()?.files?.length, 2);
+    assert.equal(addItineraryFile(advisor, { id: "MAL ID", name: "x", size: 1 }).ok, false);
+    const v = setMomentFiles(advisor, "d1-02", ["deck-01", "inexistente", "plantilla-01"]); assert.equal(v.ok, true);
+    assert.deepEqual(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, ["deck-01", "plantilla-01"]);
+    assert.equal(itineraryFileOf("deck-01")?.name, "Deck 01");
+    publishItinerary(advisor, true); const tok = itineraryOf()!.token!;
+    assert.equal(itineraryFileOf("deck-01", tok)?.id, "deck-01"); assert.equal(itineraryFileOf("deck-01", "otro-token-no-valido-xx"), null);
+    // recargar el itinerario desde JSON conserva archivos y vínculos válidos
+    const again = setItinerary(advisor, { ...IT, files: itineraryOf()!.files, items: IT.items.map((x) => (x.id === "d1-02" ? { ...x, files: ["deck-01", "fantasma"] } : x)) });
+    assert.equal(again.ok, true); assert.deepEqual(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, ["deck-01"]);
+    const r = removeItineraryFile(advisor, "deck-01"); assert.equal(r.ok, true);
+    assert.equal(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, undefined);
+    assert.equal(removeItineraryFile(advisor, "deck-01").ok, false);
+  });
+});

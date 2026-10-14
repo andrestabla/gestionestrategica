@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment } from "@/server/store";
+import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile } from "@/server/store";
+import { deleteObject } from "@/server/storage";
 import { can } from "@/lib/permissions";
 import { itineraryPublicPath, publicItinerary } from "@/lib/itinerario";
 import { originOf } from "../convencion/acceso/route";
@@ -31,6 +32,8 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     case "comment": r = addItineraryComment(body, user); break;
     case "resolve": r = resolveItineraryComment(user, body.id, body.resolved !== false); break;
     case "delete": r = deleteItineraryComment(user, body.id); break;
+    case "files": r = setMomentFiles(user, body.momentId, body.fileIds); break;
+    case "removeFile": r = removeItineraryFile(user, body.id); if (r.ok) await deleteObject("materiales", `${user.company!.slug}/${String(body.id)}.pdf`); break;
     default: return NextResponse.json({ error: "Operación desconocida" }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
