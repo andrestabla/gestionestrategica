@@ -2537,7 +2537,7 @@ export const INTEGRATION_SPECS: Record<IntegrationKey, IntegrationSpec> = {
   },
   r2: {
     name: "Cloudflare R2",
-    purpose: "Almacenamiento de evidencias, logos y exportaciones (hoy: var/uploads local).",
+    purpose: "Almacenamiento de evidencias, logos y exportaciones; sin configurar, los archivos se guardan en el servidor.",
     fields: [
       {
         key: "accountId", label: "Account ID", placeholder: "32 caracteres hex",
@@ -2583,24 +2583,35 @@ export function sesFromEnv(): IntegrationConfig | null {
   return { enabled: true, fields: { region: process.env.AWS_REGION ?? "us-east-1", accessKeyId: id, secretAccessKey: secret, sender }, updatedBy: "Variables de entorno del despliegue" };
 }
 
-/** Configuración de SES que rige: la guardada en la plataforma si está activa y
-    completa; si no, la del entorno. Sirve también fuera de una empresa activa. */
-export function effectiveSes(): IntegrationConfig | null {
+/** Cloudflare R2 configurado por variables de entorno del despliegue. */
+export function r2FromEnv(): IntegrationConfig | null {
+  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
+  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET) return null;
+  return { enabled: true, fields: { accountId: R2_ACCOUNT_ID, accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY, bucket: R2_BUCKET }, updatedBy: "Variables de entorno del despliegue" };
+}
+const envIntegration = (key: IntegrationKey): IntegrationConfig | null => (key === "ses" ? sesFromEnv() : key === "r2" ? r2FromEnv() : null);
+
+/** Configuración que rige para una integración: la guardada en la plataforma
+    si está activa y completa; si no, la del entorno. Sirve también fuera de
+    una empresa activa (p. ej. al enviar el correo de recuperación). */
+export function effectiveIntegration(key: IntegrationKey): IntegrationConfig | null {
   try {
     if (hasTenantContext()) {
-      const cfg = integrations().get("ses");
-      if (cfg?.enabled && INTEGRATION_SPECS.ses.fields.every((f) => cfg.fields[f.key]?.trim())) return cfg;
+      const cfg = integrations().get(key);
+      if (cfg?.enabled && INTEGRATION_SPECS[key].fields.every((f) => cfg.fields[f.key]?.trim())) return cfg;
     }
   } catch { /* sin empresa activa */ }
-  return sesFromEnv();
+  return envIntegration(key);
 }
+export const effectiveSes = () => effectiveIntegration("ses");
+export const effectiveR2 = () => effectiveIntegration("r2");
 
 export function getIntegrationsMasked() {
   return (Object.keys(INTEGRATION_SPECS) as IntegrationKey[]).map((key) => {
     const spec = INTEGRATION_SPECS[key];
     const stored = integrations().get(key);
-    // SES: si no hay configuración propia, rige la del entorno y se muestra activa
-    const env = key === "ses" && !(stored?.enabled) ? sesFromEnv() : null;
+    // SES y R2: si no hay configuración propia activa, rige la del entorno y se muestra activa
+    const env = !(stored?.enabled) ? envIntegration(key) : null;
     const cfg = stored?.enabled ? stored : (env ?? stored);
     return {
       key,

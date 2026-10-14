@@ -5,6 +5,7 @@ import {
   getIntegrationsMasked, setIntegration, getBranding, setBranding,
   getBrandingHistory, type IntegrationKey } from "@/server/store";
 import { sendMail } from "@/server/mail";
+import { testStorage } from "@/server/storage";
 
 // GET /api/td/settings — configuración de administración.
 // branding: cualquier sesión (el shell lo aplica); integraciones: solo
@@ -23,6 +24,12 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
 
+  if (body.integration?.key === "r2" && body.integration.test) {
+    if (!can(user, "manage_platform")) return NextResponse.json({ error: "Solo el administrador de la plataforma prueba el almacenamiento." }, { status: 403 });
+    const r = await testStorage();
+    if (!r.ok) return NextResponse.json({ error: r.error }, { status: 503 });
+    return NextResponse.json({ ok: true, message: r.detail });
+  }
   if (body.integration?.key === "ses" && body.integration.test) {
     if (!can(user, "manage_platform")) return NextResponse.json({ error: "Solo el administrador de la plataforma prueba el envío." }, { status: 403 });
     const r = await sendMail({ to: user.email, subject: "Prueba de envío · 4Shine Empresas (Amazon SES)", text: `Hola ${user.name},\n\nEste es un correo de prueba enviado desde Administración → Integraciones de la plataforma de gestión estratégica. Si lo recibes, el correo transaccional (recuperación de contraseña, notificaciones) está operativo.\n\n4Shine Empresas · Algoritmo T` });

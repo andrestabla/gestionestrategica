@@ -568,8 +568,8 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
             className="btn-primary flex-1 !py-1.5 text-[11.5px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
           </button>
-          {it.key === "ses" && it.configured && (
-            <button onClick={testSend} disabled={saving} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title="Envía un correo de prueba a tu propia dirección"><Send size={12} /> Probar</button>
+          {(it.key === "ses" || it.key === "r2") && it.configured && (
+            <button onClick={testSend} disabled={saving} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
           )}
           <button onClick={() => post({ enabled: !it.enabled })}
             disabled={saving || (!it.enabled && !it.configured) || it.source === "entorno"}
