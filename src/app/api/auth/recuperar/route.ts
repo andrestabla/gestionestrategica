@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requestPasswordReset } from "@/server/store";
+import { requestPasswordReset, companyBySlug } from "@/server/store";
 import { resetLink, resetMail } from "@/lib/recuperacion";
 import { sendMail } from "@/server/mail";
 import { originOf } from "@/app/api/td/convencion/acceso/route";
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const r = await requestPasswordReset(parsed.data.email, parsed.data.tenant ?? null);
   if (r) {
     const link = resetLink(originOf(req), r.slug, r.token);
-    const m = resetMail(r.name, link);
+    const m = resetMail(r.name, link, undefined, r.slug ? companyBySlug(r.slug)?.name : undefined);
     const sent = await sendMail({ to: r.email, subject: m.subject, text: m.text, html: m.html });
     if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 503 });
   }

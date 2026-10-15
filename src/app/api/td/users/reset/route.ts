@@ -17,7 +17,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (!target.active) return NextResponse.json({ error: "La cuenta está desactivada; reactívala antes de enviar el enlace." }, { status: 422 });
   const r = await requestPasswordReset(email, user.company?.slug ?? null);
   if (!r) return NextResponse.json({ error: "No se pudo emitir el enlace (sin base de datos o cuenta no encontrada)." }, { status: 503 });
-  const m = resetMail(r.name, resetLink(originOf(req), r.slug, r.token));
+  const m = resetMail(r.name, resetLink(originOf(req), r.slug, r.token), undefined, user.company?.name);
   const sent = await sendMail({ to: r.email, subject: m.subject, text: m.text, html: m.html });
   if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 503 });
   return NextResponse.json({ ok: true, message: `Enlace de restablecimiento enviado a ${r.email} (vale 60 minutos).` });
