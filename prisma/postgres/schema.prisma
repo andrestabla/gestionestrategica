@@ -66,6 +66,7 @@ model Company {
   logoUrl     String?
   active      Boolean @default(true)
   createdBy   String?
+  dataVersion Int     @default(0) // sube con cada escritura de la empresa: las demás instancias recargan su memoria al verla cambiar
 
   users           User[]
   assessments     Assessment[]

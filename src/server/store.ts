@@ -154,6 +154,9 @@ export type TenantState = {
   notifRead: Map<string, Set<string>>;
   itinComments: Map<string, ItineraryComment>;   // comentarios al itinerario de la convención
   hydrated: boolean;
+  version: number;        // versión de datos de la empresa que refleja esta memoria (-1 = desconocida: recargar)
+  versionAt: number;      // último chequeo de la versión contra la base
+  hydrating?: Promise<void>;   // recarga en curso (las peticiones concurrentes la esperan)
 };
 
 export type CompanyRecord = CompanyInfo & { dbId: string | null };
@@ -198,7 +201,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
     users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, responsibleId: u.responsibleId, active: true, seeded: true })),
-    integrations: new Map(), notifRead: new Map(), itinComments: new Map(), hydrated: false,
+    integrations: new Map(), notifRead: new Map(), itinComments: new Map(), hydrated: false, version: -1, versionAt: 0,
   };
 }
 
@@ -339,24 +342,54 @@ export async function hydrateCompanies() {
   }
 }
 
-/** Hidrata la memoria de la empresa activa desde la base (una vez por proceso y empresa). */
+/** Cada cuánto, como máximo, una instancia pregunta a la base si la versión de la empresa cambió. */
+const VERSION_CHECK_MS = 1_000;
+
+/** Hidrata la memoria de la empresa activa desde la base. La primera vez carga
+    todo; después, en cada petición (como máximo una vez por segundo) compara la
+    versión de datos de la empresa con la de la base y, si otra instancia
+    escribió, recarga. Así varias instancias serverless ven lo mismo con un
+    retraso de un par de segundos; las peticiones concurrentes esperan la misma recarga. */
 export async function hydrateFromDb() {
   if (!hasDb()) return;
   await hydrateCompanies();
   const st = S();
-  if (st.hydrated) return;
+  if (st.hydrating) { await st.hydrating; return; }
+  if (st.hydrated) {
+    if (Date.now() - st.versionAt < VERSION_CHECK_MS || !st.dbId) return;
+    st.versionAt = Date.now();
+    let remote: number | null = null;
+    try {
+      const db = await prisma();
+      const row = await db.company.findUnique({ where: { id: st.dbId }, select: { dataVersion: true } });
+      remote = row?.dataVersion ?? null;
+    } catch (e) { console.error("[4shine] chequeo de versión falló:", (e as Error).message); return; }
+    if (remote === null || remote === st.version) return;
+    g.companiesHydratedAt = 0;   // el registro (palancas, sesiones, itinerario…) también pudo cambiar
+    await hydrateCompanies();
+  }
+  st.hydrating = loadTenant(st);
+  try { await st.hydrating; } finally { st.hydrating = undefined; }
+}
+
+async function loadTenant(st: TenantState) {
   try {
     const db = await prisma();
     const companyId = st.dbId ?? g.companies.get(st.slug)?.dbId;
     if (!companyId) { st.hydrated = true; return; }   // empresa solo en memoria
     st.dbId = companyId;
-    // catálogo: la demo nace del seed; las demás empresas, de la base
+    // la versión que vamos a reflejar: si alguien escribe mientras cargamos, el siguiente chequeo volverá a recargar
+    const verRow = await db.company.findUnique({ where: { id: companyId }, select: { dataVersion: true } });
+    const version: number = verRow?.dataVersion ?? 0;
+    // catálogo: la demo nace del seed; las demás empresas, de la base (con el registro fresco de la empresa)
     if (st.slug !== DEFAULT_TENANT) {
-      const fresh = await readCatalog(db, { ...st.catalog.company, dbId: companyId });
+      const rec = g.companies.get(st.slug);
+      const fresh = await readCatalog(db, { ...st.catalog.company, ...(rec ?? {}), dbId: companyId });
       const next = newState(st.slug, fresh, companyId);
       next.users = st.users;
       Object.assign(st, next);
     }
+    st.version = version; st.versionAt = Date.now();
     const W = { where: { companyId } };
     type DbTaskRow = {
       id: string; status: string; assigneeId: string; coAssigneeIds: unknown;
@@ -729,8 +762,13 @@ export const getPlatformUsers = (): ManagedUser[] => g.platformUsers;
 const pendingWrites = new Set<Promise<unknown>>();
 async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
+  const st = g.tenants.get(currentTenant());   // empresa activa (si la escritura es de una empresa)
   const run = (async () => {
-    try { await fn(await prisma()); } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
+    try {
+      const db = await prisma();
+      await fn(db);
+      await bumpVersion(db, st);
+    } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
   })();
   pendingWrites.add(run); void run.finally(() => pendingWrites.delete(run));
   try {
@@ -739,6 +777,15 @@ async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   } catch { /* sin ámbito de petición: la promesa sigue su curso */ }
   await run;
 }
+/** Sube la versión de datos de la empresa en la base y la refleja en memoria. Si otra instancia
+    escribió entre medias (la versión devuelta no es la esperada), la memoria se marca desconocida
+    para que el siguiente chequeo recargue. */
+async function bumpVersion(db: AnyPrisma, st: TenantState | undefined) {
+  if (!st?.dbId) return;
+  const row = await db.company.update({ where: { id: st.dbId }, data: { dataVersion: { increment: 1 } }, select: { dataVersion: true } });
+  st.version = row.dataVersion === st.version + 1 ? row.dataVersion : -1;
+}
+
 /** Espera a que terminen todas las escrituras pendientes. Para scripts que corren fuera de una petición
     (carga del itinerario, seed): sin esto, el proceso puede terminar antes de que la base reciba la escritura. */
 export async function flushPersist() { while (pendingWrites.size) await Promise.allSettled([...pendingWrites]); }
@@ -1803,7 +1850,21 @@ export function setPrioSession(user: SessionUser, tribeId: unknown, action: Prio
   }
   const sessions = { ...(c.company.prioSessions ?? {}), [tribe]: next };
   c.company.prioSessions = sessions;
-  const rec = g.companies.get(c.company.slug); if (rec) { rec.prioSessions = sessions; if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("empresa", (db) => db.company.update({ where: { id: dbId }, data: companyRow(rec) })); } }
+  const rec = g.companies.get(c.company.slug);
+  if (rec) {
+    rec.prioSessions = sessions;
+    if (hasDb() && rec.dbId) {
+      const dbId = rec.dbId;
+      // solo la sesión de esta tribu: en PostgreSQL se fusiona en la base (dos líderes en instancias distintas no se pisan)
+      void persist("sesión de priorización", async (db) => {
+        if (/^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "")) {
+          await db.$executeRaw`UPDATE "Company" SET "prioSessions" = COALESCE("prioSessions", '{}'::jsonb) || ${JSON.stringify({ [tribe]: next })}::jsonb WHERE "id" = ${dbId}`;
+        } else {
+          await db.company.update({ where: { id: dbId }, data: { prioSessions: sessions as never } });
+        }
+      });
+    }
+  }
   audit(user, "task", `tribu:${tribe}`, `priorización en vivo: ${action} → ${status}${next.order ? ` (orden de ${next.order.length} iniciativas)` : ""}`);
   return { ok: true, session: next };
 }
