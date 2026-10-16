@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { hydrateCompanies, companyBySlug, publicItineraryOf, itineraryComments } from "@/server/store";
+import { hydrateCompanies, companyBySlug, publicItineraryOf, participantsItineraryOf, itineraryComments } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
-import { publicItinerary } from "@/lib/itinerario";
+import { publicItinerary, participantsItinerary } from "@/lib/itinerario";
 import { PublicItinerario } from "./publico";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,10 @@ export default async function ItinerarioPublicoPage({ params }: { params: Promis
   await hydrateCompanies();
   const c = companyBySlug(tenant);
   if (!c || !c.active) notFound();
-  const data = await inTenant(c.slug, async () => { const it = publicItineraryOf(token); return it ? { itinerary: publicItinerary(it), comments: itineraryComments() } : null; });
+  const data = await inTenant(c.slug, async () => {
+    const it = publicItineraryOf(token); if (it) return { audience: "organizador" as const, itinerary: publicItinerary(it), comments: itineraryComments() };
+    const p = participantsItineraryOf(token); return p ? { audience: "participantes" as const, itinerary: { ...participantsItinerary(p), public: true, items: participantsItinerary(p).items.map((x) => ({ ...x, method: "", materials: [], platform: "" })) }, comments: [] } : null;
+  });
   if (!data) notFound();
-  return <PublicItinerario tenant={c.slug} token={token} company={{ name: c.name, shortName: c.shortName }} itinerary={data.itinerary} comments={data.comments} />;
+  return <PublicItinerario tenant={c.slug} token={token} company={{ name: c.name, shortName: c.shortName }} itinerary={data.itinerary} comments={data.comments} audience={data.audience} />;
 }

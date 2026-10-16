@@ -83,7 +83,7 @@ export default function ConvencionPage() {
       <PageHeader kicker="Convención de planeación" title={`Convención · ${cat.company.name}`}
         desc="De los diagnósticos de las tribus a la dirección compartida, de los objetivos a OKR y prioridades ejecutables. Lo que se decide en sala queda registrado aquí, en vivo."
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
-          {canAccess && tab !== "itinerario" && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR de acceso a esta sección"><QrCode size={13} /> QR de acceso</button>}</span>} />
+          {canAccess && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
 
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3" style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
@@ -834,9 +834,10 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
     setBusy(false);
   };
   const meta = TABS.find((t) => t.id === section)!;
-  const mine = (rows ?? []).filter((r) => ACCESS_SECTIONS.find((x) => x.id === r.section)?.tab === section);
+  const mine = rows ?? [];   // un solo acceso para toda la convención
+  void section;
   return (
-    <Modal wide title={`QR de acceso · ${meta.label}`} sub="Quien lo escanea escribe su nombre y correo, acepta el tratamiento de datos y entra directo a esta sección. El correo identifica: la cuenta se crea una sola vez y se reutiliza." onClose={onClose}
+    <Modal wide title="QR de la convención" sub="Un solo QR para los dos días. Quien lo escanea escribe su nombre y correo, elige su tribu y su rol (miembro o líder de tribu), acepta el tratamiento de datos y entra a la plataforma. El correo identifica: la cuenta se crea una sola vez y se reutiliza." onClose={onClose}
       footer={<button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cerrar</button>}>
       {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
       {!rows ? <p className="text-[12px] text-muted">Cargando…</p> : (
@@ -850,7 +851,7 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
                 <div className="min-w-0 space-y-2.5 text-[12.5px]">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[14px] font-extrabold text-ink">{row.label}</span>
-                    <span className={`chip !py-0 text-[9.5px] ${def.role === "LIDER" ? "chip-gold" : ""}`}>{def.role === "LIDER" ? "edita · líder de tribu" : def.askTribe ? "califica · elige su tribu" : "solo ver"}</span>
+                    <span className="chip chip-gold !py-0 text-[9.5px]">miembro: ve y califica lo de su tribu · líder: además registra OKR y vincula iniciativas</span>
                   </div>
                   <p className="text-[11.5px] leading-snug text-muted">{def.what}</p>
                   <div className="num break-all rounded-lg bg-surface-2 px-3 py-2 text-[11px] text-ink">{row.url}</div>
@@ -863,7 +864,7 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
               </div>
             );
           })}
-          <p className="text-[11px] text-muted">{meta.agenda}. Imprime los QR o proyéctalos al abrir el bloque. Quien ya tiene cuenta conserva su rol; el QR de edición da permiso de edición solo durante esa sesión.</p>
+          <p className="text-[11px] text-muted">{meta.agenda}. Imprime el QR en cada mesa y proyéctalo al abrir cada bloque. Quien ya tiene cuenta conserva su rol; quien entra como líder recibe el permiso de edición solo durante esa sesión. Al cerrar la convención, «Regenerar» invalida el enlace.</p>
         </div>
       )}
     </Modal>
@@ -872,7 +873,7 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
 
 /* ═══ Itinerario de la convención (modo sesión) ═══ */
 
-type ItinData = { itinerary: ItineraryT | null; comments: ItineraryComment[]; publicUrl: string | null; canManage: boolean };
+type ItinData = { itinerary: ItineraryT | null; comments: ItineraryComment[]; publicUrl: string | null; publicUrlP?: string | null; canManage: boolean };
 
 function ItinerarioTab() {
   const [data, setData] = useState<ItinData | null>(null);
@@ -889,7 +890,7 @@ function ItinerarioTab() {
     const j = await res.json().catch(() => null);
     setBusy(false);
     if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
-    setData((d) => ({ itinerary: j.itinerary, comments: j.comments, publicUrl: j.publicUrl, canManage: d?.canManage ?? false }));
+    setData((d) => ({ itinerary: j.itinerary, comments: j.comments, publicUrl: j.publicUrl, publicUrlP: j.publicUrlP ?? null, canManage: d?.canManage ?? false }));
     return true;
   };
   if (!data && !error) return <p className="text-[12.5px] text-muted">Cargando el itinerario…</p>;
@@ -903,9 +904,9 @@ function ItinerarioTab() {
     );
   }
   return (
-    <ItinerarioView itinerary={data.itinerary} comments={data.comments} mode="sesion" canManage={data.canManage} publicUrl={data.publicUrl} error={error} busy={busy}
+    <ItinerarioView itinerary={data.itinerary} comments={data.comments} mode="sesion" canManage={data.canManage} publicUrl={data.publicUrl} publicUrlP={data.publicUrlP ?? null} error={error} busy={busy}
       onComment={(momentId, kind, text) => post({ op: "comment", momentId, kind, text })}
-      onPublish={async (on, regenerate) => { await post({ op: "publish", on, regenerate }); }}
+      onPublish={async (on, regenerate, audience) => { await post({ op: "publish", on, regenerate, audience }); }}
       onUpload={async (json) => { await post({ op: "set", itinerary: json }); }}
       onSave={(it) => post({ op: "set", itinerary: it })}
       onUploadFile={async (file, group) => {

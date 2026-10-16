@@ -6,8 +6,8 @@ import { useState } from "react";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary, ItineraryComment, CommentKind } from "@/lib/itinerario";
 
-export function PublicItinerario({ tenant, token, company, itinerary, comments: initial }: {
-  tenant: string; token: string; company: { name: string; shortName: string }; itinerary: Omit<Itinerary, "token">; comments: ItineraryComment[];
+export function PublicItinerario({ tenant, token, company, itinerary, comments: initial, audience = "organizador" }: {
+  tenant: string; token: string; company: { name: string; shortName: string }; itinerary: Omit<Itinerary, "token" | "tokenP">; comments: ItineraryComment[]; audience?: "organizador" | "participantes";
 }) {
   const [comments, setComments] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function PublicItinerario({ tenant, token, company, itinerary, comments: 
   };
   return (
     <main className="min-h-screen bg-surface-2">
-      <ItinerarioView itinerary={itinerary} comments={comments} mode="publico" company={company} error={error} onComment={comment} publicRef={{ slug: tenant, token }} />
+      <ItinerarioView itinerary={itinerary} comments={comments} mode="publico" audience={audience} company={company} error={error} onComment={comment} publicRef={{ slug: tenant, token }} />
     </main>
   );
 }

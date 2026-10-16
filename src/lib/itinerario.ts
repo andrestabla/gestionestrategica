@@ -21,8 +21,11 @@ export type ItineraryFile = { id: string; name: string; size: number; at: string
 export type Itinerary = {
   title: string; sub?: string; days: ItineraryDay[]; items: ItineraryItem[];
   files?: ItineraryFile[];   // materiales en PDF (plantillas, presentaciones, guía)
-  public: boolean;      // visible sin sesión en /<empresa>/p/itinerario/<token>
+  logo?: string;        // logo de la empresa para las vistas públicas (ruta /… o https://…)
+  public: boolean;      // visible sin sesión en /<empresa>/p/itinerario/<token> (equipo organizador: metodología, materiales, plataforma y comentarios)
   token?: string;       // enlace público; se conserva al despublicar y cambia al regenerar
+  publicP?: boolean;    // agenda para participantes publicada (solo horario, momento, quién y salida)
+  tokenP?: string;      // enlace de la agenda para participantes
 };
 
 export type CommentKind = "metodologico" | "logistico";
@@ -41,7 +44,8 @@ const s = (v: unknown, max = 400) => (typeof v === "string" ? v.trim().slice(0, 
 /** Valida el itinerario recibido (JSON del generador o de la interfaz). */
 export const FILE_ID_RE = /^[a-z0-9][a-z0-9-]{3,60}$/;
 
-export function parseItinerary(input: unknown): { ok: true; itinerary: Omit<Itinerary, "public" | "token"> } | { ok: false; error: string } {
+export type ItineraryData = Omit<Itinerary, "public" | "token" | "publicP" | "tokenP">;
+export function parseItinerary(input: unknown): { ok: true; itinerary: ItineraryData } | { ok: false; error: string } {
   if (!input || typeof input !== "object") return { ok: false, error: "El itinerario debe ser un objeto con días e ítems." };
   const raw = input as Record<string, unknown>;
   const title = s(raw.title, 160); if (title.length < 3) return { ok: false, error: "El itinerario necesita un título." };
@@ -77,11 +81,18 @@ export function parseItinerary(input: unknown): { ok: true; itinerary: Omit<Itin
   }
   const known = new Set(files.map((f) => f.id));
   for (const it of items) if (it.files) { it.files = it.files.filter((f) => known.has(f)); if (!it.files.length) delete it.files; }
-  return { ok: true, itinerary: { title, ...(s(raw.sub, 200) ? { sub: s(raw.sub, 200) } : {}), days, items, ...(files.length ? { files } : {}) } };
+  const logo = s(raw.logo, 300); const logoOk = /^(\/[^\s]+|https:\/\/[^\s]+)$/.test(logo) ? logo : "";
+  return { ok: true, itinerary: { title, ...(s(raw.sub, 200) ? { sub: s(raw.sub, 200) } : {}), days, items, ...(files.length ? { files } : {}), ...(logoOk ? { logo: logoOk } : {}) } };
 }
 
 /** Lo que ve el público: sin el token. */
-export const publicItinerary = (it: Itinerary): Omit<Itinerary, "token"> => { const { token: _t, ...rest } = it; void _t; return rest; };
+export const publicItinerary = (it: Itinerary): Omit<Itinerary, "token" | "tokenP"> => { const { token: _t, tokenP: _p, ...rest } = it; void _t; void _p; return rest; };
+/** Agenda para participantes: solo horario, momento, quién y salida (sin metodología, materiales, plataforma, archivos ni comentarios). */
+export type ParticipantsItinerary = { title: string; sub?: string; logo?: string; days: ItineraryDay[]; items: { id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string; output: string }[] };
+export const participantsItinerary = (it: Itinerary): ParticipantsItinerary => ({
+  title: it.title, ...(it.sub ? { sub: it.sub } : {}), ...(it.logo ? { logo: it.logo } : {}), days: it.days,
+  items: it.items.map((x) => ({ id: x.id, day: x.day, time: x.time, minutes: x.minutes, title: x.title, kind: x.kind, who: x.who, output: x.output })),
+});
 
 export const itineraryPublicPath = (slug: string, token: string) => `/${slug}/p/itinerario/${token}`;
 /** Ruta de lectura en línea de un material: con sesión o, en el enlace público, con el token. */

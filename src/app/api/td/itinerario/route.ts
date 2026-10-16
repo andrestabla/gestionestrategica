@@ -18,6 +18,7 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
     itinerary: it ? (manage ? it : publicItinerary(it)) : null,
     comments: itineraryComments(),
     publicUrl: it?.token && manage ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.token)}` : null,
+    publicUrlP: it?.tokenP && manage ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.tokenP)}` : null,
     canManage: manage,
   });
 });
@@ -28,7 +29,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   let r;
   switch (body.op) {
     case "set": r = setItinerary(user, body.itinerary); break;
-    case "publish": r = publishItinerary(user, !!body.on, !!body.regenerate); break;
+    case "publish": r = publishItinerary(user, !!body.on, !!body.regenerate, body.audience === "participantes" ? "participantes" : "organizador"); break;
     case "comment": r = addItineraryComment(body, user); break;
     case "resolve": r = resolveItineraryComment(user, body.id, body.resolved !== false); break;
     case "delete": r = deleteItineraryComment(user, body.id); break;
@@ -38,5 +39,5 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   const it = itineraryOf();
-  return NextResponse.json({ ok: true, itinerary: it ?? null, comments: itineraryComments(), publicUrl: it?.token ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.token)}` : null });
+  return NextResponse.json({ ok: true, itinerary: it ?? null, comments: itineraryComments(), publicUrl: it?.token ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.token)}` : null, publicUrlP: it?.tokenP ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.tokenP)}` : null });
 });

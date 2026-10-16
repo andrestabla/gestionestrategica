@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
-import { resetStore, accessLinks, updateAccess, accessSectionOf, accessUser, getUsers } from "../src/server/store";
+import { resetStore, accessLinks, updateAccess, accessSectionOf, accessUser, getUsers, catalog } from "../src/server/store";
 import { parseAccess, sectionOfToken, ACCESS_SECTIONS, accessUrl, sectionPath, isCompanyMode } from "../src/lib/acceso";
 import { splitTenantPath } from "../src/lib/tenant-url";
 import type { SessionUser } from "../src/lib/session";
@@ -12,82 +12,78 @@ const advisor: SessionUser = { email: "c@a.co", name: "Advisor", role: "CONSULTO
 const junta: SessionUser = { email: "j@a.co", name: "Junta", role: "DIRECTIVO" };
 const inAndina = <T,>(fn: () => Promise<T> | T) => runWithTenant("andina", async () => fn());
 
-test("enlaces por sección: se crean una vez, se conservan y solo los regenera quien administra usuarios", async () => {
+test("acceso único de la convención: se crea una vez, se conserva y solo lo regenera quien administra usuarios", async () => {
   await inAndina(() => {
     resetStore();
     const r1 = accessLinks(advisor); assert.equal(r1.ok, true);
     const a1 = (r1 as { access: { section: string; token: string; role: string }[] }).access;
-    assert.deepEqual(a1.map((x) => x.section), ACCESS_SECTIONS.map((s) => s.id));
-    assert.equal(a1.find((x) => x.section === "okr")?.role, "LIDER");
-    assert.equal(a1.find((x) => x.section === "priorizacion")?.role, "DIRECTIVO");
+    assert.deepEqual(a1.map((x) => x.section), ["convencion"]);
     const r2 = accessLinks(advisor);
     assert.deepEqual((r2 as typeof r1 & { access: unknown }).access, a1);                     // estable
-    assert.equal(new Set(a1.map((x) => x.token)).size, 7);                                     // únicos (ver/editar en OKR e Iniciativas)
     assert.equal(accessLinks(junta).ok, false);
-    const before = a1.find((x) => x.section === "okr")!.token;
-    const r3 = updateAccess(advisor, "okr", { regenerate: true, role: "DIRECTIVO" });
+    const before = a1[0].token;
+    const r3 = updateAccess(advisor, "convencion", { regenerate: true });
     assert.equal(r3.ok, true);
-    const okr = (r3 as typeof r1 & { access: { section: string; token: string; role: string }[] }).access.find((x) => x.section === "okr")!;
-    assert.notEqual(okr.token, before); assert.equal(okr.role, "DIRECTIVO");
+    const cv = (r3 as typeof r1 & { access: { section: string; token: string; role: string }[] }).access.find((x) => x.section === "convencion")!;
+    assert.notEqual(cv.token, before);
     assert.equal(accessSectionOf(before), null);
-    assert.equal(accessSectionOf(okr.token), "okr");
+    assert.equal(accessSectionOf(cv.token), "convencion");
     assert.equal(updateAccess(advisor, "otra", {}).ok, false);
-    assert.equal(updateAccess(advisor, "okr", { role: "ADMIN" }).ok, false);
+    assert.equal(updateAccess(advisor, "convencion", { role: "ADMIN" }).ok, false);
   });
 });
 
-test("entrada por QR: crea la cuenta una sola vez, la reutiliza por correo y rechaza tokens y correos inválidos", async () => {
+test("entrada por QR: tribu y rol obligatorios, cuenta única por correo, líder con edición y tokens o correos inválidos rechazados", async () => {
   await inAndina(async () => {
     resetStore();
     const links = accessLinks(advisor) as { ok: true; access: { section: string; token: string }[] };
-    const tok = links.access.find((x) => x.section === "priorizacion")!.token;
+    const tok = links.access[0].token;
+    const tribe = catalog().responsibles[0].id;
     const n0 = getUsers().length;
-    // sin aceptar el tratamiento de datos no se crea la cuenta
-    assert.equal((await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec" })).ok, false);
-    const r1 = await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", consent: true });
+    // sin aceptar el tratamiento de datos, sin tribu o sin rol no se crea la cuenta
+    assert.equal((await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", responsibleId: tribe, entryRole: "miembro" })).ok, false);
+    assert.equal((await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", consent: true, entryRole: "miembro" })).ok, false);
+    assert.equal((await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", consent: true, responsibleId: tribe })).ok, false);
+    assert.equal((await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", consent: true, responsibleId: "no-existe", entryRole: "miembro" })).ok, false);
+    // miembro de tribu: cuenta acotada a su tribu (responsable del catálogo)
+    const r1 = await accessUser(tok, { name: "Mishell Mendieta", email: "Mishell@Cresio.ec", consent: true, responsibleId: tribe, entryRole: "miembro" });
     assert.equal(r1.ok, true);
     const u1 = (r1 as { user: SessionUser; created: boolean; section: string });
-    assert.equal(u1.created, true); assert.equal(u1.section, "priorizacion");
-    assert.equal(u1.user.email, "mishell@cresio.ec"); assert.equal(u1.user.role, "DIRECTIVO");
+    assert.equal(u1.created, true); assert.equal(u1.section, "convencion");
+    assert.equal(u1.user.email, "mishell@cresio.ec"); assert.equal(u1.user.role, "RESPONSABLE"); assert.equal(u1.user.responsibleId, tribe);
     assert.equal(u1.user.company?.slug, "andina");
     assert.equal(getUsers().length, n0 + 1);
-    // con la aceptación ya registrada, las siguientes entradas no la exigen
-    const r2 = await accessUser(tok, { name: "Mishell M.", email: "  mishell@cresio.ec " });
+    // vuelve a entrar: misma cuenta, sin duplicar, sin exigir de nuevo la aceptación
+    const r2 = await accessUser(tok, { name: "Mishell M.", email: "  mishell@cresio.ec ", responsibleId: tribe, entryRole: "miembro" });
     assert.equal(r2.ok, true);
     assert.equal((r2 as { created: boolean }).created, false);
-    assert.equal(getUsers().length, n0 + 1);                                                  // sin duplicados
-    assert.equal((r2 as { user: SessionUser }).user.name, "Mishell Mendieta");               // conserva la cuenta existente
-    // el QR de edición (líder de tribu) da rol de edición solo en la sesión; la cuenta guardada conserva el suyo
-    const okrTok = links.access.find((x) => x.section === "okr")!.token;
-    const r3 = await accessUser(okrTok, { name: "Mishell Mendieta", email: "mishell@cresio.ec" });
+    assert.equal(getUsers().length, n0 + 1);
+    assert.equal((r2 as { user: SessionUser }).user.name, "Mishell Mendieta");
+    // si entra como líder, recibe edición solo en la sesión; la cuenta guardada sigue siendo de miembro
+    const r3 = await accessUser(tok, { name: "Mishell Mendieta", email: "mishell@cresio.ec", responsibleId: tribe, entryRole: "lider" });
     assert.equal((r3 as { user: SessionUser }).user.role, "LIDER");
-    assert.equal(getUsers().find((u) => u.email === "mishell@cresio.ec")?.role, "DIRECTIVO");
-    // el QR de «solo ver» no eleva el rol
-    const okrVer = links.access.find((x) => x.section === "okr-ver")!.token;
-    assert.equal((await accessUser(okrVer, { name: "Mishell Mendieta", email: "mishell@cresio.ec" }) as { user: SessionUser }).user.role, "DIRECTIVO");
-    // en Priorización se elige la tribu: la cuenta nueva queda acotada a ella (responsable del catálogo)
-    const tribe = getUsers().length >= 0 ? (await import("../src/server/store")).catalog().responsibles[0]?.id : undefined;
-    const r4 = await accessUser(tok, { name: "Pedro Pérez Tribu", email: "pedro@cresio.ec", consent: true, responsibleId: tribe });
-    assert.equal(r4.ok, true); assert.equal((r4 as { user: SessionUser }).user.role, "RESPONSABLE"); assert.equal((r4 as { user: SessionUser }).user.responsibleId, tribe);
-    assert.equal((await accessUser(tok, { name: "Ana Mala Tribu", email: "ana@cresio.ec", consent: true, responsibleId: "no-existe" })).ok, false);
-    assert.equal((await accessUser("token-que-no-existe-xx", { name: "Alguien Más", email: "x@y.co" })).ok, false);
-    assert.equal((await accessUser(tok, { name: "Sin", email: "x@y.co", consent: true })).ok, false);
-    assert.equal((await accessUser(tok, { name: "Sin Correo Válido", email: "no-es-correo" })).ok, false);
+    assert.equal(getUsers().find((u) => u.email === "mishell@cresio.ec")?.role, "RESPONSABLE");
+    // líder de tribu nuevo: cuenta con rol de edición y su tribu
+    const r4 = await accessUser(tok, { name: "Pedro Pérez Líder", email: "pedro@cresio.ec", consent: true, responsibleId: tribe, entryRole: "lider" });
+    assert.equal(r4.ok, true); assert.equal((r4 as { user: SessionUser }).user.role, "LIDER"); assert.equal((r4 as { user: SessionUser }).user.responsibleId, tribe);
+    assert.equal((await accessUser("token-que-no-existe-xx", { name: "Alguien Más", email: "x@y.co", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, false);
+    assert.equal((await accessUser(tok, { name: "Sin", email: "x@y.co", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, false);
+    assert.equal((await accessUser(tok, { name: "Sin Correo Válido", email: "no-es-correo", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, false);
   });
 });
 
 test("reglas puras: parseAccess, sectionOfToken, rutas y modo", () => {
   assert.deepEqual(parseAccess(undefined), { ok: true, access: undefined });
-  assert.equal(parseAccess({ okr: { token: "corto", role: "LIDER" } }).ok, false);
-  const ok = parseAccess({ okr: { token: "abcdefghijklmnopqrstuv", role: "LIDER" }, otra: { token: "x" } });
+  assert.equal(parseAccess({ convencion: { token: "corto", role: "LIDER" } }).ok, false);
+  const ok = parseAccess({ convencion: { token: "abcdefghijklmnopqrstuv", role: "LIDER" }, otra: { token: "x" } });
   assert.equal(ok.ok, true);
   const acc = (ok as { access: Record<string, { token: string; role: string }> }).access;
-  assert.deepEqual(Object.keys(acc), ["okr"]);
-  assert.equal(sectionOfToken(acc as never, "abcdefghijklmnopqrstuv"), "okr");
+  assert.deepEqual(Object.keys(acc), ["convencion"]);
+  assert.equal(sectionOfToken(acc as never, "abcdefghijklmnopqrstuv"), "convencion");
   assert.equal(sectionOfToken(acc as never, "zzz"), null);
   assert.deepEqual(splitTenantPath("/cresio/acceso/abcdefghijklmnopqrstuv"), { tenant: "cresio", path: "/acceso/abcdefghijklmnopqrstuv" });
   assert.deepEqual(splitTenantPath("/acceso/abc"), { tenant: null, path: "/acceso/abc" });
   assert.equal(accessUrl("https://x.app/", "cresio", "t0k"), "https://x.app/cresio/acceso/t0k");
-  assert.equal(sectionPath("cresio", "okr"), "/cresio/panel/convencion?t=okr");
+  assert.equal(sectionPath("cresio", "convencion"), "/cresio/panel/convencion?t=direccion");
   assert.equal(isCompanyMode("convencion"), true); assert.equal(isCompanyMode("otro"), false);
 });

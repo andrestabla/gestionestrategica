@@ -17,11 +17,11 @@ const KIND_CLS: Record<ItineraryKind, string> = {
 const DOT: Record<ItineraryKind, string> = { conferencia: "#8A6D1F", mesa: "#D4AF37", taller: "#0B6F88", plenaria: "#0D1B2A", break: "#B6BDC7", energizacion: "#B6BDC7", logistica: "#4C078C" };
 const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", label: "Todo" }, { k: "mesa", label: "Mesa redonda" }, { k: "taller", label: "Talleres" }, { k: "conferencia", label: "Conferencias" }, { k: "plenaria", label: "Plenarias" }];
 
-export function ItinerarioView({ itinerary, comments, mode, company, canManage = false, publicUrl = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, publicRef }: {
-  itinerary: Omit<Itinerary, "token">; comments: ItineraryComment[]; mode: "sesion" | "publico"; company?: { name: string; shortName: string };
-  canManage?: boolean; publicUrl?: string | null; error?: string | null; busy?: boolean;
+export function ItinerarioView({ itinerary, comments, mode, audience = "organizador", company, canManage = false, publicUrl = null, publicUrlP = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, publicRef }: {
+  itinerary: Omit<Itinerary, "token" | "tokenP">; comments: ItineraryComment[]; mode: "sesion" | "publico"; audience?: "organizador" | "participantes"; company?: { name: string; shortName: string };
+  canManage?: boolean; publicUrl?: string | null; publicUrlP?: string | null; error?: string | null; busy?: boolean;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
-  onPublish?: (on: boolean, regenerate?: boolean) => Promise<void>;
+  onPublish?: (on: boolean, regenerate?: boolean, audience?: "organizador" | "participantes") => Promise<void>;
   onUpload?: (json: unknown) => Promise<void>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -49,6 +49,7 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
   };
   const [open, setOpen] = useState<number>(-1);
   const [copied, setCopied] = useState(false);
+  const [copiedP, setCopiedP] = useState(false);
   const items = useMemo(() => itinerary.items, [itinerary]);
   const byMoment = useMemo(() => { const m = new Map<string, ItineraryComment[]>(); for (const c of comments) { const l = m.get(c.momentId) ?? []; l.push(c); m.set(c.momentId, l); } return m; }, [comments]);
   const pending = comments.filter((c) => !c.resolvedAt).length;
@@ -59,10 +60,16 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
     <div className={pub ? "mx-auto max-w-[960px] px-4 py-6 sm:px-6" : ""}>
       {pub && (
         <div className="mb-6 rounded-2xl bg-[#0D1B2A] px-5 py-6 text-white">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#D4AF37]">{company?.name ?? ""} · 4Shine Empresas</div>
+          {itinerary.logo && (
+            <div className="mb-4 inline-flex items-center rounded-xl bg-white px-4 py-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={itinerary.logo} alt={company?.name ?? "Empresa"} className="h-10 w-auto max-w-[200px] object-contain" />
+            </div>
+          )}
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#D4AF37]">{company?.name ?? ""} · 4Shine Empresas{audience === "participantes" ? " · agenda" : " · equipo organizador"}</div>
           <h1 className="mt-1.5 text-[24px] font-extrabold leading-tight sm:text-[30px]">{itinerary.title}</h1>
           {itinerary.sub && <p className="mt-1.5 max-w-2xl text-[13.5px] text-white/75">{itinerary.sub}</p>}
-          <p className="mt-3 text-[12px] text-white/60">Toca cada momento para ver la metodología, los materiales, el uso de la plataforma y el resultado esperado, y para dejar comentarios metodológicos o logísticos.</p>
+          <p className="mt-3 text-[12px] text-white/60">{audience === "participantes" ? "Toca cada momento para ver quién lo conduce y qué sale de él." : "Toca cada momento para ver la metodología, los materiales, el uso de la plataforma y el resultado esperado, y para dejar comentarios metodológicos o logísticos."}</p>
         </div>
       )}
       {!pub && (
@@ -78,11 +85,16 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
                 : <button type="button" onClick={() => onPublish?.(true)} disabled={busy} className="btn-primary !py-1.5 text-[11.5px]"><Globe size={12} /> Publicar sin login</button>}
               {itinerary.public && publicUrl && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="btn-ghost !py-1.5 text-[11.5px]">{copied ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copied ? "Copiado" : "Copiar enlace público"}</button>}
               {itinerary.public && <button type="button" onClick={() => { if (confirm("El enlace anterior dejará de valer. ¿Regenerar?")) void onPublish?.(true, true); }} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="Cambia el enlace público"><RefreshCw size={12} /></button>}
+              {itinerary.publicP
+                ? <button type="button" onClick={() => onPublish?.(false, false, "participantes")} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="La agenda para participantes deja de verse"><Lock size={12} /> Retirar agenda</button>
+                : <button type="button" onClick={() => onPublish?.(true, false, "participantes")} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="Enlace aparte, sin logística ni comentarios: horario, momento, quién y salida"><Globe size={12} /> Agenda para participantes</button>}
+              {itinerary.publicP && publicUrlP && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrlP); setCopiedP(true); setTimeout(() => setCopiedP(false), 1500); }} className="btn-ghost !py-1.5 text-[11.5px]">{copiedP ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copiedP ? "Copiado" : "Copiar enlace de participantes"}</button>}
             </span>
           )}
         </div>
       )}
-      {!pub && itinerary.public && publicUrl && <p className="num mb-4 break-all rounded-xl bg-cyan-wash/60 px-3 py-2 text-[11.5px] text-ink"><Globe size={12} className="mr-1 inline text-cyan-deep" /> Público en {publicUrl}</p>}
+      {!pub && itinerary.public && publicUrl && <p className="num mb-2 break-all rounded-xl bg-cyan-wash/60 px-3 py-2 text-[11.5px] text-ink"><Globe size={12} className="mr-1 inline text-cyan-deep" /> Equipo organizador (logística y comentarios): {publicUrl}</p>}
+      {!pub && itinerary.publicP && publicUrlP && <p className="num mb-4 break-all rounded-xl bg-[#FAF4E3] px-3 py-2 text-[11.5px] text-ink"><Globe size={12} className="mr-1 inline text-[#8A6D1F]" /> Participantes (agenda): {publicUrlP}</p>}
       {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
       {!pub && showFiles && onUploadFile && (
         <div className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
@@ -94,7 +106,7 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
           <FileList files={files} href={fileHref} onRemove={onRemoveFile} busy={busy} />
         </div>
       )}
-      {pub && files.length > 0 && (
+      {pub && audience !== "participantes" && files.length > 0 && (
         <details className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
           <summary className="cursor-pointer text-[13px] font-bold text-ink">Materiales de la convención ({files.length} PDF)</summary>
           <FileList files={files} href={fileHref} busy={false} />
@@ -143,7 +155,7 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
         );
       })}
 
-      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} canManage={canManage} busy={busy} companyName={company?.name ?? "la empresa"} files={files} href={fileHref}
+      {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} simple={audience === "participantes"} canManage={canManage} busy={busy} companyName={company?.name ?? "la empresa"} files={files} href={fileHref}
         onFiles={editable && onMomentFiles ? (ids) => onMomentFiles(cur.id, ids) : undefined}
         onClose={() => setOpen(-1)} onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined}
         onComment={onComment} onResolve={onResolve} onDelete={onDelete}
@@ -158,8 +170,8 @@ export function ItinerarioView({ itinerary, comments, mode, company, canManage =
 
 const pubMode = (m: "sesion" | "publico") => m === "publico";
 
-function MomentModal({ it, day, days, comments, pub, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles }: {
-  it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; canManage: boolean; busy: boolean; companyName: string; onClose: () => void; onPrev?: () => void; onNext?: () => void;
+function MomentModal({ it, day, days, comments, pub, simple = false, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles }: {
+  it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; simple?: boolean; canManage: boolean; busy: boolean; companyName: string; onClose: () => void; onPrev?: () => void; onNext?: () => void;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>; onDelete?: (id: string) => Promise<void>;
   onEdit?: (next: ItineraryItem) => Promise<boolean>; onRemove?: () => Promise<boolean>; onMove?: (dir: -1 | 1) => Promise<boolean>;
@@ -228,7 +240,10 @@ function MomentModal({ it, day, days, comments, pub, canManage, busy, companyNam
               <button type="button" onClick={() => void commitEdit()} disabled={busy || f.title.trim().length < 3 || !f.time.trim()} className="btn-primary ml-auto !py-2 text-[12px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Guardar</button>
             </div>
           </div>
-        ) : (<>
+        ) : simple ? (<>
+        <div><div className="label !text-[9px]">Quién lo conduce</div><p className="mt-1 text-ink">{it.who || "—"}</p></div>
+        <div><div className="label !text-[9px]">Qué sale de este momento</div><p className="mt-1 text-ink">{it.output || "—"}</p></div>
+        </>) : (<>
         <div><div className="label !text-[9px]">Metodología · dinámica y resultado</div><p className="mt-1 leading-relaxed text-ink">{it.method || "—"}</p></div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-[#FAF4E3] px-3.5 py-3"><div className="label !text-[9px]">Materiales físicos</div>{it.materials.length ? <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-ink">{it.materials.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="mt-1 text-[13px] text-muted">—</p>}</div>
@@ -249,7 +264,7 @@ function MomentModal({ it, day, days, comments, pub, canManage, busy, companyNam
         )}
         </>)}
 
-        <div className="border-t border-line pt-3">
+        {!simple && <div className="border-t border-line pt-3">
           <div className="label !text-[9px]">Comentarios del equipo organizador ({comments.length})</div>
           <div className="mt-2 space-y-2">
             {comments.length === 0 && <p className="text-[12px] italic text-faint">Aún no hay comentarios sobre este momento.</p>}
@@ -287,7 +302,7 @@ function MomentModal({ it, day, days, comments, pub, canManage, busy, companyNam
               <button type="button" onClick={send} disabled={sending || text.trim().length < 3 || (pub && (author.trim().length < 3 || !consent))} className="btn-primary ml-auto !py-2 text-[12px] disabled:opacity-40">{sending ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />} Enviar</button>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </Modal>
   );

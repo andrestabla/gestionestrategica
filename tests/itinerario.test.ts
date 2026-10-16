@@ -3,8 +3,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
-import { resetStore, setItinerary, publishItinerary, publicItineraryOf, itineraryOf, addItineraryComment, resolveItineraryComment, deleteItineraryComment, itineraryComments } from "../src/server/store";
-import { parseItinerary, publicItinerary, itineraryPublicPath } from "../src/lib/itinerario";
+import { resetStore, setItinerary, publishItinerary, publicItineraryOf, participantsItineraryOf, itineraryOf, addItineraryComment, resolveItineraryComment, deleteItineraryComment, itineraryComments } from "../src/server/store";
+import { parseItinerary, publicItinerary, participantsItinerary, itineraryPublicPath } from "../src/lib/itinerario";
 import type { SessionUser } from "../src/lib/session";
 
 const advisor: SessionUser = { email: "c@a.co", name: "Advisor", role: "CONSULTOR", company: { slug: "andina", name: "Andina", shortName: "Andina" } };
@@ -98,5 +98,25 @@ test("materiales: registro, vínculo por momento y retiro", async () => {
     const r = removeItineraryFile(advisor, "deck-01"); assert.equal(r.ok, true);
     assert.equal(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, undefined);
     assert.equal(removeItineraryFile(advisor, "deck-01").ok, false);
+  });
+});
+
+test("agenda para participantes: enlace aparte, sin logística ni comentarios, con logo", async () => {
+  await inAndina(() => {
+    resetStore();
+    assert.equal(setItinerary(advisor, { ...IT, logo: "/marcas/cresio.png" }).ok, true);
+    assert.equal(itineraryOf()?.logo, "/marcas/cresio.png");
+    assert.equal(setItinerary(advisor, { ...IT, logo: "javascript:alert(1)" }).ok, true); assert.equal(itineraryOf()?.logo, undefined);
+    setItinerary(advisor, { ...IT, logo: "/marcas/cresio.png" });
+    publishItinerary(advisor, false);                                      // el itinerario de la empresa persiste entre pruebas: lo dejamos sin publicar
+    const r = publishItinerary(advisor, true, false, "participantes"); assert.equal(r.ok, true);
+    const it = itineraryOf()!; assert.equal(it.publicP, true); assert.ok(it.tokenP); assert.equal(it.public, false);
+    assert.equal(participantsItineraryOf(it.tokenP!)?.title, "Convención de prueba");
+    assert.equal(publicItineraryOf(it.tokenP!), null);                     // el enlace de participantes no abre la vista del organizador
+    const p = participantsItinerary(it);
+    assert.equal(p.logo, "/marcas/cresio.png"); assert.equal(p.items.length, 2);
+    assert.equal("method" in p.items[0], false); assert.equal("materials" in p.items[0], false);
+    assert.equal(publicItinerary(it).tokenP, undefined);
+    publishItinerary(advisor, false, false, "participantes"); assert.equal(participantsItineraryOf(it.tokenP!), null);
   });
 });

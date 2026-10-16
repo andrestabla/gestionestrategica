@@ -20,7 +20,7 @@ import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
-import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode } from "@/lib/acceso";
+import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile } from "@/lib/itinerario";
@@ -1835,7 +1835,7 @@ export const accessSectionOf = (token: string): AccessSection | null => sectionO
 /** Entra por el enlace de una sección: identifica a la persona por su correo,
     la crea en la empresa la primera vez (con el rol de la sección) y después
     reutiliza su cuenta. Nunca duplica: el correo es único en la base. */
-export async function accessUser(token: string, input: { name?: unknown; email?: unknown; consent?: unknown; responsibleId?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
+export async function accessUser(token: string, input: { name?: unknown; email?: unknown; consent?: unknown; responsibleId?: unknown; entryRole?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
   const rec = companyRec();
   if (!rec || !rec.active) return { ok: false, status: 404, error: "La empresa no está activa." };
   const section = accessSectionOf(String(token ?? ""));
@@ -1846,21 +1846,22 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   if (name.length < 5) return { ok: false, status: 422, error: "Escribe tu nombre completo." };
   const consent = input.consent === true;
   const sec = accessSection(section);
-  // en las secciones que piden tribu (priorización), la cuenta nueva queda acotada a esa tribu (responsable del catálogo)
-  const tribeId = sec.askTribe ? String(input.responsibleId ?? "").trim() : "";
-  if (sec.askTribe && tribeId && !cat().responsibles.some((r) => r.id === tribeId)) return { ok: false, status: 422, error: "Elige tu tribu de la lista." };
+  // quien entra elige su tribu (responsable del catálogo) y su rol: miembro (califica lo de su tribu) o líder (además registra OKR y vincula iniciativas)
+  const tribeId = String(input.responsibleId ?? "").trim();
+  const entryRole = isEntryRole(input.entryRole) ? input.entryRole : null;
+  if (tribeId && !cat().responsibles.some((r) => r.id === tribeId)) return { ok: false, status: 422, error: "Elige tu tribu de la lista." };
   if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) return { ok: false, status: 403, error: "Ese correo es de un administrador de la plataforma: entra por /login." };
   let user = users().find((u) => u.email.toLowerCase() === email);
   let created = false;
   // el tratamiento de datos se acepta la primera vez (o si aún no consta la aceptación)
   if (!consent && (!user || !user.consentAt)) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
+  if (!user && (!tribeId || !entryRole)) return { ok: false, status: 422, error: "Elige tu tribu y tu rol (miembro o líder de tribu)." };
   const consentAt = new Date();
   if (!user) {
     // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
     const elsewhere = await findUserForLogin(email);
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
-    const confRole = rec.access?.[section]?.role ?? sec.role;
-    const role: SessionUser["role"] = tribeId ? "RESPONSABLE" : confRole;
+    const role: SessionUser["role"] = entryRole === "lider" ? "LIDER" : "RESPONSABLE";
     user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: new Date().toISOString(), consentAt: consentAt.toISOString() };
     users().push(user);
     created = true;
@@ -1873,11 +1874,12 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
     void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { consentAt, consentVersion: CONSENT_VERSION } }); });
   }
   if (!user.active) return { ok: false, status: 403, error: "Tu cuenta está desactivada en esta empresa." };
-  // el QR de edición (líder de tribu) da el rol de edición para la sesión; la cuenta guardada conserva el suyo
-  const sectionRole = rec.access?.[section]?.role ?? sec.role;
-  const sessionRole: SessionUser["role"] = sectionRole === "LIDER" && (user.role === "RESPONSABLE" || user.role === "DIRECTIVO") ? "LIDER" : user.role;
+  // una cuenta ya existente que entra como líder recibe el rol de edición solo en la sesión; la cuenta guardada conserva el suyo.
+  // Si aún no tiene tribu y la indica, se le guarda.
+  if (!created && tribeId && !user.responsibleId) { user.responsibleId = tribeId; void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { responsibleId: tribeId } }); }); }
+  const sessionRole: SessionUser["role"] = entryRole === "lider" && (user.role === "RESPONSABLE" || user.role === "DIRECTIVO") ? "LIDER" : user.role;
   const session: SessionUser = { email: user.email, name: user.name, role: sessionRole, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
-  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR · ${sec.label}${sessionRole !== user.role ? " (edición en esta sesión)" : ""}`);
+  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR de la convención como ${entryRole === "lider" ? "líder" : "miembro"} de tribu${sessionRole !== user.role ? " (edición en esta sesión)" : ""}`);
   return { ok: true, user: session, section, created };
 }
 
@@ -1888,7 +1890,8 @@ function readItinerary(raw: unknown): Itinerary | undefined {
   const p = parseItinerary(raw); if (!p.ok) return undefined;
   const r = raw as Record<string, unknown>;
   const token = typeof r.token === "string" && ITIN_TOKEN_RE.test(r.token) ? r.token : undefined;
-  return { ...p.itinerary, public: r.public === true && !!token, ...(token ? { token } : {}) };
+  const tokenP = typeof r.tokenP === "string" && ITIN_TOKEN_RE.test(r.tokenP) ? r.tokenP : undefined;
+  return { ...p.itinerary, public: r.public === true && !!token, ...(token ? { token } : {}), ...(tokenP ? { tokenP, publicP: r.publicP === true } : {}) };
 }
 function saveItinerary(actor: SessionUser, it: Itinerary | undefined, what: string) {
   const rec = companyRec(); if (!rec) return;
@@ -1905,7 +1908,7 @@ export function setItinerary(actor: SessionUser, input: unknown): { ok: true; it
   if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "El itinerario lo carga el advisor o la gerencia." };
   const p = parseItinerary(input); if (!p.ok) return { ok: false, status: 422, error: p.error };
   const prev = itineraryOf();
-  const it: Itinerary = { ...p.itinerary, public: prev?.public ?? false, ...(prev?.token ? { token: prev.token } : {}) };
+  const it: Itinerary = { ...p.itinerary, public: prev?.public ?? false, ...(prev?.token ? { token: prev.token } : {}), ...(prev?.tokenP ? { tokenP: prev.tokenP, publicP: prev.publicP ?? false } : {}) };
   // sin la clave «files» en la carga, se conservan los materiales ya subidos y los vínculos de cada momento
   const raw = input as { files?: unknown } | null;
   if (prev?.files?.length && (raw === null || typeof raw !== "object" || raw.files === undefined)) {
@@ -1918,13 +1921,24 @@ export function setItinerary(actor: SessionUser, input: unknown): { ok: true; it
 }
 
 /** Publica o retira el enlace público; `regenerate` cambia el enlace (el anterior deja de valer). */
-export function publishItinerary(actor: SessionUser, on: boolean, regenerate = false): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+export function publishItinerary(actor: SessionUser, on: boolean, regenerate = false, audience: "organizador" | "participantes" = "organizador"): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "El enlace público lo administra el advisor o la gerencia." };
   const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
+  if (audience === "participantes") {
+    const tokenP = regenerate || !prev.tokenP ? newToken() : prev.tokenP;
+    const it: Itinerary = { ...prev, publicP: on, tokenP };
+    saveItinerary(actor, it, `agenda para participantes ${on ? "publicada" : "retirada"}${regenerate ? " (enlace regenerado)" : ""}`);
+    return { ok: true, itinerary: it };
+  }
   const token = regenerate || !prev.token ? newToken() : prev.token;
   const it: Itinerary = { ...prev, public: on, token };
   saveItinerary(actor, it, `itinerario ${on ? "publicado" : "retirado del acceso público"}${regenerate ? " (enlace regenerado)" : ""}`);
   return { ok: true, itinerary: it };
+}
+/** Itinerario (versión para participantes) si el token es el de la agenda y está publicada. */
+export function participantsItineraryOf(token: string): Itinerary | null {
+  const it = itineraryOf();
+  return it && it.publicP && it.tokenP && token === it.tokenP ? it : null;
 }
 
 /** Itinerario público de la empresa activa si el token es el vigente y está publicado. */

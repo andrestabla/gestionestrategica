@@ -18,6 +18,6 @@ export default async function AccesoPage({ params }: { params: Promise<{ token: 
   if (!section) notFound();
   const s = accessSection(section);
   // en Priorización se elige la tribu: las que tienen iniciativas en el catálogo
-  const tribes = s.askTribe ? await inTenant(c.slug, async () => { const cat = catalog(); return cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id)).map((r) => ({ id: r.id, name: r.dependencia || r.cargo })); }) : [];
-  return <AccesoClient tenant={c.slug} token={token} company={{ name: c.name, shortName: c.shortName }} section={{ id: s.id, label: s.label, what: s.what, edit: s.role === "LIDER" }} tribes={tribes} />;
+  const tribes = await inTenant(c.slug, async () => { const cat = catalog(); return cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id)).map((r) => ({ id: r.id, name: r.dependencia || r.cargo })); });
+  return <AccesoClient tenant={c.slug} token={token} company={{ name: c.name, shortName: c.shortName }} section={{ id: s.id, label: s.label, what: s.what }} tribes={tribes} />;
 }

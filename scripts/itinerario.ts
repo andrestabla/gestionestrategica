@@ -18,9 +18,9 @@ async function main() {
     if (archivo) { const r = setItinerary(actor, JSON.parse(readFileSync(archivo, "utf8"))); if (!r.ok) throw new Error(r.error); console.log(`itinerario cargado: ${r.itinerary.items.length} momentos`); }
     // las escrituras a la base son asíncronas: dejar que la carga termine antes de publicar, para que no la pise
     if (archivo && publicar) await new Promise((r) => setTimeout(r, 2500));
-    if (publicar) { const r = publishItinerary(actor, true); if (!r.ok) throw new Error(r.error); }
+    if (publicar) { const r = publishItinerary(actor, true); if (!r.ok) throw new Error(r.error); await new Promise((r) => setTimeout(r, 1500)); const p = publishItinerary(actor, true, false, "participantes"); if (!p.ok) throw new Error(p.error); }
     const it = itineraryOf();
-    if (it) console.log(`público: ${it.public ? "sí" : "no"}${it.token ? ` · ${origen}${itineraryPublicPath(c.slug, it.token)}` : ""}`);
+    if (it) console.log(`público (equipo organizador): ${it.public ? "sí" : "no"}${it.token ? ` · ${origen}${itineraryPublicPath(c.slug, it.token)}` : ""}\nagenda para participantes: ${it.publicP ? "sí" : "no"}${it.tokenP ? ` · ${origen}${itineraryPublicPath(c.slug, it.tokenP)}` : ""}`);
   });
   await new Promise((r) => setTimeout(r, 2500));
 }
