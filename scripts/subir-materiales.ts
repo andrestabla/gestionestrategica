@@ -1,4 +1,4 @@
-// Sube los materiales de la convención (PDF) al almacenamiento de la plataforma
+// Sube los materiales de la convención (PDF y PowerPoint) al almacenamiento de la plataforma
 // a través del API, con la sesión del administrador, y los vincula a los momentos
 // del itinerario. La contraseña se lee de la variable CONTRASENA (nunca por argumento):
 //   read -rs "p?Contraseña del admin: "; echo; CONTRASENA="$p" npx tsx scripts/subir-materiales.ts --slug cresio --origen https://gestionestrategica.io
@@ -30,7 +30,15 @@ const MATERIALES: { path: string; id: string; name: string; group: string }[] = 
   { path: `${BASE}/presentaciones/pdf/04-iniciativas-criticas-priorizacion-portafolio.pdf`, id: "deck-04-iniciativas", name: "Deck 04 · Iniciativas críticas, priorización y portafolio", group: "presentacion" },
   { path: `${BASE}/presentaciones/pdf/05-conferencia-cierre-valentia-gerencial.pdf`, id: "deck-05-cierre", name: "Deck 05 · Conferencia de cierre «Valentía gerencial»", group: "presentacion" },
   { path: `${BASE}/guia-facilitacion-convencion.pdf`, id: "guia-facilitacion", name: "Guía de facilitación de la convención", group: "guia" },
+  // versiones editables (PowerPoint): se descargan; se vinculan a los mismos momentos que su PDF
+  { path: `${BASE}/presentaciones/01-conferencia-apertura-crecer-exige-elegir.pptx`, id: "deck-01-apertura-pptx", name: "Deck 01 · Conferencia de apertura (PowerPoint editable)", group: "presentacion" },
+  { path: `${BASE}/presentaciones/02-taller-mesa-redonda-estrategica.pptx`, id: "deck-02-mesa-redonda-pptx", name: "Deck 02 · Mesa redonda estratégica (PowerPoint editable)", group: "presentacion" },
+  { path: `${BASE}/presentaciones/03-marco-y-laboratorio-okr-2027.pptx`, id: "deck-03-okr-pptx", name: "Deck 03 · Marco y laboratorio de OKR 2027 (PowerPoint editable)", group: "presentacion" },
+  { path: `${BASE}/presentaciones/04-iniciativas-criticas-priorizacion-portafolio.pptx`, id: "deck-04-iniciativas-pptx", name: "Deck 04 · Iniciativas críticas, priorización y portafolio (PowerPoint editable)", group: "presentacion" },
+  { path: `${BASE}/presentaciones/05-conferencia-cierre-valentia-gerencial.pptx`, id: "deck-05-cierre-pptx", name: "Deck 05 · Conferencia de cierre «Valentía gerencial» (PowerPoint editable)", group: "presentacion" },
 ];
+/** Cada deck en PDF tiene su gemelo editable: va vinculado a los mismos momentos. */
+const GEMELO_PPTX: Record<string, string> = { "deck-01-apertura": "deck-01-apertura-pptx", "deck-02-mesa-redonda": "deck-02-mesa-redonda-pptx", "deck-03-okr": "deck-03-okr-pptx", "deck-04-iniciativas": "deck-04-iniciativas-pptx", "deck-05-cierre": "deck-05-cierre-pptx" };
 /** Materiales que ya no existen (versión de ocho plantillas y el formato F5, acta y renuncias: no se formaliza ninguna renuncia en la convención): se retiran con --retirar. */
 const RETIRADOS = ["formato-5-acta-renuncias", "plantilla-01-ficha-panelista", "plantilla-02-lienzo-maestro", "plantilla-03-tarjetas-kr", "plantilla-04-fichas-iniciativa", "plantilla-05-tarjeta-matriz", "plantilla-06-okr-por-tribu", "plantilla-07-pliego-portafolio", "plantilla-08-fichas-de-apoyo"];
 // vínculos por momento (ids del itinerario)
@@ -64,7 +72,8 @@ async function main() {
       if (soloIds.length && !soloIds.includes(m.id)) continue;
       if (!existsSync(m.path)) { console.log(`· falta ${m.path}, se omite`); continue; }
       const fd = new FormData();
-      fd.append("file", new Blob([readFileSync(m.path)], { type: "application/pdf" }), basename(m.path));
+      const mime = m.path.endsWith(".pptx") ? "application/vnd.openxmlformats-officedocument.presentationml.presentation" : "application/pdf";
+      fd.append("file", new Blob([readFileSync(m.path)], { type: mime }), basename(m.path));
       fd.append("id", m.id); fd.append("name", m.name); fd.append("group", m.group);
       const r = await fetch(`${origen}/api/td/itinerario/material`, { method: "POST", headers: h, body: fd });
       const j = await r.json().catch(() => ({}));
@@ -72,7 +81,8 @@ async function main() {
     }
   }
   let n = 0;
-  for (const [momentId, fileIds] of Object.entries(VINCULOS)) {
+  for (const [momentId, base] of Object.entries(VINCULOS)) {
+    const fileIds = base.flatMap((id) => (GEMELO_PPTX[id] ? [id, GEMELO_PPTX[id]] : [id]));
     const r = await fetch(`${origen}/api/td/itinerario`, { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ op: "files", momentId, fileIds }) });
     if (r.ok) n++; else console.log(`✗ vínculo ${momentId}: ${(await r.json().catch(() => ({}))).error ?? r.status}`);
   }
