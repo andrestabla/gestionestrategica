@@ -12,7 +12,7 @@ export const ITINERARY_KINDS: Record<ItineraryKind, string> = {
 };
 export type ItineraryDay = { id: string; title: string; sub?: string };
 /** Identidad visual del evento (concepto del cliente): rótulo, lema y colores. Sin tema, la vista usa la identidad 4Shine. */
-export type ItineraryTheme = { label?: string; tagline?: string; accent?: string; bg?: string };
+export type ItineraryTheme = { label?: string; tagline?: string; accent?: string; bg?: string; image?: string };   // image: foto de fondo de la cabecera (ruta /… o https://…), con velo oscuro para el contraste
 export type ItineraryItem = {
   id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string;
   description: string;   // de qué trata el momento, en lenguaje de participante
@@ -101,6 +101,7 @@ export function parseTheme(input: unknown): ItineraryTheme | undefined {
   if (s(t.tagline, 160)) out.tagline = s(t.tagline, 160);
   if (HEX_RE.test(s(t.accent, 7))) out.accent = s(t.accent, 7);
   if (HEX_RE.test(s(t.bg, 7))) out.bg = s(t.bg, 7);
+  const image = s(t.image, 300); if (/^(\/[^\s]+|https:\/\/[^\s]+)$/.test(image)) out.image = image;
   return Object.keys(out).length ? out : undefined;
 }
 
