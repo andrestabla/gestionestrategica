@@ -1717,6 +1717,7 @@ export function evaluateInitiative(
 ): { ok: true; evaluation: Evaluation; consolidated: Consolidated } | { ok: false; status: number; error: string } {
   const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!base.kpi) return { ok: false, status: 422, error: "La iniciativa aún no está vinculada a un resultado clave: el líder de la tribu la vincula en «Iniciativas → KR» y entonces queda habilitada para calificar." };
   if (!can(user, "evaluate_initiatives", base)) {
     return {
       ok: false, status: 403,
@@ -1834,7 +1835,7 @@ export const accessSectionOf = (token: string): AccessSection | null => sectionO
 /** Entra por el enlace de una sección: identifica a la persona por su correo,
     la crea en la empresa la primera vez (con el rol de la sección) y después
     reutiliza su cuenta. Nunca duplica: el correo es único en la base. */
-export async function accessUser(token: string, input: { name?: unknown; email?: unknown; consent?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
+export async function accessUser(token: string, input: { name?: unknown; email?: unknown; consent?: unknown; responsibleId?: unknown }): Promise<{ ok: true; user: SessionUser; section: AccessSection; created: boolean } | { ok: false; status: number; error: string }> {
   const rec = companyRec();
   if (!rec || !rec.active) return { ok: false, status: 404, error: "La empresa no está activa." };
   const section = accessSectionOf(String(token ?? ""));
@@ -1844,6 +1845,10 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "Escribe un correo válido: es tu identificación en la plataforma." };
   if (name.length < 5) return { ok: false, status: 422, error: "Escribe tu nombre completo." };
   const consent = input.consent === true;
+  const sec = accessSection(section);
+  // en las secciones que piden tribu (priorización), la cuenta nueva queda acotada a esa tribu (responsable del catálogo)
+  const tribeId = sec.askTribe ? String(input.responsibleId ?? "").trim() : "";
+  if (sec.askTribe && tribeId && !cat().responsibles.some((r) => r.id === tribeId)) return { ok: false, status: 422, error: "Elige tu tribu de la lista." };
   if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) return { ok: false, status: 403, error: "Ese correo es de un administrador de la plataforma: entra por /login." };
   let user = users().find((u) => u.email.toLowerCase() === email);
   let created = false;
@@ -1854,21 +1859,25 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
     // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
     const elsewhere = await findUserForLogin(email);
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
-    const role = rec.access?.[section]?.role ?? accessSection(section).role;
-    user = { email, name, role, active: true, seeded: false, createdBy: `acceso QR · ${accessSection(section).label}`, at: new Date().toISOString(), consentAt: consentAt.toISOString() };
+    const confRole = rec.access?.[section]?.role ?? sec.role;
+    const role: SessionUser["role"] = tribeId ? "RESPONSABLE" : confRole;
+    user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: new Date().toISOString(), consentAt: consentAt.toISOString() };
     users().push(user);
     created = true;
     void persist("usuario", async (db) => {
       const companyId = cid();
-      await db.user.upsert({ where: { email }, update: { name, active: true, companyId, consentAt, consentVersion: CONSENT_VERSION }, create: { email, name, role, passwordHash: "", companyId, consentAt, consentVersion: CONSENT_VERSION } });
+      await db.user.upsert({ where: { email }, update: { name, active: true, companyId, consentAt, consentVersion: CONSENT_VERSION, ...(tribeId ? { responsibleId: tribeId } : {}) }, create: { email, name, role, passwordHash: "", companyId, consentAt, consentVersion: CONSENT_VERSION, ...(tribeId ? { responsibleId: tribeId } : {}) } });
     });
   } else if (!user.consentAt) {
     user.consentAt = consentAt.toISOString();
     void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { consentAt, consentVersion: CONSENT_VERSION } }); });
   }
   if (!user.active) return { ok: false, status: 403, error: "Tu cuenta está desactivada en esta empresa." };
-  const session: SessionUser = { email: user.email, name: user.name, role: user.role, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
-  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR · ${accessSection(section).label}`);
+  // el QR de edición (líder de tribu) da el rol de edición para la sesión; la cuenta guardada conserva el suyo
+  const sectionRole = rec.access?.[section]?.role ?? sec.role;
+  const sessionRole: SessionUser["role"] = sectionRole === "LIDER" && (user.role === "RESPONSABLE" || user.role === "DIRECTIVO") ? "LIDER" : user.role;
+  const session: SessionUser = { email: user.email, name: user.name, role: sessionRole, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
+  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR · ${sec.label}${sessionRole !== user.role ? " (edición en esta sesión)" : ""}`);
   return { ok: true, user: session, section, created };
 }
 

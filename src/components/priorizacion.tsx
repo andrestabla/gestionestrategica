@@ -80,6 +80,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const user = useUser();
   const cv = useCatalog();
   const canEval = useCan("evaluate_initiatives", line);
+  const linked = !!cv.catalog.initiatives.find((i) => i.id === iniId)?.kpi;   // sin resultado clave no se califica
   const canDecide = useCan("decide_initiatives");
   const { data, refetch } = usePriorizacion(iniId);
   const [error, setError] = useState<string | null>(null);
@@ -215,7 +216,9 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         {/* evaluación propia */}
         <div>
           <div className="label mb-3">{mine ? "Tu evaluación" : `Evaluar con los ${validationCriteriaCount(rule)} criterios`}</div>
-          {canEval ? (
+          {canEval && !linked ? (
+            <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">Esta iniciativa aún no está vinculada a un resultado clave. El líder de la tribu la vincula en «Iniciativas → KR» y entonces queda habilitada para calificar.</p>
+          ) : canEval ? (
             <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} onSave={(ev) => post({ evaluation: ev })} />
           ) : (
             <p className="rounded-xl bg-surface-2/60 px-4 py-4 text-[12px] leading-relaxed text-muted">

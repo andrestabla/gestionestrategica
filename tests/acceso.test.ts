@@ -22,7 +22,7 @@ test("enlaces por sección: se crean una vez, se conservan y solo los regenera q
     assert.equal(a1.find((x) => x.section === "priorizacion")?.role, "DIRECTIVO");
     const r2 = accessLinks(advisor);
     assert.deepEqual((r2 as typeof r1 & { access: unknown }).access, a1);                     // estable
-    assert.equal(new Set(a1.map((x) => x.token)).size, 5);                                     // únicos
+    assert.equal(new Set(a1.map((x) => x.token)).size, 7);                                     // únicos (ver/editar en OKR e Iniciativas)
     assert.equal(accessLinks(junta).ok, false);
     const before = a1.find((x) => x.section === "okr")!.token;
     const r3 = updateAccess(advisor, "okr", { regenerate: true, role: "DIRECTIVO" });
@@ -57,10 +57,19 @@ test("entrada por QR: crea la cuenta una sola vez, la reutiliza por correo y rec
     assert.equal((r2 as { created: boolean }).created, false);
     assert.equal(getUsers().length, n0 + 1);                                                  // sin duplicados
     assert.equal((r2 as { user: SessionUser }).user.name, "Mishell Mendieta");               // conserva la cuenta existente
-    // quien ya tiene cuenta conserva su rol aunque entre por otra sección
+    // el QR de edición (líder de tribu) da rol de edición solo en la sesión; la cuenta guardada conserva el suyo
     const okrTok = links.access.find((x) => x.section === "okr")!.token;
     const r3 = await accessUser(okrTok, { name: "Mishell Mendieta", email: "mishell@cresio.ec" });
-    assert.equal((r3 as { user: SessionUser }).user.role, "DIRECTIVO");
+    assert.equal((r3 as { user: SessionUser }).user.role, "LIDER");
+    assert.equal(getUsers().find((u) => u.email === "mishell@cresio.ec")?.role, "DIRECTIVO");
+    // el QR de «solo ver» no eleva el rol
+    const okrVer = links.access.find((x) => x.section === "okr-ver")!.token;
+    assert.equal((await accessUser(okrVer, { name: "Mishell Mendieta", email: "mishell@cresio.ec" }) as { user: SessionUser }).user.role, "DIRECTIVO");
+    // en Priorización se elige la tribu: la cuenta nueva queda acotada a ella (responsable del catálogo)
+    const tribe = getUsers().length >= 0 ? (await import("../src/server/store")).catalog().responsibles[0]?.id : undefined;
+    const r4 = await accessUser(tok, { name: "Pedro Pérez Tribu", email: "pedro@cresio.ec", consent: true, responsibleId: tribe });
+    assert.equal(r4.ok, true); assert.equal((r4 as { user: SessionUser }).user.role, "RESPONSABLE"); assert.equal((r4 as { user: SessionUser }).user.responsibleId, tribe);
+    assert.equal((await accessUser(tok, { name: "Ana Mala Tribu", email: "ana@cresio.ec", consent: true, responsibleId: "no-existe" })).ok, false);
     assert.equal((await accessUser("token-que-no-existe-xx", { name: "Alguien Más", email: "x@y.co" })).ok, false);
     assert.equal((await accessUser(tok, { name: "Sin", email: "x@y.co", consent: true })).ok, false);
     assert.equal((await accessUser(tok, { name: "Sin Correo Válido", email: "no-es-correo" })).ok, false);

@@ -59,8 +59,8 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
     if (!o.lever) out.push({ level: "medio", kind: "objetivo-sin-palanca", ref: o.id, text: `${o.id} no tiene palanca asignada.` });
     const krs = keyResultsOf(cat, o);
     if (krs.length === 0) out.push({ level: "alto", kind: "objetivo-sin-kr", ref: o.id, text: `${o.id} no tiene resultados clave: no es medible.` });
-    else if (krs.length < 2) out.push({ level: "medio", kind: "objetivo-pocos-kr", ref: o.id, text: `${o.id} tiene un solo resultado clave; la regla pide de 2 a 4.` });
-    else if (krs.length > 4) out.push({ level: "medio", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene ${krs.length} resultados clave; la regla pide de 2 a 4.` });
+    else if (krs.length < 2) out.push({ level: "medio", kind: "objetivo-pocos-kr", ref: o.id, text: `${o.id} tiene un solo resultado clave; la regla pide de 2 a 5.` });
+    else if (krs.length > 5) out.push({ level: "medio", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene ${krs.length} resultados clave; la regla pide de 2 a 5.` });
     for (const k of krs) {
       const missing: string[] = [];
       if (!(k.baseline > 0 || k.series.length > 0)) missing.push("línea base");

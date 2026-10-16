@@ -14,7 +14,8 @@ import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
 import Link from "next/link";
 import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote } from "@/components/ui";
-import { AccessChip, useCan, useBase } from "@/components/user-context";
+import { AccessChip, useCan, useBase, useUser } from "@/components/user-context";
+import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Lever } from "@/data/catalogo";
 import { PERSPECTIVES, type CmiObjective, type KpiFull } from "@/data/cmi";
@@ -42,6 +43,7 @@ export default function ConvencionPage() {
   const base = useBase();
   const canEdit = useCan("manage_catalog");
   const canAccess = useCan("manage_users");
+  const me = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -108,7 +110,7 @@ export default function ConvencionPage() {
       )}
 
       {tab === "itinerario" && <ItinerarioTab />}
-      {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit} saving={saving} mutate={mutate} />}
+      {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
       {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} />}
@@ -303,21 +305,36 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
 /* ═══ OKR del primer horizonte ═══ */
 
 function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; saving: boolean; mutate: Mutate; base: string }) {
-  const objectives = cat.objectives.filter((o) => o.horizon === horizon);
+  const allObjectives = cat.objectives.filter((o) => o.horizon === horizon);
   const issues = okrChecks(cat, horizon);
   const [kr, setKr] = useState<{ obj: CmiObjective; kpi: KpiFull | null } | null>(null);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
+  // filtros: objetivo estratégico y tribu (la tribu dueña de la palanca o de alguno de los KR)
+  const [fOe, setFOe] = useState(""); const [fTribe, setFTribe] = useState("");
+  const tribeOf = (o: CmiObjective) => { const l = levers.find((x) => x.id === o.lever); return l?.ownerId ?? ""; };
+  const inTribe = (o: CmiObjective, t: string) => !t || tribeOf(o) === t || keyResultsOf(cat, o).some((k) => k.ownerId === t);
+  const tribes = cat.responsibles.filter((r) => allObjectives.some((o) => inTribe(o, r.id) && (tribeOf(o) === r.id || keyResultsOf(cat, o).some((k) => k.ownerId === r.id))));
+  const objectives = allObjectives.filter((o) => (!fOe || o.id === fOe) && inTribe(o, fTribe));
   const byLever = [...levers.map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length);
   const high = issues.filter((i) => i.level === "alto").length;
   return (
     <>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
-        <StatCard label={`Objetivos ${horizonLabel(cat.company, horizon)}`} value={objectives.length} foot={`${objectives.filter((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 4).length} con 2 a 4 resultados clave`} />
+        <StatCard label={`Objetivos ${horizonLabel(cat.company, horizon)}`} value={allObjectives.length} foot={`${allObjectives.filter((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 5).length} con 2 a 5 resultados clave`} accent={allObjectives.every((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 5) ? "linear-gradient(90deg, var(--ok), #2f8f5b)" : undefined} />
         <StatCard label="Resultados clave" value={objectives.reduce((a, o) => a + keyResultsOf(cat, o).length, 0)} foot="indicador, base, meta, dueño y plazo" />
         <StatCard label="Alertas de calidad" value={issues.length} foot={`${high} de nivel alto`} accent={issues.length ? "linear-gradient(90deg, var(--warn), var(--bad))" : "linear-gradient(90deg, var(--ok), #2f8f5b)"} />
         <StatCard label="Iniciativas vinculadas" value={cat.initiatives.filter((i) => i.horizon === horizon && i.kpi).length} unit={`de ${cat.initiatives.filter((i) => i.horizon === horizon).length}`} foot="mueven un resultado clave" />
       </div>
-      {objectives.length === 0 && <Card className="rise p-6"><EmptyNote>No hay objetivos en {horizonLabel(cat.company, horizon)}. Créalos en «Dirección» y vuelve aquí para sus resultados clave.</EmptyNote></Card>}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Filter size={13} className="shrink-0 text-cyan-deep" />
+        <span className="num text-[12px] font-bold text-ink">{objectives.length} de {allObjectives.length} objetivos</span>
+        <select value={fOe} onChange={(e) => setFOe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[320px]" title="Objetivo estratégico"><option value="">Todos los objetivos (OE)</option>{allObjectives.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select>
+        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        {(fOe || fTribe) && <button type="button" onClick={() => { setFOe(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
+        {!canEdit && <span className="ml-auto text-[10.5px] text-faint">Solo lectura: el líder de cada tribu registra con el QR de edición.</span>}
+      </div>
+      {allObjectives.length === 0 && <Card className="rise p-6"><EmptyNote>No hay objetivos en {horizonLabel(cat.company, horizon)}. Créalos en «Dirección» y vuelve aquí para sus resultados clave.</EmptyNote></Card>}
+      {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
       {byLever.map((g) => (
         <Card key={g.key} className="rise mb-5 overflow-hidden">
           <CardHeader title={g.label} sub={`${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}`} />
@@ -398,7 +415,7 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
           </div>
         </Card>
       ))}
-      <p className="text-[11px] text-faint">Regla de calidad: cada objetivo con 2 a 4 resultados clave; cada resultado clave con línea base, meta, dueño y plazo, y al menos una iniciativa que lo mueva. Un KPI con plazo es resultado clave; sin plazo, KPI de salud del objetivo. Los valores de los KR se reportan en <Link href={`${base}/panel/kpi`} className="text-cyan-deep hover:underline">Indicadores</Link>.</p>
+      <p className="text-[11px] text-faint">Regla de calidad: cada objetivo con 2 a 5 resultados clave; cada resultado clave con línea base, meta, dueño y plazo, y al menos una iniciativa que lo mueva. Un KPI con plazo es resultado clave; sin plazo, KPI de salud del objetivo. Los valores de los KR se reportan en <Link href={`${base}/panel/kpi`} className="text-cyan-deep hover:underline">Indicadores</Link>.</p>
       {kr && <KrForm cat={cat} obj={kr.obj} initial={kr.kpi} saving={saving} onCancel={() => setKr(null)}
         onSubmit={async (d) => { const ok = await mutate("kpi", "upsert", d); if (ok) setKr(null); return ok; }}
         onDelete={kr.kpi ? async () => { if (window.confirm(`¿Eliminar el resultado clave ${kr.kpi!.code}?`)) { const ok = await mutate("kpi", "delete", { code: kr.kpi!.code }); if (ok) setKr(null); } } : undefined} />}
@@ -454,12 +471,19 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; saving: boolean; mutate: Mutate; base: string }) {
   const objectives = cat.objectives.filter((o) => o.horizon === horizon);
   const krs = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
-  const unlinked = cat.initiatives.filter((i) => !i.kpi || !krs.some((x) => x.k.code === i.kpi));
+  const [fTribe, setFTribe] = useState("");
+  const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
+  const unlinked = cat.initiatives.filter((i) => (!i.kpi || !krs.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe));
   const [link, setLink] = useState<string | null>(null);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   const leverName = (o: CmiObjective) => levers.find((l) => l.id === o.lever)?.name ?? "";
   return (
     <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Filter size={13} className="shrink-0 text-cyan-deep" />
+        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
+      </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <StatCard label="Resultados clave" value={krs.length} foot={`en ${horizonLabel(cat.company, horizon)}`} />
         <StatCard label="KR con iniciativa" value={krs.filter((x) => initiativesOfKr(cat, x.k.code).length > 0).length} unit={`de ${krs.length}`} foot="al menos una iniciativa los mueve" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
@@ -470,7 +494,8 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base }:
           <CardHeader title="Qué mueve cada resultado clave" sub="depurar: solo las iniciativas que efectivamente alteran el KR" />
           <div className="divide-y divide-line">
             {krs.map(({ k, o }) => {
-              const inis = initiativesOfKr(cat, k.code);
+              const inis = initiativesOfKr(cat, k.code).filter((i) => !fTribe || i.ownerId === fTribe);
+              if (fTribe && inis.length === 0) return null;
               return (
                 <div key={k.code} className="px-5 py-3">
                   <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className="text-[10px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
@@ -563,7 +588,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
         <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Evaluaciones registradas" value={(prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)).length} foot={`${cov.evaluators.length} evaluadores activos`} />
-        <StatCard label="Elegibles con capacidad" value={ranked.filter((x) => x.r && x.r.c.n > 0 && x.r.c.eligible && !x.r.c.capacityFirst).length} foot="D ≥ 3 y L ≥ 3 en el consolidado" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+        <StatCard label="Habilitadas para calificar" value={list.filter((i) => i.kpi).length} unit={`de ${list.length}`} foot="vinculadas a un resultado clave por el líder de tribu" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="rise overflow-hidden">
@@ -580,6 +605,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
                     <span className="block text-[13px] font-bold leading-snug text-ink">{i.name}</span>
                     <span className="num block text-[10.5px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">
+                      {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title="Sin resultado clave: el líder de tribu la vincula en Iniciativas → KR">sin KR · no se califica</span>}
                       <span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
                       {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
                       {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
@@ -613,6 +639,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
                       {CRITERIA.map((cr) => <td key={cr.key} className="num px-2 py-2 text-center">{c && c.n ? <span className={`font-bold ${c.rounded[cr.key] >= 3 ? "text-ink" : "text-muted"}`}>{c.avg[cr.key]}</span> : <span className="text-faint">—</span>}</td>)}
                       <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
                       <td className="px-2 py-2"><span className="flex flex-wrap gap-1">
+                        {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title="Sin resultado clave: el líder de tribu la vincula en Iniciativas → KR">sin KR</span>}
                         {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
                         {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
                         {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
@@ -787,50 +814,56 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 /* ═══ QR de acceso por sección ═══ */
 
-type AccessRow = { section: Tab; label: string; role: "LIDER" | "DIRECTIVO"; token: string; url: string; what: string };
+type AccessRow = { section: AccessSection; label: string; role: "LIDER" | "DIRECTIVO"; token: string; url: string; what: string };
 
 function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void }) {
   const [rows, setRows] = useState<AccessRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   useEffect(() => {
     let on = true;
     fetch("/api/td/convencion/acceso").then(async (res) => { const j = await res.json().catch(() => null); if (!on) return; if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setRows(j.access); }).catch(() => { if (on) setError("No se pudo conectar con el servidor."); });
     return () => { on = false; };
   }, []);
-  const post = async (body: Record<string, unknown>) => {
+  const post = async (sec: AccessSection, body: Record<string, unknown>) => {
     setBusy(true); setError(null);
-    const res = await fetch("/api/td/convencion/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, ...body }) });
+    const res = await fetch("/api/td/convencion/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: sec, ...body }) });
     const j = await res.json().catch(() => null);
     if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setRows(j.access);
     setBusy(false);
   };
-  const row = rows?.find((r) => r.section === section);
   const meta = TABS.find((t) => t.id === section)!;
+  const mine = (rows ?? []).filter((r) => ACCESS_SECTIONS.find((x) => x.id === r.section)?.tab === section);
   return (
-    <Modal title={`QR de acceso · ${meta.label}`} sub="Quien lo escanea escribe su nombre y correo y entra directo a esta sección. El correo identifica: la cuenta se crea una sola vez y se reutiliza." onClose={onClose}
-      footer={<>
-        <button type="button" onClick={() => { if (row && confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post({ regenerate: true }); }} disabled={!row || busy} className="btn-ghost !py-2 text-[12px] disabled:opacity-40"><RefreshCw size={13} /> Regenerar</button>
-        <a href={row ? `/api/td/convencion/acceso/qr?section=${section}&v=${row.token}` : "#"} download={`qr-${section}.svg`} className="btn-ghost !py-2 text-[12px]"><Download size={13} /> Descargar SVG</a>
-        <button type="button" onClick={async () => { if (row) { await navigator.clipboard.writeText(row.url); setCopied(true); setTimeout(() => setCopied(false), 1500); } }} disabled={!row} className="btn-primary !py-2 text-[12px] disabled:opacity-40">{copied ? <CheckCircle2 size={13} /> : <Copy size={13} />} {copied ? "Copiado" : "Copiar enlace"}</button>
-      </>}>
+    <Modal wide title={`QR de acceso · ${meta.label}`} sub="Quien lo escanea escribe su nombre y correo, acepta el tratamiento de datos y entra directo a esta sección. El correo identifica: la cuenta se crea una sola vez y se reutiliza." onClose={onClose}
+      footer={<button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cerrar</button>}>
       {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
-      {!row ? <p className="text-[12px] text-muted">Cargando…</p> : (
-        <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/td/convencion/acceso/qr?section=${section}&v=${row.token}`} alt={`QR de acceso a ${meta.label}`} className="w-[220px] rounded-xl border border-line bg-white p-2" />
-          <div className="space-y-3 text-[12.5px]">
-            <div><div className="label !text-[9px]">Enlace</div><div className="num mt-1 break-all rounded-lg bg-surface-2 px-3 py-2 text-[11.5px] text-ink">{row.url}</div></div>
-            <div><div className="label !text-[9px]">Rol de quien entra por este QR</div>
-              <select value={row.role} onChange={(e) => void post({ role: e.target.value })} disabled={busy} className="input mt-1 !py-2 text-[12px]">
-                <option value="DIRECTIVO">Consulta y evalúa · ve todo y califica con la matriz; no edita</option>
-                <option value="LIDER">Edita · además edita objetivos, KR e iniciativas y decide el tiempo</option>
-              </select>
-              <p className="mt-1 text-[10.5px] leading-snug text-faint">Quien ya tiene cuenta en la empresa conserva su rol. Las cuentas creadas por QR aparecen en Administración → Usuarios.</p>
-            </div>
-            <p className="text-[11px] text-muted">{meta.agenda}. Imprime el QR o proyéctalo al abrir el bloque; con «Regenerar» el enlace anterior deja de valer.</p>
-          </div>
+      {!rows ? <p className="text-[12px] text-muted">Cargando…</p> : (
+        <div className="space-y-4">
+          {mine.map((row) => {
+            const def = ACCESS_SECTIONS.find((x) => x.id === row.section)!;
+            return (
+              <div key={row.section} className="grid gap-4 rounded-2xl border border-line p-4 sm:grid-cols-[200px_1fr]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} alt={`QR de acceso a ${row.label}`} className="w-[200px] rounded-xl border border-line bg-white p-2" />
+                <div className="min-w-0 space-y-2.5 text-[12.5px]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[14px] font-extrabold text-ink">{row.label}</span>
+                    <span className={`chip !py-0 text-[9.5px] ${def.role === "LIDER" ? "chip-gold" : ""}`}>{def.role === "LIDER" ? "edita · líder de tribu" : def.askTribe ? "califica · elige su tribu" : "solo ver"}</span>
+                  </div>
+                  <p className="text-[11.5px] leading-snug text-muted">{def.what}</p>
+                  <div className="num break-all rounded-lg bg-surface-2 px-3 py-2 text-[11px] text-ink">{row.url}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary !py-1.5 text-[11.5px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
+                    <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost !py-1.5 text-[11.5px]"><Download size={12} /> SVG</a>
+                    <button type="button" onClick={() => { if (confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post(row.section, { regenerate: true }); }} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40"><RefreshCw size={12} /> Regenerar</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-muted">{meta.agenda}. Imprime los QR o proyéctalos al abrir el bloque. Quien ya tiene cuenta conserva su rol; el QR de edición da permiso de edición solo durante esa sesión.</p>
         </div>
       )}
     </Modal>
