@@ -34,7 +34,7 @@ export const kpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
 };
 
 /** Resultados clave de un objetivo. Regla: si el objetivo tiene KPI con plazo,
-    esos son sus resultados clave y los demás son KPI de salud; si ninguno tiene
+    esos son sus resultados clave y los demás son métrica; si ninguno tiene
     plazo, todos cuentan como resultados clave (catálogo sin convención). */
 export const keyResultsOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
   const all = kpisOf(cat, o);
@@ -42,7 +42,7 @@ export const keyResultsOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
   return withDue.length ? withDue : all;
 };
 
-/** KPI de salud: los del objetivo que no son resultados clave. */
+/** métrica: los del objetivo que no son resultados clave. */
 export const healthKpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
   const krs = new Set(keyResultsOf(cat, o).map((k) => k.code));
   return kpisOf(cat, o).filter((k) => !krs.has(k.code));
