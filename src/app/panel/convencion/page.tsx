@@ -313,12 +313,12 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
   const issues = okrChecks(cat, horizon);
   const [kr, setKr] = useState<{ obj: CmiObjective; kpi: KpiFull | null } | null>(null);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
-  // filtros: objetivo estratégico y tribu (la tribu dueña de la palanca o de alguno de los KR)
-  const [fOe, setFOe] = useState(""); const [fTribe, setFTribe] = useState("");
+  // filtros: palanca y tribu (la tribu dueña de la palanca o de alguno de los KR); los objetivos no se filtran uno a uno
+  const [fLever, setFLever] = useState(""); const [fTribe, setFTribe] = useState("");
   const tribeOf = (o: CmiObjective) => { const l = levers.find((x) => x.id === o.lever); return l?.ownerId ?? ""; };
   const inTribe = (o: CmiObjective, t: string) => !t || tribeOf(o) === t || keyResultsOf(cat, o).some((k) => k.ownerId === t);
   const tribes = cat.responsibles.filter((r) => allObjectives.some((o) => inTribe(o, r.id) && (tribeOf(o) === r.id || keyResultsOf(cat, o).some((k) => k.ownerId === r.id))));
-  const objectives = allObjectives.filter((o) => (!fOe || o.id === fOe) && inTribe(o, fTribe));
+  const objectives = allObjectives.filter((o) => (!fLever || o.lever === fLever) && inTribe(o, fTribe));
   const byLever = [...levers.map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length);
   const high = issues.filter((i) => i.level === "alto").length;
   return (
@@ -332,9 +332,9 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <span className="num text-[12px] font-bold text-ink">{objectives.length} de {allObjectives.length} objetivos</span>
-        <select value={fOe} onChange={(e) => setFOe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[320px]" title="Objetivo estratégico"><option value="">Todos los objetivos (OE)</option>{allObjectives.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select>
+        <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Palanca"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(fOe || fTribe) && <button type="button" onClick={() => { setFOe(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
+        {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
         {!canEdit && <span className="ml-auto text-[10.5px] text-faint">Solo lectura: el líder de cada tribu registra con el QR de edición.</span>}
       </div>
       {allObjectives.length === 0 && <Card className="rise p-6"><EmptyNote>No hay objetivos en {horizonLabel(cat.company, horizon)}. Créalos en «Dirección 3x3» y vuelve aquí para sus resultados clave.</EmptyNote></Card>}
