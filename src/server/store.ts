@@ -715,17 +715,22 @@ export const getPlatformUsers = (): ManagedUser[] => g.platformUsers;
 // escritura lanzada sin esperar se perdería. `after()` de Next registra la
 // promesa para que la plataforma la complete antes de apagar la función; fuera
 // de una petición (pruebas, seed) no hay ámbito y se omite sin fallar.
+const pendingWrites = new Set<Promise<unknown>>();
 async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
   const run = (async () => {
     try { await fn(await prisma()); } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
   })();
+  pendingWrites.add(run); void run.finally(() => pendingWrites.delete(run));
   try {
     const { after } = await serverImport("next/server") as { after?: (task: Promise<unknown>) => void };
     after?.(run);
   } catch { /* sin ámbito de petición: la promesa sigue su curso */ }
   await run;
 }
+/** Espera a que terminen todas las escrituras pendientes. Para scripts que corren fuera de una petición
+    (carga del itinerario, seed): sin esto, el proceso puede terminar antes de que la base reciba la escritura. */
+export async function flushPersist() { while (pendingWrites.size) await Promise.allSettled([...pendingWrites]); }
 
 /* ═══ Lecturas ═══ */
 

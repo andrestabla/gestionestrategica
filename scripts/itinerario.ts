@@ -3,7 +3,7 @@
 import "dotenv/config";
 import { readFileSync } from "fs";
 import { inTenant } from "../src/app/api/td/_helpers";
-import { hydrateCompanies, companyBySlug, setItinerary, publishItinerary, itineraryOf } from "../src/server/store";
+import { hydrateCompanies, companyBySlug, setItinerary, publishItinerary, itineraryOf, flushPersist } from "../src/server/store";
 import { itineraryPublicPath } from "../src/lib/itinerario";
 import type { SessionUser } from "../src/lib/session";
 
@@ -16,12 +16,12 @@ async function main() {
   const actor: SessionUser = { email: "andrestablarico@gmail.com", name: "Andrés Tabla Rico", role: "CONSULTOR", company: { slug: c.slug, name: c.name, shortName: c.shortName } };
   await inTenant(c.slug, async () => {
     if (archivo) { const r = setItinerary(actor, JSON.parse(readFileSync(archivo, "utf8"))); if (!r.ok) throw new Error(r.error); console.log(`itinerario cargado: ${r.itinerary.items.length} momentos`); }
-    // las escrituras a la base son asíncronas: dejar que la carga termine antes de publicar, para que no la pise
-    if (archivo && publicar) await new Promise((r) => setTimeout(r, 2500));
-    if (publicar) { const r = publishItinerary(actor, true); if (!r.ok) throw new Error(r.error); await new Promise((r) => setTimeout(r, 1500)); const p = publishItinerary(actor, true, false, "participantes"); if (!p.ok) throw new Error(p.error); }
+    // las escrituras a la base son asíncronas: esperar a que cada una termine antes de la siguiente, para que no se pisen
+    await flushPersist();
+    if (publicar) { const r = publishItinerary(actor, true); if (!r.ok) throw new Error(r.error); await flushPersist(); const p = publishItinerary(actor, true, false, "participantes"); if (!p.ok) throw new Error(p.error); }
     const it = itineraryOf();
     if (it) console.log(`público (equipo organizador): ${it.public ? "sí" : "no"}${it.token ? ` · ${origen}${itineraryPublicPath(c.slug, it.token)}` : ""}\nagenda para participantes: ${it.publicP ? "sí" : "no"}${it.tokenP ? ` · ${origen}${itineraryPublicPath(c.slug, it.tokenP)}` : ""}`);
   });
-  await new Promise((r) => setTimeout(r, 2500));
+  await flushPersist();
 }
 main().then(() => process.exit(0)).catch((e) => { console.error(e.message ?? e); process.exit(1); });
