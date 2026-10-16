@@ -1,7 +1,10 @@
 // Convención de planeación: reglas puras que apoyan la facilitación.
 //   · objetivos por palanca y horizonte (dirección compartida)
-//   · calidad de los OKR de un horizonte (2–4 resultados clave con base,
-//     meta, dueño y plazo; iniciativas vinculadas a un resultado clave)
+//   · calidad de los OKR de un horizonte (de 2 a 4 resultados clave por
+//     objetivo, máximo 5, con base, meta, dueño y plazo; iniciativas
+//     vinculadas a un resultado clave). Los objetivos de OKR son los que
+//     define cada tribu en el laboratorio (okr); los directivos viven en
+//     Dirección 3x3.
 //   · cobertura de la evaluación con la matriz (quién ha calificado qué)
 //   · resumen y exportación del portafolio por horizonte y decisión
 
@@ -22,8 +25,9 @@ export type OkrIssue = {
 export function objectivesMatrix(cat: Catalog): { levers: Lever[]; horizons: string[]; cell: (lever: string, horizon: string) => CmiObjective[]; orphan: CmiObjective[] } {
   const levers = leversOf(cat.company);
   const horizons = horizonsOf(cat.company).map((h) => h.id);
-  const cell = (lever: string, horizon: string) => cat.objectives.filter((o) => (o.lever ?? "") === lever && (o.horizon ?? "") === horizon);
-  const orphan = cat.objectives.filter((o) => !o.lever || !o.horizon || !levers.some((l) => l.id === o.lever) || !horizons.includes(o.horizon));
+  const directive = cat.objectives.filter((o) => !o.okr);   // la matriz muestra los objetivos directivos; los de las tribus viven en OKR
+  const cell = (lever: string, horizon: string) => directive.filter((o) => (o.lever ?? "") === lever && (o.horizon ?? "") === horizon);
+  const orphan = directive.filter((o) => !o.lever || !o.horizon || !levers.some((l) => l.id === o.lever) || !horizons.includes(o.horizon));
   return { levers, horizons, cell, orphan };
 }
 
@@ -51,16 +55,25 @@ export const healthKpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
 /** Iniciativas que mueven un resultado clave. */
 export const initiativesOfKr = (cat: Catalog, code: string): InitiativeFull[] => cat.initiatives.filter((i) => i.kpi === code);
 
+/** Objetivos sobre los que se construyen OKR en un horizonte: los definidos por las tribus (okr); si la empresa no usa ese nivel, todos los del horizonte. */
+export const okrObjectivesOf = (cat: Catalog, horizon: string): CmiObjective[] => {
+  const own = cat.objectives.filter((o) => o.horizon === horizon && o.okr);
+  return cat.objectives.some((o) => o.okr) ? own : cat.objectives.filter((o) => o.horizon === horizon);
+};
+/** Regla de resultados clave por objetivo: de 2 a 4; 5 se admite como máximo. */
+export const KR_MIN = 2, KR_IDEAL_MAX = 4, KR_MAX = 5;
+
 /** Reglas de calidad de los OKR del horizonte dado. */
 export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
   const out: OkrIssue[] = [];
-  const objectives = cat.objectives.filter((o) => o.horizon === horizon);
+  const objectives = okrObjectivesOf(cat, horizon);
   for (const o of objectives) {
     if (!o.lever) out.push({ level: "medio", kind: "objetivo-sin-palanca", ref: o.id, text: `${o.id} no tiene palanca asignada.` });
     const krs = keyResultsOf(cat, o);
     if (krs.length === 0) out.push({ level: "alto", kind: "objetivo-sin-kr", ref: o.id, text: `${o.id} no tiene resultados clave: no es medible.` });
-    else if (krs.length < 2) out.push({ level: "medio", kind: "objetivo-pocos-kr", ref: o.id, text: `${o.id} tiene un solo resultado clave; la regla pide de 2 a 5.` });
-    else if (krs.length > 5) out.push({ level: "medio", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene ${krs.length} resultados clave; la regla pide de 2 a 5.` });
+    else if (krs.length < KR_MIN) out.push({ level: "medio", kind: "objetivo-pocos-kr", ref: o.id, text: `${o.id} tiene un solo resultado clave; la regla pide de 2 a 4 (máximo 5).` });
+    else if (krs.length > KR_MAX) out.push({ level: "alto", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene ${krs.length} resultados clave; el máximo es 5 (lo recomendado, de 2 a 4).` });
+    else if (krs.length > KR_IDEAL_MAX) out.push({ level: "medio", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene 5 resultados clave: es el máximo; lo recomendado es de 2 a 4.` });
     for (const k of krs) {
       const missing: string[] = [];
       if (!(k.baseline > 0 || k.series.length > 0)) missing.push("línea base");

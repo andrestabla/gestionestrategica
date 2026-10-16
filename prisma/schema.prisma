@@ -119,6 +119,8 @@ model CmiObjective {
   pillar      String? // pilar corporativo
   desc        String? // aspiración
   indicator   String? // indicador impulsor
+  okr         Boolean @default(false) // objetivo definido por la tribu en el laboratorio de OKR
+  parent      String? // objetivo directivo que concreta
 
   @@id([companyId, id])
 }

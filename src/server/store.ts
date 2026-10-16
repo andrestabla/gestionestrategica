@@ -2207,10 +2207,15 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   const horizon = str(input.horizon, 12).toUpperCase() || undefined;
   if (horizon && !horizonsOf(c.company).some((h) => h.id === horizon)) return fail(422, "El horizonte no es de esta empresa.");
   const pillar = str(input.pillar, 80) || undefined, desc = str(input.desc, 600) || undefined, indicator = str(input.indicator, 200) || undefined;
-  const id = str(input.id, 10) || nextCode("OE-", c.objectives.map((o) => o.id), 2);
+  // objetivo de la tribu (laboratorio de OKR): lleva la marca okr y, si lo indica, el objetivo directivo que concreta
+  const okr = input.okr === true;
+  const parent = str(input.parent, 10).toUpperCase() || undefined;
+  if (parent && !c.objectives.some((x) => x.id === parent && !x.okr)) return fail(422, "El objetivo directivo que concreta no existe.");
+  const id = str(input.id, 10) || (okr ? nextCode(`${lever ?? "OK"}-O`, c.objectives.map((o) => o.id), 1) : nextCode("OE-", c.objectives.map((o) => o.id), 2));
   const o: CmiObjective = {
     id, perspective, name, kpis, ...(line ? { line } : {}),
     ...(lever ? { lever } : {}), ...(horizon ? { horizon } : {}), ...(pillar ? { pillar } : {}), ...(desc ? { desc } : {}), ...(indicator ? { indicator } : {}),
+    ...(okr ? { okr: true } : {}), ...(parent ? { parent } : {}),
   };
   const idx = c.objectives.findIndex((x) => x.id === id);
   if (idx >= 0) c.objectives[idx] = o; else c.objectives.push(o);

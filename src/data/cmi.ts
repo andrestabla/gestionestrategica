@@ -54,6 +54,8 @@ export type CmiObjective = {
   pillar?: string;     // pilar corporativo (texto libre: p. ej. «El ser humano»)
   desc?: string;       // aspiración: qué se quiere lograr o dejar habilitado
   indicator?: string;  // indicador impulsor (texto) propuesto para el objetivo
+  okr?: boolean;       // objetivo definido por la tribu en el laboratorio de OKR (no es un objetivo directivo)
+  parent?: string;     // objetivo directivo que concreta (id de otro objetivo)
 };
 
 export const CMI_OBJECTIVES: CmiObjective[] = [

@@ -43,7 +43,7 @@ export async function writeResponsible(db: Db, companyId: string, r: Responsible
 export const deleteResponsible = (db: Db, companyId: string, id: string) => db.responsible.deleteMany({ where: { companyId, id } });
 
 export async function writeObjective(db: Db, companyId: string, o: CmiObjective) {
-  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null, lever: o.lever ?? null, horizon: o.horizon ?? null, pillar: o.pillar ?? null, desc: o.desc ?? null, indicator: o.indicator ?? null };
+  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null, lever: o.lever ?? null, horizon: o.horizon ?? null, pillar: o.pillar ?? null, desc: o.desc ?? null, indicator: o.indicator ?? null, okr: !!o.okr, parent: o.parent ?? null };
   await db.cmiObjective.upsert({ where: { companyId_id: { companyId, id: o.id } }, update: data, create: { companyId, id: o.id, ...data } });
 }
 export const deleteObjective = (db: Db, companyId: string, id: string) => db.cmiObjective.deleteMany({ where: { companyId, id } });
@@ -169,9 +169,9 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
   const responsibles: Responsible[] = (await db.responsible.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
     .map((r: Responsible) => ({ id: r.id, cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }));
   const objectives: CmiObjective[] = (await db.cmiObjective.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
-    .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null; lever: string | null; horizon: string | null; pillar: string | null; desc: string | null; indicator: string | null }) => ({
+    .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null; lever: string | null; horizon: string | null; pillar: string | null; desc: string | null; indicator: string | null; okr?: boolean | null; parent?: string | null }) => ({
       id: o.id, perspective: o.perspective, name: o.name, kpis: (o.kpis as string[]) ?? [], line: o.line ?? undefined,
-      ...(o.lever ? { lever: o.lever } : {}), ...(o.horizon ? { horizon: o.horizon } : {}), ...(o.pillar ? { pillar: o.pillar } : {}), ...(o.desc ? { desc: o.desc } : {}), ...(o.indicator ? { indicator: o.indicator } : {}),
+      ...(o.lever ? { lever: o.lever } : {}), ...(o.horizon ? { horizon: o.horizon } : {}), ...(o.pillar ? { pillar: o.pillar } : {}), ...(o.desc ? { desc: o.desc } : {}), ...(o.indicator ? { indicator: o.indicator } : {}), ...(o.okr ? { okr: true } : {}), ...(o.parent ? { parent: o.parent } : {}),
     }));
   const kpiRows = await db.kpi.findMany({ where: { companyId }, include: { values: true }, orderBy: { code: "asc" } });
   const kpiCodeById = new Map<string, string>();
