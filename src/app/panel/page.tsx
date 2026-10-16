@@ -29,7 +29,7 @@ export default function Panel() {
   const router = useRouter();
   const convencion = isConvencion(v.catalog.company);
   // modo convención: el inicio es Dirección
-  useEffect(() => { if (convencion) router.replace(`${base}/panel/convencion?t=direccion`); }, [convencion, base, router]);
+  useEffect(() => { if (convencion) router.replace(`${base}/panel/convencion?t=itinerario`); }, [convencion, base, router]);
   return convencion ? null : <PanelHome />;
 }
 

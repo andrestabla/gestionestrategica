@@ -92,6 +92,6 @@ test("reglas puras: parseAccess, sectionOfToken, rutas y modo", () => {
   assert.deepEqual(splitTenantPath("/cresio/acceso/abcdefghijklmnopqrstuv"), { tenant: "cresio", path: "/acceso/abcdefghijklmnopqrstuv" });
   assert.deepEqual(splitTenantPath("/acceso/abc"), { tenant: null, path: "/acceso/abc" });
   assert.equal(accessUrl("https://x.app/", "cresio", "t0k"), "https://x.app/cresio/acceso/t0k");
-  assert.equal(sectionPath("cresio", "convencion"), "/cresio/panel/convencion?t=direccion");
+  assert.equal(sectionPath("cresio", "convencion"), "/cresio/panel/convencion?t=itinerario");   // lo primero que se ve al entrar por el QR es el itinerario
   assert.equal(isCompanyMode("convencion"), true); assert.equal(isCompanyMode("otro"), false);
 });

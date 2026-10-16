@@ -27,8 +27,9 @@ export const entryRoleNeedsTribe = (r: EntryRole) => r !== "directivo";
 export const isEntryRole = (r: unknown): r is EntryRole => ENTRY_ROLES.some((x) => x.id === r);
 
 /** Un solo acceso para toda la convención: quien lo escanea elige su tribu y su rol y se mueve por las cinco secciones. */
-export const ACCESS_SECTIONS: { id: AccessSection; tab: AccessTab; label: string; short: string; role: AccessRole; what: string; askTribe?: boolean }[] = [
-  { id: "convencion", tab: "direccion", label: "Convención", short: "Convención", role: "DIRECTIVO", askTribe: true, what: "Un solo QR para los dos días. Al entrar eliges tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál; te mueves por Dirección, OKR, Iniciativas → KR, Priorización en vivo y Portafolio según lo que tu rol permite." },
+export const ACCESS_SECTIONS: { id: AccessSection; tab: AccessTab; landing?: AccessTab | "itinerario"; label: string; short: string; role: AccessRole; what: string; askTribe?: boolean }[] = [
+  // landing: lo primero que ve quien entra por el QR (la agenda de los dos días); tab: la sección de trabajo de referencia
+  { id: "convencion", tab: "direccion", landing: "itinerario", label: "Convención", short: "Convención", role: "DIRECTIVO", askTribe: true, what: "Un solo QR para los dos días. Al entrar eliges tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál; te mueves por Dirección, OKR, Iniciativas → KR, Priorización en vivo y Portafolio según lo que tu rol permite." },
 ];
 /** Pestañas de la convención en orden (el menú). */
 export const ACCESS_TABS: { id: AccessTab; label: string }[] = [
@@ -45,8 +46,8 @@ export const accessSection = (id: AccessSection) => ACCESS_SECTIONS.find((s) => 
 
 /** Enlace que lleva el QR. */
 export const accessUrl = (origin: string, slug: string, token: string) => `${origin.replace(/\/$/, "")}/${slug}/acceso/${token}`;
-/** Ruta de la sección dentro de la empresa. */
-export const sectionPath = (slug: string, section: AccessSection) => `/${slug}/panel/convencion?t=${accessSection(section).tab}`;
+/** Adónde llega quien entra por el QR: la pestaña de llegada de la sección (el itinerario) o, si no la define, su pestaña de trabajo. */
+export const sectionPath = (slug: string, section: AccessSection) => { const s = accessSection(section); return `/${slug}/panel/convencion?t=${s.landing ?? s.tab}`; };
 
 export const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
 
