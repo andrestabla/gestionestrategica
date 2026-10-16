@@ -6,9 +6,9 @@
 // plataforma (modo sesión) y en el enlace público (modo público).
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui";
-import { ITINERARY_KINDS, COMMENT_KINDS, materialPath, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind, type ItineraryFile } from "@/lib/itinerario";
+import { ITINERARY_KINDS, COMMENT_KINDS, materialHref, fileKindOf, linkHost, URL_RE, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind, type ItineraryFile } from "@/lib/itinerario";
 import { consentSummary } from "@/lib/consentimiento";
-import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown, FileText } from "lucide-react";
+import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown, FileText, Presentation, ExternalLink } from "lucide-react";
 
 const KIND_CLS: Record<ItineraryKind, string> = {
   conferencia: "bg-[#8A6D1F] text-white", mesa: "bg-[#D4AF37] text-[#0D1B2A]", taller: "bg-[#0B6F88] text-white", plenaria: "bg-[#0D1B2A] text-white",
@@ -28,7 +28,7 @@ const kindStyle = (kind: ItineraryKind, accent: string, bg: string): { backgroun
 };
 const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", label: "Todo" }, { k: "mesa", label: "Mesa redonda" }, { k: "taller", label: "Talleres" }, { k: "conferencia", label: "Conferencias" }, { k: "plenaria", label: "Plenarias" }];
 
-export function ItinerarioView({ itinerary, comments, mode, audience = "organizador", company, canManage = false, publicUrl = null, publicUrlP = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, onUploadMomentFile, publicRef }: {
+export function ItinerarioView({ itinerary, comments, mode, audience = "organizador", company, canManage = false, publicUrl = null, publicUrlP = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, onUploadMomentFile, onAddLink, publicRef }: {
   itinerary: Omit<Itinerary, "token" | "tokenP">; comments: ItineraryComment[]; mode: "sesion" | "publico"; audience?: "organizador" | "participantes"; company?: { name: string; shortName: string };
   canManage?: boolean; publicUrl?: string | null; publicUrlP?: string | null; error?: string | null; busy?: boolean;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
@@ -40,14 +40,15 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
   onUploadFile?: (file: File, group: string) => Promise<boolean>;         // sube un PDF a los materiales
   onRemoveFile?: (id: string) => Promise<boolean>;
   onMomentFiles?: (momentId: string, fileIds: string[]) => Promise<boolean>;
-  onUploadMomentFile?: (momentId: string, file: File) => Promise<boolean>;   // sube un PDF y lo deja vinculado a ese momento
+  onUploadMomentFile?: (momentId: string, file: File) => Promise<boolean>;   // sube un PDF o PowerPoint y lo deja vinculado a ese momento
+  onAddLink?: (name: string, url: string, momentId?: string) => Promise<boolean>;   // añade un enlace como material (y lo vincula al momento, si se indica)
   publicRef?: { slug: string; token: string };                             // en el enlace público, para abrir los PDF
 }) {
   const [filter, setFilter] = useState<ItineraryKind | "all">("all");
   const [editHeader, setEditHeader] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
   const files = itinerary.files ?? [];
-  const fileHref = (id: string) => materialPath(id, publicRef);
+  const fileHref = (f: ItineraryFile) => materialHref(f, publicRef);
   // identidad visual del evento: con tema, cabecera oscura con el color de acento del cliente; sin tema, la identidad 4Shine
   const th = itinerary.theme;
   const accent = th?.accent ?? "#D4AF37", bg = th?.bg ?? "#0D1B2A";
@@ -127,16 +128,17 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
       {!pub && showFiles && onUploadFile && (
         <div className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-[13px] font-bold text-ink">Materiales en PDF</div>
-            <span className="text-[11px] text-muted">Se guardan en el almacenamiento (R2) y se abren en línea. También puedes subirlos desde el modal de cada momento: quedan vinculados a ese momento.</span>
-            <label className="btn-primary ml-auto cursor-pointer !py-1.5 text-[11.5px]"><Upload size={12} /> Subir PDF<input type="file" accept="application/pdf" multiple className="hidden" onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) await onUploadFile(f, "material"); e.target.value = ""; }} /></label>
+            <div className="text-[13px] font-bold text-ink">Materiales</div>
+            <span className="text-[11px] text-muted">PDF (se abre en línea), PowerPoint .pptx (se descarga) o enlace. Los archivos se guardan en el almacenamiento (R2). También puedes añadirlos desde el modal de cada momento: quedan vinculados a ese momento.</span>
+            {onAddLink && <LinkForm busy={busy} onAdd={(n, u) => onAddLink(n, u)} className="ml-auto" />}
+            <label className={`btn-primary cursor-pointer !py-1.5 text-[11.5px] ${onAddLink ? "" : "ml-auto"}`}><Upload size={12} /> Subir PDF o PowerPoint<input type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple className="hidden" onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) await onUploadFile(f, "material"); e.target.value = ""; }} /></label>
           </div>
           <FileList files={files} href={fileHref} onRemove={onRemoveFile} busy={busy} />
         </div>
       )}
       {pub && audience !== "participantes" && files.length > 0 && (
         <details className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
-          <summary className="cursor-pointer text-[13px] font-bold text-ink">Materiales de la convención ({files.length} PDF)</summary>
+          <summary className="cursor-pointer text-[13px] font-bold text-ink">Materiales de la convención ({files.length})</summary>
           <FileList files={files} href={fileHref} busy={false} />
         </details>
       )}
@@ -187,6 +189,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
       {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} simple={audience === "participantes"} canManage={canManage} busy={busy} companyName={company?.name ?? "la empresa"} files={files} href={fileHref}
         onFiles={editable && onMomentFiles ? (ids) => onMomentFiles(cur.id, ids) : undefined}
         onUpload={editable && onUploadMomentFile ? (f) => onUploadMomentFile(cur.id, f) : undefined}
+        onAddLink={editable && onAddLink ? (n, u) => onAddLink(n, u, cur.id) : undefined}
         onClose={() => setOpen(-1)} onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined}
         onComment={onComment} onResolve={onResolve} onDelete={onDelete}
         onEdit={editable ? async (next) => { const items = itinerary.items.map((x) => (x.id === cur.id ? next : x)); return save({ items }); } : undefined}
@@ -200,12 +203,12 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
 
 const pubMode = (m: "sesion" | "publico") => m === "publico";
 
-function MomentModal({ it, day, days, comments, pub, simple = false, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles, onUpload }: {
+function MomentModal({ it, day, days, comments, pub, simple = false, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles, onUpload, onAddLink }: {
   it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; simple?: boolean; canManage: boolean; busy: boolean; companyName: string; onClose: () => void; onPrev?: () => void; onNext?: () => void;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>; onDelete?: (id: string) => Promise<void>;
   onEdit?: (next: ItineraryItem) => Promise<boolean>; onRemove?: () => Promise<boolean>; onMove?: (dir: -1 | 1) => Promise<boolean>;
-  files: ItineraryFile[]; href: (id: string) => string; onFiles?: (ids: string[]) => Promise<boolean>; onUpload?: (file: File) => Promise<boolean>;
+  files: ItineraryFile[]; href: (f: ItineraryFile) => string; onFiles?: (ids: string[]) => Promise<boolean>; onUpload?: (file: File) => Promise<boolean>; onAddLink?: (name: string, url: string) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
   const linked = (it.files ?? []).map((id) => files.find((f) => f.id === id)).filter((f): f is ItineraryFile => !!f);
@@ -282,12 +285,13 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
         </div>
         {(linked.length > 0 || onFiles) && (
           <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
-            <div className="label !text-[9px]">Materiales en PDF de este momento</div>
-            {linked.length ? <ul className="mt-1.5 space-y-1">{linked.map((f) => <li key={f.id}><a href={href(f.id)} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-cyan-deep hover:underline"><FileText size={13} /> {f.name}<span className="num text-[10.5px] font-normal text-faint">· {Math.max(1, Math.round(f.size / 1024))} KB</span></a></li>)}</ul> : <p className="mt-1 text-[12px] italic text-faint">Sin materiales vinculados.</p>}
+            <div className="label !text-[9px]">Materiales de este momento</div>
+            {linked.length ? <ul className="mt-1.5 space-y-1">{linked.map((f) => <li key={f.id}><a href={href(f)} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-cyan-deep hover:underline"><FileIcon f={f} size={13} /> {f.name}<span className="num text-[10.5px] font-normal text-faint">· {fileMeta(f)}</span></a></li>)}</ul> : <p className="mt-1 text-[12px] italic text-faint">Sin materiales vinculados.</p>}
+            {onAddLink && <div className="mt-2"><LinkForm busy={busy} onAdd={onAddLink} label="Añadir enlace a este momento" /></div>}
             {onUpload && (
-              <label className={`btn-ghost mt-2 inline-flex cursor-pointer !py-1.5 text-[11.5px] ${busy ? "pointer-events-none opacity-50" : ""}`} title="Sube un PDF al almacenamiento y lo deja vinculado a este momento">
-                <Upload size={12} /> Subir PDF a este momento
-                <input type="file" accept="application/pdf" multiple className="hidden" disabled={busy} onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) { if (!(await onUpload(f))) break; } e.target.value = ""; }} />
+              <label className={`btn-ghost mt-2 inline-flex cursor-pointer !py-1.5 text-[11.5px] ${busy ? "pointer-events-none opacity-50" : ""}`} title="Sube un PDF o un PowerPoint al almacenamiento y lo deja vinculado a este momento">
+                <Upload size={12} /> Subir PDF o PowerPoint a este momento
+                <input type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple className="hidden" disabled={busy} onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) { if (!(await onUpload(f))) break; } e.target.value = ""; }} />
               </label>
             )}
             {onFiles && files.length > 0 && (
@@ -368,16 +372,37 @@ function DayForm({ day, busy, onClose, onSave }: { day: { id: string; title: str
   );
 }
 
-function FileList({ files, href, onRemove, busy }: { files: ItineraryFile[]; href: (id: string) => string; onRemove?: (id: string) => Promise<boolean>; busy: boolean }) {
-  if (!files.length) return <p className="mt-2 text-[12px] italic text-faint">Aún no hay materiales. Sube las plantillas y presentaciones en PDF.</p>;
+/** Icono según el tipo de material. */
+function FileIcon({ f, size = 13, className = "shrink-0 text-cyan-deep" }: { f: ItineraryFile; size?: number; className?: string }) {
+  const k = fileKindOf(f);
+  return k === "link" ? <ExternalLink size={size} className={className} /> : k === "pptx" ? <Presentation size={size} className={className} /> : <FileText size={size} className={className} />;
+}
+/** Dato breve junto al nombre: tamaño del archivo, o dominio del enlace. */
+const fileMeta = (f: ItineraryFile) => (fileKindOf(f) === "link" ? linkHost(f.url ?? "") || "enlace" : `${fileKindOf(f) === "pptx" ? "PowerPoint · " : ""}${Math.max(1, Math.round(f.size / 1024))} KB`);
+/** Formulario mínimo para añadir un enlace como material: nombre y URL. */
+function LinkForm({ busy, onAdd, label = "Añadir enlace", className = "" }: { busy: boolean; onAdd: (name: string, url: string) => Promise<boolean>; label?: string; className?: string }) {
+  const [open, setOpen] = useState(false); const [name, setName] = useState(""); const [url, setUrl] = useState("");
+  const ok = name.trim().length >= 2 && URL_RE.test(url.trim());
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className={`btn-ghost !py-1.5 text-[11.5px] ${className}`}><Link2 size={12} /> {label}</button>;
+  return (
+    <div className={`flex w-full flex-wrap items-end gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-2 ${className}`}>
+      <label className="block min-w-[160px] flex-1"><span className="label !text-[9px]">Nombre</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={160} className="input mt-1 !py-1.5 text-[12.5px]" placeholder="Presentación de la tribu" /></label>
+      <label className="block min-w-[200px] flex-[2]"><span className="label !text-[9px]">URL</span><input value={url} onChange={(e) => setUrl(e.target.value)} maxLength={600} inputMode="url" className="input mt-1 !py-1.5 text-[12.5px]" placeholder="https://…" /></label>
+      <button type="button" onClick={() => setOpen(false)} className="btn-ghost !py-1.5 text-[11.5px]">Cancelar</button>
+      <button type="button" disabled={busy || !ok} onClick={async () => { if (await onAdd(name.trim(), url.trim())) { setName(""); setUrl(""); setOpen(false); } }} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Añadir</button>
+    </div>
+  );
+}
+function FileList({ files, href, onRemove, busy }: { files: ItineraryFile[]; href: (f: ItineraryFile) => string; onRemove?: (id: string) => Promise<boolean>; busy: boolean }) {
+  if (!files.length) return <p className="mt-2 text-[12px] italic text-faint">Aún no hay materiales. Sube plantillas y presentaciones (PDF o PowerPoint) o añade enlaces.</p>;
   const groups = [...new Set(files.map((f) => f.group ?? "material"))];
   return (
     <div className="mt-2 grid gap-1 sm:grid-cols-2">
       {groups.map((g) => files.filter((f) => (f.group ?? "material") === g).map((f) => (
         <div key={f.id} className="flex items-center gap-2 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-[12px]">
-          <FileText size={13} className="shrink-0 text-cyan-deep" />
-          <a href={href(f.id)} target="_blank" rel="noopener" className="min-w-0 flex-1 break-words font-semibold leading-snug text-ink hover:text-cyan-deep">{f.name}</a>
-          <span className="num shrink-0 text-[10.5px] text-faint">{Math.max(1, Math.round(f.size / 1024))} KB</span>
+          <FileIcon f={f} />
+          <a href={href(f)} target="_blank" rel="noopener" className="min-w-0 flex-1 break-words font-semibold leading-snug text-ink hover:text-cyan-deep">{f.name}</a>
+          <span className="num shrink-0 text-[10.5px] text-faint">{fileMeta(f)}</span>
           {onRemove && <button type="button" disabled={busy} onClick={() => { if (confirm(`¿Quitar «${f.name}» de los materiales?`)) void onRemove(f.id); }} className="rounded-md p-1 text-faint hover:text-bad" title="Quitar"><Trash2 size={12} /></button>}
         </div>
       )))}

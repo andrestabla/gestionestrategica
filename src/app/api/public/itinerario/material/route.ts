@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { inTenant } from "@/app/api/td/_helpers";
 import { hydrateCompanies, companyBySlug, itineraryFileOf } from "@/server/store";
-import { getObject, pdfDisposition } from "@/server/storage";
-import { TOKEN_RE, FILE_ID_RE } from "@/lib/itinerario";
+import { getObject, materialDisposition } from "@/server/storage";
+import { TOKEN_RE, FILE_ID_RE, fileKindOf, FILE_TYPES } from "@/lib/itinerario";
 
-// GET /<empresa>/api/public/itinerario/material?token=&id= — el PDF de un
+// GET /<empresa>/api/public/itinerario/material?token=&id= — el archivo de un
 // material del itinerario publicado, sin sesión; el token del enlace autoriza.
+// El PDF se abre en línea, el PowerPoint se descarga y un enlace redirige.
 export async function GET(req: Request) {
   const u = new URL(req.url);
   const tenant = req.headers.get("x-tenant") ?? u.searchParams.get("tenant") ?? "";
@@ -16,7 +17,10 @@ export async function GET(req: Request) {
   if (!c || !c.active) return NextResponse.json({ error: "No existe" }, { status: 404 });
   const f = await inTenant(c.slug, async () => itineraryFileOf(id, token));
   if (!f) return NextResponse.json({ error: "El itinerario no está publicado o el material no existe." }, { status: 404 });
-  const buf = await getObject("materiales", `${c.slug}/${id}.pdf`);
+  const kind = fileKindOf(f);
+  if (kind === "link") return NextResponse.redirect(f.url!, 307);
+  const type = FILE_TYPES[kind];
+  const buf = await getObject("materiales", `${c.slug}/${id}.${type.ext}`);
   if (!buf) return NextResponse.json({ error: "Archivo no disponible." }, { status: 404 });
-  return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": "application/pdf", "Content-Disposition": pdfDisposition(f.name), "Cache-Control": "public, max-age=300" } });
+  return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": type.mime, "Content-Disposition": materialDisposition(f.name, type.ext as "pdf" | "pptx"), "Cache-Control": "public, max-age=300" } });
 }

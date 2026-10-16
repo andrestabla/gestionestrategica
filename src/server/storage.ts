@@ -99,9 +99,10 @@ export async function getObject(folder: Folder, key: string): Promise<Buffer | n
   }
 }
 
-/** Content-Disposition con nombre ASCII de respaldo y nombre UTF-8 (RFC 5987), siempre con extensión .pdf. */
-export function pdfDisposition(name: string): string {
-  const base = name.replace(/\.pdf$/i, "");
+/** Content-Disposition con nombre ASCII de respaldo y nombre UTF-8 (RFC 5987). El PDF se abre en línea; el PowerPoint se descarga. */
+export function materialDisposition(name: string, ext: "pdf" | "pptx" = "pdf"): string {
+  const base = name.replace(/\.(pdf|pptx)$/i, "");
   const ascii = base.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "").replace(/["\\]/g, "").trim() || "material";
-  return `inline; filename="${ascii}.pdf"; filename*=UTF-8''${encodeURIComponent(base + ".pdf")}`;
+  return `${ext === "pdf" ? "inline" : "attachment"}; filename="${ascii}.${ext}"; filename*=UTF-8''${encodeURIComponent(base + "." + ext)}`;
 }
+export const pdfDisposition = (name: string) => materialDisposition(name, "pdf");

@@ -99,6 +99,15 @@ test("materiales: registro, vínculo por momento y retiro", async () => {
     const r = removeItineraryFile(advisor, "deck-01"); assert.equal(r.ok, true);
     assert.equal(itineraryOf()?.items.find((x) => x.id === "d1-02")?.files, undefined);
     assert.equal(removeItineraryFile(advisor, "deck-01").ok, false);
+    // PowerPoint y enlaces: el tipo se conserva; un enlace exige URL http(s); sin «kind» es PDF
+    assert.equal(addItineraryFile(advisor, { id: "deck-02-pptx", name: "Deck 02.pptx", size: 500, kind: "pptx" }).ok, true);
+    assert.equal(itineraryFileOf("deck-02-pptx")?.kind, "pptx");
+    assert.equal(addItineraryFile(advisor, { id: "canva", name: "Deck en Canva", size: 0, kind: "link", url: "javascript:alert(1)" }).ok, false);
+    assert.equal(addItineraryFile(advisor, { id: "canva", name: "Deck en Canva", size: 99, kind: "link", url: "https://www.canva.com/design/x/view" }).ok, true);
+    assert.deepEqual([itineraryFileOf("canva")?.kind, itineraryFileOf("canva")?.url, itineraryFileOf("canva")?.size], ["link", "https://www.canva.com/design/x/view", 0]);
+    assert.equal(itineraryFileOf("plantilla-01")?.kind, undefined);
+    const reload2 = setItinerary(advisor, { ...IT, files: itineraryOf()!.files }); assert.equal(reload2.ok, true);
+    assert.equal(itineraryFileOf("canva")?.url, "https://www.canva.com/design/x/view"); assert.equal(itineraryFileOf("deck-02-pptx")?.kind, "pptx");
   });
 });
 
@@ -120,4 +129,15 @@ test("agenda para participantes: enlace aparte, sin logística ni comentarios, c
     assert.equal(publicItinerary(it).tokenP, undefined);
     publishItinerary(advisor, false, false, "participantes"); assert.equal(participantsItineraryOf(it.tokenP!), null);
   });
+});
+
+test("materiales: identificadores, tipo por extensión y destino de cada material", async () => {
+  const { fileIdFrom, uploadKindOf, materialHref } = await import("../src/lib/itinerario");
+  assert.equal(fileIdFrom("Deck 02 · Mesa redonda.pptx"), "deck-02-mesa-redonda");
+  assert.equal(fileIdFrom("Guía de facilitación.pdf"), "guia-de-facilitacion");
+  assert.deepEqual([uploadKindOf("a.PDF"), uploadKindOf("b.pptx"), uploadKindOf("c.ppt"), uploadKindOf("d.txt")], ["pdf", "pptx", null, null]);
+  const base = { name: "x", size: 1, at: "2026-10-16T00:00:00.000Z" };
+  assert.equal(materialHref({ id: "deck-01", ...base }), "/api/td/itinerario/material/deck-01");
+  assert.equal(materialHref({ id: "deck-01", ...base }, { slug: "cresio", token: "tok" }), "/cresio/api/public/itinerario/material?token=tok&id=deck-01");
+  assert.equal(materialHref({ id: "canva", ...base, kind: "link", url: "https://canva.com/x" }), "https://canva.com/x");
 });

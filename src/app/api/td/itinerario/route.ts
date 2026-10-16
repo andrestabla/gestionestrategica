@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile } from "@/server/store";
+import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile, addItineraryFile, itineraryFileOf } from "@/server/store";
 import { deleteObject } from "@/server/storage";
 import { can } from "@/lib/permissions";
-import { itineraryPublicPath, participantsAsItinerary } from "@/lib/itinerario";
+import { itineraryPublicPath, participantsAsItinerary, fileIdFrom, fileKindOf, FILE_TYPES } from "@/lib/itinerario";
 import { originOf } from "../convencion/acceso/route";
 
 // GET /api/td/itinerario — itinerario de la empresa activa, comentarios y, para
@@ -12,7 +12,9 @@ import { originOf } from "../convencion/acceso/route";
 // horario, momento, quién y descripción, sin logística ni comentarios. POST { op, … } para cargar
 // (op: "set", itinerary), publicar (op: "publish", on, regenerate), comentar
 // (op: "comment", momentId, kind, text), atender (op: "resolve", id, resolved)
-// o eliminar un comentario (op: "delete", id).
+// o eliminar un comentario (op: "delete", id); vincular materiales a un momento
+// (op: "files", momentId, fileIds); añadir un enlace como material (op: "link",
+// name, url, group?) o retirar un material (op: "removeFile", id).
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const it = itineraryOf();
   const manage = can(user, "manage_catalog") && !user.qr;
@@ -37,7 +39,8 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     case "resolve": r = resolveItineraryComment(user, body.id, body.resolved !== false); break;
     case "delete": r = deleteItineraryComment(user, body.id); break;
     case "files": r = setMomentFiles(user, body.momentId, body.fileIds); break;
-    case "removeFile": r = removeItineraryFile(user, body.id); if (r.ok) await deleteObject("materiales", `${user.company!.slug}/${String(body.id)}.pdf`); break;
+    case "link": { const name = String(body.name ?? "").trim(); const id = String(body.id ?? fileIdFrom(name || "enlace")); r = addItineraryFile(user, { id, name: name || String(body.url ?? ""), size: 0, kind: "link", url: String(body.url ?? "").trim(), group: String(body.group ?? "") || undefined }); break; }
+    case "removeFile": { const f = itineraryFileOf(String(body.id ?? "")); const kind = f ? fileKindOf(f) : "pdf"; r = removeItineraryFile(user, body.id); if (r.ok && kind !== "link") await deleteObject("materiales", `${user.company!.slug}/${String(body.id)}.${FILE_TYPES[kind].ext}`); break; }
     default: return NextResponse.json({ error: "Operación desconocida" }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

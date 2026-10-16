@@ -934,6 +934,18 @@ function ItinerarioTab() {
       }}
       onRemoveFile={(id) => post({ op: "removeFile", id })}
       onMomentFiles={(momentId, fileIds) => post({ op: "files", momentId, fileIds })}
+      onAddLink={async (name, url, momentId) => {
+        // registra el enlace como material y, si viene de un momento, lo vincula a ese momento
+        setBusy(true); setError(null);
+        const res = await fetch("/api/td/itinerario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "link", name, url, group: "material" }) });
+        const j = await res.json().catch(() => null); setBusy(false);
+        if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
+        const it = j.itinerary as ItineraryT; setData((d) => d ? { ...d, itinerary: it } : d);
+        if (!momentId) return true;
+        const f = (it.files ?? []).find((x) => x.url === url.trim()); if (!f) return true;
+        const prev = it.items.find((x) => x.id === momentId)?.files ?? [];
+        return prev.includes(f.id) ? true : post({ op: "files", momentId, fileIds: [...prev, f.id] });
+      }}
       onResolve={async (id, resolved) => { await post({ op: "resolve", id, resolved }); }}
       onDelete={async (id) => { await post({ op: "delete", id }); }} />
   );

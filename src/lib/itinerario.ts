@@ -19,8 +19,18 @@ export type ItineraryItem = {
   method: string; materials: string[]; platform: string;
   files?: string[];     // ids de archivos (PDF) vinculados a este momento
 };
-/** Archivo del itinerario guardado en el almacenamiento (R2 o local), siempre PDF. */
-export type ItineraryFile = { id: string; name: string; size: number; at: string; by?: string; group?: string };
+/** Material del itinerario: un PDF o un PowerPoint guardado en el almacenamiento (R2 o local), o un enlace externo. Sin «kind» es un PDF (formato original). */
+export type ItineraryFileKind = "pdf" | "pptx" | "link";
+export type ItineraryFile = { id: string; name: string; size: number; at: string; by?: string; group?: string; kind?: ItineraryFileKind; url?: string };
+export const fileKindOf = (f: Pick<ItineraryFile, "kind">): ItineraryFileKind => f.kind ?? "pdf";
+/** Extensión y tipo MIME con los que se guarda y se sirve un material subido. */
+export const FILE_TYPES: Record<Exclude<ItineraryFileKind, "link">, { ext: string; mime: string; label: string }> = {
+  pdf: { ext: "pdf", mime: "application/pdf", label: "PDF" },
+  pptx: { ext: "pptx", mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", label: "PowerPoint" },
+};
+/** Tipo de un archivo que se sube, por su nombre; null si no se admite. */
+export const uploadKindOf = (name: string): Exclude<ItineraryFileKind, "link"> | null => /\.pdf$/i.test(name) ? "pdf" : /\.pptx$/i.test(name) ? "pptx" : null;
+export const URL_RE = /^https?:\/\/[^\s"'<>]+$/;
 export type Itinerary = {
   title: string; sub?: string; days: ItineraryDay[]; items: ItineraryItem[];
   files?: ItineraryFile[];   // materiales en PDF (plantillas, presentaciones, guía)
@@ -81,7 +91,10 @@ export function parseItinerary(input: unknown): { ok: true; itinerary: Itinerary
     for (const f of raw.files as Record<string, unknown>[]) {
       const id = s(f?.id, 60); const name = s(f?.name, 160);
       if (!FILE_ID_RE.test(id) || !name || files.some((x) => x.id === id)) continue;
-      files.push({ id, name, size: Math.max(0, Math.round(Number(f?.size) || 0)), at: s(f?.at, 40) || new Date().toISOString(), ...(s(f?.by, 80) ? { by: s(f?.by, 80) } : {}), ...(s(f?.group, 40) ? { group: s(f?.group, 40) } : {}) });
+      const kind: ItineraryFileKind = f?.kind === "pptx" ? "pptx" : f?.kind === "link" ? "link" : "pdf";
+      const url = s(f?.url, 600);
+      if (kind === "link" && !URL_RE.test(url)) continue;
+      files.push({ id, name, size: Math.max(0, Math.round(Number(f?.size) || 0)), at: s(f?.at, 40) || new Date().toISOString(), ...(s(f?.by, 80) ? { by: s(f?.by, 80) } : {}), ...(s(f?.group, 40) ? { group: s(f?.group, 40) } : {}), ...(kind !== "pdf" ? { kind } : {}), ...(kind === "link" ? { url } : {}) });
     }
   }
   const known = new Set(files.map((f) => f.id));
@@ -121,4 +134,8 @@ export const participantsAsItinerary = (it: Itinerary): Omit<Itinerary, "token" 
 export const itineraryPublicPath = (slug: string, token: string) => `/${slug}/p/itinerario/${token}`;
 /** Ruta de lectura en línea de un material: con sesión o, en el enlace público, con el token. */
 export const materialPath = (fileId: string, pub?: { slug: string; token: string }) => pub ? `/${pub.slug}/api/public/itinerario/material?token=${pub.token}&id=${fileId}` : `/api/td/itinerario/material/${fileId}`;
-export const fileIdFrom = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\.pdf$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+/** Adónde lleva un material: a su URL si es un enlace; a la ruta de lectura si es un archivo. */
+export const materialHref = (f: ItineraryFile, pub?: { slug: string; token: string }) => (fileKindOf(f) === "link" && f.url ? f.url : materialPath(f.id, pub));
+/** Dominio de un enlace, para mostrarlo junto al nombre. */
+export const linkHost = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } };
+export const fileIdFrom = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\.(pdf|pptx)$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);

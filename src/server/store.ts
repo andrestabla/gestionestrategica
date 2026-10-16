@@ -23,7 +23,7 @@ import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Ev
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
-import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile } from "@/lib/itinerario";
+import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile, URL_RE } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import { RESERVED } from "@/lib/tenant-url";
@@ -2036,11 +2036,13 @@ export async function resetPassword(token: string, password: unknown): Promise<{
 
 
 /** Registra un material (PDF ya guardado en el almacenamiento) en el itinerario. */
-export function addItineraryFile(actor: SessionUser, file: { id: string; name: string; size: number; group?: string }): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
+export function addItineraryFile(actor: SessionUser, file: { id: string; name: string; size: number; group?: string; kind?: ItineraryFile["kind"]; url?: string }): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
   const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
   if (!FILE_ID_RE.test(file.id)) return { ok: false, status: 422, error: "Identificador de archivo inválido." };
-  const entry: ItineraryFile = { id: file.id, name: str(file.name, 160), size: file.size, at: new Date().toISOString(), by: actor.name, ...(file.group ? { group: str(file.group, 40) } : {}) };
+  const kind = file.kind ?? "pdf";
+  if (kind === "link" && !URL_RE.test(String(file.url ?? ""))) return { ok: false, status: 422, error: "El enlace debe empezar por http:// o https://." };
+  const entry: ItineraryFile = { id: file.id, name: str(file.name, 160), size: kind === "link" ? 0 : file.size, at: new Date().toISOString(), by: actor.name, ...(file.group ? { group: str(file.group, 40) } : {}), ...(kind !== "pdf" ? { kind } : {}), ...(kind === "link" ? { url: str(file.url, 600) } : {}) };
   const files = [...(prev.files ?? []).filter((f) => f.id !== file.id), entry].sort((a, b) => a.name.localeCompare(b.name));
   const it: Itinerary = { ...prev, files };
   saveItinerary(actor, it, `material del itinerario: ${entry.name}`);
