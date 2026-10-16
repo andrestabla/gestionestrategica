@@ -35,13 +35,18 @@ export const OKR_EJEMPLOS: Record<string, OkrSugerido> & { default: OkrSugerido 
 export const ejemploPara = (leverId: string): OkrSugerido => OKR_EJEMPLOS[leverId] ?? OKR_EJEMPLOS.default;
 
 /** Encargo al modelo: contexto de la empresa, la palanca, la tribu, los objetivos directivos y la biblioteca de plantillas. */
-export function armarEncargo(cat: Catalog, lever: Lever, tribeName: string, templates: KrTemplate[]): { system: string; user: string } {
+export type ObjetivoEscrito = { name: string; desc?: string; indicator?: string };
+
+/** Con `objective` (el que escribió la tribu) el modelo propone sus resultados clave; sin él, propone OKR completos. */
+export function armarEncargo(cat: Catalog, lever: Lever, tribeName: string, templates: KrTemplate[], objective?: ObjetivoEscrito): { system: string; user: string } {
   const directivos = cat.objectives.filter((o) => !o.okr && o.lever === lever.id).map((o) => `- ${o.id} (${o.horizon ?? "?"}): ${o.name}${o.indicator ? ` · indicador: ${o.indicator}` : ""}${o.desc ? ` · ${o.desc}` : ""}`).join("\n");
   const propios = cat.objectives.filter((o) => o.okr && o.lever === lever.id).map((o) => `- ${o.name}`).join("\n");
   const plantillas = templates.map((t) => `- ${t.name} (${t.unit}${t.goodDirection === "down" ? ", mejor si baja" : ""})${t.formula ? ` · fórmula: ${t.formula}` : ""}`).join("\n");
   const system = `Eres un consultor de planeación estratégica que ayuda a una tribu a escribir sus OKR 2027 con el método 4Shine Empresas: un objetivo cualitativo y de 2 a 4 resultados clave (máximo 5) medibles, con unidad, sentido, frecuencia, definición y fórmula. Regla: al menos dos resultados clave de resultado de negocio (lo que cambia para el cliente, el colaborador o el margen), como máximo uno de hito. Nunca propongas actividades como resultados clave. Escribe en español de Ecuador, concreto y breve. Responde solo JSON con esta forma exacta:
 {"propuestas":[{"objective":{"name":"…","desc":"…","indicator":"…"},"why":"…","krs":[{"name":"…","unit":"…","goodDirection":"up|down","frequency":"Mensual|Trimestral|Semestral|Anual","definition":"…","formula":"…","target":null,"why":"…"}]}]}
-Devuelve exactamente 2 propuestas, cada una con 3 resultados clave. En "why" explica en una frase por qué es pertinente para esta palanca y tribu. En "target" deja null salvo que el contexto dé una meta explícita.`;
+${objective
+    ? `Devuelve exactamente 1 propuesta: en "objective" conserva el objetivo que escribió la tribu (puedes afinar la redacción solo si gana claridad, sin cambiar su intención) y propón 3 resultados clave que lo midan (nunca actividades). En "why" de cada resultado clave explica en una frase qué mide y por qué importa.`
+    : `Devuelve exactamente 2 propuestas, cada una con 3 resultados clave. En "why" explica en una frase por qué es pertinente para esta palanca y tribu.`} En "target" deja null salvo que el contexto dé una meta explícita.`;
   const user = `Empresa: ${cat.company.name} (${cat.company.sector || "retail farmacéutico"}, ${cat.company.country === "EC" ? "Ecuador" : cat.company.department || ""}).
 Palanca: ${lever.name}${lever.indicator ? ` · indicador principal: ${lever.indicator}` : ""}${lever.desc ? ` · ${lever.desc}` : ""}.
 Tribu: ${tribeName}.
@@ -49,7 +54,10 @@ Objetivos directivos de esta palanca (lineamientos del Directorio, por horizonte
 ${directivos || "- (sin objetivos directivos cargados)"}
 ${propios ? `Objetivos que la tribu ya escribió hoy (no los repitas):\n${propios}\n` : ""}Biblioteca de indicadores disponibles para esta palanca (puedes usarlos o proponer otros mejores):
 ${plantillas || "- (sin biblioteca)"}
-Propón los 2 OKR 2027 más pertinentes para esta tribu, derivados de los objetivos directivos de su palanca, cada uno con 3 resultados clave técnicos.`;
+${objective
+    ? `Objetivo 2027 que escribió la tribu: «${objective.name}»${objective.desc ? ` · aspiración: ${objective.desc}` : ""}${objective.indicator ? ` · indicador impulsor: ${objective.indicator}` : ""}.
+Propón los 3 resultados clave técnicos más pertinentes para medir ese objetivo (al menos dos de resultado de negocio, como máximo uno de hito).`
+    : `Propón los 2 OKR 2027 más pertinentes para esta tribu, derivados de los objetivos directivos de su palanca, cada uno con 3 resultados clave técnicos.`}`;
   return { system, user };
 }
 

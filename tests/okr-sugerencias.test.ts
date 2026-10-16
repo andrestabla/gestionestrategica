@@ -26,3 +26,9 @@ test("encargo al modelo: palanca, tribu, lineamientos directivos y regla de 2 a 
   const { system, user } = armarEncargo(ANDINA_CATALOG, lever, "Tribu de prueba", []);
   assert.match(system, /2 a 4 resultados clave/); assert.ok(user.includes(lever.name)); assert.ok(user.includes("Tribu de prueba"));
 });
+
+test("encargo con el objetivo escrito por la tribu: una propuesta con sus resultados clave", () => {
+  const lever = { id: "FID", name: "Fidelización del cliente", order: 2 } as Lever;
+  const { system, user } = armarEncargo(ANDINA_CATALOG, lever, "Tribu Experiencia", [], { name: "Elevar el NPS de servicio a 60 puntos", desc: "", indicator: "NPS" });
+  assert.match(system, /exactamente 1 propuesta/); assert.ok(user.includes("Elevar el NPS de servicio a 60 puntos")); assert.match(user, /3 resultados clave/);
+});
