@@ -20,6 +20,7 @@ import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
+import { parseKrTemplates } from "@/lib/okr-plantillas";
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
@@ -310,6 +311,7 @@ export async function hydrateCompanies() {
         horizons: parseHorizons(c.horizons).ok ? (parseHorizons(c.horizons) as { horizons?: Horizon[] }).horizons : undefined,
         levers: parseLevers(c.levers).ok ? (parseLevers(c.levers) as { levers?: Lever[] }).levers : undefined,
         typeRule: parseTypeRule(c.typeRule).ok ? (parseTypeRule(c.typeRule) as { rule?: TypeRule }).rule : undefined,
+        krTemplates: (() => { const r = parseKrTemplates(c.krTemplates); return r.ok ? r.templates : undefined; })(),
         mode: isCompanyMode(c.mode) ? c.mode : "completa",
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
@@ -465,6 +467,7 @@ export type CompanyInput = {
   levers?: unknown;     // [{id, name, order, ownerId, indicator, desc}] · palancas estratégicas
   typeRule?: unknown;   // "4shine" | "cresio" | {criteria: [{key, name, strategic, tactical}], min} · regla estratégica/táctica
   mode?: unknown;       // "completa" | "convencion" · menú completo o solo las cinco secciones de la convención
+  krTemplates?: unknown; // [{oe, code, name, unit, …}] · plantillas de KR por objetivo (lista vacía = sin biblioteca)
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
 
@@ -646,6 +649,12 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     if (!tr.ok) return { ok: false, status: 422, error: tr.error };
     c.typeRule = tr.rule;
     audit(actor, "task", `empresa:${c.slug}`, `regla de tipo estratégica/táctica: ${tr.rule ? (tr.rule.id ?? "propia") : "4shine"}`);
+  }
+  if (patch.krTemplates !== undefined) {
+    const kt = parseKrTemplates(patch.krTemplates);
+    if (!kt.ok) return { ok: false, status: 422, error: kt.error };
+    c.krTemplates = kt.templates;
+    audit(actor, "task", `empresa:${c.slug}`, `plantillas de KR: ${kt.templates?.length ?? 0}`);
   }
   if (patch.mode !== undefined) {
     if (!isCompanyMode(patch.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
@@ -2268,6 +2277,29 @@ export function removeKpi(user: SessionUser, code: string): CatResult {
   audit(user, "task", `cat:${code}`, "KPI eliminado");
   void persist("catálogo", (db) => dbDeleteKpi(db, cid(), code));
   return { ok: true };
+}
+
+/** Vacía los OKR de la empresa: borra todos los KPI, desvincula los objetivos y las iniciativas y olvida los reportes.
+    Para que cada tribu cree sus resultados clave desde cero en el laboratorio (con la biblioteca de plantillas). */
+export function clearOkr(user: SessionUser): CatResult & { removed?: number; unlinked?: number } {
+  const denied = canCatalog(user); if (denied) return denied;
+  const c = cat();
+  const removed = c.kpis.length;
+  const touchedObjectives = c.objectives.filter((o) => o.kpis.length);
+  const touchedInitiatives = c.initiatives.filter((i) => i.kpi);
+  for (const o of touchedObjectives) o.kpis = [];
+  for (const i of touchedInitiatives) i.kpi = "";
+  const codes = c.kpis.map((k) => k.code);
+  c.kpis = [];
+  kpiReports().clear();
+  audit(user, "task", "cat:okr", `OKR vaciados: ${removed} KPI borrados, ${touchedInitiatives.length} iniciativas desvinculadas`);
+  void persist("catálogo", async (db) => {
+    const id = cid();
+    for (const o of touchedObjectives) await writeObjective(db, id, o);
+    for (const i of touchedInitiatives) await writeInitiative(db, id, i);
+    for (const code of codes) await dbDeleteKpi(db, id, code);
+  });
+  return { ok: true, removed, unlinked: touchedInitiatives.length };
 }
 
 export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFull>): CatResult & { id?: string } {

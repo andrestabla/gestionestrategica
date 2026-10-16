@@ -9,6 +9,7 @@
 // Edita quien administra el catálogo (advisor, gerencia); los demás ven en vivo.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { templatesFor } from "@/lib/okr-plantillas";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
@@ -437,6 +438,17 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const num = (s: string) => { const n = Number(String(s).replace(",", ".")); return Number.isFinite(n) ? n : 0; };
   const ok = f.code.trim().length >= 2 && f.name.trim().length >= 3 && f.unit.trim() && /^\d{4}(-T[1-4])?$/.test(f.due.trim().toUpperCase());
+  // biblioteca de plantillas de KR del objetivo: prellena el formulario; la tribu fija base, meta, dueño y plazo
+  const templates = initial ? [] : templatesFor(cat.company.krTemplates, obj.id);
+  const [tpl, setTpl] = useState("");
+  const applyTemplate = (code: string) => {
+    setTpl(code);
+    const t = templates.find((x) => x.code === code); if (!t) return;
+    const free = !cat.kpis.some((k) => k.code === t.code);
+    setF({ ...f, code: free ? t.code : next, name: t.name, unit: t.unit, goodDirection: t.goodDirection ?? "up", frequency: t.frequency ?? "Trimestral",
+      definition: [t.definition, t.formula ? `Fórmula: ${t.formula}` : "", t.source ? `Fuente: ${t.source}` : ""].filter(Boolean).join(" · "),
+      baseline: t.baseline !== undefined ? String(t.baseline) : "", target: t.target !== undefined ? String(t.target) : "" });
+  };
   return (
     <Modal title={initial ? `Resultado clave · ${initial.code}` : `Nuevo resultado clave · ${obj.id}`} sub={obj.name} onClose={onCancel}
       footer={<>
@@ -448,6 +460,15 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
         </button>
       </>}>
       <div className="space-y-2.5">
+        {templates.length > 0 && (
+          <Field label="Plantilla de resultado clave (opcional)">
+            <select value={tpl} onChange={(e) => applyTemplate(e.target.value)} className={INPUT}>
+              <option value="">Elegir de la biblioteca del objetivo… ({templates.length})</option>
+              {templates.map((t) => { const used = cat.kpis.some((k) => k.code === t.code); return <option key={t.code} value={t.code}>{t.code} · {t.name}{used ? " (ya creado)" : ""}</option>; })}
+            </select>
+            <span className="mt-1 block text-[10.5px] leading-snug text-faint">La plantilla trae nombre, unidad, sentido, frecuencia y definición; la tribu fija línea base, meta, dueño y plazo. Se puede editar todo antes de crear.</span>
+          </Field>
+        )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
           <Field label="Código"><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} disabled={!!initial} className={`${INPUT} num`} /></Field>
           <Field label="Resultado clave"><input value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>

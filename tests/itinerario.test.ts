@@ -141,3 +141,24 @@ test("materiales: identificadores, tipo por extensión y destino de cada materia
   assert.equal(materialHref({ id: "deck-01", ...base }, { slug: "cresio", token: "tok" }), "/cresio/api/public/itinerario/material?token=tok&id=deck-01");
   assert.equal(materialHref({ id: "canva", ...base, kind: "link", url: "https://canva.com/x" }), "https://canva.com/x");
 });
+
+test("plantillas de KR: validación y vaciado de OKR", async () => {
+  const { parseKrTemplates, templatesFor } = await import("../src/lib/okr-plantillas");
+  const { updateCompany, clearOkr, catalog, companyBySlug } = await import("../src/server/store");
+  assert.equal(parseKrTemplates(undefined).ok, true);
+  assert.equal(parseKrTemplates([{ oe: "OE-01", code: "mal id", name: "x", unit: "%" }]).ok, false);
+  assert.equal(parseKrTemplates([{ oe: "OE-01", code: "MS-10", name: "PDV en funcionamiento", unit: "PDV" }, { oe: "OE-01", code: "MS-10", name: "Repetido aquí", unit: "%" }]).ok, false);
+  const ok = parseKrTemplates([{ oe: "OE-01", code: "ms-10", name: "PDV en funcionamiento", unit: "PDV", goodDirection: "down", frequency: "Mensual", baseline: "860", target: 1000, formula: "antiguos + nuevos" }, { oe: "OE-02", code: "MAR-10", name: "Margen bruto del portafolio (%)", unit: "%" }]);
+  assert.equal(ok.ok, true);
+  if (ok.ok) { assert.deepEqual(ok.templates?.[0], { oe: "OE-01", code: "MS-10", name: "PDV en funcionamiento", unit: "PDV", goodDirection: "down", frequency: "Mensual", formula: "antiguos + nuevos", baseline: 860, target: 1000 }); assert.equal(templatesFor(ok.templates, "OE-02").length, 1); assert.equal(templatesFor(ok.templates, "OE-09").length, 0); }
+  await inAndina(async () => {
+    resetStore();
+    const admin = { ...advisor, role: "ADMIN" as const };
+    const r = await updateCompany(admin, "andina", { krTemplates: [{ oe: "OE-01", code: "MS-10", name: "PDV en funcionamiento", unit: "PDV" }] });
+    assert.equal(r.ok, true); assert.equal(companyBySlug("andina")?.krTemplates?.length, 1);
+    const before = catalog().kpis.length; assert.ok(before > 0);
+    assert.equal(clearOkr(junta).ok, false);
+    const c = clearOkr(advisor); assert.equal(c.ok, true); assert.equal((c as { removed?: number }).removed, before);
+    assert.equal(catalog().kpis.length, 0); assert.equal(catalog().objectives.some((o) => o.kpis.length), false); assert.equal(catalog().initiatives.some((i) => i.kpi), false);
+  });
+});

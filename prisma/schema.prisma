@@ -55,6 +55,7 @@ model Company {
   horizons    Json? // horizontes de planeación [{id, label, months}]; nulo = corto/mediano
   levers      Json? // palancas estratégicas [{id, name, order, ownerId, indicator, desc}]
   typeRule    Json? // regla estratégica/táctica de la matriz {id, criteria, min}; nulo = regla 4Shine
+  krTemplates Json? // plantillas de resultados clave por objetivo [{oe, code, name, unit, …}]; nulo = sin biblioteca
   mode        String  @default("completa") // completa | convencion (menú reducido a las cinco secciones)
   access      Json? // acceso por sección de la convención con QR: {seccion: {token, role, at}}
   itinerary   Json? // itinerario de la convención {title, days, items, public, token}
