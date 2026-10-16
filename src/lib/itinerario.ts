@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Itinerario de la convención: la ruta de los dos días, momento a momento, con
-// la metodología, los materiales físicos, el uso de la plataforma y la salida
-// de cada tramo. Se guarda en la empresa, puede publicarse sin sesión con un
+// la descripción, la metodología, los materiales físicos y el uso de la
+// plataforma de cada tramo. Se guarda en la empresa, puede publicarse sin sesión con un
 // enlace propio, y el equipo organizador deja comentarios metodológicos o
 // logísticos por momento. Reglas puras; el store las aplica y persiste.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -13,7 +13,8 @@ export const ITINERARY_KINDS: Record<ItineraryKind, string> = {
 export type ItineraryDay = { id: string; title: string; sub?: string };
 export type ItineraryItem = {
   id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string;
-  method: string; materials: string[]; platform: string; output: string;
+  description: string;   // de qué trata el momento, en lenguaje de participante
+  method: string; materials: string[]; platform: string;
   files?: string[];     // ids de archivos (PDF) vinculados a este momento
 };
 /** Archivo del itinerario guardado en el almacenamiento (R2 o local), siempre PDF. */
@@ -24,7 +25,7 @@ export type Itinerary = {
   logo?: string;        // logo de la empresa para las vistas públicas (ruta /… o https://…)
   public: boolean;      // visible sin sesión en /<empresa>/p/itinerario/<token> (equipo organizador: metodología, materiales, plataforma y comentarios)
   token?: string;       // enlace público; se conserva al despublicar y cambia al regenerar
-  publicP?: boolean;    // agenda para participantes publicada (solo horario, momento, quién y salida)
+  publicP?: boolean;    // agenda para participantes publicada (solo horario, momento, quién y descripción)
   tokenP?: string;      // enlace de la agenda para participantes
 };
 
@@ -69,7 +70,8 @@ export function parseItinerary(input: unknown): { ok: true; itinerary: Itinerary
     const kind = isKind(it?.kind) ? it.kind : "plenaria";
     const materials = Array.isArray(it?.materials) ? (it.materials as unknown[]).map((m) => s(m, 160)).filter(Boolean).slice(0, 12) : [];
     const files = Array.isArray(it?.files) ? (it.files as unknown[]).map((f) => s(f, 60)).filter((f) => FILE_ID_RE.test(f)).slice(0, 20) : [];
-    items.push({ id, day, time, minutes, title, kind, who: s(it?.who, 200), method: s(it?.method, 1200), materials, platform: s(it?.platform, 400), output: s(it?.output, 300), ...(files.length ? { files } : {}) });
+    // «output» es el nombre anterior del campo (salida del momento): se acepta al cargar JSON antiguos
+    items.push({ id, day, time, minutes, title, kind, who: s(it?.who, 200), description: s(it?.description ?? it?.output, 500), method: s(it?.method, 1200), materials, platform: s(it?.platform, 400), ...(files.length ? { files } : {}) });
   }
   const files: ItineraryFile[] = [];
   if (Array.isArray(raw.files)) {
@@ -87,11 +89,15 @@ export function parseItinerary(input: unknown): { ok: true; itinerary: Itinerary
 
 /** Lo que ve el público: sin el token. */
 export const publicItinerary = (it: Itinerary): Omit<Itinerary, "token" | "tokenP"> => { const { token: _t, tokenP: _p, ...rest } = it; void _t; void _p; return rest; };
-/** Agenda para participantes: solo horario, momento, quién y salida (sin metodología, materiales, plataforma, archivos ni comentarios). */
-export type ParticipantsItinerary = { title: string; sub?: string; logo?: string; days: ItineraryDay[]; items: { id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string; output: string }[] };
+/** Agenda para participantes: solo horario, momento, quién y descripción (sin metodología, materiales, plataforma, archivos ni comentarios). */
+export type ParticipantsItinerary = { title: string; sub?: string; logo?: string; days: ItineraryDay[]; items: { id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string; description: string }[] };
 export const participantsItinerary = (it: Itinerary): ParticipantsItinerary => ({
   title: it.title, ...(it.sub ? { sub: it.sub } : {}), ...(it.logo ? { logo: it.logo } : {}), days: it.days,
-  items: it.items.map((x) => ({ id: x.id, day: x.day, time: x.time, minutes: x.minutes, title: x.title, kind: x.kind, who: x.who, output: x.output })),
+  items: it.items.map((x) => ({ id: x.id, day: x.day, time: x.time, minutes: x.minutes, title: x.title, kind: x.kind, who: x.who, description: x.description })),
+});
+/** La agenda de participantes con la forma del itinerario completo (sin logística), para reutilizar la misma vista. */
+export const participantsAsItinerary = (it: Itinerary): Omit<Itinerary, "token" | "tokenP"> => ({
+  ...participantsItinerary(it), public: true, items: participantsItinerary(it).items.map((x) => ({ ...x, method: "", materials: [], platform: "" })),
 });
 
 export const itineraryPublicPath = (slug: string, token: string) => `/${slug}/p/itinerario/${token}`;

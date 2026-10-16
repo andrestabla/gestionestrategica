@@ -15,17 +15,20 @@ export type AccessTab = "direccion" | "okr" | "iniciativas" | "priorizacion" | "
 export type AccessRole = Extract<Role, "LIDER" | "DIRECTIVO">;
 export type AccessEntry = { token: string; role: AccessRole; at: string };
 export type AccessConfig = Partial<Record<AccessSection, AccessEntry>>;
-/** Rol que elige quien entra por el QR: miembro de tribu o líder de tribu. */
-export type EntryRole = "miembro" | "lider";
+/** Rol que elige quien entra por el QR: miembro de tribu, líder de tribu o directivo (sin tribu). */
+export type EntryRole = "miembro" | "lider" | "directivo";
 export const ENTRY_ROLES: { id: EntryRole; label: string; what: string }[] = [
   { id: "miembro", label: "Miembro de tribu", what: "Ve toda la convención y califica las iniciativas de su tribu en Priorización en vivo." },
   { id: "lider", label: "Líder de tribu", what: "Además registra los OKR de su tribu y vincula sus iniciativas a los resultados clave (así quedan habilitadas para calificar)." },
+  { id: "directivo", label: "Directivo", what: "Sin tribu: ve toda la convención (Dirección, OKR, iniciativas, ranking y Portafolio en tiempo real), pregunta y ratifica en plenaria." },
 ];
+/** Miembros y líderes pertenecen a una tribu; el directivo no. */
+export const entryRoleNeedsTribe = (r: EntryRole) => r !== "directivo";
 export const isEntryRole = (r: unknown): r is EntryRole => ENTRY_ROLES.some((x) => x.id === r);
 
 /** Un solo acceso para toda la convención: quien lo escanea elige su tribu y su rol y se mueve por las cinco secciones. */
 export const ACCESS_SECTIONS: { id: AccessSection; tab: AccessTab; label: string; short: string; role: AccessRole; what: string; askTribe?: boolean }[] = [
-  { id: "convencion", tab: "direccion", label: "Convención", short: "Convención", role: "DIRECTIVO", askTribe: true, what: "Un solo QR para los dos días. Al entrar eliges tu tribu y tu rol (miembro o líder) y te mueves por Dirección, OKR, Iniciativas → KR, Priorización en vivo y Portafolio según lo que tu rol permite." },
+  { id: "convencion", tab: "direccion", label: "Convención", short: "Convención", role: "DIRECTIVO", askTribe: true, what: "Un solo QR para los dos días. Al entrar eliges tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál; te mueves por Dirección, OKR, Iniciativas → KR, Priorización en vivo y Portafolio según lo que tu rol permite." },
 ];
 /** Pestañas de la convención en orden (el menú). */
 export const ACCESS_TABS: { id: AccessTab; label: string }[] = [

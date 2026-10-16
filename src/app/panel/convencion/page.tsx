@@ -44,6 +44,9 @@ export default function ConvencionPage() {
   const canEdit = useCan("manage_catalog");
   const canAccess = useCan("manage_users");
   const me = useUser();
+  // quien entró por el QR (o no administra el catálogo) ve la agenda de participantes, no el itinerario del equipo organizador
+  const guest = !!me.qr || !(me.role === "ADMIN" || me.role === "CONSULTOR" || me.role === "LIDER");
+  const agendaOf = (t: (typeof TABS)[number]) => t.id === "itinerario" && guest ? "Agenda de los dos días: horario, momento, quién lo conduce y descripción" : t.agenda;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -95,17 +98,17 @@ export default function ConvencionPage() {
       {/* en móvil la lámina de sección reemplaza la descripción larga del encabezado */}
       {convencion ? (
         <div className="rise mb-5 flex items-center gap-2 text-[12.5px] text-muted">
-          {(() => { const t = TABS.find((x) => x.id === tab)!; return <><t.icon size={14} className="text-cyan-deep" /><b className="text-ink">{t.label}</b><span>· {t.agenda}</span></>; })()}
+          {(() => { const t = TABS.find((x) => x.id === tab)!; return <><t.icon size={14} className="text-cyan-deep" /><b className="text-ink">{t.label}</b><span>· {agendaOf(t)}</span></>; })()}
         </div>
       ) : (
       <div className="rise mb-5 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
         {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} title={t.agenda}
+          <button key={t.id} onClick={() => setTab(t.id)} title={agendaOf(t)}
             className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[12px] font-bold transition-all ${tab === t.id ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
             <t.icon size={13} className={tab === t.id ? "text-cyan-deep" : ""} /> {t.label}
           </button>
         ))}
-        <span className="ml-auto hidden text-[10.5px] text-faint sm:block">{TABS.find((t) => t.id === tab)?.agenda}</span>
+        <span className="ml-auto hidden text-[10.5px] text-faint sm:block">{agendaOf(TABS.find((t) => t.id === tab)!)}</span>
       </div>
       )}
 
@@ -873,7 +876,7 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
 
 /* ═══ Itinerario de la convención (modo sesión) ═══ */
 
-type ItinData = { itinerary: ItineraryT | null; comments: ItineraryComment[]; publicUrl: string | null; publicUrlP?: string | null; canManage: boolean };
+type ItinData = { itinerary: ItineraryT | null; audience?: "organizador" | "participantes"; comments: ItineraryComment[]; publicUrl: string | null; publicUrlP?: string | null; canManage: boolean };
 
 function ItinerarioTab() {
   const [data, setData] = useState<ItinData | null>(null);
@@ -890,21 +893,21 @@ function ItinerarioTab() {
     const j = await res.json().catch(() => null);
     setBusy(false);
     if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
-    setData((d) => ({ itinerary: j.itinerary, comments: j.comments, publicUrl: j.publicUrl, publicUrlP: j.publicUrlP ?? null, canManage: d?.canManage ?? false }));
+    setData((d) => ({ itinerary: j.itinerary, audience: d?.audience, comments: j.comments, publicUrl: j.publicUrl, publicUrlP: j.publicUrlP ?? null, canManage: d?.canManage ?? false }));
     return true;
   };
   if (!data && !error) return <p className="text-[12.5px] text-muted">Cargando el itinerario…</p>;
   if (!data?.itinerary) {
     return (
       <Card className="rise p-6">
-        <EmptyNote>Esta empresa aún no tiene itinerario cargado. {data?.canManage ? "Carga el JSON generado desde la guía de facilitación (Cresio/Convención/itinerario.json)." : "Lo carga el advisor o la gerencia."}</EmptyNote>
+        <EmptyNote>{data?.canManage ? "Esta empresa aún no tiene itinerario cargado. Carga el JSON generado desde la guía de facilitación (Cresio/Convención/itinerario.json)." : "El equipo organizador aún no ha publicado la agenda."}</EmptyNote>
         {data?.canManage && <label className="btn-primary mt-3 inline-flex cursor-pointer !py-2 text-[12px]"><Upload size={12} /> Cargar JSON<input type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { await post({ op: "set", itinerary: JSON.parse(await f.text()) }); } catch { setError("El archivo no es un JSON válido."); } }} /></label>}
         {error && <p className="mt-3 text-[12px] text-bad">{error}</p>}
       </Card>
     );
   }
   return (
-    <ItinerarioView itinerary={data.itinerary} comments={data.comments} mode="sesion" canManage={data.canManage} publicUrl={data.publicUrl} publicUrlP={data.publicUrlP ?? null} error={error} busy={busy}
+    <ItinerarioView itinerary={data.itinerary} comments={data.comments} mode="sesion" audience={data.audience ?? "organizador"} canManage={data.canManage} publicUrl={data.publicUrl} publicUrlP={data.publicUrlP ?? null} error={error} busy={busy}
       onComment={(momentId, kind, text) => post({ op: "comment", momentId, kind, text })}
       onPublish={async (on, regenerate, audience) => { await post({ op: "publish", on, regenerate, audience }); }}
       onUpload={async (json) => { await post({ op: "set", itinerary: json }); }}

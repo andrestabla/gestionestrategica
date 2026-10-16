@@ -20,7 +20,7 @@ import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
-import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole } from "@/lib/acceso";
+import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile } from "@/lib/itinerario";
@@ -1846,22 +1846,23 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   if (name.length < 5) return { ok: false, status: 422, error: "Escribe tu nombre completo." };
   const consent = input.consent === true;
   const sec = accessSection(section);
-  // quien entra elige su tribu (responsable del catálogo) y su rol: miembro (califica lo de su tribu) o líder (además registra OKR y vincula iniciativas)
-  const tribeId = String(input.responsibleId ?? "").trim();
+  // quien entra elige su rol: miembro (califica lo de su tribu), líder (además registra OKR y vincula iniciativas) o directivo (sin tribu, solo consulta);
+  // miembros y líderes eligen además su tribu (responsable del catálogo)
   const entryRole = isEntryRole(input.entryRole) ? input.entryRole : null;
+  const tribeId = entryRole === "directivo" ? "" : String(input.responsibleId ?? "").trim();
   if (tribeId && !cat().responsibles.some((r) => r.id === tribeId)) return { ok: false, status: 422, error: "Elige tu tribu de la lista." };
   if (g.platformUsers.some((u) => u.email.toLowerCase() === email)) return { ok: false, status: 403, error: "Ese correo es de un administrador de la plataforma: entra por /login." };
   let user = users().find((u) => u.email.toLowerCase() === email);
   let created = false;
   // el tratamiento de datos se acepta la primera vez (o si aún no consta la aceptación)
   if (!consent && (!user || !user.consentAt)) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
-  if (!user && (!tribeId || !entryRole)) return { ok: false, status: 422, error: "Elige tu tribu y tu rol (miembro o líder de tribu)." };
+  if (!user && (!entryRole || (entryRoleNeedsTribe(entryRole) && !tribeId))) return { ok: false, status: 422, error: "Elige tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál." };
   const consentAt = new Date();
   if (!user) {
     // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
     const elsewhere = await findUserForLogin(email);
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
-    const role: SessionUser["role"] = entryRole === "lider" ? "LIDER" : "RESPONSABLE";
+    const role: SessionUser["role"] = entryRole === "lider" ? "LIDER" : entryRole === "directivo" ? "DIRECTIVO" : "RESPONSABLE";
     user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: new Date().toISOString(), consentAt: consentAt.toISOString() };
     users().push(user);
     created = true;
@@ -1878,8 +1879,10 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   // Si aún no tiene tribu y la indica, se le guarda.
   if (!created && tribeId && !user.responsibleId) { user.responsibleId = tribeId; void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { responsibleId: tribeId } }); }); }
   const sessionRole: SessionUser["role"] = entryRole === "lider" && (user.role === "RESPONSABLE" || user.role === "DIRECTIVO") ? "LIDER" : user.role;
-  const session: SessionUser = { email: user.email, name: user.name, role: sessionRole, line: user.line, responsibleId: user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
-  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR de la convención como ${entryRole === "lider" ? "líder" : "miembro"} de tribu${sessionRole !== user.role ? " (edición en esta sesión)" : ""}`);
+  // la sesión queda marcada como entrada por QR: el itinerario que ve es la agenda de participantes
+  const session: SessionUser = { email: user.email, name: user.name, role: sessionRole, line: user.line, responsibleId: user.responsibleId, qr: true, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
+  const como = entryRole === "lider" ? "líder de tribu" : entryRole === "directivo" ? "directivo" : "miembro de tribu";
+  audit(session, "task", user.email, `${created ? "cuenta creada y " : ""}entrada por QR de la convención como ${como}${sessionRole !== user.role ? " (edición en esta sesión)" : ""}`);
   return { ok: true, user: session, section, created };
 }
 

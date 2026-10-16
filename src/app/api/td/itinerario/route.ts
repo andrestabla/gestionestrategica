@@ -3,20 +3,23 @@ import { withTenant } from "../_helpers";
 import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile } from "@/server/store";
 import { deleteObject } from "@/server/storage";
 import { can } from "@/lib/permissions";
-import { itineraryPublicPath, publicItinerary } from "@/lib/itinerario";
+import { itineraryPublicPath, participantsAsItinerary } from "@/lib/itinerario";
 import { originOf } from "../convencion/acceso/route";
 
 // GET /api/td/itinerario — itinerario de la empresa activa, comentarios y, para
-// quien lo administra, el enlace público. POST { op, … } para cargar
+// quien lo administra, el enlace público. Quien entró por el QR de la
+// convención (o no administra el catálogo) recibe la agenda de participantes:
+// horario, momento, quién y descripción, sin logística ni comentarios. POST { op, … } para cargar
 // (op: "set", itinerary), publicar (op: "publish", on, regenerate), comentar
 // (op: "comment", momentId, kind, text), atender (op: "resolve", id, resolved)
 // o eliminar un comentario (op: "delete", id).
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const it = itineraryOf();
-  const manage = can(user, "manage_catalog");
+  const manage = can(user, "manage_catalog") && !user.qr;
   return NextResponse.json({
-    itinerary: it ? (manage ? it : publicItinerary(it)) : null,
-    comments: itineraryComments(),
+    itinerary: it ? (manage ? it : participantsAsItinerary(it)) : null,
+    audience: manage ? "organizador" : "participantes",
+    comments: manage ? itineraryComments() : [],
     publicUrl: it?.token && manage ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.token)}` : null,
     publicUrlP: it?.tokenP && manage ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.tokenP)}` : null,
     canManage: manage,

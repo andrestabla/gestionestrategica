@@ -1,7 +1,7 @@
 "use client";
 
 // Itinerario de la convención: línea de tiempo vertical por día, modal por
-// momento (metodología, materiales, plataforma, salida) y comentarios
+// momento (descripción, metodología, materiales, plataforma) y comentarios
 // metodológicos o logísticos del equipo organizador. Sirve dentro de la
 // plataforma (modo sesión) y en el enlace público (modo público).
 import { useMemo, useState } from "react";
@@ -42,7 +42,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
   const newId = (day: string) => { let n = 1; while (itinerary.items.some((x) => x.id === `${day}-${String(n).padStart(2, "0")}`)) n++; return `${day}-${String(n).padStart(2, "0")}`; };
   const addMoment = (day: string) => {
     const last = [...itinerary.items].reverse().find((x) => x.day === day);
-    const it: ItineraryItem = { id: newId(day), day, time: last?.time ?? "8:00", minutes: 15, title: "Nuevo momento", kind: "plenaria", who: "", method: "", materials: [], platform: "", output: "" };
+    const it: ItineraryItem = { id: newId(day), day, time: last?.time ?? "8:00", minutes: 15, title: "Nuevo momento", kind: "plenaria", who: "", description: "", method: "", materials: [], platform: "" };
     const idx = last ? itinerary.items.indexOf(last) + 1 : itinerary.items.length;
     const items = [...itinerary.items]; items.splice(idx, 0, it);
     return save({ items }).then((ok) => { if (ok) setOpen(idx); });
@@ -69,12 +69,12 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
           <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#D4AF37]">{company?.name ?? ""} · 4Shine Empresas{audience === "participantes" ? " · agenda" : " · equipo organizador"}</div>
           <h1 className="mt-1.5 text-[24px] font-extrabold leading-tight sm:text-[30px]">{itinerary.title}</h1>
           {itinerary.sub && <p className="mt-1.5 max-w-2xl text-[13.5px] text-white/75">{itinerary.sub}</p>}
-          <p className="mt-3 text-[12px] text-white/60">{audience === "participantes" ? "Toca cada momento para ver quién lo conduce y qué sale de él." : "Toca cada momento para ver la metodología, los materiales, el uso de la plataforma y el resultado esperado, y para dejar comentarios metodológicos o logísticos."}</p>
+          <p className="mt-3 text-[12px] text-white/60">{audience === "participantes" ? "Toca cada momento para ver de qué trata y quién lo conduce." : "Toca cada momento para ver la metodología, los materiales, el uso de la plataforma y el resultado esperado, y para dejar comentarios metodológicos o logísticos."}</p>
         </div>
       )}
       {!pub && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <p className="text-[12.5px] text-muted">{itinerary.sub ?? "Ruta de la convención, momento a momento: metodología, materiales, plataforma y salida."}{pending ? <> · <b className="text-ink">{pending}</b> comentario{pending === 1 ? "" : "s"} por atender</> : null}</p>
+          <p className="text-[12.5px] text-muted">{itinerary.sub ?? "Ruta de la convención, momento a momento: descripción, metodología, materiales y plataforma."}{pending ? <> · <b className="text-ink">{pending}</b> comentario{pending === 1 ? "" : "s"} por atender</> : null}</p>
           {canManage && (
             <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
               {editable && <button type="button" onClick={() => setEditHeader(true)} className="btn-ghost !py-1.5 text-[11.5px]"><Pencil size={12} /> Encabezado</button>}
@@ -87,7 +87,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
               {itinerary.public && <button type="button" onClick={() => { if (confirm("El enlace anterior dejará de valer. ¿Regenerar?")) void onPublish?.(true, true); }} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="Cambia el enlace público"><RefreshCw size={12} /></button>}
               {itinerary.publicP
                 ? <button type="button" onClick={() => onPublish?.(false, false, "participantes")} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="La agenda para participantes deja de verse"><Lock size={12} /> Retirar agenda</button>
-                : <button type="button" onClick={() => onPublish?.(true, false, "participantes")} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="Enlace aparte, sin logística ni comentarios: horario, momento, quién y salida"><Globe size={12} /> Agenda para participantes</button>}
+                : <button type="button" onClick={() => onPublish?.(true, false, "participantes")} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px]" title="Enlace aparte, sin logística ni comentarios: horario, momento, quién y descripción"><Globe size={12} /> Agenda para participantes</button>}
               {itinerary.publicP && publicUrlP && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrlP); setCopiedP(true); setTimeout(() => setCopiedP(false), 1500); }} className="btn-ghost !py-1.5 text-[11.5px]">{copiedP ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copiedP ? "Copiado" : "Copiar enlace de participantes"}</button>}
             </span>
           )}
@@ -229,27 +229,27 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
               <label className="block"><span className="label !text-[9px]">Día</span><select value={f.day} onChange={set("day")} className="input mt-1 !py-2 text-[13px]">{days.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</select></label>
               <label className="block"><span className="label !text-[9px]">Quién conduce</span><input value={f.who} onChange={set("who")} className="input mt-1 !py-2 text-[13px]" /></label>
             </div>
+            <label className="block"><span className="label !text-[9px]">Descripción del momento (lo que ven los participantes)</span><textarea value={f.description} onChange={set("description")} rows={3} maxLength={500} className="input mt-1 !py-2 text-[13px]" /></label>
             <label className="block"><span className="label !text-[9px]">Metodología · dinámica y resultado</span><textarea value={f.method} onChange={set("method")} rows={5} maxLength={1200} className="input mt-1 !py-2 text-[13px]" /></label>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="block"><span className="label !text-[9px]">Materiales físicos (uno por línea)</span><textarea value={f.materialsText} onChange={set("materialsText")} rows={4} className="input mt-1 !py-2 text-[13px]" /></label>
               <label className="block"><span className="label !text-[9px]">Plataforma y pantalla</span><textarea value={f.platform} onChange={set("platform")} rows={4} maxLength={400} className="input mt-1 !py-2 text-[13px]" /></label>
             </div>
-            <label className="block"><span className="label !text-[9px]">Salida del momento</span><input value={f.output} onChange={set("output")} maxLength={300} className="input mt-1 !py-2 text-[13px]" /></label>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setEditing(false)} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
               <button type="button" onClick={() => void commitEdit()} disabled={busy || f.title.trim().length < 3 || !f.time.trim()} className="btn-primary ml-auto !py-2 text-[12px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Guardar</button>
             </div>
           </div>
         ) : simple ? (<>
+        <div><div className="label !text-[9px]">Descripción</div><p className="mt-1 leading-relaxed text-ink">{it.description || "—"}</p></div>
         <div><div className="label !text-[9px]">Quién lo conduce</div><p className="mt-1 text-ink">{it.who || "—"}</p></div>
-        <div><div className="label !text-[9px]">Qué sale de este momento</div><p className="mt-1 text-ink">{it.output || "—"}</p></div>
         </>) : (<>
+        <div><div className="label !text-[9px]">Descripción del momento</div><p className="mt-1 leading-relaxed text-ink">{it.description || "—"}</p></div>
         <div><div className="label !text-[9px]">Metodología · dinámica y resultado</div><p className="mt-1 leading-relaxed text-ink">{it.method || "—"}</p></div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-[#FAF4E3] px-3.5 py-3"><div className="label !text-[9px]">Materiales físicos</div>{it.materials.length ? <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-ink">{it.materials.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="mt-1 text-[13px] text-muted">—</p>}</div>
           <div className="rounded-xl bg-cyan-wash/60 px-3.5 py-3"><div className="label !text-[9px]">Plataforma y pantalla</div><p className="mt-1 text-[13px] text-ink">{it.platform || "—"}</p></div>
         </div>
-        <div><div className="label !text-[9px]">Salida del momento</div><p className="mt-1 text-ink">{it.output || "—"}</p></div>
         {(linked.length > 0 || onFiles) && (
           <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
             <div className="label !text-[9px]">Materiales en PDF de este momento</div>

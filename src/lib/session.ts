@@ -17,6 +17,8 @@ export type SessionUser = {
   line?: number;
   /** Responsable del catálogo (tribu, área) que delimita el ámbito de un RESPONSABLE. */
   responsibleId?: string;
+  /** Entró por el QR de la convención: ve la agenda de participantes, no el itinerario del equipo organizador. */
+  qr?: true;
   /** Empresa del usuario. El admin de plataforma no tiene empresa propia: aquí
       va la que eligió como contexto activo (puede cambiarla). */
   company?: SessionCompany;

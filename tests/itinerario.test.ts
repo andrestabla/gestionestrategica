@@ -10,13 +10,14 @@ import type { SessionUser } from "../src/lib/session";
 const advisor: SessionUser = { email: "c@a.co", name: "Advisor", role: "CONSULTOR", company: { slug: "andina", name: "Andina", shortName: "Andina" } };
 const junta: SessionUser = { email: "j@a.co", name: "Junta Directiva", role: "DIRECTIVO" };
 const IT = { title: "Convención de prueba", days: [{ id: "d1", title: "Día 1 · miércoles" }], items: [
-  { id: "d1-01", day: "d1", time: "8:00", minutes: 30, title: "Apertura", kind: "conferencia", who: "Carmenza", method: "Enmarcar.", materials: ["Deck 01"], platform: "Deck", output: "Marco" },
-  { id: "d1-02", day: "d1", time: "8:30", minutes: 60, title: "Mesa", kind: "mesa", who: "Directivos", method: "Rondas.", materials: [], platform: "Dirección", output: "Ternas" },
+  { id: "d1-01", day: "d1", time: "8:00", minutes: 30, title: "Apertura", kind: "conferencia", who: "Carmenza", method: "Enmarcar.", materials: ["Deck 01"], platform: "Deck", description: "Qué es y por qué importa." },
+  { id: "d1-02", day: "d1", time: "8:30", minutes: 60, title: "Mesa", kind: "mesa", who: "Directivos", method: "Rondas.", materials: [], platform: "Dirección", output: "Ternas" },   // «output» es el nombre anterior del campo
 ] };
 const inAndina = <T,>(fn: () => Promise<T> | T) => runWithTenant("andina", async () => fn());
 
 test("parseItinerary valida días, momentos y tipos", () => {
   const ok = parseItinerary(IT); assert.equal(ok.ok, true);
+  if (ok.ok) { assert.equal(ok.itinerary.items[0].description, "Qué es y por qué importa."); assert.equal(ok.itinerary.items[1].description, "Ternas"); assert.equal("output" in ok.itinerary.items[1], false); }
   assert.equal((ok as { itinerary: { items: { kind: string }[] } }).itinerary.items[0].kind, "conferencia");
   assert.equal(parseItinerary({ title: "x" }).ok, false);
   assert.equal(parseItinerary({ ...IT, items: [{ ...IT.items[0], day: "d9" }] }).ok, false);

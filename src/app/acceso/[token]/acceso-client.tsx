@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight } from "lucide-react";
 import { consentSummary, consentText } from "@/lib/consentimiento";
-import { ENTRY_ROLES, type EntryRole } from "@/lib/acceso";
+import { ENTRY_ROLES, entryRoleNeedsTribe, type EntryRole } from "@/lib/acceso";
 
 export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
   tenant: string; token: string; company: { name: string; shortName: string }; section: { id: string; label: string; what: string }; tribes?: { id: string; name: string }[];
@@ -16,7 +16,8 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
   const [consent, setConsent] = useState(false);
   const [tribe, setTribe] = useState("");
   const [entryRole, setEntryRole] = useState<EntryRole | "">("");
-  const askTribe = tribes.length > 0;
+  // miembros y líderes eligen su tribu; el directivo entra sin tribu
+  const askTribe = tribes.length > 0 && entryRole !== "" && entryRoleNeedsTribe(entryRole);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (e: React.FormEvent) => {
@@ -38,9 +39,6 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
           <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoCapitalize="words" required minLength={5} className="input mt-1 !py-2.5 text-[14px]" placeholder="Nombre y apellido" /></label>
         <label className="mt-3 block"><span className="label !text-[9px]">Correo</span>
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" autoCapitalize="none" inputMode="email" required className="input mt-1 !py-2.5 text-[14px]" placeholder="tu@correo.com" /></label>
-        {askTribe && <label className="mt-3 block"><span className="label !text-[9px]">Tu tribu</span>
-          <select value={tribe} onChange={(e) => setTribe(e.target.value)} required className="input mt-1 !py-2.5 text-[14px]"><option value="">Elige tu tribu…</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
-          <span className="mt-1 block text-[11px] leading-snug text-faint">Si ya tienes cuenta, se conserva tu tribu.</span></label>}
         <div className="mt-3"><span className="label !text-[9px]">Tu rol en la convención</span>
           <div className="mt-1 grid gap-1.5">
             {ENTRY_ROLES.map((r) => (
@@ -51,6 +49,9 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
             ))}
           </div>
         </div>
+        {askTribe && <label className="mt-3 block"><span className="label !text-[9px]">Tu tribu</span>
+          <select value={tribe} onChange={(e) => setTribe(e.target.value)} required className="input mt-1 !py-2.5 text-[14px]"><option value="">Elige tu tribu…</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+          <span className="mt-1 block text-[11px] leading-snug text-faint">Si ya tienes cuenta, se conserva tu tribu.</span></label>}
         <p className="mt-2 text-[11px] leading-snug text-faint">El correo te identifica: si ya entraste antes, se usa tu misma cuenta.</p>
         <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-surface-2/70 px-3 py-2.5">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--navy)]" />

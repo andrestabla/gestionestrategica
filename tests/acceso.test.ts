@@ -69,6 +69,14 @@ test("entrada por QR: tribu y rol obligatorios, cuenta única por correo, líder
     assert.equal((await accessUser("token-que-no-existe-xx", { name: "Alguien Más", email: "x@y.co", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, false);
     assert.equal((await accessUser(tok, { name: "Sin", email: "x@y.co", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, false);
     assert.equal((await accessUser(tok, { name: "Sin Correo Válido", email: "no-es-correo", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, false);
+    // directivo: entra sin tribu, con rol de consulta; la sesión queda marcada como entrada por QR
+    assert.equal((await accessUser(tok, { name: "Doris Directiva", email: "doris@cresio.ec", consent: true, entryRole: "no-es-rol" })).ok, false);
+    const r5 = await accessUser(tok, { name: "Doris Directiva", email: "doris@cresio.ec", consent: true, entryRole: "directivo", responsibleId: tribe });
+    assert.equal(r5.ok, true);
+    const u5 = (r5 as { user: SessionUser; created: boolean }).user;
+    assert.equal(u5.role, "DIRECTIVO"); assert.equal(u5.responsibleId, undefined); assert.equal(u5.qr, true);
+    assert.equal(getUsers().find((u) => u.email === "doris@cresio.ec")?.responsibleId, undefined);
+    assert.equal(u1.user.qr, true);
   });
 });
 
