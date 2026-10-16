@@ -1,7 +1,7 @@
 "use client";
 
 // Convención de planeación: apoyo a la facilitación en vivo.
-//   Dirección   → objetivos por palanca y horizonte (mesa redonda, talleres 2027/2030/2033)
+//   Dirección 3x3   → objetivos por palanca y horizonte (mesa redonda, talleres 2027/2030/2033)
 //   OKR         → objetivos del primer horizonte con sus resultados clave y reglas de calidad
 //   Iniciativas → qué iniciativa mueve cada resultado clave; vinculación en vivo
 //   Priorización→ cobertura de la evaluación con la matriz, ranking y actividad por evaluador
@@ -29,7 +29,7 @@ import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loade
 type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
   { id: "itinerario", label: "Itinerario", icon: CalendarDays, agenda: "Ruta de los dos días: metodología, materiales, plataforma y comentarios del equipo organizador" },
-  { id: "direccion", label: "Dirección", icon: Target, agenda: "Día 1 · mesa redonda y talleres 2027 / 2030 / 2033" },
+  { id: "direccion", label: "Dirección 3x3", icon: Target, agenda: "Día 1 · mesa redonda y talleres 2027 / 2030 / 2033" },
   { id: "okr", label: "OKR", icon: Gauge, agenda: "Día 2 · laboratorio y validación cruzada de OKR" },
   { id: "iniciativas", label: "Iniciativas → KR", icon: Rocket, agenda: "Día 2 · iniciativas críticas para mover resultados" },
   { id: "priorizacion", label: "Priorización en vivo", icon: Scale, agenda: "Día 2 · priorización en herramienta" },
@@ -126,7 +126,7 @@ export default function ConvencionPage() {
 type Mutate = (entity: string, op: "upsert" | "delete", data: unknown) => Promise<boolean>;
 type Cat = ReturnType<typeof useCatalog>["catalog"];
 
-/* ═══ Dirección: palanca × horizonte ═══ */
+/* ═══ Dirección 3x3: palanca × horizonte ═══ */
 
 function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; horizons: { id: string; label: string; months: number }[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
   const m = objectivesMatrix(cat);
@@ -337,7 +337,7 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
         {(fOe || fTribe) && <button type="button" onClick={() => { setFOe(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
         {!canEdit && <span className="ml-auto text-[10.5px] text-faint">Solo lectura: el líder de cada tribu registra con el QR de edición.</span>}
       </div>
-      {allObjectives.length === 0 && <Card className="rise p-6"><EmptyNote>No hay objetivos en {horizonLabel(cat.company, horizon)}. Créalos en «Dirección» y vuelve aquí para sus resultados clave.</EmptyNote></Card>}
+      {allObjectives.length === 0 && <Card className="rise p-6"><EmptyNote>No hay objetivos en {horizonLabel(cat.company, horizon)}. Créalos en «Dirección 3x3» y vuelve aquí para sus resultados clave.</EmptyNote></Card>}
       {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
       {byLever.map((g) => (
         <Card key={g.key} className="rise mb-5 overflow-hidden">

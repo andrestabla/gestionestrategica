@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Acceso por sección de la convención con código QR.
-// Cada sección (Dirección, OKR, Iniciativas → KR, Priorización en vivo y
+// Cada sección (Dirección 3x3, OKR, Iniciativas → KR, Priorización en vivo y
 // Portafolio) tiene un enlace único «/<empresa>/acceso/<token>»: quien lo
 // abre se identifica con nombre y correo y entra directo a esa sección. El
 // usuario se crea una sola vez en la base (el correo es la clave: volver a
@@ -20,7 +20,7 @@ export type EntryRole = "miembro" | "lider" | "directivo";
 export const ENTRY_ROLES: { id: EntryRole; label: string; what: string }[] = [
   { id: "miembro", label: "Miembro de tribu", what: "Ve toda la convención y califica las iniciativas de su tribu en Priorización en vivo." },
   { id: "lider", label: "Líder de tribu", what: "Además registra los OKR de su tribu y vincula sus iniciativas a los resultados clave (así quedan habilitadas para calificar)." },
-  { id: "directivo", label: "Directivo", what: "Sin tribu: ve toda la convención (Dirección, OKR, iniciativas, ranking y Portafolio en tiempo real), pregunta y ratifica en plenaria." },
+  { id: "directivo", label: "Directivo", what: "Sin tribu: ve toda la convención (Dirección 3x3, OKR, iniciativas, ranking y Portafolio en tiempo real), pregunta y ratifica en plenaria." },
 ];
 /** Miembros y líderes pertenecen a una tribu; el directivo no. */
 export const entryRoleNeedsTribe = (r: EntryRole) => r !== "directivo";
@@ -29,11 +29,11 @@ export const isEntryRole = (r: unknown): r is EntryRole => ENTRY_ROLES.some((x) 
 /** Un solo acceso para toda la convención: quien lo escanea elige su tribu y su rol y se mueve por las cinco secciones. */
 export const ACCESS_SECTIONS: { id: AccessSection; tab: AccessTab; landing?: AccessTab | "itinerario"; label: string; short: string; role: AccessRole; what: string; askTribe?: boolean }[] = [
   // landing: lo primero que ve quien entra por el QR (la agenda de los dos días); tab: la sección de trabajo de referencia
-  { id: "convencion", tab: "direccion", landing: "itinerario", label: "Convención", short: "Convención", role: "DIRECTIVO", askTribe: true, what: "Un solo QR para los dos días. Al entrar eliges tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál; te mueves por Dirección, OKR, Iniciativas → KR, Priorización en vivo y Portafolio según lo que tu rol permite." },
+  { id: "convencion", tab: "direccion", landing: "itinerario", label: "Convención", short: "Convención", role: "DIRECTIVO", askTribe: true, what: "Un solo QR para los dos días. Al entrar eliges tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál; te mueves por Dirección 3x3, OKR, Iniciativas → KR, Priorización en vivo y Portafolio según lo que tu rol permite." },
 ];
 /** Pestañas de la convención en orden (el menú). */
 export const ACCESS_TABS: { id: AccessTab; label: string }[] = [
-  { id: "direccion", label: "Dirección" }, { id: "okr", label: "OKR" }, { id: "iniciativas", label: "Iniciativas → KR" }, { id: "priorizacion", label: "Priorización en vivo" }, { id: "portafolio", label: "Portafolio" },
+  { id: "direccion", label: "Dirección 3x3" }, { id: "okr", label: "OKR" }, { id: "iniciativas", label: "Iniciativas → KR" }, { id: "priorizacion", label: "Priorización en vivo" }, { id: "portafolio", label: "Portafolio" },
 ];
 export const isAccessTab = (t: unknown): t is AccessTab => ACCESS_TABS.some((x) => x.id === t);
 export const ACCESS_ROLES: { id: AccessRole; label: string; what: string }[] = [
