@@ -17,7 +17,7 @@ const KIND_CLS: Record<ItineraryKind, string> = {
 const DOT: Record<ItineraryKind, string> = { conferencia: "#8A6D1F", mesa: "#D4AF37", taller: "#0B6F88", plenaria: "#0D1B2A", break: "#B6BDC7", energizacion: "#B6BDC7", logistica: "#4C078C" };
 const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", label: "Todo" }, { k: "mesa", label: "Mesa redonda" }, { k: "taller", label: "Talleres" }, { k: "conferencia", label: "Conferencias" }, { k: "plenaria", label: "Plenarias" }];
 
-export function ItinerarioView({ itinerary, comments, mode, audience = "organizador", company, canManage = false, publicUrl = null, publicUrlP = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, publicRef }: {
+export function ItinerarioView({ itinerary, comments, mode, audience = "organizador", company, canManage = false, publicUrl = null, publicUrlP = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, onUploadMomentFile, publicRef }: {
   itinerary: Omit<Itinerary, "token" | "tokenP">; comments: ItineraryComment[]; mode: "sesion" | "publico"; audience?: "organizador" | "participantes"; company?: { name: string; shortName: string };
   canManage?: boolean; publicUrl?: string | null; publicUrlP?: string | null; error?: string | null; busy?: boolean;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
@@ -29,6 +29,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
   onUploadFile?: (file: File, group: string) => Promise<boolean>;         // sube un PDF a los materiales
   onRemoveFile?: (id: string) => Promise<boolean>;
   onMomentFiles?: (momentId: string, fileIds: string[]) => Promise<boolean>;
+  onUploadMomentFile?: (momentId: string, file: File) => Promise<boolean>;   // sube un PDF y lo deja vinculado a ese momento
   publicRef?: { slug: string; token: string };                             // en el enlace público, para abrir los PDF
 }) {
   const [filter, setFilter] = useState<ItineraryKind | "all">("all");
@@ -100,7 +101,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
         <div className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <div className="text-[13px] font-bold text-ink">Materiales en PDF</div>
-            <span className="text-[11px] text-muted">Se guardan en el almacenamiento (R2) y se abren en línea; vincúlalos a cada momento con «Editar textos».</span>
+            <span className="text-[11px] text-muted">Se guardan en el almacenamiento (R2) y se abren en línea. También puedes subirlos desde el modal de cada momento: quedan vinculados a ese momento.</span>
             <label className="btn-primary ml-auto cursor-pointer !py-1.5 text-[11.5px]"><Upload size={12} /> Subir PDF<input type="file" accept="application/pdf" multiple className="hidden" onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) await onUploadFile(f, "material"); e.target.value = ""; }} /></label>
           </div>
           <FileList files={files} href={fileHref} onRemove={onRemoveFile} busy={busy} />
@@ -157,6 +158,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
 
       {cur && <MomentModal it={cur} day={itinerary.days.find((d) => d.id === cur.day)?.title ?? ""} days={itinerary.days} comments={byMoment.get(cur.id) ?? []} pub={pub} simple={audience === "participantes"} canManage={canManage} busy={busy} companyName={company?.name ?? "la empresa"} files={files} href={fileHref}
         onFiles={editable && onMomentFiles ? (ids) => onMomentFiles(cur.id, ids) : undefined}
+        onUpload={editable && onUploadMomentFile ? (f) => onUploadMomentFile(cur.id, f) : undefined}
         onClose={() => setOpen(-1)} onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined}
         onComment={onComment} onResolve={onResolve} onDelete={onDelete}
         onEdit={editable ? async (next) => { const items = itinerary.items.map((x) => (x.id === cur.id ? next : x)); return save({ items }); } : undefined}
@@ -170,12 +172,12 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
 
 const pubMode = (m: "sesion" | "publico") => m === "publico";
 
-function MomentModal({ it, day, days, comments, pub, simple = false, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles }: {
+function MomentModal({ it, day, days, comments, pub, simple = false, canManage, busy, companyName, onClose, onPrev, onNext, onComment, onResolve, onDelete, onEdit, onRemove, onMove, files, href, onFiles, onUpload }: {
   it: ItineraryItem; day: string; days: { id: string; title: string }[]; comments: ItineraryComment[]; pub: boolean; simple?: boolean; canManage: boolean; busy: boolean; companyName: string; onClose: () => void; onPrev?: () => void; onNext?: () => void;
   onComment: (momentId: string, kind: CommentKind, text: string, author?: string, email?: string, consent?: boolean) => Promise<boolean>;
   onResolve?: (id: string, resolved: boolean) => Promise<void>; onDelete?: (id: string) => Promise<void>;
   onEdit?: (next: ItineraryItem) => Promise<boolean>; onRemove?: () => Promise<boolean>; onMove?: (dir: -1 | 1) => Promise<boolean>;
-  files: ItineraryFile[]; href: (id: string) => string; onFiles?: (ids: string[]) => Promise<boolean>;
+  files: ItineraryFile[]; href: (id: string) => string; onFiles?: (ids: string[]) => Promise<boolean>; onUpload?: (file: File) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState(false);
   const linked = (it.files ?? []).map((id) => files.find((f) => f.id === id)).filter((f): f is ItineraryFile => !!f);
@@ -254,6 +256,12 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
           <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
             <div className="label !text-[9px]">Materiales en PDF de este momento</div>
             {linked.length ? <ul className="mt-1.5 space-y-1">{linked.map((f) => <li key={f.id}><a href={href(f.id)} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-cyan-deep hover:underline"><FileText size={13} /> {f.name}<span className="num text-[10.5px] font-normal text-faint">· {Math.max(1, Math.round(f.size / 1024))} KB</span></a></li>)}</ul> : <p className="mt-1 text-[12px] italic text-faint">Sin materiales vinculados.</p>}
+            {onUpload && (
+              <label className={`btn-ghost mt-2 inline-flex cursor-pointer !py-1.5 text-[11.5px] ${busy ? "pointer-events-none opacity-50" : ""}`} title="Sube un PDF al almacenamiento y lo deja vinculado a este momento">
+                <Upload size={12} /> Subir PDF a este momento
+                <input type="file" accept="application/pdf" multiple className="hidden" disabled={busy} onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) { if (!(await onUpload(f))) break; } e.target.value = ""; }} />
+              </label>
+            )}
             {onFiles && files.length > 0 && (
               <details className="mt-2"><summary className="cursor-pointer text-[11.5px] font-bold text-ink">Vincular materiales</summary>
                 <div className="mt-1.5 grid gap-1 sm:grid-cols-2">{files.map((f) => { const on = (it.files ?? []).includes(f.id); return (

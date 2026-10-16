@@ -920,6 +920,18 @@ function ItinerarioTab() {
         if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
         setData((d) => d ? { ...d, itinerary: j.itinerary } : d); return true;
       }}
+      onUploadMomentFile={async (momentId, file) => {
+        // sube el PDF y lo vincula al momento desde el que se subió (los vínculos previos se conservan)
+        setBusy(true); setError(null);
+        const fd = new FormData(); fd.append("file", file); fd.append("group", "material");
+        const res = await fetch("/api/td/itinerario/material", { method: "POST", body: fd });
+        const j = await res.json().catch(() => null); setBusy(false);
+        if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
+        const it = j.itinerary as ItineraryT; setData((d) => d ? { ...d, itinerary: it } : d);
+        const id = String(j.file?.id ?? ""); if (!id) return false;
+        const prev = it.items.find((x) => x.id === momentId)?.files ?? [];
+        return post({ op: "files", momentId, fileIds: prev.includes(id) ? prev : [...prev, id] });
+      }}
       onRemoveFile={(id) => post({ op: "removeFile", id })}
       onMomentFiles={(momentId, fileIds) => post({ op: "files", momentId, fileIds })}
       onResolve={async (id, resolved) => { await post({ op: "resolve", id, resolved }); }}
