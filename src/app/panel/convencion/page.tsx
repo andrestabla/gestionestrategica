@@ -331,7 +331,9 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
   const inTribe = (o: CmiObjective, t: string) => !t || tribeOf(o) === t || keyResultsOf(cat, o).some((k) => k.ownerId === t);
   const tribes = cat.responsibles.filter((r) => allObjectives.some((o) => inTribe(o, r.id) && (tribeOf(o) === r.id || keyResultsOf(cat, o).some((k) => k.ownerId === r.id))));
   const objectives = allObjectives.filter((o) => (!fLever || o.lever === fLever) && inTribe(o, fTribe));
-  const byLever = [...levers.map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length);
+  // en la convención se ven siempre las palancas (aunque aún no tengan objetivos de la tribu); los objetivos directivos no aparecen aquí
+  const convencion = isConvencion(cat.company);
+  const byLever = [...levers.filter((l) => !fLever || l.id === fLever).map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length || (convencion && g.key && !fTribe));
   const high = issues.filter((i) => i.level === "alto").length;
   return (
     <>
@@ -350,12 +352,14 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
         {canEdit && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
         {!canEdit && <span className="ml-auto text-[10.5px] text-faint">Solo lectura: el líder de cada tribu registra con el QR de edición.</span>}
       </div>
-      {allObjectives.length === 0 && <Card className="rise p-6"><EmptyNote>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</EmptyNote></Card>}
+      {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</EmptyNote></Card>}
       {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
       {byLever.map((g) => (
         <Card key={g.key} className="rise mb-5 overflow-hidden">
-          <CardHeader title={g.label} sub={`${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}`} />
+          <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin objetivos de la tribu todavía"}
+            right={canEdit && g.key ? <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button> : undefined} />
           <div className="divide-y divide-line">
+            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Primero el objetivo: la tribu lo escribe a partir del objetivo directivo de esta palanca (Dirección 3x3){canEdit ? " con «+ Objetivo»" : "; lo registra el líder"}. Después, de 2 a 4 resultados clave por objetivo (máximo 5).</EmptyNote></div>}
             {g.objs.map((o) => {
               const krs = keyResultsOf(cat, o);
               const mine = issues.filter((i) => i.ref === o.id || krs.some((k) => k.code === i.ref));

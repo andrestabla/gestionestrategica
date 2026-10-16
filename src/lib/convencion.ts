@@ -55,9 +55,11 @@ export const healthKpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
 /** Iniciativas que mueven un resultado clave. */
 export const initiativesOfKr = (cat: Catalog, code: string): InitiativeFull[] => cat.initiatives.filter((i) => i.kpi === code);
 
-/** Objetivos sobre los que se construyen OKR en un horizonte: los definidos por las tribus (okr); si la empresa no usa ese nivel, todos los del horizonte. */
+/** Objetivos sobre los que se construyen OKR en un horizonte: en modo convención, solo los definidos por las tribus (okr): los directivos
+    viven en Dirección 3x3 y no se muestran en OKR. Fuera de la convención, si la empresa no usa ese nivel, todos los del horizonte. */
 export const okrObjectivesOf = (cat: Catalog, horizon: string): CmiObjective[] => {
   const own = cat.objectives.filter((o) => o.horizon === horizon && o.okr);
+  if (cat.company.mode === "convencion") return own;
   return cat.objectives.some((o) => o.okr) ? own : cat.objectives.filter((o) => o.horizon === horizon);
 };
 /** Regla de resultados clave por objetivo: de 2 a 4; 5 se admite como máximo. */
