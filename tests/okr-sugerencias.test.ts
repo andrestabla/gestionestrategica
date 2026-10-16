@@ -2,7 +2,7 @@
 // sugerencias que devuelve el modelo (reglas puras, sin llamar a OpenAI).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseSugerencias, ejemploPara, OKR_EJEMPLOS, armarEncargo } from "../src/lib/okr-sugerencias";
+import { parseSugerencias, ejemploPara, OKR_EJEMPLOS, armarEncargo, armarVinculo, parseVinculo } from "../src/lib/okr-sugerencias";
 import { ANDINA_CATALOG, type Lever } from "../src/data/catalogo";
 
 test("ejemplo por palanca: un objetivo con tres resultados clave; palanca desconocida usa el genérico", () => {
@@ -31,4 +31,13 @@ test("encargo con el objetivo escrito por la tribu: una propuesta con sus result
   const lever = { id: "FID", name: "Fidelización del cliente", order: 2 } as Lever;
   const { system, user } = armarEncargo(ANDINA_CATALOG, lever, "Tribu Experiencia", [], { name: "Elevar el NPS de servicio a 60 puntos", desc: "", indicator: "NPS" });
   assert.match(system, /exactamente 1 propuesta/); assert.ok(user.includes("Elevar el NPS de servicio a 60 puntos")); assert.match(user, /3 resultados clave/);
+});
+
+test("vínculo sugerido: solo ids de la lista; el KR debe pertenecer al objetivo elegido", () => {
+  const cands = [{ id: "MS-O1", name: "Cercanía optimizada", krs: [{ code: "MS-01", name: "PDV" }] }, { id: "FID-O1", name: "Experiencia", krs: [] }];
+  assert.deepEqual(parseVinculo({ objective: "MS-O1", kpi: "ms-01", why: "Mueve los PDV" }, cands), { objective: "MS-O1", kpi: "MS-01", why: "Mueve los PDV" });
+  assert.equal(parseVinculo({ objective: "FID-O1", kpi: "MS-01" }, cands)?.kpi, "");
+  assert.equal(parseVinculo({ objective: "XX-O9" }, cands), null); assert.equal(parseVinculo(null, cands), null);
+  const { user } = armarVinculo(ANDINA_CATALOG, { name: "Protocolo de bienvenida" }, cands);
+  assert.ok(user.includes("MS-O1") && user.includes("MS-01") && user.includes("sin resultados clave"));
 });

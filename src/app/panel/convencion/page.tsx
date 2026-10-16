@@ -24,7 +24,6 @@ import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Leve
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
-import { DIMS } from "@/data/mapa";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen } from "lucide-react";
@@ -605,7 +604,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[11.5px]" title={krs.length ? "Crear una iniciativa nueva, asociada a su resultado clave principal" : "Crear una iniciativa nueva; mientras no haya resultados clave, se asocia a un objetivo y el KR se vincula después"}><Plus size={12} /> Iniciativa</button>}
+        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[11.5px]" title="Crear una iniciativa nueva, vinculada a un OKR de la tribu"><Plus size={12} /> Iniciativa</button>}
         <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
@@ -646,16 +645,16 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, 
           </div>
         </Card>
       </div>
-      {nueva && <InitiativeForm cat={cat} krs={krs} horizon={horizon} defaultOwner={defaultOwner} saving={saving} onCancel={() => setNueva(false)}
+      {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
-      {edit && <InitiativeForm cat={cat} krs={krs} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} saving={saving} onCancel={() => setEdit(null)}
+      {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} saving={saving} onCancel={() => setEdit(null)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) setEdit(null); return ok; }}
         onDelete={async () => { if (window.confirm(`¿Eliminar la iniciativa «${edit.name}»?`)) { const ok = await mutate("initiative", "delete", { id: edit.id }); if (ok) setEdit(null); } }} />}
       {link && (() => {
         const ini = cat.initiatives.find((i) => i.id === link)!;
         return (
-          <LinkForm ini={ini} krs={krs} saving={saving} onCancel={() => setLink(null)}
-            onSubmit={async (code, cmi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi: code, cmi }); if (ok) setLink(null); return ok; }} />
+          <LinkForm cat={cat} horizon={horizon} ini={ini} saving={saving} onCancel={() => setLink(null)}
+            onSubmit={async (cmi, kpi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi, cmi }); if (ok) setLink(null); return ok; }} />
         );
       })()}
     </>
@@ -663,53 +662,81 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, 
 }
 
 /** Iniciativa nueva creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el resultado clave principal que mueve. */
-function InitiativeForm({ cat, krs, horizon, initial, defaultOwner, saving, onCancel, onSubmit, onDelete }: { cat: Cat; krs: { k: KpiFull; o: CmiObjective }[]; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
-  const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
-  const objectives = cat.objectives.filter((o) => o.horizon === horizon);   // objetivos del horizonte (directivos y de las tribus) cuando aún no hay KR
-  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "", kpi: initial?.kpi ?? "", cmi: initial?.cmi ?? "", capability: initial?.capability ?? "EJE-1" });
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
-  const sel = krs.find((x) => x.k.code === f.kpi);
-  const sinKr = krs.length === 0;   // todavía no hay resultados clave: se asocia a un objetivo y el KR se vincula después
-  const cmi = sel?.o.id ?? (sinKr ? f.cmi : "");
-  const ok = f.name.trim().length >= 5 && !!cmi && !!f.ownerId;
+/** Selector del OKR al que se vincula una iniciativa: objetivo de la tribu y, si ya tiene resultados clave, el KR principal. Con la IA, sugiere el vínculo a partir del nombre y de lo que logra. */
+function OkrPicker({ cat, horizon, value, onChange, initiative }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; initiative: { name: string; objetivo: string } }) {
+  const objectives = okrObjectivesOf(cat, horizon);
+  const sel = objectives.find((o) => o.id === value.cmi);
+  const krs = sel ? keyResultsOf(cat, sel) : [];
+  const [ia, setIa] = useState<{ loading: boolean; error: string | null; why: string | null }>({ loading: false, error: null, why: null });
+  const puede = objectives.length > 0 && initiative.name.trim().length >= 5;
+  const sugerir = async () => {
+    setIa({ loading: true, error: null, why: null });
+    const res = await fetch("/api/td/okr/vincular", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon, initiative: { name: initiative.name.trim(), objetivo: initiative.objetivo.trim() } }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) { setIa({ loading: false, error: j?.error ?? `Error ${res.status}`, why: null }); return; }
+    onChange({ cmi: j.objective, kpi: j.kpi ?? "" });
+    setIa({ loading: false, error: null, why: j.why || "Vínculo sugerido por el modelo." });
+  };
+  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>Aún no hay OKR de las tribus en {horizonLabel(cat.company, horizon)}: las iniciativas se vinculan a un OKR, así que primero créalos en la pestaña «OKR».</p>;
   return (
-    <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub="lo que se hace para mover un resultado clave; queda habilitada para calificar" onClose={onCancel}
+    <div className="space-y-2">
+      <Field label="OKR al que se vincula (obligatorio)">
+        <select value={value.cmi} onChange={(e) => { onChange({ cmi: e.target.value, kpi: "" }); setIa({ loading: false, error: null, why: null }); }} className={INPUT}><option value="">— elegir el objetivo de la tribu —</option>{objectives.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name.slice(0, 90)}</option>)}</select>
+      </Field>
+      {sel && krs.length > 0 && (
+        <Field label="Resultado clave principal que mueve (obligatorio)">
+          <select value={value.kpi} onChange={(e) => onChange({ ...value, kpi: e.target.value })} className={INPUT}><option value="">— elegir —</option>{krs.map((k) => <option key={k.code} value={k.code}>{k.code} · {k.name}</option>)}</select>
+        </Field>
+      )}
+      {sel && krs.length === 0 && <p className="text-[11px] text-faint">Este objetivo aún no tiene resultados clave: la iniciativa queda vinculada al objetivo y el KR se asigna cuando exista (sin KR no se califica).</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => void sugerir()} disabled={!puede || ia.loading} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={puede ? "El modelo sugiere a qué OKR vincular esta iniciativa" : "Escribe primero el nombre de la iniciativa"}>{ia.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Sugerir OKR</button>
+        {ia.why && <span className="text-[11px] italic text-faint">{ia.why}</span>}
+        {ia.error && <span className="text-[11px] text-bad">{ia.error}</span>}
+      </div>
+    </div>
+  );
+}
+/** ¿El vínculo está completo? Objetivo de la tribu y, si tiene resultados clave, uno de ellos. */
+function okrLinkOk(cat: Cat, horizon: string, v: { cmi: string; kpi: string }): boolean {
+  const o = okrObjectivesOf(cat, horizon).find((x) => x.id === v.cmi); if (!o) return false;
+  const krs = keyResultsOf(cat, o); return krs.length === 0 || krs.some((k) => k.code === v.kpi);
+}
+
+/** Iniciativa creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el OKR (objetivo y KR principal) que mueve. */
+function InitiativeForm({ cat, horizon, initial, defaultOwner, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
+  const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
+  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "" });
+  const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const ok = f.name.trim().length >= 5 && !!f.ownerId && okrLinkOk(cat, horizon, link);
+  return (
+    <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub="lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar" onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: sel?.k.code ?? "", cmi, horizon, capability: f.capability, subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
+          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: initial?.capability ?? "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
-        {sinKr
-          ? <Field label="Objetivo al que apunta (obligatorio; el resultado clave se vincula cuando exista)">
-              <select value={f.cmi} onChange={set("cmi")} className={INPUT}><option value="">— elegir —</option>{objectives.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name.slice(0, 80)}</option>)}</select>
-            </Field>
-          : <Field label="Resultado clave principal que mueve (obligatorio)">
-              <select value={f.kpi} onChange={set("kpi")} className={INPUT}><option value="">— elegir —</option>{krs.map((x) => <option key={x.k.code} value={x.k.code}>{x.k.code} · {x.k.name} ({x.o.id})</option>)}</select>
-            </Field>}
         <Field label="Iniciativa"><input value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
-          <Field label="Capacidad que instala"><select value={f.capability} onChange={set("capability")} className={INPUT}>{DIMS.map((d) => <option key={d.code} value={d.code}>{d.code} · {d.name}</option>)}</select></Field>
-        </div>
-        <p className="text-[11px] text-faint">{sinKr ? `Aún no hay resultados clave en ${horizonLabel(cat.company, horizon)}: queda en «Iniciativas sin resultado clave» hasta vincularla con «Vincular»; sin KR no se califica.` : `Queda asociada al objetivo del resultado clave y a ${horizonLabel(cat.company, horizon)}; se califica en Priorización en vivo como las demás.`}</p>
+        <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
+        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} initiative={f} />
+        <p className="text-[11px] text-faint">Queda asociada al OKR elegido y a {horizonLabel(cat.company, horizon)}; con resultado clave se califica en Priorización en vivo como las demás.</p>
       </div>
     </Modal>
   );
 }
 
-function LinkForm({ ini, krs, saving, onCancel, onSubmit }: { ini: { id: string; name: string; kpi: string; cmi: string }; krs: { k: KpiFull; o: CmiObjective }[]; saving: boolean; onCancel: () => void; onSubmit: (code: string, cmi: string) => Promise<boolean> }) {
-  const [code, setCode] = useState(krs[0]?.k.code ?? "");
-  const sel = krs.find((x) => x.k.code === code);
+function LinkForm({ cat, horizon, ini, saving, onCancel, onSubmit }: { cat: Cat; horizon: string; ini: InitiativeFull; saving: boolean; onCancel: () => void; onSubmit: (cmi: string, kpi: string) => Promise<boolean> }) {
+  const [link, setLink] = useState({ cmi: okrObjectivesOf(cat, horizon).some((o) => o.id === ini.cmi) ? ini.cmi : "", kpi: ini.kpi });
+  const ok = okrLinkOk(cat, horizon, link);
   return (
     <Modal title={`Vincular · ${ini.id}`} sub={ini.name} onClose={onCancel}
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
-        <button type="button" disabled={saving || !sel} onClick={() => sel && onSubmit(sel.k.code, sel.o.id)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
-      <Field label="Resultado clave que mueve">
-        <select value={code} onChange={(e) => setCode(e.target.value)} className={INPUT}>{krs.map((x) => <option key={x.k.code} value={x.k.code}>{x.k.code} · {x.k.name} ({x.o.id})</option>)}</select>
-      </Field>
-      <p className="mt-2 text-[11px] text-faint">Al vincular, la iniciativa queda asociada también al objetivo del resultado clave.</p>
+        <button type="button" disabled={saving || !ok} onClick={() => ok && onSubmit(link.cmi, link.kpi)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
+      <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} initiative={{ name: ini.name, objetivo: ini.objetivo }} />
+      <p className="mt-2 text-[11px] text-faint">Al vincular, la iniciativa queda asociada al objetivo de la tribu y, si lo eliges, a su resultado clave principal.</p>
     </Modal>
   );
 }
