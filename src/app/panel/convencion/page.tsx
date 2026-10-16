@@ -605,7 +605,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} disabled={krs.length === 0} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40" title={krs.length ? "Crear una iniciativa nueva, asociada a su resultado clave principal" : "Primero define resultados clave en OKR"}><Plus size={12} /> Iniciativa</button>}
+        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[11.5px]" title={krs.length ? "Crear una iniciativa nueva, asociada a su resultado clave principal" : "Crear una iniciativa nueva; mientras no haya resultados clave, se asocia a un objetivo y el KR se vincula después"}><Plus size={12} /> Iniciativa</button>}
         <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
@@ -665,28 +665,35 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, 
 /** Iniciativa nueva creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el resultado clave principal que mueve. */
 function InitiativeForm({ cat, krs, horizon, initial, defaultOwner, saving, onCancel, onSubmit, onDelete }: { cat: Cat; krs: { k: KpiFull; o: CmiObjective }[]; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
   const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
-  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "", kpi: initial?.kpi ?? "", capability: initial?.capability ?? "EJE-1" });
+  const objectives = cat.objectives.filter((o) => o.horizon === horizon);   // objetivos del horizonte (directivos y de las tribus) cuando aún no hay KR
+  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "", kpi: initial?.kpi ?? "", cmi: initial?.cmi ?? "", capability: initial?.capability ?? "EJE-1" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const sel = krs.find((x) => x.k.code === f.kpi);
-  const ok = f.name.trim().length >= 5 && !!sel && !!f.ownerId;
+  const sinKr = krs.length === 0;   // todavía no hay resultados clave: se asocia a un objetivo y el KR se vincula después
+  const cmi = sel?.o.id ?? (sinKr ? f.cmi : "");
+  const ok = f.name.trim().length >= 5 && !!cmi && !!f.ownerId;
   return (
     <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub="lo que se hace para mover un resultado clave; queda habilitada para calificar" onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => sel && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: sel.k.code, cmi: sel.o.id, horizon, capability: f.capability, subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
+          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: sel?.k.code ?? "", cmi, horizon, capability: f.capability, subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
-        <Field label="Resultado clave principal que mueve (obligatorio)">
-          <select value={f.kpi} onChange={set("kpi")} className={INPUT}><option value="">— elegir —</option>{krs.map((x) => <option key={x.k.code} value={x.k.code}>{x.k.code} · {x.k.name} ({x.o.id})</option>)}</select>
-        </Field>
+        {sinKr
+          ? <Field label="Objetivo al que apunta (obligatorio; el resultado clave se vincula cuando exista)">
+              <select value={f.cmi} onChange={set("cmi")} className={INPUT}><option value="">— elegir —</option>{objectives.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name.slice(0, 80)}</option>)}</select>
+            </Field>
+          : <Field label="Resultado clave principal que mueve (obligatorio)">
+              <select value={f.kpi} onChange={set("kpi")} className={INPUT}><option value="">— elegir —</option>{krs.map((x) => <option key={x.k.code} value={x.k.code}>{x.k.code} · {x.k.name} ({x.o.id})</option>)}</select>
+            </Field>}
         <Field label="Iniciativa"><input value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
           <Field label="Capacidad que instala"><select value={f.capability} onChange={set("capability")} className={INPUT}>{DIMS.map((d) => <option key={d.code} value={d.code}>{d.code} · {d.name}</option>)}</select></Field>
         </div>
-        <p className="text-[11px] text-faint">Queda asociada al objetivo del resultado clave y a {horizonLabel(cat.company, horizon)}; se califica en Priorización en vivo como las demás.</p>
+        <p className="text-[11px] text-faint">{sinKr ? `Aún no hay resultados clave en ${horizonLabel(cat.company, horizon)}: queda en «Iniciativas sin resultado clave» hasta vincularla con «Vincular»; sin KR no se califica.` : `Queda asociada al objetivo del resultado clave y a ${horizonLabel(cat.company, horizon)}; se califica en Priorización en vivo como las demás.`}</p>
       </div>
     </Modal>
   );
