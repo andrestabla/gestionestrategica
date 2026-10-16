@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { templatesFor } from "@/lib/okr-plantillas";
+import { sessionOf, PRIO_STATUS_LABEL, type PrioSessionAction } from "@/lib/priorizacion-sesion";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
@@ -25,7 +26,7 @@ import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrCheck
 import { DIMS } from "@/data/mapa";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown } from "lucide-react";
 
 type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
@@ -118,7 +119,7 @@ export default function ConvencionPage() {
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
-      {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} />}
+      {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} onCatalogRefresh={() => void refetch()} me={me} />}
       {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} />}
     </div>
   );
@@ -629,7 +630,12 @@ function LinkForm({ ini, krs, saving, onCancel, onSubmit }: { ini: { id: string;
 
 /* ═══ Priorización en vivo ═══ */
 
-function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void }) {
+function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh, me }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void; onCatalogRefresh: () => void; me: { role: string; responsibleId?: string } }) {
+  // sesión de calificación por tribu (modo convención): el líder la abre, la cierra, ajusta el orden y guarda
+  const convencion = cat.company.mode === "convencion";
+  const sessions = prio?.sessions ?? cat.company.prioSessions ?? {};
+  const canManageSession = convencion && (me.role === "CONSULTOR" || me.role === "ADMIN" || me.role === "LIDER");
+  const tribeOfLever = (leverId: string) => levers.find((l) => l.id === leverId)?.ownerId ?? "";
   // el ranking se agrupa por tribu (palanca, por defecto) o por resultado clave; el selector filtra un grupo
   const [mode, setMode] = useState<"tribu" | "resultado">("tribu");
   const [sel, setSel] = useState("");
@@ -648,7 +654,15 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
   const list = cat.initiatives.filter((i) => !sel || groupKey(i) === sel);
   const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
   const rank = (items: Ini[]) => items.map((i) => ({ i, r: rows.find((r) => r.id === i.id) })).sort((a, b) => ((b.r?.c.n ? b.r.c.score : -1) - (a.r?.c.n ? a.r.c.score : -1)));
-  const groups = groupDefs.map((g) => ({ ...g, items: rank(list.filter((i) => groupKey(i) === g.key)) })).filter((g) => g.items.length > 0);
+  // con la priorización de una tribu guardada (o en revisión con orden), el ranking de esa tribu sigue el orden fijado por el líder
+  const applyOrder = (key: string, items: { i: Ini; r: PriorizacionData["ranking"][number] | undefined }[]) => {
+    if (mode !== "tribu") return items;
+    const ses = sessionOf(sessions, tribeOfLever(key));
+    if (!ses.order || (ses.status !== "guardada" && ses.status !== "revision")) return items;
+    const pos = new Map(ses.order.map((id, n) => [id, n]));
+    return [...items].sort((a, b) => (pos.get(a.i.id) ?? 999) - (pos.get(b.i.id) ?? 999));
+  };
+  const groups = groupDefs.map((g) => { const ses = mode === "tribu" ? sessionOf(sessions, tribeOfLever(g.key)) : null; const tag = ses && ses.status === "guardada" && ses.order ? " · orden guardado por el líder" : ses && ses.status === "abierta" ? " · calificación abierta" : ""; return { ...g, label: g.label + tag, items: applyOrder(g.key, rank(list.filter((i) => groupKey(i) === g.key))) }; }).filter((g) => g.items.length > 0);
   const ranked = groups.flatMap((g) => g.items);
   const sub = (i: Ini) => (mode === "tribu" ? (i.kpi ? `KR ${i.kpi}` : "sin KR") : owner(i.ownerId));
   return (
@@ -664,6 +678,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh }: { cat: Cat; lev
         <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[10.5px] text-faint">se refresca cada 15 s</span>
       </div>
+      {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
@@ -1025,5 +1040,81 @@ function ItinerarioTab() {
       }}
       onResolve={async (id, resolved) => { await post({ op: "resolve", id, resolved }); }}
       onDelete={async (id) => { await post({ op: "delete", id }); }} />
+  );
+}
+
+
+/* ═══ Sesión de calificación de la tribu (priorización en vivo, modo convención) ═══ */
+
+function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { cat: Cat; sessions: NonNullable<Cat["company"]["prioSessions"]>; me: { role: string; responsibleId?: string }; rank: (items: Cat["initiatives"]) => Cat["initiatives"]; scoreOf: (id: string) => number | null; onChanged: () => void }) {
+  const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
+  const leaderOnly = me.role === "LIDER" && !!me.responsibleId;
+  const [tribe, setTribe] = useState(me.responsibleId && tribes.some((t) => t.id === me.responsibleId) ? me.responsibleId : (tribes[0]?.id ?? ""));
+  const ses = sessionOf(sessions, tribe);
+  const own = cat.initiatives.filter((i) => i.ownerId === tribe);
+  const idx = (id: string) => { const n = ses.order ? ses.order.indexOf(id) : -1; return n === -1 ? 999 : n; };
+  const base = ses.order ? [...own].sort((a, b) => idx(a.id) - idx(b.id)) : rank(own);
+  const [order, setOrder] = useState<string[] | null>(null);
+  const ids = order ?? base.map((i) => i.id);
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const MSG: Record<PrioSessionAction, string> = {
+    abrir: "Vas a abrir la calificación para tu tribu: desde ahora cada miembro puede calificar una sola vez las iniciativas de la tribu. ¿Confirmas?",
+    cerrar: "Vas a cerrar la calificación: nadie más podrá calificar. Después podrás ajustar el orden a mano y guardar. ¿Confirmas?",
+    guardar: "Vas a guardar la priorización definitiva de tu tribu con este orden. ¿Confirmas?",
+    reabrir: "Vas a reabrir la calificación; el orden guardado se conserva hasta que vuelvas a guardar. ¿Confirmas?",
+  };
+  const act = async (action: PrioSessionAction) => {
+    if (!window.confirm(MSG[action])) return;
+    setBusy(true); setErr(null);
+    const res = await fetch("/api/td/priorizacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tribe, session: action, ...(action === "guardar" ? { order: ids } : {}) }) });
+    const j = await res.json().catch(() => null); setBusy(false);
+    if (!res.ok) { setErr(j?.error ?? `Error ${res.status}`); return; }
+    if (action !== "guardar") setOrder(null);
+    onChanged();
+  };
+  const move = (id: string, d: -1 | 1) => { const a = [...ids]; const i = a.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setOrder(a); };
+  const name = (id: string) => cat.initiatives.find((i) => i.id === id)?.name ?? id;
+  const tone = ses.status === "abierta" ? "chip-ok" : ses.status === "guardada" ? "chip-cyan" : ses.status === "revision" ? "chip-gold" : "";
+  const hora = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) : "");
+  return (
+    <Card className="rise mb-5 overflow-hidden">
+      <CardHeader title="Mesa de la tribu · calificación" sub="el líder abre la calificación, la cierra, ajusta el orden si hace falta y guarda la priorización" />
+      <div className="px-5 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {leaderOnly ? <span className="text-[12.5px] font-bold text-ink">{tribes.find((t) => t.id === tribe)?.dependencia ?? "Tu tribu"}</span>
+            : <select value={tribe} onChange={(e) => { setTribe(e.target.value); setOrder(null); }} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[320px]">{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>}
+          <span className={`chip !py-0.5 text-[10px] ${tone}`}>{PRIO_STATUS_LABEL[ses.status]}</span>
+          <span className="ml-auto flex flex-wrap gap-2">
+            {ses.status === "cerrada" && <button type="button" disabled={busy || own.length === 0} onClick={() => void act("abrir")} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40"><Scale size={12} /> Abrir calificación</button>}
+            {ses.status === "abierta" && <button type="button" disabled={busy} onClick={() => void act("cerrar")} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40"><Lock size={12} /> Cerrar calificación y revisar</button>}
+            {(ses.status === "revision" || ses.status === "abierta") && <button type="button" disabled={busy} onClick={() => void act("guardar")} className={`${ses.status === "revision" ? "btn-primary" : "btn-ghost"} !py-1.5 text-[11.5px] disabled:opacity-40`}><Save size={12} /> Guardar priorización</button>}
+            {(ses.status === "guardada" || ses.status === "revision") && <button type="button" disabled={busy} onClick={() => void act("reabrir")} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40"><RefreshCw size={12} /> Reabrir</button>}
+          </span>
+        </div>
+        {err && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{err}</p>}
+        <p className="mt-2 text-[11px] text-faint">
+          {ses.status === "cerrada" ? "Mientras no abras la calificación, los miembros de la tribu no pueden calificar."
+            : ses.status === "abierta" ? `Abierta${ses.openedAt ? " a las " + hora(ses.openedAt) : ""}: cada miembro califica una sola vez; el ranking se actualiza en vivo.`
+            : ses.status === "revision" ? "Calificación cerrada. Revisa el orden: mueve las iniciativas si la tribu decide algo distinto al puntaje, y guarda."
+            : `Priorización guardada${ses.savedAt ? " a las " + hora(ses.savedAt) : ""}. Este orden es el que presenta la tribu en la socialización.`}
+        </p>
+        {(ses.status === "revision" || ses.status === "guardada") && own.length > 0 && (
+          <ol className="mt-3 space-y-1">
+            {ids.map((id, n) => (
+              <li key={id} className="flex items-center gap-2 rounded-lg bg-surface-2/60 px-3 py-1.5 text-[12px]">
+                <span className="num w-5 shrink-0 font-extrabold text-faint">{n + 1}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold text-ink">{name(id)}</span>
+                <span className="num shrink-0 text-[11px] text-muted">{scoreOf(id) ?? "—"}</span>
+                {ses.status === "revision" && <span className="flex shrink-0 gap-0.5">
+                  <button type="button" onClick={() => move(id, -1)} disabled={busy || n === 0} className="rounded-md p-1 text-faint hover:text-ink disabled:opacity-30" title="Subir"><ArrowUp size={12} /></button>
+                  <button type="button" onClick={() => move(id, 1)} disabled={busy || n === ids.length - 1} className="rounded-md p-1 text-faint hover:text-ink disabled:opacity-30" title="Bajar"><ArrowDown size={12} /></button>
+                </span>}
+              </li>
+            ))}
+          </ol>
+        )}
+        {ses.status === "revision" && order && <p className="mt-1.5 text-[10.5px] text-warn">Orden ajustado a mano: guarda la priorización para fijarlo.</p>}
+      </div>
+    </Card>
   );
 }

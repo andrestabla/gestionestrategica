@@ -22,6 +22,7 @@ export function companyRow(c: CompanyInfo) {
     levers: (c.levers?.length ? c.levers : null) as never,
     typeRule: (Array.isArray(c.typeRule?.criteria) ? c.typeRule : null) as never,
     krTemplates: (c.krTemplates?.length ? c.krTemplates : null) as never,
+    prioSessions: (c.prioSessions && Object.keys(c.prioSessions).length ? c.prioSessions : null) as never,
     mode: c.mode ?? "completa",
     access: (c.access && Object.keys(c.access).length ? c.access : null) as never,
     itinerary: (c.itinerary ?? null) as never,

@@ -6,6 +6,7 @@
 // exige (403/422) y explica el motivo.
 
 import { useCallback, useEffect, useState } from "react";
+import { sessionOf, type PrioSessions } from "@/lib/priorizacion-sesion";
 import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { horizonLabel, typeRuleOf } from "@/data/catalogo";
@@ -24,6 +25,7 @@ export type PriorizacionData = {
   evaluations: Evaluation[];
   decisions: Record<string, DecisionRecord>;
   ranking: { id: string; horizon: string; line: number; name: string; c: Consolidated; position: number; suggested: string | null }[];
+  sessions?: PrioSessions;   // modo convención: sesión de calificación por tribu
 };
 
 /** Chip del horizonte sugerido por el puntaje frente al actual. */
@@ -80,7 +82,11 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const user = useUser();
   const cv = useCatalog();
   const canEval = useCan("evaluate_initiatives", line);
-  const linked = !!cv.catalog.initiatives.find((i) => i.id === iniId)?.kpi;   // sin resultado clave no se califica
+  const ini = cv.catalog.initiatives.find((i) => i.id === iniId);
+  const linked = !!ini?.kpi;   // sin resultado clave no se califica
+  // modo convención: la tribu califica solo con su calificación abierta por el líder, y cada miembro una sola vez
+  const convencion = cv.catalog.company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER");
+  const session = sessionOf(cv.catalog.company.prioSessions, ini?.ownerId);
   const canDecide = useCan("decide_initiatives");
   const { data, refetch } = usePriorizacion(iniId);
   const [error, setError] = useState<string | null>(null);
@@ -216,10 +222,17 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         {/* evaluación propia */}
         <div>
           <div className="label mb-3">{mine ? "Tu evaluación" : `Evaluar con los ${validationCriteriaCount(rule)} criterios`}</div>
-          {canEval && !linked ? (
+          {canEval && mine && convencion ? (
+            <div className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">
+              <div className="mb-1 flex items-center gap-1.5 font-bold text-ink"><CheckCircle2 size={13} className="text-ok" /> Calificación registrada: cada miembro califica una sola vez.</div>
+              <div className="num">{(["D", "E", "M", "L"] as const).map((k) => `${k} ${mine.scores[k]}`).join(" · ")}{mine.type && Object.keys(mine.type).length ? ` · ${Object.values(mine.type).includes("TACTICO") ? "táctica" : "estratégica"}` : ""}</div>
+            </div>
+          ) : canEval && linked && convencion && session.status !== "abierta" ? (
+            <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">{session.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : session.status === "revision" ? "La calificación de tu tribu ya se cerró: el líder revisa el orden y guarda la priorización." : "La priorización de tu tribu ya está guardada."}</p>
+          ) : canEval && !linked ? (
             <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">Esta iniciativa aún no está vinculada a un resultado clave. El líder de la tribu la vincula en «Iniciativas → KR» y entonces queda habilitada para calificar.</p>
           ) : canEval ? (
-            <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} onSave={(ev) => post({ evaluation: ev })} />
+            <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} confirmOnce={convencion} onSave={(ev) => post({ evaluation: ev })} />
           ) : (
             <p className="rounded-xl bg-surface-2/60 px-4 py-4 text-[12px] leading-relaxed text-muted">
               {user.role === "RESPONSABLE"
@@ -233,7 +246,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   );
 }
 
-function EvaluationForm({ initial, saving, rule, onSave }: {
+function EvaluationForm({ initial, saving, rule, onSave, confirmOnce = false }: { confirmOnce?: boolean;
   initial?: Evaluation; saving: boolean; rule: TypeRule;
   onSave: (ev: { scores: Record<CriterionKey, Level>; type: TypeMarks; notes: Partial<Record<CriterionKey, string>> }) => Promise<boolean>;
 }) {
@@ -308,7 +321,7 @@ function EvaluationForm({ initial, saving, rule, onSave }: {
           {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : (rule.criteria.length ? `Completa los ${validationCriteriaCount(rule)} criterios: tipo (1 a ${rule.criteria.length}) y matriz (${rule.criteria.length + 1} a ${validationCriteriaCount(rule)}).` : "Califica los cuatro criterios de 1 a 4.")}
         </div>
         <button type="button" disabled={!complete || saving}
-          onClick={async () => { setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
+          onClick={async () => { if (confirmOnce && !initial && !window.confirm("¿Estás seguro de tu valoración? Solo se puede calificar una vez; después no se puede cambiar.")) return; setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
           className="btn-primary ml-auto w-full justify-center !py-2.5 text-[12.5px] disabled:opacity-40 sm:w-auto sm:!py-1.5 sm:text-[11.5px]">
           {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12} /> : <Save size={12} />} {initial ? "Actualizar evaluación" : "Registrar evaluación"}
         </button>

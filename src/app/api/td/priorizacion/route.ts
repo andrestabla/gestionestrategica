@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
-import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, catalog } from "@/server/store";
+import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, catalog } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz 4Shine, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
@@ -14,15 +14,23 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
     evaluations: getEvaluations(id ?? undefined),
     decisions: getDecisions(),
     ranking,
+    sessions: catalog().company.prioSessions ?? {},
   });
 });
 
 // POST /api/td/priorizacion — { id, evaluation: { scores, type, notes } } para
 // calificar, { id, decision, rationale } para decidir el tiempo, o
-// { id, horizon } para mover la iniciativa al horizonte (p. ej. el sugerido).
+// { id, horizon } para mover la iniciativa al horizonte (p. ej. el sugerido), o
+// { tribe, session: "abrir" | "cerrar" | "guardar" | "reabrir", order? } para que el
+// líder maneje la calificación de su tribu en la convención.
 // El store exige permisos (403) y las reglas de la matriz (422) con explicación.
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
+  if (body?.session) {
+    const r = setPrioSession(user, body.tribe, body.session, body.order);
+    if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+    return NextResponse.json({ session: r.session, sessions: catalog().company.prioSessions ?? {} });
+  }
   if (!body?.id) return NextResponse.json({ error: "Cuerpo inválido: falta id" }, { status: 400 });
   const id = String(body.id).toLowerCase();
   if (body.evaluation) {

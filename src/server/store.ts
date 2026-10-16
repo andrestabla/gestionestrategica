@@ -21,6 +21,7 @@ import { periodIndex, isValidPeriod } from "@/lib/period";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
+import { parsePrioSessions, nextStatus, sessionOf, type PrioSessionAction } from "@/lib/priorizacion-sesion";
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
@@ -312,6 +313,7 @@ export async function hydrateCompanies() {
         levers: parseLevers(c.levers).ok ? (parseLevers(c.levers) as { levers?: Lever[] }).levers : undefined,
         typeRule: parseTypeRule(c.typeRule).ok ? (parseTypeRule(c.typeRule) as { rule?: TypeRule }).rule : undefined,
         krTemplates: (() => { const r = parseKrTemplates(c.krTemplates); return r.ok ? r.templates : undefined; })(),
+        prioSessions: (() => { const r = parsePrioSessions(c.prioSessions); return r.ok ? r.sessions : undefined; })(),
         mode: isCompanyMode(c.mode) ? c.mode : "completa",
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
@@ -1742,6 +1744,12 @@ export function evaluateInitiative(
           : "Tu rol no evalúa la priorización.",
     };
   }
+  // en modo convención, los miembros y líderes de tribu califican solo con la calificación de su tribu abierta, y una sola vez
+  if (isCompanyMode(cat().company.mode) && cat().company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER")) {
+    const ses = sessionOf(cat().company.prioSessions, base.ownerId);
+    if (ses.status !== "abierta") return { ok: false, status: 403, error: ses.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización." };
+    if (evals().has(`${iniId}|${user.email.toLowerCase()}`)) return { ok: false, status: 409, error: "Ya calificaste esta iniciativa: cada miembro califica una sola vez." };
+  }
   const scores = {} as Record<CriterionKey, 1 | 2 | 3 | 4>;
   for (const k of ["D", "E", "M", "L"] as CriterionKey[]) {
     const v = Number(input.scores?.[k]);
@@ -1771,6 +1779,33 @@ export function evaluateInitiative(
     where: { companyId_id: { companyId: cid(), id: key } }, update: { data: evaluation }, create: { companyId: cid(), id: key, iniCode: iniId, by: evaluation.by, data: evaluation },
   }));
   return { ok: true, evaluation, consolidated: consolidatedOf(iniId) };
+}
+
+/** Sesión de calificación de una tribu en la priorización en vivo: el líder la abre, la cierra para revisar, fija el orden y guarda. */
+export function setPrioSession(user: SessionUser, tribeId: unknown, action: PrioSessionAction, order?: unknown): { ok: true; session: import("@/lib/priorizacion-sesion").PrioSession } | { ok: false; status: number; error: string } {
+  const c = cat();
+  const tribe = str(tribeId, 20);
+  if (!c.responsibles.some((r) => r.id === tribe)) return { ok: false, status: 422, error: "La tribu no existe." };
+  const leader = user.role === "LIDER" && (!user.responsibleId || user.responsibleId === tribe);
+  if (!(leader || user.role === "CONSULTOR" || user.role === "ADMIN")) return { ok: false, status: 403, error: user.role === "LIDER" ? "Solo el líder de esa tribu (o el advisor) maneja su calificación." : "Solo el líder de tribu abre, cierra y guarda la calificación." };
+  const prev = sessionOf(c.company.prioSessions, tribe);
+  const status = nextStatus(prev.status, action);
+  if (!status) return { ok: false, status: 422, error: `No se puede «${action}» desde el estado «${prev.status}».` };
+  const now = new Date().toISOString();
+  const next = { ...prev, status };
+  if (action === "abrir" || action === "reabrir") { next.openedAt = now; next.openedBy = user.email.toLowerCase(); delete next.savedAt; delete next.savedBy; }
+  if (action === "cerrar") next.closedAt = now;
+  if (action === "guardar") {
+    const own = new Set(c.initiatives.filter((i) => i.ownerId === tribe).map((i) => i.id));
+    const ids = Array.isArray(order) ? [...new Set((order as unknown[]).map((x) => str(x, 20)).filter((x) => own.has(x)))] : [];
+    if (ids.length) next.order = ids;
+    next.savedAt = now; next.savedBy = user.email.toLowerCase();
+  }
+  const sessions = { ...(c.company.prioSessions ?? {}), [tribe]: next };
+  c.company.prioSessions = sessions;
+  const rec = g.companies.get(c.company.slug); if (rec) { rec.prioSessions = sessions; if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("empresa", (db) => db.company.update({ where: { id: dbId }, data: companyRow(rec) })); } }
+  audit(user, "task", `tribu:${tribe}`, `priorización en vivo: ${action} → ${status}${next.order ? ` (orden de ${next.order.length} iniciativas)` : ""}`);
+  return { ok: true, session: next };
 }
 
 export function decideInitiative(

@@ -108,3 +108,37 @@ test("decidir: solo gerencia y advisor, y solo decisiones admisibles", () => {
   assert.ok(decideInitiative(lider, "i7", { decision: "RENUNCIAR", rationale: "la sustituye el plan de sucesión" }).ok);
   resetStore();
 });
+
+test("convención: el líder abre y cierra la calificación de su tribu; cada miembro califica una sola vez", async () => {
+  const { resetStore, updateCompany, setPrioSession, evaluateInitiative, catalog } = await import("../src/server/store");
+  const { runWithTenant } = await import("../src/server/tenant");
+  await runWithTenant("andina", async () => {
+    resetStore();
+    const admin = { email: "a@a.co", name: "Admin", role: "ADMIN" as const };
+    assert.equal((await updateCompany(admin, "andina", { mode: "convencion" })).ok, true);
+    const cat = catalog();
+    const ini = cat.initiatives.find((i) => i.kpi && i.ownerId)!; const tribe = ini.ownerId;
+    const miembro = { email: "m@a.co", name: "Miembro", role: "RESPONSABLE" as const, responsibleId: tribe, company: { slug: "andina", name: "Andina", shortName: "Andina" } };
+    const lider = { ...miembro, email: "l@a.co", name: "Líder", role: "LIDER" as const };
+    const otro = { ...lider, email: "o@a.co", responsibleId: "R99" };
+    const ev = { scores: { D: 3, E: 3, M: 2, L: 3 }, type: T };
+    // sin abrir, nadie de la tribu califica
+    const cerrada = evaluateInitiative(miembro, ini.id, ev); assert.equal(cerrada.ok, false); assert.equal((cerrada as { status: number }).status, 403);
+    assert.equal(setPrioSession(miembro, tribe, "abrir").ok, false);                 // un miembro no abre
+    assert.equal(setPrioSession(otro, tribe, "abrir").ok, false);                    // el líder de otra tribu tampoco
+    assert.equal(setPrioSession(lider, tribe, "cerrar").ok, false);                  // no se cierra lo que no está abierto
+    assert.equal(setPrioSession(lider, tribe, "abrir").ok, true);
+    assert.equal(catalog().company.prioSessions?.[tribe]?.status, "abierta");
+    assert.equal(evaluateInitiative(miembro, ini.id, ev).ok, true);
+    const otra = evaluateInitiative(miembro, ini.id, ev); assert.equal(otra.ok, false); assert.equal((otra as { status: number }).status, 409);   // una sola vez
+    assert.equal(evaluateInitiative(lider, ini.id, ev).ok, true);                     // el líder también califica, una vez
+    assert.equal(setPrioSession(lider, tribe, "cerrar").ok, true);
+    assert.equal(evaluateInitiative({ ...miembro, email: "n@a.co" }, ini.id, ev).ok, false);   // cerrada: nadie más
+    const own = catalog().initiatives.filter((i) => i.ownerId === tribe).map((i) => i.id).reverse();
+    const g = setPrioSession(lider, tribe, "guardar", [...own, "fantasma"]); assert.equal(g.ok, true);
+    assert.deepEqual(catalog().company.prioSessions?.[tribe]?.order, own);
+    assert.equal(catalog().company.prioSessions?.[tribe]?.status, "guardada");
+    assert.equal(setPrioSession(lider, tribe, "reabrir").ok, true);
+    assert.equal(catalog().company.prioSessions?.[tribe]?.order?.length, own.length);   // el orden se conserva al reabrir
+  });
+});

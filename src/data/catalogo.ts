@@ -8,6 +8,7 @@
 
 import { DEFAULT_TYPE_RULE, type TypeRule } from "@/lib/priorizacion";
 import type { KrTemplate } from "@/lib/okr-plantillas";
+import type { PrioSessions } from "@/lib/priorizacion-sesion";
 import type { AccessConfig, CompanyMode } from "@/lib/acceso";
 import type { Itinerary } from "@/lib/itinerario";
 import {
@@ -38,6 +39,7 @@ export type CompanyInfo = {
   levers?: Lever[];         // palancas estratégicas (hilo conductor de objetivos, OKR e iniciativas)
   typeRule?: TypeRule;      // regla estratégica/táctica de la matriz (vacío = regla 4Shine: 3 de 4 marcas)
   krTemplates?: KrTemplate[]; // plantillas de resultados clave por objetivo (biblioteca para el laboratorio de OKR)
+  prioSessions?: PrioSessions; // sesión de calificación por tribu en la priorización en vivo (abierta, en revisión, guardada; orden del líder)
   mode?: CompanyMode;       // completa (todos los módulos) o convencion (solo Dirección, OKR, Iniciativas → KR, Priorización y Portafolio)
   access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
   itinerary?: Itinerary;    // itinerario de la convención (momentos, publicación y enlace público)
