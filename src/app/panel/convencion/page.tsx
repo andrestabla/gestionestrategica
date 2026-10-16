@@ -667,13 +667,14 @@ function OkrPicker({ cat, horizon, value, onChange, initiative }: { cat: Cat; ho
   const objectives = okrObjectivesOf(cat, horizon);
   const sel = objectives.find((o) => o.id === value.cmi);
   const krs = sel ? keyResultsOf(cat, sel) : [];
-  const [ia, setIa] = useState<{ loading: boolean; error: string | null; why: string | null }>({ loading: false, error: null, why: null });
+  const [ia, setIa] = useState<{ loading: boolean; error: string | null; why: string | null; none?: boolean }>({ loading: false, error: null, why: null });
   const puede = objectives.length > 0 && initiative.name.trim().length >= 5;
   const sugerir = async () => {
     setIa({ loading: true, error: null, why: null });
     const res = await fetch("/api/td/okr/vincular", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon, initiative: { name: initiative.name.trim(), objetivo: initiative.objetivo.trim() } }) });
     const j = await res.json().catch(() => null);
     if (!res.ok) { setIa({ loading: false, error: j?.error ?? `Error ${res.status}`, why: null }); return; }
+    if (j.none || !j.objective) { setIa({ loading: false, error: null, why: j.why || "No hay evidentemente un OKR con el que se pueda vincular esta iniciativa. Analiza muy bien esta situación. ¿Vale la pena?", none: true }); return; }
     onChange({ cmi: j.objective, kpi: j.kpi ?? "" });
     setIa({ loading: false, error: null, why: j.why || "Vínculo sugerido por el modelo." });
   };
@@ -691,9 +692,10 @@ function OkrPicker({ cat, horizon, value, onChange, initiative }: { cat: Cat; ho
       {sel && krs.length === 0 && <p className="text-[11px] text-faint">Este objetivo aún no tiene resultados clave: la iniciativa queda vinculada al objetivo y el KR se asigna cuando exista (sin KR no se califica).</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => void sugerir()} disabled={!puede || ia.loading} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={puede ? "El modelo sugiere a qué OKR vincular esta iniciativa" : "Escribe primero el nombre de la iniciativa"}>{ia.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Sugerir OKR</button>
-        {ia.why && <span className="text-[11px] italic text-faint">{ia.why}</span>}
+        {ia.why && !ia.none && <span className="text-[11px] italic text-faint">{ia.why}</span>}
         {ia.error && <span className="text-[11px] text-bad">{ia.error}</span>}
       </div>
+      {ia.none && <p className="rounded-lg px-3 py-2 text-[12px] font-semibold text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 14%, white)" }}>{ia.why}</p>}
     </div>
   );
 }

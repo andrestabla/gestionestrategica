@@ -24,7 +24,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (!candidatos.length) return NextResponse.json({ error: "Aún no hay OKR de las tribus en este horizonte; créalos en la pestaña OKR." }, { status: 422 });
   const { system, user: prompt } = armarVinculo(cat, { name, objetivo: typeof ini?.objetivo === "string" ? ini.objetivo.trim().slice(0, 600) : "" }, candidatos);
   try {
-    const v = parseVinculo(await chatJson(system, prompt, { maxTokens: 300 }), candidatos);
+    const v = parseVinculo(await chatJson(system, prompt, { maxTokens: 300 }), candidatos);   // v.none: ningún OKR evidente
     if (!v) return NextResponse.json({ error: "El modelo no devolvió un vínculo utilizable; inténtalo de nuevo." }, { status: 502 });
     return NextResponse.json(v);
   } catch (e) {

@@ -88,11 +88,12 @@ export function parseSugerencias(input: unknown): OkrSugerido[] {
 /* ═══ ¿A qué OKR se vincula una iniciativa? ═══ */
 
 export type CandidatoOkr = { id: string; name: string; krs: { code: string; name: string }[] };
-export type VinculoSugerido = { objective: string; kpi: string; why: string };
+export const SIN_VINCULO = "No hay evidentemente un OKR con el que se pueda vincular esta iniciativa. Analiza muy bien esta situación. ¿Vale la pena?";
+export type VinculoSugerido = { objective: string; kpi: string; why: string; none?: true };
 
 /** Encargo: dada la iniciativa (nombre y qué logra) y los OKR de las tribus, el modelo elige el objetivo y, si existe, el resultado clave que más mueve. */
 export function armarVinculo(cat: Catalog, initiative: { name: string; objetivo?: string }, candidatos: CandidatoOkr[]): { system: string; user: string } {
-  const system = `Eres un consultor de planeación estratégica (método 4Shine Empresas). Una iniciativa es lo que se hace para mover un resultado clave. Dada una iniciativa y la lista de OKR de las tribus, elige el objetivo que la iniciativa más contribuye a lograr y, si ese objetivo tiene resultados clave, el que más mueve. Responde solo JSON con esta forma exacta: {"objective":"<id del objetivo>","kpi":"<código del resultado clave o cadena vacía>","why":"<una frase en español que explique el vínculo>"}. Usa únicamente ids y códigos de la lista.`;
+  const system = `Eres un consultor de planeación estratégica (método 4Shine Empresas). Una iniciativa es lo que se hace para mover un resultado clave. Dada una iniciativa y la lista de OKR de las tribus, elige el objetivo al que la iniciativa contribuye de forma evidente y, si ese objetivo tiene resultados clave, el que más mueve. Sé estricto: vincula solo cuando la relación sea clara por el contenido (qué logra la iniciativa y qué mide el objetivo); no fuerces un vínculo por descarte ni elijas objetivos cuyo nombre no sea un objetivo comprensible (texto de prueba, abreviaturas sin sentido). Si ningún objetivo está evidentemente relacionado, devuelve "objective" y "kpi" vacíos. Responde solo JSON con esta forma exacta: {"objective":"<id del objetivo o cadena vacía>","kpi":"<código del resultado clave o cadena vacía>","why":"<una frase en español: por qué ese vínculo, o por qué ninguno>"}. Usa únicamente ids y códigos de la lista.`;
   const lista = candidatos.map((o) => `- ${o.id}: ${o.name}${o.krs.length ? `\n${o.krs.map((k) => `    · ${k.code}: ${k.name}`).join("\n")}` : "\n    (sin resultados clave todavía)"}`).join("\n");
   const user = `Empresa: ${cat.company.name}.
 Iniciativa: «${initiative.name}»${initiative.objetivo ? ` · qué logra y cómo: ${initiative.objetivo}` : ""}.
@@ -102,12 +103,14 @@ ${lista}
   return { system, user };
 }
 
-/** Valida la respuesta: el objetivo debe existir entre los candidatos y el KR, si viene, pertenecer a ese objetivo. */
+/** Valida la respuesta: el objetivo debe existir entre los candidatos y el KR, si viene, pertenecer a ese objetivo.
+    Objetivo vacío o desconocido = no hay OKR evidente (`none`); respuesta no interpretable = null. */
 export function parseVinculo(input: unknown, candidatos: CandidatoOkr[]): VinculoSugerido | null {
-  const r = input as Record<string, unknown> | null;
-  const objective = typeof r?.objective === "string" ? r.objective.trim() : "";
+  const r = input && typeof input === "object" ? input as Record<string, unknown> : null;
+  if (!r) return null;
+  const objective = typeof r.objective === "string" ? r.objective.trim() : "";
   const o = candidatos.find((c) => c.id === objective);
-  if (!o) return null;
+  if (!o) return { objective: "", kpi: "", why: SIN_VINCULO, none: true };
   const kpiRaw = typeof r?.kpi === "string" ? r.kpi.trim().toUpperCase() : "";
   const kpi = o.krs.some((k) => k.code === kpiRaw) ? kpiRaw : "";
   return { objective: o.id, kpi, why: typeof r?.why === "string" ? r.why.trim().slice(0, 300) : "" };

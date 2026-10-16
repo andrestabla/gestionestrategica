@@ -37,7 +37,7 @@ test("vínculo sugerido: solo ids de la lista; el KR debe pertenecer al objetivo
   const cands = [{ id: "MS-O1", name: "Cercanía optimizada", krs: [{ code: "MS-01", name: "PDV" }] }, { id: "FID-O1", name: "Experiencia", krs: [] }];
   assert.deepEqual(parseVinculo({ objective: "MS-O1", kpi: "ms-01", why: "Mueve los PDV" }, cands), { objective: "MS-O1", kpi: "MS-01", why: "Mueve los PDV" });
   assert.equal(parseVinculo({ objective: "FID-O1", kpi: "MS-01" }, cands)?.kpi, "");
-  assert.equal(parseVinculo({ objective: "XX-O9" }, cands), null); assert.equal(parseVinculo(null, cands), null);
+  assert.equal(parseVinculo({ objective: "XX-O9" }, cands)?.none, true, "id desconocido = ningún OKR evidente"); assert.equal(parseVinculo({ objective: "", why: "nada se relaciona" }, cands)?.none, true); assert.equal(parseVinculo(null, cands), null);
   const { user } = armarVinculo(ANDINA_CATALOG, { name: "Protocolo de bienvenida" }, cands);
   assert.ok(user.includes("MS-O1") && user.includes("MS-01") && user.includes("sin resultados clave"));
 });
