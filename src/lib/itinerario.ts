@@ -11,6 +11,8 @@ export const ITINERARY_KINDS: Record<ItineraryKind, string> = {
   conferencia: "Conferencia", plenaria: "Plenaria", taller: "Taller", mesa: "Mesa redonda", break: "Break", energizacion: "Energización", logistica: "Logística",
 };
 export type ItineraryDay = { id: string; title: string; sub?: string };
+/** Identidad visual del evento (concepto del cliente): rótulo, lema y colores. Sin tema, la vista usa la identidad 4Shine. */
+export type ItineraryTheme = { label?: string; tagline?: string; accent?: string; bg?: string };
 export type ItineraryItem = {
   id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string;
   description: string;   // de qué trata el momento, en lenguaje de participante
@@ -23,6 +25,7 @@ export type Itinerary = {
   title: string; sub?: string; days: ItineraryDay[]; items: ItineraryItem[];
   files?: ItineraryFile[];   // materiales en PDF (plantillas, presentaciones, guía)
   logo?: string;        // logo de la empresa para las vistas públicas (ruta /… o https://…)
+  theme?: ItineraryTheme; // identidad visual del evento (p. ej. «Strategy Grid 2027»: negro y rojo)
   public: boolean;      // visible sin sesión en /<empresa>/p/itinerario/<token> (equipo organizador: metodología, materiales, plataforma y comentarios)
   token?: string;       // enlace público; se conserva al despublicar y cambia al regenerar
   publicP?: boolean;    // agenda para participantes publicada (solo horario, momento, quién y descripción)
@@ -84,15 +87,29 @@ export function parseItinerary(input: unknown): { ok: true; itinerary: Itinerary
   const known = new Set(files.map((f) => f.id));
   for (const it of items) if (it.files) { it.files = it.files.filter((f) => known.has(f)); if (!it.files.length) delete it.files; }
   const logo = s(raw.logo, 300); const logoOk = /^(\/[^\s]+|https:\/\/[^\s]+)$/.test(logo) ? logo : "";
-  return { ok: true, itinerary: { title, ...(s(raw.sub, 200) ? { sub: s(raw.sub, 200) } : {}), days, items, ...(files.length ? { files } : {}), ...(logoOk ? { logo: logoOk } : {}) } };
+  const theme = parseTheme(raw.theme);
+  return { ok: true, itinerary: { title, ...(s(raw.sub, 200) ? { sub: s(raw.sub, 200) } : {}), days, items, ...(files.length ? { files } : {}), ...(logoOk ? { logo: logoOk } : {}), ...(theme ? { theme } : {}) } };
+}
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+/** Tema visual: textos acotados y colores en hexadecimal; lo demás se descarta. */
+export function parseTheme(input: unknown): ItineraryTheme | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const t = input as Record<string, unknown>;
+  const out: ItineraryTheme = {};
+  if (s(t.label, 80)) out.label = s(t.label, 80);
+  if (s(t.tagline, 160)) out.tagline = s(t.tagline, 160);
+  if (HEX_RE.test(s(t.accent, 7))) out.accent = s(t.accent, 7);
+  if (HEX_RE.test(s(t.bg, 7))) out.bg = s(t.bg, 7);
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** Lo que ve el público: sin el token. */
 export const publicItinerary = (it: Itinerary): Omit<Itinerary, "token" | "tokenP"> => { const { token: _t, tokenP: _p, ...rest } = it; void _t; void _p; return rest; };
 /** Agenda para participantes: solo horario, momento, quién y descripción (sin metodología, materiales, plataforma, archivos ni comentarios). */
-export type ParticipantsItinerary = { title: string; sub?: string; logo?: string; days: ItineraryDay[]; items: { id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string; description: string }[] };
+export type ParticipantsItinerary = { title: string; sub?: string; logo?: string; theme?: ItineraryTheme; days: ItineraryDay[]; items: { id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string; description: string }[] };
 export const participantsItinerary = (it: Itinerary): ParticipantsItinerary => ({
-  title: it.title, ...(it.sub ? { sub: it.sub } : {}), ...(it.logo ? { logo: it.logo } : {}), days: it.days,
+  title: it.title, ...(it.sub ? { sub: it.sub } : {}), ...(it.logo ? { logo: it.logo } : {}), ...(it.theme ? { theme: it.theme } : {}), days: it.days,
   items: it.items.map((x) => ({ id: x.id, day: x.day, time: x.time, minutes: x.minutes, title: x.title, kind: x.kind, who: x.who, description: x.description })),
 });
 /** La agenda de participantes con la forma del itinerario completo (sin logística), para reutilizar la misma vista. */

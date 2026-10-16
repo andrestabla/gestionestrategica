@@ -15,6 +15,17 @@ const KIND_CLS: Record<ItineraryKind, string> = {
   break: "bg-[#B6BDC7] text-[#0D1B2A]", energizacion: "bg-[#B6BDC7] text-[#0D1B2A]", logistica: "bg-[#4C078C] text-white",
 };
 const DOT: Record<ItineraryKind, string> = { conferencia: "#8A6D1F", mesa: "#D4AF37", taller: "#0B6F88", plenaria: "#0D1B2A", break: "#B6BDC7", energizacion: "#B6BDC7", logistica: "#4C078C" };
+/** Con tema del evento, los tipos se tiñen con sus colores: acento para la mesa, fondo para plenarias, gris oscuro para talleres. */
+const kindStyle = (kind: ItineraryKind, accent: string, bg: string): { background: string; color: string } => {
+  switch (kind) {
+    case "mesa": return { background: accent, color: "#fff" };
+    case "conferencia": return { background: `${accent}CC`, color: "#fff" };
+    case "plenaria": return { background: bg, color: "#fff" };
+    case "taller": return { background: "#2B2B33", color: "#fff" };
+    case "logistica": return { background: "#55555F", color: "#fff" };
+    default: return { background: "#C9CBD3", color: bg };
+  }
+};
 const FILTERS: { k: ItineraryKind | "all"; label: string }[] = [{ k: "all", label: "Todo" }, { k: "mesa", label: "Mesa redonda" }, { k: "taller", label: "Talleres" }, { k: "conferencia", label: "Conferencias" }, { k: "plenaria", label: "Plenarias" }];
 
 export function ItinerarioView({ itinerary, comments, mode, audience = "organizador", company, canManage = false, publicUrl = null, publicUrlP = null, error = null, busy = false, onComment, onPublish, onUpload, onResolve, onDelete, onSave, onUploadFile, onRemoveFile, onMomentFiles, onUploadMomentFile, publicRef }: {
@@ -37,6 +48,11 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
   const [showFiles, setShowFiles] = useState(false);
   const files = itinerary.files ?? [];
   const fileHref = (id: string) => materialPath(id, publicRef);
+  // identidad visual del evento: con tema, cabecera oscura con el color de acento del cliente; sin tema, la identidad 4Shine
+  const th = itinerary.theme;
+  const accent = th?.accent ?? "#D4AF37", bg = th?.bg ?? "#0D1B2A";
+  const heroStyle = { background: th ? `radial-gradient(circle at 88% 20%, ${accent}55, transparent 42%), linear-gradient(135deg, ${bg} 0%, ${bg} 70%, ${accent}22 100%)` : bg };
+  const titleCls = th ? "uppercase tracking-tight font-black" : "font-extrabold";
   const [editDay, setEditDay] = useState<string | null>(null);
   const editable = !pubMode(mode) && canManage && !!onSave;
   const save = (patch: Partial<Omit<Itinerary, "token">>) => onSave ? onSave({ ...itinerary, ...patch }) : Promise.resolve(false);
@@ -60,17 +76,25 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
   return (
     <div className={pub ? "mx-auto max-w-[960px] px-4 py-6 sm:px-6" : ""}>
       {pub && (
-        <div className="mb-6 rounded-2xl bg-[#0D1B2A] px-5 py-6 text-white">
+        <div className="mb-6 rounded-2xl px-5 py-6 text-white" style={heroStyle}>
           {itinerary.logo && (
             <div className="mb-4 inline-flex items-center rounded-xl bg-white px-4 py-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={itinerary.logo} alt={company?.name ?? "Empresa"} className="h-10 w-auto max-w-[200px] object-contain" />
             </div>
           )}
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#D4AF37]">{company?.name ?? ""} · 4Shine Empresas{audience === "participantes" ? " · agenda" : " · equipo organizador"}</div>
-          <h1 className="mt-1.5 text-[24px] font-extrabold leading-tight sm:text-[30px]">{itinerary.title}</h1>
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>{th?.label ?? `${company?.name ?? ""} · 4Shine Empresas`}{audience === "participantes" ? " · agenda" : " · equipo organizador"}</div>
+          <h1 className={`mt-1.5 text-[26px] leading-[1.05] sm:text-[36px] ${titleCls}`}>{itinerary.title}</h1>
           {itinerary.sub && <p className="mt-1.5 max-w-2xl text-[13.5px] text-white/75">{itinerary.sub}</p>}
+          {th?.tagline && <><div className="mt-4 h-[3px] w-16 rounded-full" style={{ background: accent }} /><p className="mt-2 text-[14px] italic text-white/90">«{th.tagline}»</p></>}
           <p className="mt-3 text-[12px] text-white/60">{audience === "participantes" ? "Toca cada momento para ver de qué trata y quién lo conduce." : "Toca cada momento para ver la metodología, los materiales, el uso de la plataforma y el resultado esperado, y para dejar comentarios metodológicos o logísticos."}</p>
+        </div>
+      )}
+      {!pub && th && (
+        <div className="mb-4 rounded-2xl px-5 py-4 text-white" style={heroStyle}>
+          <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>{th.label ?? itinerary.title}</div>
+          <div className={`mt-1 text-[22px] leading-none sm:text-[26px] ${titleCls}`}>{itinerary.title}</div>
+          {th.tagline && <p className="mt-1.5 text-[12.5px] italic text-white/85">«{th.tagline}»</p>}
         </div>
       )}
       {!pub && (
@@ -116,7 +140,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
 
       <div className="sticky top-[54px] z-10 -mx-1 mb-4 flex flex-wrap gap-1.5 bg-surface-2/90 px-1 py-2 backdrop-blur sm:top-0">
         {itinerary.days.map((d) => <a key={d.id} href={`#dia-${d.id}`} className="chip !py-1 text-[11px] font-bold">{d.title.split(" · ")[0]}</a>)}
-        {FILTERS.map((f) => <button key={f.k} type="button" onClick={() => setFilter(f.k)} className={`chip !py-1 text-[11px] font-bold ${filter === f.k ? "!bg-[#0D1B2A] !text-white" : ""}`}>{f.label}</button>)}
+        {FILTERS.map((f) => <button key={f.k} type="button" onClick={() => setFilter(f.k)} className={`chip !py-1 text-[11px] font-bold ${filter === f.k ? "!text-white" : ""}`} style={filter === f.k ? { background: bg } : undefined}>{f.label}</button>)}
       </div>
 
       {itinerary.days.map((d) => {
@@ -125,28 +149,29 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
         return (
           <section key={d.id} id={`dia-${d.id}`} className="mb-7 scroll-mt-24">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-[18px] font-extrabold text-ink">{d.title}</h2>
+              <h2 className={`text-[18px] text-ink ${th ? "uppercase tracking-tight font-black" : "font-extrabold"}`}>{d.title}</h2>
               {editable && <span className="flex gap-1.5">
                 <button type="button" onClick={() => setEditDay(d.id)} className="rounded-lg p-1.5 text-faint hover:bg-surface hover:text-ink" title="Editar el día"><Pencil size={13} /></button>
                 <button type="button" onClick={() => void addMoment(d.id)} disabled={busy} className="btn-ghost !py-1 text-[11px]"><Plus size={11} /> Momento</button>
               </span>}
             </div>
             <p className="mb-3 text-[12.5px] text-muted">{d.sub ? `${d.sub} · ` : ""}{items.filter((it) => it.day === d.id).length} momentos · {Math.round(total / 6) / 10} horas de agenda</p>
-            <div className="relative pl-7 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-[2px] before:bg-gradient-to-b before:from-[#D4AF37] before:to-[#0D1B2A]">
+            <div className="relative pl-7">
+              <span aria-hidden className="absolute bottom-2 left-[9px] top-2 w-[2px]" style={{ background: `linear-gradient(${accent}, ${bg})` }} />
               {list.map(({ it, i }) => {
                 const n = byMoment.get(it.id)?.length ?? 0, pend = (byMoment.get(it.id) ?? []).filter((c) => !c.resolvedAt).length;
                 const soft = it.kind === "break" || it.kind === "energizacion";
                 return (
                   <button key={it.id} type="button" onClick={() => setOpen(i)}
                     className={`relative mb-2 grid w-full grid-cols-[54px_1fr] items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-all active:bg-cyan-wash sm:grid-cols-[62px_1fr_auto] ${soft ? "border-dashed border-line bg-transparent" : "border-line bg-surface hover:-translate-y-px hover:shadow-sm"}`}>
-                    <span className="absolute -left-[23px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-[3px] bg-white" style={{ borderColor: DOT[it.kind], background: it.kind === "mesa" ? DOT.mesa : "#fff" }} />
-                    <span className="num text-[13px] font-extrabold text-ink">{it.time}{it.minutes ? <small className="block text-[10.5px] font-semibold text-muted">{it.minutes} min</small> : null}</span>
+                    <span className="absolute -left-[23px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-[3px] bg-white" style={th ? { borderColor: kindStyle(it.kind, accent, bg).background, background: it.kind === "mesa" ? accent : "#fff" } : { borderColor: DOT[it.kind], background: it.kind === "mesa" ? DOT.mesa : "#fff" }} />
+                    <span className="num text-[13px] font-extrabold text-ink" style={th ? { color: accent } : undefined}>{it.time}{it.minutes ? <small className="block text-[10.5px] font-semibold text-muted">{it.minutes} min</small> : null}</span>
                     <span className="min-w-0">
                       <span className="block text-[13.5px] font-bold leading-snug text-ink">{it.title}</span>
                       <span className="block text-[11.5px] text-muted">{it.who}</span>
                       {n > 0 && <span className={`mt-1 inline-flex items-center gap-1 text-[10.5px] font-bold ${pend ? "text-warn" : "text-faint"}`}><MessageSquare size={11} /> {n} comentario{n === 1 ? "" : "s"}{pend ? ` · ${pend} por atender` : ""}</span>}
                     </span>
-                    <span className={`col-start-2 justify-self-start rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wider sm:col-start-3 ${KIND_CLS[it.kind]}`}>{ITINERARY_KINDS[it.kind]}</span>
+                    <span className={`col-start-2 justify-self-start rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wider sm:col-start-3 ${th ? "" : KIND_CLS[it.kind]}`} style={th ? kindStyle(it.kind, accent, bg) : undefined}>{th && it.kind === "break" ? "Pit Stop" : ITINERARY_KINDS[it.kind]}</span>
                   </button>
                 );
               })}
