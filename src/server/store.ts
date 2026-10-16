@@ -2342,9 +2342,18 @@ export function clearOkr(user: SessionUser): CatResult & { removed?: number; unl
   return { ok: true, removed, unlinked: touchedInitiatives.length };
 }
 
+/** Iniciativas: quien administra el catálogo edita todas; quien solo puede crearlas
+    (líder de tribu, directivo por QR) edita y elimina únicamente las suyas. */
+function canInitiative(user: SessionUser, prev: InitiativeFull | undefined): CatResult | null {
+  if (can(user, "manage_catalog")) return null;
+  if (!can(user, "create_initiatives")) return fail(403, "Las iniciativas las crean el advisor, el líder de tribu y los directivos.");
+  if (prev && (prev.createdBy ?? "").toLowerCase() !== user.email.toLowerCase()) return fail(403, "Solo puedes editar o eliminar las iniciativas que creaste.");
+  return null;
+}
+
 export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFull>): CatResult & { id?: string } {
-  const denied = canCatalog(user); if (denied) return denied;
   const c = cat();
+  const denied = canInitiative(user, c.initiatives.find((i) => i.id === str(input.id, 10))); if (denied) return denied;
   const name = str(input.name, 200);
   if (name.length < 5) return fail(422, "El nombre de la iniciativa debe tener al menos 5 caracteres.");
   const dim = DIMS.find((d) => d.code === str(input.capability, 10));
@@ -2370,7 +2379,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
     impact: int(input.impact, 1, 5, 3), feasibility: int(input.feasibility, 1, 5, 3), urgency: int(input.urgency, 1, 5, 3), dependency: int(input.dependency, 1, 5, 3),
     status: STATUS.find((x) => x === input.status) ?? "PLANEADA", start, end, ownerId, metaResultado: str(input.metaResultado, 400),
     budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted),
-    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi,
+    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi, createdBy: prev?.createdBy ?? user.email,
     actions: (Array.isArray(input.actions) ? input.actions : []).map((a) => ({ name: str(a?.name, 200), meta: str(a?.meta, 200), status: ACT.find((x) => x === a?.status) ?? "PENDIENTE", quarter: str(a?.quarter, 8) })).filter((a) => a.name),
     log: Array.isArray(input.log) ? input.log.filter((l) => l && typeof l.text === "string") : (prev?.log ?? []),
     nextMilestone: { date: str(input.nextMilestone?.date, 12), text: str(input.nextMilestone?.text, 200) },
@@ -2385,9 +2394,10 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
 }
 
 export function removeInitiative(user: SessionUser, id: string): CatResult {
-  const denied = canCatalog(user); if (denied) return denied;
   const c = cat();
-  if (!c.initiatives.some((i) => i.id === id)) return fail(404, "La iniciativa no existe.");
+  const prev = c.initiatives.find((i) => i.id === id);
+  if (!prev) return fail(404, "La iniciativa no existe.");
+  const denied = canInitiative(user, prev); if (denied) return denied;
   const n = tasks().filter((t) => t.iniId === id).length + archived().filter((t) => t.iniId === id).length;
   if (n) return fail(422, `No se puede eliminar: tiene ${n} tarea${n === 1 ? "" : "s"} en el plan de trabajo.`);
   c.initiatives = c.initiatives.filter((i) => i.id !== id);

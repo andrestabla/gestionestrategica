@@ -31,6 +31,7 @@ export type Action =
   | "view"              // ver el módulo
   | "edit_tasks"        // crear/editar/mover tareas del gestor
   | "edit_initiatives"  // avance, factores, bitácora de iniciativas
+  | "create_initiatives" // crear iniciativas y editar o eliminar las propias (quien administra el catálogo edita todas)
   | "evaluate_initiatives" // calificar con la matriz 4Shine de priorización (D·E·M·L y tipo)
   | "decide_initiatives"   // decidir el tiempo: implementar, preparar, backlog o renunciar
   | "report_kpi"        // registrar valores de KPI
@@ -62,6 +63,8 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
   view:             { ADMIN: true,  CONSULTOR: true, LIDER: true, RESPONSABLE: true, DIRECTIVO: true },
   edit_tasks:       { ADMIN: false, CONSULTOR: true, LIDER: true, RESPONSABLE: "line", DIRECTIVO: false },
   edit_initiatives: { ADMIN: false, CONSULTOR: true, LIDER: true, RESPONSABLE: "line", DIRECTIVO: false },
+  // en la convención, el advisor, el líder de tribu y el directivo (también por QR) crean iniciativas; cada quien edita o elimina las suyas
+  create_initiatives: { ADMIN: true, CONSULTOR: true, LIDER: true, RESPONSABLE: false, DIRECTIVO: true },
   // la convención de prioridades: advisor, gerencia y junta evalúan todo el
   // portafolio; el responsable de capacidad evalúa las iniciativas de la suya.
   evaluate_initiatives: { ADMIN: false, CONSULTOR: true, LIDER: true, RESPONSABLE: "line", DIRECTIVO: true },
@@ -98,7 +101,7 @@ export const MODULE_ACTIONS: Record<ModuleKey, Action[]> = {
   capacidades:  ["view", "edit_initiatives"],
   kpi:          ["view", "report_kpi"],
   ruta:         ["view", "edit_initiatives"],
-  iniciativas:  ["view", "edit_initiatives", "edit_tasks", "evaluate_initiatives", "decide_initiatives"],
+  iniciativas:  ["view", "create_initiatives", "edit_initiatives", "edit_tasks", "evaluate_initiatives", "decide_initiatives"],
   proyectos:    ["view", "edit_tasks", "verify_evidence"],
   bi:           ["view"],
   metodologia:  ["view"],
@@ -121,7 +124,7 @@ export function describeAccess(user: SessionUser | null, module: ModuleKey, scop
   if (grants.some((g) => g === true) && grants.every((g) => g !== "line")) {
     // algunas acciones sí, otras no (p. ej. la junta evalúa pero no edita)
     const yes = actions.filter((a) => MATRIX[a][user.role] === true);
-    if (yes.every((a) => a === "evaluate_initiatives")) return { level: "partial", label: "Evalúa la priorización" };
+    if (yes.every((a) => a === "evaluate_initiatives" || a === "create_initiatives")) return { level: "partial", label: yes.includes("create_initiatives") ? "Evalúa la priorización y crea iniciativas" : "Evalúa la priorización" };
     return { level: "full", label: "Edición completa" };
   }
   if (grants.some((g) => g === true)) return { level: "full", label: "Edición completa" };

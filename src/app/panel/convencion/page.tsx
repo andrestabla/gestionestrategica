@@ -21,7 +21,7 @@ import { AccessChip, useCan, useBase, useUser } from "@/components/user-context"
 import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Lever } from "@/data/catalogo";
-import { PERSPECTIVES, type CmiObjective, type KpiFull } from "@/data/cmi";
+import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { DIMS } from "@/data/mapa";
@@ -46,6 +46,7 @@ export default function ConvencionPage() {
   const refetch = useCatalogRefetch();
   const base = useBase();
   const canEdit = useCan("manage_catalog");
+  const canCreate = useCan("create_initiatives");   // crea iniciativas y edita o elimina las suyas (líder, directivo por QR, advisor)
   const canAccess = useCan("manage_users");
   const me = useUser();
   // quien entró por el QR (o no administra el catálogo) ve la agenda de participantes, no el itinerario del equipo organizador
@@ -119,7 +120,7 @@ export default function ConvencionPage() {
       {tab === "itinerario" && <ItinerarioTab />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
-      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
+      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
       {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} onCatalogRefresh={() => void refetch()} me={me} />}
       {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} />}
     </div>
@@ -531,11 +532,14 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 
 /* ═══ Iniciativas → resultado clave ═══ */
 
-function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
+function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
   const objectives = okrObjectivesOf(cat, horizon);
   const krs = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
   const [fTribe, setFTribe] = useState("");
   const [nueva, setNueva] = useState(false);
+  const [edit, setEdit] = useState<InitiativeFull | null>(null);
+  // quien administra el catálogo edita todas; quien solo puede crear, edita y elimina las suyas
+  const mine = (i: InitiativeFull) => canEdit || (canCreate && (i.createdBy ?? "").toLowerCase() === me.toLowerCase());
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
   const unlinked = cat.initiatives.filter((i) => (!i.kpi || !krs.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe));
   const [link, setLink] = useState<string | null>(null);
@@ -546,8 +550,8 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base, d
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {canEdit && <button type="button" onClick={() => setNueva(true)} disabled={krs.length === 0} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40" title={krs.length ? "Crear una iniciativa nueva, asociada a su resultado clave principal" : "Primero define resultados clave en OKR"}><Plus size={12} /> Iniciativa</button>}
-        <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
+        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} disabled={krs.length === 0} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40" title={krs.length ? "Crear una iniciativa nueva, asociada a su resultado clave principal" : "Primero define resultados clave en OKR"}><Plus size={12} /> Iniciativa</button>}
+        <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <StatCard label="Resultados clave" value={krs.length} foot={`en ${horizonLabel(cat.company, horizon)}`} />
@@ -565,7 +569,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base, d
                 <div key={k.code} className="px-5 py-3">
                   <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className="text-[10px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
                   {inis.length === 0 ? <p className="mt-1 text-[11px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
-                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[10px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span></li>)}</ul>
+                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[10px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
                   )}
                 </div>
               );
@@ -579,7 +583,8 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base, d
             {unlinked.map((i) => (
               <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
                 <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
-                {canEdit && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 !py-1.5 text-[11px] sm:!py-1 sm:text-[10.5px]"><Link2 size={11} /> Vincular</button>}
+                {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 !py-1.5 text-[11px] sm:!py-1 sm:text-[10.5px]"><Link2 size={11} /> Vincular</button>}
+                {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
               </div>
             ))}
             {unlinked.length === 0 && <div className="px-5 py-4 text-[12px] text-muted"><CheckCircle2 size={14} className="mr-1 inline text-ok" /> Todas las iniciativas mueven un resultado clave.</div>}
@@ -588,6 +593,9 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base, d
       </div>
       {nueva && <InitiativeForm cat={cat} krs={krs} horizon={horizon} defaultOwner={defaultOwner} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
+      {edit && <InitiativeForm cat={cat} krs={krs} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} saving={saving} onCancel={() => setEdit(null)}
+        onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) setEdit(null); return ok; }}
+        onDelete={async () => { if (window.confirm(`¿Eliminar la iniciativa «${edit.name}»?`)) { const ok = await mutate("initiative", "delete", { id: edit.id }); if (ok) setEdit(null); } }} />}
       {link && (() => {
         const ini = cat.initiatives.find((i) => i.id === link)!;
         return (
@@ -600,18 +608,18 @@ function IniciativasTab({ cat, levers, horizon, canEdit, saving, mutate, base, d
 }
 
 /** Iniciativa nueva creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el resultado clave principal que mueve. */
-function InitiativeForm({ cat, krs, horizon, defaultOwner, saving, onCancel, onSubmit }: { cat: Cat; krs: { k: KpiFull; o: CmiObjective }[]; horizon: string; defaultOwner?: string; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean> }) {
-  const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner);
-  const [f, setF] = useState({ name: "", objetivo: "", ownerId: defaultOwner ?? tribes[0]?.id ?? "", kpi: "", capability: "EJE-1" });
+function InitiativeForm({ cat, krs, horizon, initial, defaultOwner, saving, onCancel, onSubmit, onDelete }: { cat: Cat; krs: { k: KpiFull; o: CmiObjective }[]; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
+  const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
+  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "", kpi: initial?.kpi ?? "", capability: initial?.capability ?? "EJE-1" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const sel = krs.find((x) => x.k.code === f.kpi);
   const ok = f.name.trim().length >= 5 && !!sel && !!f.ownerId;
   return (
-    <Modal title="Nueva iniciativa" sub="lo que se hace para mover un resultado clave; queda habilitada para calificar" onClose={onCancel}
-      footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+    <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub="lo que se hace para mover un resultado clave; queda habilitada para calificar" onClose={onCancel}
+      footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => sel && onSubmit({ name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: sel.k.code, cmi: sel.o.id, horizon, capability: f.capability, subsistema: "Operación", status: "PLANEADA" })}>
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Crear
+          onClick={() => sel && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: sel.k.code, cmi: sel.o.id, horizon, capability: f.capability, subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
+          {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
         <Field label="Resultado clave principal que mueve (obligatorio)">

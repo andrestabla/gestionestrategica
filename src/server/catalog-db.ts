@@ -99,7 +99,7 @@ export async function writeInitiative(db: Db, companyId: string, i: InitiativeFu
     metaResultado: i.metaResultado, actions: i.actions as never, log: i.log as never, nextMilestone: i.nextMilestone as never, horizon: i.horizon,
     impact: i.impact, feasibility: i.feasibility, urgency: i.urgency, dependency: i.dependency, status: i.status, ownerRole: i.ownerId,
     startQuarter: i.start, endQuarter: i.end, budgetPlanned: i.budgetPlanned, budgetCommitted: i.budgetCommitted, budgetExecuted: i.budgetExecuted,
-    progress: i.progress, kpiId: kpi?.id ?? null,
+    progress: i.progress, kpiId: kpi?.id ?? null, createdBy: i.createdBy ?? null,
   };
   const existing = await db.initiative.findUnique({ where: { companyId_code: { companyId, code: i.id } } });
   const ini = existing
@@ -197,7 +197,7 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
     ownerId: (i.ownerRole as string) ?? "", metaResultado: (i.metaResultado as string) ?? "",
     budgetPlanned: i.budgetPlanned as number, budgetCommitted: i.budgetCommitted as number, budgetExecuted: i.budgetExecuted as number,
     progress: i.progress as number, capability: (i.dimension as string) ?? "", framework: (i.framework as string) ?? "",
-    kpi: i.kpiId ? (kpiCodeById.get(i.kpiId as string) ?? "") : "",
+    kpi: i.kpiId ? (kpiCodeById.get(i.kpiId as string) ?? "") : "", ...(i.createdBy ? { createdBy: i.createdBy as string } : {}),
     actions: (i.actions as InitiativeFull["actions"]) ?? [], log: (i.log as InitiativeFull["log"]) ?? [],
     nextMilestone: (i.nextMilestone as InitiativeFull["nextMilestone"]) ?? { date: "", text: "" },
     factors: i.successFactors.map((f) => ({ name: f.name, state: f.state as "VERDE" | "AMBAR" | "ROJO", history: (f.history as string[]) ?? [], ...(f.note ? { note: f.note } : {}) })),
