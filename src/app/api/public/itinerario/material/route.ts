@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { inTenant } from "@/app/api/td/_helpers";
 import { hydrateCompanies, companyBySlug, itineraryFileOf } from "@/server/store";
-import { getObject, materialDisposition } from "@/server/storage";
+import { getObject, signedUrl, materialDisposition } from "@/server/storage";
 import { TOKEN_RE, FILE_ID_RE, fileKindOf, FILE_TYPES } from "@/lib/itinerario";
 
 // GET /<empresa>/api/public/itinerario/material?token=&id= — el archivo de un
@@ -20,6 +20,9 @@ export async function GET(req: Request) {
   const kind = fileKindOf(f);
   if (kind === "link") return NextResponse.redirect(f.url!, 307);
   const type = FILE_TYPES[kind];
+  const disposition = materialDisposition(f.name, type.ext as "pdf" | "pptx");
+  const direct = await signedUrl("materiales", `${c.slug}/${id}.${type.ext}`, { mime: type.mime, disposition });
+  if (direct) return NextResponse.redirect(direct, { status: 307, headers: { "Cache-Control": "private, no-store" } });
   const buf = await getObject("materiales", `${c.slug}/${id}.${type.ext}`);
   if (!buf) return NextResponse.json({ error: "Archivo no disponible." }, { status: 404 });
   return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": type.mime, "Content-Disposition": materialDisposition(f.name, type.ext as "pdf" | "pptx"), "Cache-Control": "public, max-age=300" } });

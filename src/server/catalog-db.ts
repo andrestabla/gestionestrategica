@@ -43,8 +43,9 @@ export async function writeResponsible(db: Db, companyId: string, r: Responsible
 }
 export const deleteResponsible = (db: Db, companyId: string, id: string) => db.responsible.deleteMany({ where: { companyId, id } });
 
-export async function writeObjective(db: Db, companyId: string, o: CmiObjective) {
+export async function writeObjective(db: Db, companyId: string, o: CmiObjective, mode: "upsert" | "create" = "upsert") {
   const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null, lever: o.lever ?? null, horizon: o.horizon ?? null, pillar: o.pillar ?? null, desc: o.desc ?? null, indicator: o.indicator ?? null, okr: !!o.okr, parent: o.parent ?? null };
+  if (mode === "create") { await db.cmiObjective.create({ data: { companyId, id: o.id, ...data } }); return; }
   await db.cmiObjective.upsert({ where: { companyId_id: { companyId, id: o.id } }, update: data, create: { companyId, id: o.id, ...data } });
 }
 export const deleteObjective = (db: Db, companyId: string, id: string) => db.cmiObjective.deleteMany({ where: { companyId, id } });
@@ -71,13 +72,15 @@ export async function writeEvidence(db: Db, companyId: string, e: EvidenceFull) 
   await db.evidence.upsert({ where: { companyId_id: { companyId, id: e.id } }, update: { practice: e.practice, status: e.status, note: e.note ?? null }, create: { companyId, id: e.id, practice: e.practice, status: e.status, note: e.note ?? null } });
 }
 
-export async function writeKpi(db: Db, companyId: string, k: KpiFull): Promise<string> {
+export async function writeKpi(db: Db, companyId: string, k: KpiFull, mode: "upsert" | "create" = "upsert"): Promise<string> {
   const data = {
     line: k.line, name: k.name, unit: k.unit, source: k.source, ownerRole: k.ownerId, definition: k.definition, formula: k.formula,
     cmiObjective: k.cmi, frequency: k.frequency.toUpperCase(), baseline: k.baseline, target: k.target, goodDirection: k.goodDirection,
     due: k.due ?? null,
   };
-  const kpi = await db.kpi.upsert({ where: { companyId_code: { companyId, code: k.code } }, update: data, create: { companyId, code: k.code, ...data } });
+  const kpi = mode === "create"
+    ? await db.kpi.create({ data: { companyId, code: k.code, ...data } })
+    : await db.kpi.upsert({ where: { companyId_code: { companyId, code: k.code } }, update: data, create: { companyId, code: k.code, ...data } });
   await db.kpiValue.deleteMany({ where: { kpiId: kpi.id, period: { notIn: k.series.map((v) => v.period) } } });
   for (const v of k.series) {
     await db.kpiValue.upsert({ where: { kpiId_period: { kpiId: kpi.id, period: v.period } }, update: { value: v.value, note: v.note ?? null }, create: { kpiId: kpi.id, period: v.period, value: v.value, note: v.note ?? null } });
@@ -92,7 +95,7 @@ export async function deleteKpi(db: Db, companyId: string, code: string) {
   await db.kpi.delete({ where: { id: kpi.id } });
 }
 
-export async function writeInitiative(db: Db, companyId: string, i: InitiativeFull) {
+export async function writeInitiative(db: Db, companyId: string, i: InitiativeFull, mode: "upsert" | "create" = "upsert") {
   const kpi = i.kpi ? await db.kpi.findUnique({ where: { companyId_code: { companyId, code: i.kpi } } }) : null;
   const data = {
     line: i.line, name: i.name, description: i.objetivo, subsistema: i.subsistema, cmiObjective: i.cmi, dimension: i.capability, framework: i.framework,
@@ -101,7 +104,7 @@ export async function writeInitiative(db: Db, companyId: string, i: InitiativeFu
     startQuarter: i.start, endQuarter: i.end, budgetPlanned: i.budgetPlanned, budgetCommitted: i.budgetCommitted, budgetExecuted: i.budgetExecuted,
     progress: i.progress, kpiId: kpi?.id ?? null, createdBy: i.createdBy ?? null,
   };
-  const existing = await db.initiative.findUnique({ where: { companyId_code: { companyId, code: i.id } } });
+  const existing = mode === "create" ? null : await db.initiative.findUnique({ where: { companyId_code: { companyId, code: i.id } } });
   const ini = existing
     ? await db.initiative.update({ where: { id: existing.id }, data })
     : await db.initiative.create({ data: { companyId, code: i.id, ...data } });

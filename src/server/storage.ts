@@ -99,6 +99,22 @@ export async function getObject(folder: Folder, key: string): Promise<Buffer | n
   }
 }
 
+/** Enlace firmado y temporal al objeto en R2 (null si el almacenamiento es local): el navegador
+    descarga directamente del bucket, sin pasar el archivo por la función. Con 120 personas abriendo
+    un material a la vez, la función solo firma enlaces. */
+export async function signedUrl(folder: Folder, key: string, opts: { mime: string; disposition: string; expiresIn?: number }): Promise<string | null> {
+  const cfg = r2Config();
+  if (!cfg) return null;
+  try {
+    const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+    const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+    return await getSignedUrl(await s3(), new GetObjectCommand({ Bucket: cfg.bucket, Key: `${folder}/${key}`, ResponseContentType: opts.mime, ResponseContentDisposition: opts.disposition }), { expiresIn: opts.expiresIn ?? 600 });
+  } catch (e) {
+    console.error("[4shine] enlace firmado falló:", (e as Error).message);
+    return null;
+  }
+}
+
 /** Content-Disposition con nombre ASCII de respaldo y nombre UTF-8 (RFC 5987). El PDF se abre en línea; el PowerPoint se descarga. */
 export function materialDisposition(name: string, ext: "pdf" | "pptx" = "pdf"): string {
   const base = name.replace(/\.(pdf|pptx)$/i, "");

@@ -157,6 +157,7 @@ export type TenantState = {
   version: number;        // versión de datos de la empresa que refleja esta memoria (-1 = desconocida: recargar)
   versionAt: number;      // último chequeo de la versión contra la base
   hydrating?: Promise<void>;   // recarga en curso (las peticiones concurrentes la esperan)
+  writes: number;         // escrituras iniciadas en esta instancia (si hubo alguna durante una recarga, se vuelve a recargar)
 };
 
 export type CompanyRecord = CompanyInfo & { dbId: string | null };
@@ -201,7 +202,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
     users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, responsibleId: u.responsibleId, active: true, seeded: true })),
-    integrations: new Map(), notifRead: new Map(), itinComments: new Map(), hydrated: false, version: -1, versionAt: 0,
+    integrations: new Map(), notifRead: new Map(), itinComments: new Map(), hydrated: false, version: -1, versionAt: 0, writes: 0,
   };
 }
 
@@ -378,7 +379,8 @@ async function loadTenant(st: TenantState) {
     const companyId = st.dbId ?? g.companies.get(st.slug)?.dbId;
     if (!companyId) { st.hydrated = true; return; }   // empresa solo en memoria
     st.dbId = companyId;
-    // la versión que vamos a reflejar: si alguien escribe mientras cargamos, el siguiente chequeo volverá a recargar
+    // la versión que vamos a reflejar: si alguien escribe mientras cargamos (aquí o en otra instancia), el siguiente chequeo volverá a recargar
+    const writesBefore = st.writes;
     const verRow = await db.company.findUnique({ where: { id: companyId }, select: { dataVersion: true } });
     const version: number = verRow?.dataVersion ?? 0;
     // catálogo: la demo nace del seed; las demás empresas, de la base (con el registro fresco de la empresa)
@@ -386,10 +388,10 @@ async function loadTenant(st: TenantState) {
       const rec = g.companies.get(st.slug);
       const fresh = await readCatalog(db, { ...st.catalog.company, ...(rec ?? {}), dbId: companyId });
       const next = newState(st.slug, fresh, companyId);
-      next.users = st.users;
+      next.users = st.users; next.writes = st.writes;
       Object.assign(st, next);
     }
-    st.version = version; st.versionAt = Date.now();
+    st.version = st.writes === writesBefore ? version : -1; st.versionAt = Date.now();
     const W = { where: { companyId } };
     type DbTaskRow = {
       id: string; status: string; assigneeId: string; coAssigneeIds: unknown;
@@ -763,6 +765,7 @@ const pendingWrites = new Set<Promise<unknown>>();
 async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
   const st = g.tenants.get(currentTenant());   // empresa activa (si la escritura es de una empresa)
+  if (st) st.writes++;
   const run = (async () => {
     try {
       const db = await prisma();
@@ -783,7 +786,25 @@ async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
 async function bumpVersion(db: AnyPrisma, st: TenantState | undefined) {
   if (!st?.dbId) return;
   const row = await db.company.update({ where: { id: st.dbId }, data: { dataVersion: { increment: 1 } }, select: { dataVersion: true } });
-  st.version = row.dataVersion === st.version + 1 ? row.dataVersion : -1;
+  st.version = !st.hydrating && row.dataVersion === st.version + 1 ? row.dataVersion : -1;
+}
+
+/** Crea en la base una entidad nueva con el código asignado en memoria. Si otra instancia usó ese
+    código en el mismo instante (violación de unicidad), toma el siguiente libre según la base, lo
+    renombra en memoria y vuelve a intentar: no se pierde ni se pisa ninguna de las dos. */
+async function createRekeying(db: AnyPrisma, label: string, current: () => string, rename: (fresh: string) => void,
+  usedInDb: () => Promise<string[]>, nextFree: (used: string[]) => string, create: () => Promise<unknown>) {
+  for (let n = 0; n < 5; n++) {
+    try { await create(); return; }
+    catch (e) {
+      if ((e as { code?: string })?.code !== "P2002") throw e;
+      const used = [...(await usedInDb()), current()];
+      const fresh = nextFree(used);
+      console.warn(`[4shine] ${label} ${current()} ya existía en la base (otra instancia): pasa a ${fresh}`);
+      rename(fresh);
+    }
+  }
+  throw new Error(`${label}: no se pudo asignar un código libre`);
 }
 
 /** Espera a que terminen todas las escrituras pendientes. Para scripts que corren fuera de una petición
@@ -2316,7 +2337,12 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   const idx = c.objectives.findIndex((x) => x.id === id);
   if (idx >= 0) c.objectives[idx] = o; else c.objectives.push(o);
   audit(user, "task", `cat:${id}`, `objetivo ${idx >= 0 ? "actualizado" : "creado"}`);
-  void persist("catálogo", (db) => writeObjective(db, cid(), o));
+  const generated = !str(input.id, 10);
+  void persist("catálogo", (db) => idx >= 0 || !generated ? writeObjective(db, cid(), o) : createRekeying(db, "objetivo", () => o.id,
+    (fresh) => { const old = o.id; o.id = fresh; for (const k of c.kpis) if (k.cmi === old) k.cmi = fresh; },
+    async () => (await db.cmiObjective.findMany({ where: { companyId: cid() }, select: { id: true } })).map((x: { id: string }) => x.id),
+    (used) => okr ? nextCode(`${lever ?? "OK"}-O`, used, 1) : nextCode("OE-", used, 2),
+    () => writeObjective(db, cid(), o, "create")));
   return { ok: true, id };
 }
 
@@ -2363,7 +2389,11 @@ export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult
   const idx = c.kpis.findIndex((x) => x.code === code);
   if (idx >= 0) c.kpis[idx] = k; else c.kpis.push(k);
   audit(user, "task", `cat:${code}`, `KPI ${idx >= 0 ? "actualizado" : "creado"} (${name})`);
-  void persist("catálogo", (db) => writeKpi(db, cid(), k));
+  void persist("catálogo", (db) => idx >= 0 ? writeKpi(db, cid(), k) : createRekeying(db, "KPI", () => k.code,
+    (fresh) => { const old = k.code; k.code = fresh; for (const i of c.initiatives) if (i.kpi === old) i.kpi = fresh; },
+    async () => (await db.kpi.findMany({ where: { companyId: cid() }, select: { code: true } })).map((x: { code: string }) => x.code),
+    (used) => { const m = /^(.*?)(\d+)$/.exec(k.code); return m ? nextCode(m[1], used, m[2].length) : nextCode(`${k.code}-`, used, 1); },
+    () => writeKpi(db, cid(), k, "create")));
   return { ok: true, code };
 }
 
@@ -2450,7 +2480,14 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (idx >= 0) c.initiatives[idx] = i; else c.initiatives.push(i);
   iniOverrides().delete(id);
   audit(user, "task", `cat:${id}`, `iniciativa ${idx >= 0 ? "actualizada" : "creada"} (${name})`);
-  void persist("catálogo", async (db) => { await writeInitiative(db, cid(), i); await db.initiativeOverride.deleteMany({ where: { companyId: cid(), code: id } }); });
+  void persist("catálogo", async (db) => {
+    if (idx >= 0 || str(input.id, 10)) await writeInitiative(db, cid(), i);
+    else await createRekeying(db, "iniciativa", () => i.id, (fresh) => { i.id = fresh; },
+      async () => (await db.initiative.findMany({ where: { companyId: cid() }, select: { code: true } })).map((x: { code: string }) => x.code),
+      (used) => { let n = 1; while (used.includes(`i${n}`)) n++; return `i${n}`; },
+      () => writeInitiative(db, cid(), i, "create"));
+    await db.initiativeOverride.deleteMany({ where: { companyId: cid(), code: i.id } });
+  });
   return { ok: true, id };
 }
 
