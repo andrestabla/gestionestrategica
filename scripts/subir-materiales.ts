@@ -44,8 +44,8 @@ const GEMELO_PPTX: Record<string, string> = { "deck-01-apertura": "deck-01-apert
 const RETIRADOS = ["formato-5-acta-renuncias", "plantilla-01-ficha-panelista", "plantilla-02-lienzo-maestro", "plantilla-03-tarjetas-kr", "plantilla-04-fichas-iniciativa", "plantilla-05-tarjeta-matriz", "plantilla-06-okr-por-tribu", "plantilla-07-pliego-portafolio", "plantilla-08-fichas-de-apoyo"];
 // vínculos por momento (ids del itinerario)
 const VINCULOS: Record<string, string[]> = {
-  "d1-01": ["hoja-qr-secciones", "guia-facilitacion"], "d1-02": ["deck-01-apertura"], "d1-03": ["deck-01-apertura"],
-  "d1-06": ["formato-1-panelista"],   "d1-13": ["formato-2-lienzo", "deck-02-mesa-redonda"], "d1-15": ["deck-02-mesa-redonda", "formato-1-panelista"], "d1-16": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
+  "d1-01": ["hoja-qr-secciones", "guia-facilitacion", "formato-5-preguntas"], "d1-02": ["deck-01-apertura", "deck-02-mesa-redonda"], "d1-03": ["deck-01-apertura"],
+  "d1-06": ["formato-1-panelista"], "d1-07": ["formato-1-panelista"], "d1-08": ["formato-1-panelista"], "d1-11": ["formato-1-panelista"], "d1-12": ["formato-1-panelista"], "d1-22": ["formato-5-preguntas", "deck-02-mesa-redonda"], "d1-23": ["formato-5-preguntas", "deck-02-mesa-redonda"],   "d1-13": ["formato-2-lienzo", "deck-02-mesa-redonda"], "d1-15": ["deck-02-mesa-redonda", "formato-1-panelista"], "d1-16": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
   "d1-17": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"], "d1-18": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"], "d1-19": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
   "d1-20": ["deck-02-mesa-redonda", "formato-2-lienzo"], "d1-21": ["formato-2-lienzo"], "d1-24": ["formato-2-lienzo"], "d1-26": ["formato-2-lienzo"],
   "d2-01": ["hoja-qr-secciones", "formato-3-tribu", "formato-4-iniciativa"], "d2-02": ["deck-03-okr"], "d2-03": ["deck-03-okr"], "d2-04": ["deck-03-okr", "formato-3-tribu"], "d2-05": ["formato-3-tribu"], "d2-06": ["formato-3-tribu"], "d2-07": ["formato-3-tribu"],
