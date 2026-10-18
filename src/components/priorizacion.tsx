@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { sessionOf, type PrioSessions } from "@/lib/priorizacion-sesion";
 import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
-import { horizonLabel, typeRuleOf } from "@/data/catalogo";
+import { horizonLabel, typeRuleOf, isConvencion } from "@/data/catalogo";
 import {
   CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount, validationLabel,
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
@@ -106,6 +106,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const mine = data?.evaluations.find((e) => e.by === user.email.toLowerCase());
   const decision = data?.decisions[iniId] ?? null;
   const sameHorizon = data?.ranking.filter((r) => r.horizon === horizon).length ?? 0;
+  const convMode = isConvencion(cv.catalog.company);   // modo convención: todo se desarrolla a 2027, sin horizonte sugerido ni «mover a»
   const rule = typeRuleOf(cv.catalog.company);
 
   return (
@@ -114,14 +115,14 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
         <Scale size={16} className="text-cyan-deep" />
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-extrabold tracking-tight text-ink">Validación con {validationCriteriaCount(rule)} criterios</div>
-          <div className="text-[11.5px] text-muted">{validationLabel(rule)} · tipo: {typeRuleLabel(rule)} · puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4, ordena dentro del horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia</div>
+          <div className="text-[11.5px] text-muted">{validationLabel(rule)} · tipo: {typeRuleLabel(rule)} · puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4, {convMode ? "ordena el portafolio (todo a 2027)" : "ordena dentro del horizonte y sugiere el horizonte"} · la decisión de tiempo la registra la gerencia</div>
         </div>
         {c && c.n > 0 && row && (
           <span className="chip chip-cyan" title="Posición por puntaje entre las iniciativas del mismo horizonte">
-            {row.position}.º de {sameHorizon} · {horizonLabel(cv.catalog.company, horizon).toLowerCase()}
+            {row.position}.º de {sameHorizon}{convMode ? "" : ` · ${horizonLabel(cv.catalog.company, horizon).toLowerCase()}`}
           </span>
         )}
-        {row && row.suggested && row.suggested !== horizon && (
+        {!convMode && row && row.suggested && row.suggested !== horizon && (
           <span className="flex items-center gap-1.5">
             <span className="chip chip-gold" title="Según el puntaje consolidado y las reglas de la matriz">Sugerido: {horizonLabel(cv.catalog.company, row.suggested)}</span>
             {canDecide && (
@@ -132,7 +133,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
             )}
           </span>
         )}
-        {row && row.suggested && row.suggested === horizon && (
+        {!convMode && row && row.suggested && row.suggested === horizon && (
           <span className="chip chip-ok" title="El puntaje consolidado confirma el horizonte actual">Horizonte confirmado</span>
         )}
         {decision && <span className={DECISION_CLS[decision.decision]}>{decisionLabel(decision.decision)}</span>}

@@ -147,6 +147,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
         </span>}
       </div>
+      {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}><b>Día 2:</b> los objetivos de Dirección 3x3 no se modifican; son la fuente de consulta de las tribus para escribir sus OKR. Solo el relator (advisor) registra ajustes ratificados.</p>}
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus palancas estratégicas. {canEdit ? "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
       ) : (<>
@@ -409,13 +410,13 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
       {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
       {byLever.map((g) => (
         <Card key={g.key} className="rise mb-5 overflow-hidden">
-          <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin objetivos de la tribu todavía"}
+          <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR de la tribu todavía · un objetivo por palanca (un segundo solo si el primero no basta), con 2 a 4 resultados clave"}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
               <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>
               {canEdit && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
-            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Primero el objetivo: la tribu lo escribe a partir del objetivo directivo de esta palanca (Dirección 3x3){canEdit ? " con «+ Objetivo»" : "; lo registra el líder"}. Después, de 2 a 4 resultados clave por objetivo (máximo 5).</EmptyNote></div>}
+            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Primero el objetivo: un OKR por palanca es el reto de la tribu, escrito a partir de los lineamientos de Dirección 3x3 (un segundo objetivo solo si el primero no basta){canEdit ? " con «+ Objetivo»" : "; lo registra el líder"}. Después, de 2 a 4 resultados clave por objetivo (máximo 5).</EmptyNote></div>}
             {g.objs.map((o) => {
               const krs = keyResultsOf(cat, o);
               const mine = issues.filter((i) => i.ref === o.id || krs.some((k) => k.code === i.ref));
@@ -802,7 +803,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="rise overflow-hidden">
-          <CardHeader title="Ranking en vivo" sub="puntaje consolidado · elegibilidad y capacidad · horizonte sugerido · decisión" />
+          <CardHeader title="Ranking en vivo" sub={convencion ? "puntaje consolidado · elegibilidad y capacidad · decisión · todo a 2027" : "puntaje consolidado · elegibilidad y capacidad · horizonte sugerido · decisión"} />
           <div className="divide-y divide-line sm:hidden">
             {groups.map((g) => (<div key={g.key || "sin"}>
               <div className="bg-surface-2/70 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</div>
@@ -834,7 +835,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
           </div>
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[720px] text-[12px]">
-              <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Horizonte</th><th className="px-2 py-2">Decisión</th></tr></thead>
+              <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">{convencion ? "Palanca" : "Horizonte"}</th><th className="px-2 py-2">Decisión</th></tr></thead>
               <tbody>
                 {groups.map((g) => [
                   <tr key={`g-${g.key}`}><td colSpan={CRITERIA.length + 7} className="bg-surface-2/70 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</td></tr>,
@@ -855,7 +856,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                         {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
                         {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
                       </span></td>
-                      <td className="px-2 py-2"><span className="num text-[10.5px] text-muted">{horizonLabel(cat.company, i.horizon)}</span> {r && <HorizonHint compact current={i.horizon} suggested={r.suggested} company={cat.company} />}</td>
+                      <td className="px-2 py-2"><span className="num text-[10.5px] text-muted">{convencion ? (levers.find((l) => l.id === cat.objectives.find((o) => o.id === i.cmi)?.lever)?.name ?? "—") : horizonLabel(cat.company, i.horizon)}</span> {r && !convencion && <HorizonHint compact current={i.horizon} suggested={r.suggested} company={cat.company} />}</td>
                       <td className="px-2 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
@@ -910,9 +911,14 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   const tribes = useMemo(() => cat.responsibles.filter((t) => all.some((r) => r.ownerId === t.id)), [cat, all]);
   const rows = useMemo(() => all.filter((r) => (!fOe || r.oe === fOe) && (!fTribe || r.ownerId === fTribe) && (!fLever || r.leverId === fLever) && matchStatus(r, fStatus)), [all, fOe, fTribe, fLever, fStatus]);
   const filtered = !!(fOe || fTribe || fLever || fStatus);
+  // en la convención todas las iniciativas se desarrollan a 2027: el portafolio se lee por palanca (y tribu), no por horizonte
+  const convencion = isConvencion(cat.company);
   const count = (st: PortStatus) => all.filter((r) => matchStatus(r, st)).length;
   const hzAll = useMemo(() => [...horizons, ...[...new Set(all.map((r) => r.horizon))].filter((h) => !horizons.includes(h))], [horizons, all]);   // «sin horizonte» o valores fuera del catálogo también se muestran
-  const sum = portfolioSummary(rows, hzAll);
+  const groups = convencion ? [...levers.map((l) => l.id), ...(all.some((r) => !r.leverId) ? [""] : [])] : hzAll;
+  const gKey = (r: PortRow) => convencion ? (r.leverId ?? "") : r.horizon;
+  const gLabel = (g: string) => convencion ? (levers.find((l) => l.id === g)?.name ?? "Sin palanca") : (g ? horizonLabel(cat.company, g) : "Sin horizonte");
+  const sum = portfolioSummary(convencion ? rows.map((r) => ({ ...r, horizon: r.leverId ?? "" })) : rows, groups);
   const tactical = rows.filter((r) => r.c.transfer);
   const DEC: (Decision | "PENDIENTE")[] = ["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR", "PENDIENTE"];
   const label = (d: Decision | "PENDIENTE") => d === "PENDIENTE" ? "Pendiente" : decisionLabel(d);
@@ -923,7 +929,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <p className="text-[12.5px] text-muted">Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa.</p>
+        <p className="text-[12.5px] text-muted">{convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
         <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[11.5px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
       </div>
       <Card className="rise mb-5 overflow-hidden">
@@ -943,20 +949,20 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         </div>
       </Card>
       <Card className="rise mb-5 overflow-hidden">
-        <CardHeader title="Resumen por horizonte y decisión" />
+        <CardHeader title={convencion ? "Resumen por palanca y decisión" : "Resumen por horizonte y decisión"} />
         <div className="space-y-2 px-4 pb-3 sm:hidden">
-          {hzAll.map((h) => (
+          {groups.map((h) => (
             <div key={h} className="rounded-xl bg-surface-2/60 px-3 py-2">
-              <div className="flex items-baseline justify-between text-[12.5px]"><b className="text-ink">{horizonLabel(cat.company, h)}</b><span className="num text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)} iniciativas</span></div>
+              <div className="flex items-baseline justify-between text-[12.5px]"><b className="text-ink">{gLabel(h)}</b><span className="num text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)} iniciativas</span></div>
               <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
             </div>
           ))}
         </div>
         <div className="hidden overflow-x-auto px-2 pb-3 sm:block">
           <table className="w-full min-w-[560px] text-[12px]">
-            <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Horizonte</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
+            <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? "Palanca" : "Horizonte"}</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
             <tbody>
-              {hzAll.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{h ? horizonLabel(cat.company, h) : "Sin horizonte"}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
+              {groups.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{gLabel(h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
             </tbody>
           </table>
           <p className="px-3 pt-2 text-[11px] text-muted">
@@ -964,12 +970,12 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           </p>
         </div>
       </Card>
-      {hzAll.map((h) => {
-        const hr = rows.filter((r) => r.horizon === h).sort((a, b) => (b.c.n ? b.c.score : -1) - (a.c.n ? a.c.score : -1));
+      {groups.map((h) => {
+        const hr = rows.filter((r) => gKey(r) === h).sort((a, b) => (b.c.n ? b.c.score : -1) - (a.c.n ? a.c.score : -1));
         if (filtered && hr.length === 0) return null;
         return (
           <Card key={h} className="rise rise-1 mb-5 overflow-hidden">
-            <CardHeader title={h ? horizonLabel(cat.company, h) : "Sin horizonte"} sub={`${hr.length} iniciativas · ordenadas por puntaje consolidado`} />
+            <CardHeader title={gLabel(h)} sub={`${hr.length} iniciativas · ordenadas por puntaje consolidado`} />
             <div className="divide-y divide-line sm:hidden">
               {hr.map((r) => (
                 <Link key={r.id} href={`${base}/panel/iniciativas/${r.id}`} className="block px-4 py-3 active:bg-cyan-wash">
@@ -981,29 +987,29 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                     <span className="num shrink-0 text-[18px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />
+                    {!convencion && <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />}
                     {r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}
                   </div>
                   {r.rationale && <p className="mt-1 text-[11px] leading-snug text-ink-soft">{r.rationale}</p>}
                 </Link>
               ))}
-              {hr.length === 0 && <p className="px-4 py-3 text-[12px] italic text-faint">Sin iniciativas en este horizonte.</p>}
+              {hr.length === 0 && <p className="px-4 py-3 text-[12px] italic text-faint">{convencion ? "Sin iniciativas en esta palanca." : "Sin iniciativas en este horizonte."}</p>}
             </div>
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] text-[12px]">
-                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Sugerido</th><th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
+                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th>{!convencion && <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
                 <tbody>
                   {hr.map((r) => (
                     <tr key={r.id} className="border-t border-line">
                       <td className="px-4 py-2"><Link href={`${base}/panel/iniciativas/${r.id}`} className="font-bold text-ink hover:text-cyan-deep">{r.name}</Link><div className="num text-[10px] text-faint">{r.id} · {r.owner ?? "—"}</div></td>
                       <td className="px-2 py-2 text-[11px] text-muted">{r.lever ?? "—"}</td>
                       <td className="num px-2 py-2 text-right font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
-                      <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>
+                      {!convencion && <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>}
                       <td className="px-2 py-2">{r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
                       <td className="px-2 py-2 text-[11px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
                     </tr>
                   ))}
-                  {hr.length === 0 && <tr><td colSpan={6} className="px-4 py-3 text-[12px] italic text-faint">Sin iniciativas en este horizonte.</td></tr>}
+                  {hr.length === 0 && <tr><td colSpan={convencion ? 5 : 6} className="px-4 py-3 text-[12px] italic text-faint">{convencion ? "Sin iniciativas en esta palanca." : "Sin iniciativas en este horizonte."}</td></tr>}
                 </tbody>
               </table>
             </div>

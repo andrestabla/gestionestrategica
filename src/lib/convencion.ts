@@ -15,7 +15,7 @@ import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
 
 export type OkrIssue = {
   level: "alto" | "medio";
-  kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "iniciativa-sin-kr";
+  kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "iniciativa-sin-kr" | "palanca-muchos-objetivos";
   ref: string;       // id del objetivo, código del KR o id de la iniciativa
   text: string;
 };
@@ -85,6 +85,11 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
       if (missing.length) out.push({ level: "alto", kind: "kr-incompleto", ref: k.code, text: `${k.code} sin ${missing.join(", ")}.` });
       if (initiativesOfKr(cat, k.code).length === 0) out.push({ level: "medio", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva.` });
     }
+  }
+  // un OKR por palanca es el reto de la tribu; un segundo objetivo solo si el primero no basta
+  for (const l of leversOf(cat.company)) {
+    const n = objectives.filter((o) => o.lever === l.id).length;
+    if (n > 2) out.push({ level: "medio", kind: "palanca-muchos-objetivos", ref: l.id, text: `${l.name} tiene ${n} objetivos de tribu; la regla es un objetivo por palanca (un segundo solo si el primero no basta).` });
   }
   const krCodes = new Set(objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => k.code)));
   for (const i of cat.initiatives.filter((i) => i.horizon === horizon)) {

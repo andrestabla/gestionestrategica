@@ -2326,6 +2326,8 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   const pillar = str(input.pillar, 80) || undefined, desc = str(input.desc, 600) || undefined, indicator = str(input.indicator, 200) || undefined;
   // objetivo de la tribu (laboratorio de OKR): lleva la marca okr y, si lo indica, el objetivo directivo que concreta
   const okr = input.okr === true;
+  // en la convención los objetivos directivos (Dirección 3x3) son fuente de consulta: el líder de tribu solo escribe los OKR de su tribu
+  if (c.company.mode === "convencion" && user.role === "LIDER" && !okr) return fail(403, "Durante la convención los objetivos de Dirección 3x3 no se modifican: son la fuente de consulta de las tribus. Escribe los OKR de tu tribu en la sección OKR.");
   const parent = str(input.parent, 10).toUpperCase() || undefined;
   if (parent && !c.objectives.some((x) => x.id === parent && !x.okr)) return fail(422, "El objetivo directivo que concreta no existe.");
   const id = str(input.id, 10) || (okr ? nextCode(`${lever ?? "OK"}-O`, c.objectives.map((o) => o.id), 1) : nextCode("OE-", c.objectives.map((o) => o.id), 2));
@@ -2349,7 +2351,9 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
 export function removeObjective(user: SessionUser, id: string): CatResult {
   const denied = canCatalog(user); if (denied) return denied;
   const c = cat();
-  if (!c.objectives.some((o) => o.id === id)) return fail(404, "El objetivo no existe.");
+  const prevObj = c.objectives.find((o) => o.id === id);
+  if (!prevObj) return fail(404, "El objetivo no existe.");
+  if (c.company.mode === "convencion" && user.role === "LIDER" && !prevObj.okr) return fail(403, "Durante la convención los objetivos de Dirección 3x3 no se modifican: son la fuente de consulta de las tribus.");
   const refs = [...c.kpis.filter((k) => k.cmi === id).map((k) => `KPI ${k.code}`), ...c.initiatives.filter((i) => i.cmi === id).map((i) => `iniciativa ${i.id}`)];
   if (refs.length) return fail(422, `No se puede eliminar: lo usan ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}.`);
   c.objectives = c.objectives.filter((o) => o.id !== id);
