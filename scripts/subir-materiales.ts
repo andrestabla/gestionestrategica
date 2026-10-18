@@ -3,7 +3,7 @@
 // del itinerario. La contraseña se lee de la variable CONTRASENA (nunca por argumento):
 //   read -rs "p?Contraseña del admin: "; echo; CONTRASENA="$p" npx tsx scripts/subir-materiales.ts --slug cresio --origen https://gestionestrategica.io
 // --solo-vincular: no sube archivos, solo aplica los vínculos.
-// --retirar: retira primero los materiales que ya no existen (plantillas 01 a 08 y el formato F5).
+// --retirar: retira primero los materiales que ya no existen (plantillas 01 a 08 y el antiguo formato F5 de renuncias, id formato-5-renuncias).
 // --ids a,b,c: sube solo esos materiales (por id) y luego aplica los vínculos.
 import { readFileSync, existsSync } from "fs";
 import { basename } from "path";
@@ -23,6 +23,7 @@ const MATERIALES: { path: string; id: string; name: string; group: string }[] = 
   { path: `${BASE}/plantillas-imprimibles/F2-lienzo-mesa-redonda-A2.pdf`, id: "formato-2-lienzo", name: "Formato F2 · Lienzo único de la mesa redonda (A2)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F3-formato-tribu-A3.pdf`, id: "formato-3-tribu", name: "Formato F3 · Formato de tribu: OKR 2027 e iniciativas (A3)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F4-ficha-iniciativa.pdf`, id: "formato-4-iniciativa", name: "Formato F4 · Ficha de iniciativa estándar", group: "plantilla" },
+  { path: `${BASE}/plantillas-imprimibles/F5-ficha-preguntas-tribu.pdf`, id: "formato-5-preguntas", name: "Formato F5 · Ficha de preguntas de la tribu (mesa redonda)", group: "plantilla" },
   { path: `${BASE}/qr/hoja-qr-secciones.pdf`, id: "hoja-qr-secciones", name: "QR único de la convención (hoja para imprimir)", group: "plantilla" },
   { path: `${BASE}/presentaciones/pdf/01-conferencia-apertura-crecer-exige-elegir.pdf`, id: "deck-01-apertura", name: "Deck 01 · Conferencia de apertura «Crecer exige elegir»", group: "presentacion" },
   { path: `${BASE}/presentaciones/pdf/02-taller-mesa-redonda-estrategica.pdf`, id: "deck-02-mesa-redonda", name: "Deck 02 · Mesa redonda estratégica", group: "presentacion" },
