@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { sessionOf, type PrioSessions } from "@/lib/priorizacion-sesion";
 import { useCan, useUser } from "@/components/user-context";
-import { useCatalog } from "@/components/catalog-context";
+import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonLabel, typeRuleOf, isConvencion } from "@/data/catalogo";
 import {
   CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount, validationLabel,
@@ -88,7 +88,16 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const convencion = cv.catalog.company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER");
   const session = sessionOf(cv.catalog.company.prioSessions, ini?.ownerId);
   const canDecide = useCan("decide_initiatives");
+  const refetchCatalog = useCatalogRefetch();
   const { data, refetch } = usePriorizacion(iniId);
+  // convención: trimestre de inicio (propuesto por la tribu, ratificado por el directorio) en lugar del horizonte
+  const INICIO = [["2027-T1", "T1 2027"], ["2027-T2", "T2 2027"], ["2027-T3", "T3 2027"], ["2027-T4", "T4 2027"], ["2028-T1", "Después"]] as const;
+  const setStart = async (start: string) => {
+    if (!ini) return; setSaving(true); setError(null);
+    const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
+    if (!res.ok) setError((await res.json().catch(() => ({}))).error ?? "Error al guardar"); else await refetchCatalog();
+    setSaving(false);
+  };
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -137,6 +146,9 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
           <span className="chip chip-ok" title="El puntaje consolidado confirma el horizonte actual">Horizonte confirmado</span>
         )}
         {decision && <span className={DECISION_CLS[decision.decision]}>{decisionLabel(decision.decision)}</span>}
+        {convMode && ini && (canDecide
+          ? <label className="flex items-center gap-1.5 text-[11px] text-muted">Inicio definitivo<select value={INICIO.some(([v]) => v === ini.start) ? ini.start : ""} onChange={(e) => void setStart(e.target.value)} disabled={saving} className="input !py-0.5 pr-6 !text-[11px]" title="Trimestre de inicio ratificado por el directorio"><option value="">—</option>{INICIO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          : <span className="chip !py-0 text-[9.5px]" title="Trimestre de inicio propuesto por la tribu; lo ratifica el directorio">Inicio {INICIO.find(([v]) => v === ini.start)?.[1] ?? "—"}</span>)}
       </div>
 
       {error && (

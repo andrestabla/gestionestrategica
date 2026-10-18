@@ -24,11 +24,12 @@ test("convención: el líder no toca Dirección 3x3 pero sí escribe los OKR de 
     assert.equal(bloqueado.ok, false); assert.equal((bloqueado as { status: number }).status, 403);
     assert.equal(removeObjective(lider, "OE-01").ok, false);
     assert.equal(catalog().objectives.find((o) => o.id === "OE-01")?.name, "Objetivo directivo de la palanca");
-    for (let n = 1; n <= 3; n++) assert.ok(upsertObjective(lider, { perspective: "clientes", name: `Objetivo ${n} de la tribu para 2027`, kpis: [], lever: "MS", horizon: "H1", okr: true }).ok, "el líder sí escribe los OKR de su tribu");
+    assert.ok(okrChecks(catalog(), "H1").some((i) => i.kind === "palanca-sin-okr" && i.ref === "MS"), "sin OKR en la palanca hay alerta alta");
+    for (let n = 1; n <= 2; n++) assert.ok(upsertObjective(lider, { perspective: "clientes", name: `Objetivo ${n} de la tribu para 2027`, kpis: [], lever: "MS", horizon: "H1", okr: true }).ok, "el líder sí escribe los OKR de su tribu");
     const issues = okrChecks(catalog(), "H1");
-    assert.ok(issues.some((i) => i.kind === "palanca-muchos-objetivos" && i.ref === "MS" && /un objetivo por palanca/.test(i.text)), "tres objetivos en una palanca disparan la alerta");
-    assert.ok(removeObjective(lider, "MS-O3").ok);
-    assert.ok(!okrChecks(catalog(), "H1").some((i) => i.kind === "palanca-muchos-objetivos"), "con dos objetivos no hay alerta");
+    assert.ok(issues.some((i) => i.kind === "palanca-muchos-objetivos" && i.ref === "MS" && /un solo OKR por tribu/.test(i.text)), "dos objetivos en una palanca disparan la alerta");
+    assert.ok(removeObjective(lider, "MS-O2").ok);
+    assert.ok(!okrChecks(catalog(), "H1").some((i) => i.kind === "palanca-muchos-objetivos" || i.kind === "palanca-sin-okr"), "con un solo OKR no hay alerta");
     assert.ok(upsertObjective(advisor, { id: "OE-01", perspective: "clientes", name: "Ajuste ratificado por el relator", kpis: [], lever: "MS", horizon: "H1" }).ok);
   });
   resetStore();

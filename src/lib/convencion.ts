@@ -9,13 +9,13 @@
 //   · resumen y exportación del portafolio por horizonte y decisión
 
 import type { Catalog, Lever } from "@/data/catalogo";
-import { horizonsOf, leversOf } from "@/data/catalogo";
+import { horizonsOf, leversOf, isConvencion } from "@/data/catalogo";
 import type { CmiObjective, InitiativeFull, KpiFull } from "@/data/cmi";
 import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
 
 export type OkrIssue = {
   level: "alto" | "medio";
-  kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "iniciativa-sin-kr" | "palanca-muchos-objetivos";
+  kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "iniciativa-sin-kr" | "palanca-muchos-objetivos" | "palanca-sin-okr";
   ref: string;       // id del objetivo, código del KR o id de la iniciativa
   text: string;
 };
@@ -86,10 +86,11 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
       if (initiativesOfKr(cat, k.code).length === 0) out.push({ level: "medio", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva.` });
     }
   }
-  // un OKR por palanca es el reto de la tribu; un segundo objetivo solo si el primero no basta
-  for (const l of leversOf(cat.company)) {
+  // convención: un solo OKR por tribu, cuyo objetivo es el objetivo rector de la palanca
+  if (isConvencion(cat.company)) for (const l of leversOf(cat.company)) {
     const n = objectives.filter((o) => o.lever === l.id).length;
-    if (n > 2) out.push({ level: "medio", kind: "palanca-muchos-objetivos", ref: l.id, text: `${l.name} tiene ${n} objetivos de tribu; la regla es un objetivo por palanca (un segundo solo si el primero no basta).` });
+    if (n === 0) out.push({ level: "alto", kind: "palanca-sin-okr", ref: l.id, text: `${l.name}: la tribu aún no tiene su OKR (el objetivo rector de la palanca con 2 a 4 resultados clave).` });
+    else if (n > 1) out.push({ level: "medio", kind: "palanca-muchos-objetivos", ref: l.id, text: `${l.name} tiene ${n} objetivos; la regla es un solo OKR por tribu, con el objetivo rector de la palanca.` });
   }
   const krCodes = new Set(objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => k.code)));
   for (const i of cat.initiatives.filter((i) => i.horizon === horizon)) {

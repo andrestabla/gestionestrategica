@@ -90,6 +90,7 @@ export type TypeCriterion = { key: string; name: string; strategic: string; tact
 export type TypeRule = {
   id?: string; criteria: TypeCriterion[]; min: number;
   excludeTactical?: boolean;  // lo táctico se transfiere al área y no admite implementar ni preparar (regla Cresio)
+  strategicScores?: CriterionKey[];  // sin marcas de tipo: criterios de la matriz que deben quedar en 3 o 4 para ser estratégica (por defecto, D)
   notes?: Partial<Record<CriterionKey, string>>;  // criterios de la empresa incluidos dentro de D, E, M o L (sin marcas aparte)
 };
 
@@ -100,9 +101,9 @@ export const TYPE_RULES: Record<"4shine" | "cresio", TypeRule> = {
   "4shine": { id: "4shine", criteria: TYPE_CRITERIA, min: 3 },
   // Cresio: sin marcas de tipo aparte; sus criterios van dentro de la calificación
   // (impacto en los objetivos → D, transversalidad → E, potencial y madurez → E y M).
-  // Tipo: estratégica con D de 3 o 4; con D de 1 o 2 es táctica y se transfiere al área.
+  // Tipo: estratégica con 3 o 4 en D, E y M; si alguno queda en 1 o 2 es táctica y se transfiere al área.
   "cresio": {
-    id: "cresio", min: 0, excludeTactical: true, criteria: [],
+    id: "cresio", min: 0, excludeTactical: true, criteria: [], strategicScores: ["D", "E", "M"],
     notes: {
       D: "Impacto en los objetivos estratégicos: cambia materialmente un objetivo o un resultado clave 2027, o habilita una condición indispensable para 2030 y 2033. Mejorar solo un indicador de ejecución es nivel 1 o 2.",
       E: "Transversalidad: depende de al menos tres áreas y ninguna concentra más del 75 % de la ejecución. Madurez: indicadores, pilotos, prototipos o MVP con los que se comprobará la siguiente etapa.",
@@ -115,7 +116,7 @@ export const DEFAULT_TYPE_RULE: TypeRule = TYPE_RULES["4shine"];
 /** Texto corto de la regla, para formularios y fichas. */
 export function typeRuleLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
   const n = rule.criteria.length;
-  if (n === 0) return "sin marcas de tipo aparte: estratégica cuando el impacto en los objetivos (D) es 3 o 4; con D de 1 o 2 es táctica";
+  if (n === 0) { const k = rule.strategicScores ?? ["D"]; return k.length > 1 ? `sin marcas de tipo aparte: estratégica cuando ${k.join(", ")} quedan en 3 o 4; si alguno es 1 o 2, es táctica` : "sin marcas de tipo aparte: estratégica cuando el impacto en los objetivos (D) es 3 o 4; con D de 1 o 2 es táctica"; }
   return rule.min >= n ? `los ${n} criterios son obligatorios: con uno que falle, es táctica` : `con ${rule.min} o más marcas estratégicas de ${n}, es estratégica`;
 }
 
@@ -163,8 +164,8 @@ export function score(s: Record<CriterionKey, number>): number {
     estratégica cuando al menos `min` de sus criterios apuntan a estratégico
     (regla 4Shine: tres de cuatro; regla Cresio: los tres). */
 export function typeOf(marks: TypeMarks, rule: TypeRule = DEFAULT_TYPE_RULE, scores?: Partial<Record<CriterionKey, number>>): TypeMark {
-  // sin criterios de tipo, el tipo sale del impacto en los objetivos (D): 3 o 4 = estratégica
-  if (rule.criteria.length === 0) return (scores?.D ?? 0) >= 3 ? "ESTRATEGICO" : "TACTICO";
+  // sin criterios de tipo, el tipo sale de la calificación: 3 o 4 en los criterios indicados (por defecto D; Cresio: D, E y M) = estratégica
+  if (rule.criteria.length === 0) return (rule.strategicScores ?? ["D"]).every((k) => (scores?.[k] ?? 0) >= 3) ? "ESTRATEGICO" : "TACTICO";
   const n = rule.criteria.filter((c) => marks[c.key] === "ESTRATEGICO").length;
   return n >= rule.min ? "ESTRATEGICO" : "TACTICO";
 }

@@ -147,7 +147,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
         </span>}
       </div>
-      {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}><b>Día 2:</b> los objetivos de Dirección 3x3 no se modifican; son la fuente de consulta de las tribus para escribir sus OKR. Solo el relator (advisor) registra ajustes ratificados.</p>}
+      {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}><b>Dirección 3x3 es informativa:</b> agrupa los objetivos estratégicos de CRESIO por palanca. El objetivo rector de cada palanca es el objetivo del único OKR de su tribu; el día 2 no se modifica (solo el relator registra ajustes ratificados).</p>}
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus palancas estratégicas. {canEdit ? "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
       ) : (<>
@@ -293,7 +293,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
             : <Field label="Horizonte"><select value={f.horizon} onChange={set("horizon")} className={INPUT}><option value="">— sin horizonte —</option>{horizons.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></Field>}
         </div>
         {okr && parents.length > 0 && <p className="text-[11px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
-        <Field label={okr ? "Objetivo 2027 de la tribu (o del escuadrón)" : "Objetivo"}><input value={f.name} onChange={set("name")} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
+        <Field label={okr ? (initial?.parent ? "Objetivo del OKR · objetivo rector de la palanca (se adopta tal cual)" : "Objetivo 2027 de la tribu") : "Objetivo"}><input value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
         <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
         <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder="¿Cómo mediremos ese avance? (complementa el indicador de la palanca)" className={INPUT} /></Field>
         {okr && (
@@ -403,20 +403,20 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
         <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Palanca"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
-        {canEdit && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
+        {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
         {!canEdit && <span className="ml-auto text-[10.5px] text-faint">Solo lectura: el líder de cada tribu registra con el QR de edición.</span>}
       </div>
       {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</EmptyNote></Card>}
       {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
       {byLever.map((g) => (
         <Card key={g.key} className="rise mb-5 overflow-hidden">
-          <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR de la tribu todavía · un objetivo por palanca (un segundo solo si el primero no basta), con 2 a 4 resultados clave"}
+          <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)"}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
               <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>
-              {canEdit && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
+              {canEdit && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
-            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Primero el objetivo: un OKR por palanca es el reto de la tribu, escrito a partir de los lineamientos de Dirección 3x3 (un segundo objetivo solo si el primero no basta){canEdit ? " con «+ Objetivo»" : "; lo registra el líder"}. Después, de 2 a 4 resultados clave por objetivo (máximo 5).</EmptyNote></div>}
+            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</EmptyNote></div>}
             {g.objs.map((o) => {
               const krs = keyResultsOf(cat, o);
               const mine = issues.filter((i) => i.ref === o.id || krs.some((k) => k.code === i.ref));
@@ -886,7 +886,9 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
 
 /* ═══ Portafolio por horizonte y decisión ═══ */
 
-type PortRow = PortfolioRow & { oe: string; ownerId: string; leverId: string; kpi: string };
+/** «2027-T2» → «T2 2027»; «2028-T1» o posterior → «Después»; vacío → «—». */
+const quarterLabel = (q: string) => !q ? "—" : /^2027-T[1-4]$/.test(q) ? `${q.slice(5)} 2027` : q >= "2028" ? "Después" : q;
+type PortRow = PortfolioRow & { oe: string; ownerId: string; leverId: string; kpi: string; start: string };
 type PortStatus = "" | "PENDIENTE" | "IMPLEMENTAR" | "PREPARAR" | "BACKLOG" | "RENUNCIAR" | "TACTICA" | "SIN_DUENO" | "SIN_KR" | "SIN_EVAL";
 const PORT_STATUS: { key: PortStatus; label: string }[] = [
   { key: "", label: "Todas" }, { key: "PENDIENTE", label: "Pendientes (sin decisión)" }, { key: "IMPLEMENTAR", label: "Implementar" }, { key: "PREPARAR", label: "Preparar o validar" },
@@ -903,7 +905,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     const d = prio?.decisions[i.id];
     const o = cat.objectives.find((x) => x.id === i.cmi);
     const c = r?.c ?? { n: 0, avg: { D: 0, E: 0, M: 0, L: 0 }, rounded: { D: 1, E: 1, M: 1, L: 1 }, score: 0, eligible: false, capacityFirst: true, type: null, transfer: false, strategicVotes: 0, spread: 0, lowConsensus: false, evaluators: [] } as PortfolioRow["c"];
-    return { id: i.id, name: i.name, horizon: i.horizon, suggested: r?.suggested ?? null, c, decision: d?.decision ?? null, rationale: d?.rationale, lever: levers.find((l) => l.id === o?.lever)?.name, owner: cat.responsibles.find((x) => x.id === i.ownerId)?.dependencia, oe: o?.id ?? "", ownerId: i.ownerId ?? "", leverId: o?.lever ?? "", kpi: i.kpi ?? "" };
+    return { id: i.id, name: i.name, horizon: i.horizon, start: i.start ?? "", suggested: r?.suggested ?? null, c, decision: d?.decision ?? null, rationale: d?.rationale, lever: levers.find((l) => l.id === o?.lever)?.name, owner: cat.responsibles.find((x) => x.id === i.ownerId)?.dependencia, oe: o?.id ?? "", ownerId: i.ownerId ?? "", leverId: o?.lever ?? "", kpi: i.kpi ?? "" };
   }), [prio, cat, levers]);
   // filtros: objetivo estratégico, tribu (responsable), palanca y estado
   const [fOe, setFOe] = useState(""); const [fTribe, setFTribe] = useState(""); const [fLever, setFLever] = useState(""); const [fStatus, setFStatus] = useState<PortStatus>("");
@@ -987,7 +989,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                     <span className="num shrink-0 text-[18px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {!convencion && <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />}
+                    {convencion ? <span className="chip !py-0 text-[9.5px]">Inicio {quarterLabel(r.start)}</span> : <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />}
                     {r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}
                   </div>
                   {r.rationale && <p className="mt-1 text-[11px] leading-snug text-ink-soft">{r.rationale}</p>}
@@ -997,19 +999,19 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
             </div>
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] text-[12px]">
-                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th>{!convencion && <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
+                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th>{convencion ? <th className="px-2 py-2">Inicio</th> : <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
                 <tbody>
                   {hr.map((r) => (
                     <tr key={r.id} className="border-t border-line">
                       <td className="px-4 py-2"><Link href={`${base}/panel/iniciativas/${r.id}`} className="font-bold text-ink hover:text-cyan-deep">{r.name}</Link><div className="num text-[10px] text-faint">{r.id} · {r.owner ?? "—"}</div></td>
                       <td className="px-2 py-2 text-[11px] text-muted">{r.lever ?? "—"}</td>
                       <td className="num px-2 py-2 text-right font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
-                      {!convencion && <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>}
+                      {convencion ? <td className="num px-2 py-2 text-[11px] text-muted">{quarterLabel(r.start)}</td> : <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>}
                       <td className="px-2 py-2">{r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
                       <td className="px-2 py-2 text-[11px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
                     </tr>
                   ))}
-                  {hr.length === 0 && <tr><td colSpan={convencion ? 5 : 6} className="px-4 py-3 text-[12px] italic text-faint">{convencion ? "Sin iniciativas en esta palanca." : "Sin iniciativas en este horizonte."}</td></tr>}
+                  {hr.length === 0 && <tr><td colSpan={6} className="px-4 py-3 text-[12px] italic text-faint">{convencion ? "Sin iniciativas en esta palanca." : "Sin iniciativas en este horizonte."}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -1195,11 +1197,22 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
   };
   const move = (id: string, d: -1 | 1) => { const a = [...ids]; const i = a.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setOrder(a); };
   const name = (id: string) => cat.initiatives.find((i) => i.id === id)?.name ?? id;
+  // trimestre de inicio propuesto por la tribu (T1 a T4 de 2027, o después); lo ratifica el directorio en la ficha
+  const INICIO = [["2027-T1", "T1"], ["2027-T2", "T2"], ["2027-T3", "T3"], ["2027-T4", "T4"], ["2028-T1", "Después"]] as const;
+  const startOf = (id: string) => cat.initiatives.find((i) => i.id === id)?.start ?? "";
+  const setStart = async (id: string, start: string) => {
+    const ini = cat.initiatives.find((i) => i.id === id); if (!ini) return;
+    setBusy(true); setErr(null);
+    const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
+    const j = await res.json().catch(() => null); setBusy(false);
+    if (!res.ok) { setErr(j?.error ?? `Error ${res.status}`); return; }
+    onChanged();
+  };
   const tone = ses.status === "abierta" ? "chip-ok" : ses.status === "guardada" ? "chip-cyan" : ses.status === "revision" ? "chip-gold" : "";
   const hora = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) : "");
   return (
     <Card className="rise mb-5 overflow-hidden">
-      <CardHeader title="Mesa de la tribu · calificación" sub="el líder abre la calificación, la cierra, ajusta el orden si hace falta y guarda la priorización" />
+      <CardHeader title="Mesa de la tribu · calificación y trimestre de inicio" sub="el líder abre la calificación, la cierra, ajusta el orden si hace falta, propone el trimestre de inicio de cada iniciativa y guarda" />
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
           {leaderOnly ? <span className="text-[12.5px] font-bold text-ink">{tribes.find((t) => t.id === tribe)?.dependencia ?? "Tu tribu"}</span>
@@ -1217,7 +1230,7 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
           {ses.status === "cerrada" ? "Mientras no abras la calificación, los miembros de la tribu no pueden calificar."
             : ses.status === "abierta" ? `Abierta${ses.openedAt ? " a las " + hora(ses.openedAt) : ""}: cada miembro califica una sola vez; el ranking se actualiza en vivo.`
             : ses.status === "revision" ? "Calificación cerrada. Revisa el orden: mueve las iniciativas si la tribu decide algo distinto al puntaje, y guarda."
-            : `Priorización guardada${ses.savedAt ? " a las " + hora(ses.savedAt) : ""}. Este orden es el que presenta la tribu en la socialización.`}
+            : `Priorización guardada${ses.savedAt ? " a las " + hora(ses.savedAt) : ""}. Este orden y los trimestres de inicio propuestos son los que presenta la tribu en la socialización; el directorio ratifica el trimestre definitivo en la ficha de cada iniciativa.`}
         </p>
         {(ses.status === "revision" || ses.status === "guardada") && own.length > 0 && (
           <ol className="mt-3 space-y-1">
@@ -1226,6 +1239,7 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
                 <span className="num w-5 shrink-0 font-extrabold text-faint">{n + 1}</span>
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink">{name(id)}</span>
                 <span className="num shrink-0 text-[11px] text-muted">{scoreOf(id) ?? "—"}</span>
+                <select value={INICIO.some(([v]) => v === startOf(id)) ? startOf(id) : ""} onChange={(e) => void setStart(id, e.target.value)} disabled={busy} className="input shrink-0 !py-0.5 pr-6 !text-[10.5px]" title="Trimestre de inicio propuesto por la tribu"><option value="">Inicio…</option>{INICIO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
                 {ses.status === "revision" && <span className="flex shrink-0 gap-0.5">
                   <button type="button" onClick={() => move(id, -1)} disabled={busy || n === 0} className="rounded-md p-1 text-faint hover:text-ink disabled:opacity-30" title="Subir"><ArrowUp size={12} /></button>
                   <button type="button" onClick={() => move(id, 1)} disabled={busy || n === ids.length - 1} className="rounded-md p-1 text-faint hover:text-ink disabled:opacity-30" title="Bajar"><ArrowDown size={12} /></button>

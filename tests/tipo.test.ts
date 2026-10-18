@@ -19,15 +19,17 @@ test("regla 4Shine por defecto: tres de cuatro marcas", () => {
   assert.equal(typeRuleOf({ typeRule: undefined }), DEFAULT_TYPE_RULE);
 });
 
-test("regla Cresio: sin marcas aparte; sus criterios van dentro de D, E y M y el tipo sale de D", () => {
+test("regla Cresio: sin marcas aparte; sus criterios van dentro de D, E y M y el tipo exige 3 o 4 en D, E y M", () => {
   assert.deepEqual(CR.criteria, []);
   assert.equal(CR.excludeTactical, true);
   assert.ok(CR.notes?.D?.includes("Impacto") && CR.notes?.E?.includes("Transversalidad") && CR.notes?.M?.includes("Potencial"));
-  assert.equal(typeOf({}, CR, { D: 3, E: 2, M: 2, L: 1 }), "ESTRATEGICO");
+  assert.deepEqual(CR.strategicScores, ["D", "E", "M"]);
+  assert.equal(typeOf({}, CR, { D: 3, E: 3, M: 4, L: 1 }), "ESTRATEGICO");
+  assert.equal(typeOf({}, CR, { D: 3, E: 2, M: 2, L: 1 }), "TACTICO", "con E o M en 1 o 2 es táctica aunque D sea 3");
   assert.equal(typeOf({}, CR, { D: 2, E: 4, M: 4, L: 4 }), "TACTICO");
   // las marcas de la regla 4Shine no cuentan bajo la regla Cresio
   assert.equal(typeOf({ contribucion: "ESTRATEGICO", profundidad: "ESTRATEGICO", alcance: "ESTRATEGICO", permanencia: "ESTRATEGICO" }, CR), "TACTICO");
-  assert.match(typeRuleLabel(CR), /D de 1 o 2 es táctica/);
+  assert.match(typeRuleLabel(CR), /D, E, M quedan en 3 o 4/);
   assert.match(typeRuleLabel(), /3 o más/);
   // la validación de Cresio son los cuatro criterios de la matriz
   assert.equal(validationCriteriaCount(CR), 4);
