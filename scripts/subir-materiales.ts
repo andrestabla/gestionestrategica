@@ -3,7 +3,7 @@
 // del itinerario. La contraseña se lee de la variable CONTRASENA (nunca por argumento):
 //   read -rs "p?Contraseña del admin: "; echo; CONTRASENA="$p" npx tsx scripts/subir-materiales.ts --slug cresio --origen https://gestionestrategica.io
 // --solo-vincular: no sube archivos, solo aplica los vínculos.
-// --retirar: retira primero los materiales que ya no existen (plantillas 01 a 08 y el antiguo formato F5 de renuncias, id formato-5-renuncias).
+// --retirar: retira primero los materiales que ya no existen (plantillas 01 a 08, el antiguo F5 de renuncias y la ficha de iniciativa F4).
 // --ids a,b,c: sube solo esos materiales (por id) y luego aplica los vínculos.
 import { readFileSync, existsSync } from "fs";
 import { basename } from "path";
@@ -22,7 +22,6 @@ const MATERIALES: { path: string; id: string; name: string; group: string }[] = 
   { path: `${BASE}/plantillas-imprimibles/F1-ficha-panelista.pdf`, id: "formato-1-panelista", name: "Formato F1 · Ficha del panelista (mesa redonda)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F2-lienzo-mesa-redonda-A2.pdf`, id: "formato-2-lienzo", name: "Formato F2 · Lienzo único de la mesa redonda (A2)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F3-formato-tribu-A3.pdf`, id: "formato-3-tribu", name: "Formato F3 · Formato de tribu: OKR 2027 e iniciativas (A3)", group: "plantilla" },
-  { path: `${BASE}/plantillas-imprimibles/F4-ficha-iniciativa.pdf`, id: "formato-4-iniciativa", name: "Formato F4 · Ficha de iniciativa estándar", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F5-ficha-preguntas-tribu.pdf`, id: "formato-5-preguntas", name: "Formato F5 · Ficha de preguntas de la tribu (mesa redonda)", group: "plantilla" },
   { path: `${BASE}/qr/hoja-qr-secciones.pdf`, id: "hoja-qr-secciones", name: "QR único de la convención (hoja para imprimir)", group: "plantilla" },
   { path: `${BASE}/presentaciones/pdf/01-conferencia-apertura-crecer-exige-elegir.pdf`, id: "deck-01-apertura", name: "Deck 01 · Conferencia de apertura «Crecer exige elegir»", group: "presentacion" },
@@ -41,16 +40,16 @@ const MATERIALES: { path: string; id: string; name: string; group: string }[] = 
 /** Cada deck en PDF tiene su gemelo editable: va vinculado a los mismos momentos. */
 const GEMELO_PPTX: Record<string, string> = { "deck-01-apertura": "deck-01-apertura-pptx", "deck-02-mesa-redonda": "deck-02-mesa-redonda-pptx", "deck-03-okr": "deck-03-okr-pptx", "deck-04-iniciativas": "deck-04-iniciativas-pptx", "deck-05-cierre": "deck-05-cierre-pptx" };
 /** Materiales que ya no existen (versión de ocho plantillas y el formato F5, acta y renuncias: no se formaliza ninguna renuncia en la convención): se retiran con --retirar. */
-const RETIRADOS = ["formato-5-acta-renuncias", "plantilla-01-ficha-panelista", "plantilla-02-lienzo-maestro", "plantilla-03-tarjetas-kr", "plantilla-04-fichas-iniciativa", "plantilla-05-tarjeta-matriz", "plantilla-06-okr-por-tribu", "plantilla-07-pliego-portafolio", "plantilla-08-fichas-de-apoyo"];
+const RETIRADOS = ["formato-4-iniciativa", "formato-5-acta-renuncias", "plantilla-01-ficha-panelista", "plantilla-02-lienzo-maestro", "plantilla-03-tarjetas-kr", "plantilla-04-fichas-iniciativa", "plantilla-05-tarjeta-matriz", "plantilla-06-okr-por-tribu", "plantilla-07-pliego-portafolio", "plantilla-08-fichas-de-apoyo"];
 // vínculos por momento (ids del itinerario)
 const VINCULOS: Record<string, string[]> = {
   "d1-01": ["hoja-qr-secciones", "guia-facilitacion", "formato-5-preguntas"], "d1-02": ["deck-01-apertura", "deck-02-mesa-redonda"], "d1-03": ["deck-01-apertura"],
   "d1-06": ["formato-1-panelista"], "d1-07": ["formato-1-panelista"], "d1-08": ["formato-1-panelista"], "d1-11": ["formato-1-panelista"], "d1-12": ["formato-1-panelista"], "d1-22": ["formato-5-preguntas", "deck-02-mesa-redonda"], "d1-23": ["formato-5-preguntas", "deck-02-mesa-redonda"],   "d1-13": ["formato-2-lienzo", "deck-02-mesa-redonda"], "d1-15": ["deck-02-mesa-redonda", "formato-1-panelista"], "d1-16": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
   "d1-17": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"], "d1-18": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"], "d1-19": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
   "d1-20": ["deck-02-mesa-redonda", "formato-2-lienzo"], "d1-21": ["formato-2-lienzo"], "d1-24": ["formato-2-lienzo"], "d1-26": ["formato-2-lienzo"],
-  "d2-01": ["hoja-qr-secciones", "formato-3-tribu", "formato-4-iniciativa"], "d2-02": ["deck-03-okr"], "d2-03": ["deck-03-okr"], "d2-04": ["deck-03-okr", "formato-3-tribu"], "d2-05": ["formato-3-tribu"], "d2-06": ["formato-3-tribu"], "d2-07": ["formato-3-tribu"],
-  "d2-09": ["formato-3-tribu"], "d2-10": ["deck-03-okr"], "d2-11": ["deck-04-iniciativas", "formato-4-iniciativa"],
-  "d2-14": ["deck-04-iniciativas"], "d2-15": ["formato-4-iniciativa"], "d2-16": ["deck-04-iniciativas"], "d2-17": ["deck-04-iniciativas"],
+  "d2-01": ["hoja-qr-secciones", "formato-3-tribu"], "d2-02": ["deck-03-okr"], "d2-03": ["deck-03-okr"], "d2-04": ["deck-03-okr", "formato-3-tribu"], "d2-05": ["formato-3-tribu"], "d2-06": ["formato-3-tribu"], "d2-07": ["formato-3-tribu"],
+  "d2-09": ["formato-3-tribu"], "d2-10": ["deck-03-okr"], "d2-11": ["deck-04-iniciativas", "formato-3-tribu"],
+  "d2-14": ["deck-04-iniciativas"], "d2-15": ["formato-3-tribu"], "d2-16": ["deck-04-iniciativas"], "d2-17": ["deck-04-iniciativas"],
   "d2-19": ["formato-3-tribu"], "d2-22": ["deck-05-cierre"],
 };
 
