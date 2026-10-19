@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { templatesFor } from "@/lib/okr-plantillas";
 import { sessionOf, PRIO_STATUS_LABEL, type PrioSessionAction } from "@/lib/priorizacion-sesion";
-import { ejemploPara, type OkrSugerido, type KrSugerido } from "@/lib/okr-sugerencias";
+import { ejemploPara, type OkrSugerido, type KrSugerido, type ValidacionOkr, type KrPropuesta } from "@/lib/okr-sugerencias";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
@@ -482,6 +482,7 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
                       </table>
                     </div>
                   )}
+                  <AsistenteKr cat={cat} o={o} krs={krs} tribeId={levers.find((l) => l.id === o.lever)?.ownerId ?? ""} horizon={horizon} canEdit={canEdit} mutate={mutate} onEditKr={(k) => setKr({ obj: o, kpi: k })} />
                   {healthKpisOf(cat, o).length > 0 && (
                     <p className="mt-2 text-[10.5px] leading-snug text-faint"><span className="font-semibold text-muted">Métricas</span> (sin plazo, no cuentan como resultado clave): {healthKpisOf(cat, o).map((k) => `${k.code} ${k.name}`).join(" · ")}</p>
                   )}
@@ -1287,6 +1288,119 @@ function OkrEjemploModal({ levers, lever, onClose, onUsar }: { levers: Lever[]; 
       <OkrCard okr={ejemploPara(lever)} />
       <p className="mt-3 text-[11px] leading-snug text-faint">Anatomía: el objetivo dice qué cambia y para quién; cada resultado clave trae métrica, unidad, sentido, frecuencia y fórmula, y en el laboratorio se le fijan línea base real, meta, dueño y plazo (2027-T4). Al menos dos resultados clave de resultado de negocio; como máximo uno de hito.</p>
     </Modal>
+  );
+}
+
+/* ═══ Asistente de resultados clave: el modelo propone KR complementarios y revisa los registrados ═══ */
+
+const ESTADO_KR = { ok: ["bien", "chip-ok"], ajustar: ["ajustar", "chip-warn"], reemplazar: ["reemplazar", "chip-bad"] } as const;
+const VEREDICTO = { listo: ["Listo: el OKR está bien formulado", "chip-ok"], ajustar: ["Casi: hay ajustes puntuales", "chip-warn"], rehacer: ["Rehacer: los resultados clave no miden el objetivo", "chip-bad"] } as const;
+
+function KrChecklist({ krs, chosen, onToggle, onCrear, creando, nota }: { krs: KrSugerido[]; chosen: boolean[]; onToggle: (n: number, v: boolean) => void; onCrear?: (lista: KrSugerido[]) => void; creando: boolean; nota: string }) {
+  const elegidos = krs.filter((_, n) => chosen[n]);
+  return (
+    <div className="space-y-1.5">
+      {krs.map((k, n) => (
+        <label key={n} className={`flex items-start gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px] ${onCrear ? "cursor-pointer" : ""}`}>
+          {onCrear && <input type="checkbox" checked={!!chosen[n]} onChange={(e) => onToggle(n, e.target.checked)} className="mt-0.5" />}
+          <span className="min-w-0">
+            <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span>
+            {(k.formula || k.definition) && <span className="block text-[11px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
+            {k.why && <span className="block text-[11px] italic text-faint">{k.why}</span>}
+          </span>
+        </label>
+      ))}
+      {onCrear && (
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <button type="button" disabled={creando || elegidos.length === 0} onClick={() => onCrear(elegidos)} className="btn-primary !py-1.5 text-[12px] disabled:opacity-40">{creando ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Crear {elegidos.length} KR</button>
+          <span className="text-[11px] leading-snug text-faint">{nota}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr }: { cat: Cat; o: CmiObjective; krs: KpiFull[]; tribeId: string; horizon: string; canEdit: boolean; mutate: Mutate; onEditKr: (k: KpiFull) => void }) {
+  const [modo, setModo] = useState<"sugerir" | "validar" | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sug, setSug] = useState<{ krs: KrSugerido[]; chosen: boolean[] } | null>(null);
+  const [val, setVal] = useState<{ v: ValidacionOkr; chosen: boolean[] } | null>(null);
+  const [creando, setCreando] = useState(false);
+  const tribe = cat.responsibles.find((r) => r.id === tribeId)?.dependencia ?? "la tribu";
+  const nota = `Se crean con línea base 0 y la meta sugerida (si la hay), dueño ${tribe} y plazo a fin de ${horizonLabel(cat.company, horizon)}; la tribu fija base y meta reales.`;
+  const pedir = async (m: "sugerir" | "validar") => {
+    setModo(m); setLoading(true); setError(null); setSug(null); setVal(null);
+    const res = await fetch(m === "sugerir" ? "/api/td/okr/sugerir" : "/api/td/okr/validar", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(m === "sugerir" ? { lever: o.lever, tribe: tribeId, objective: { id: o.id, name: o.name, desc: o.desc ?? "", indicator: o.indicator ?? "" } } : { objective: o.id }) });
+    const j = await res.json().catch(() => null);
+    setLoading(false);
+    if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return; }
+    if (m === "sugerir") {
+      const p: OkrSugerido | undefined = j?.propuestas?.[0];
+      if (!p) { setError("El asistente no devolvió una propuesta utilizable; inténtalo de nuevo."); return; }
+      setSug({ krs: p.krs, chosen: p.krs.map(() => true) });
+    } else {
+      const v = j as ValidacionOkr; setVal({ v, chosen: v.faltantes.map(() => true) });
+    }
+  };
+  const crear = async (lista: KrSugerido[]) => {
+    setCreando(true); const ok = await crearKrs(cat, o.id, o.lever ?? "KR", tribeId, horizon, lista, mutate); setCreando(false);
+    if (ok) { setSug(null); setVal(null); setModo(null); }
+  };
+  // la redacción corregida abre el formulario del KR ya prellenado; la tribu confirma y guarda
+  const aplicar = (k: KpiFull, p: KrPropuesta) => onEditKr({ ...k, name: p.name, unit: p.unit ?? k.unit, goodDirection: p.goodDirection ?? k.goodDirection, frequency: p.frequency ?? k.frequency, formula: p.formula ?? k.formula,
+    definition: [p.definition, p.formula ? `Fórmula: ${p.formula}` : ""].filter(Boolean).join(" · ") || k.definition, target: p.target ?? k.target });
+  const lleno = krs.length >= KR_MAX;
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-line px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-faint"><Sparkles size={12} /> Asistente</span>
+        {canEdit && <button type="button" onClick={() => void pedir("sugerir")} disabled={loading || lleno} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={lleno ? "Este objetivo ya tiene el máximo de 5 resultados clave" : "El modelo propone resultados clave complementarios a los registrados; eliges cuáles se crean"}>{loading && modo === "sugerir" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Sugerir KR</button>}
+        <button type="button" onClick={() => void pedir("validar")} disabled={loading || krs.length === 0} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={krs.length ? "El modelo revisa cada resultado clave y el conjunto: resultado y no actividad, medible, base y meta, cobertura del objetivo" : "Primero registra los resultados clave"}>{loading && modo === "validar" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Validar KR</button>
+        <span className="text-[11px] leading-snug text-faint">{canEdit ? "Propone KR que falten y revisa los registrados con las reglas del método; nada se guarda sin confirmarlo." : "Revisa los resultados clave de tu tribu con las reglas del método; el líder registra los cambios."}</span>
+      </div>
+      {error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+      {modo === "sugerir" && sug && (
+        <div className="mt-2.5 space-y-1.5">
+          <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Resultados clave propuestos{krs.length ? " (complementan los registrados)" : ""} · marca los que se crean</div>
+          <KrChecklist krs={sug.krs} chosen={sug.chosen} onToggle={(n, v) => setSug({ ...sug, chosen: sug.chosen.map((c, m) => (m === n ? v : c)) })} onCrear={(l) => void crear(l)} creando={creando} nota={nota} />
+        </div>
+      )}
+      {modo === "validar" && val && (
+        <div className="mt-2.5 space-y-2">
+          <div className="flex flex-wrap items-center gap-2"><span className={`chip ${VEREDICTO[val.v.veredicto][1]} text-[10.5px]`}>{VEREDICTO[val.v.veredicto][0]}</span></div>
+          <p className="text-[12px] leading-snug text-ink">{val.v.resumen}</p>
+          <div className="space-y-1.5">
+            {val.v.krs.map((e) => { const k = krs.find((x) => x.code === e.code); if (!k) return null; const [label, cls] = ESTADO_KR[e.estado]; return (
+              <div key={e.code} className="rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
+                <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+                  <span className="num shrink-0 font-extrabold text-cyan-deep">{e.code}</span>
+                  <span className="min-w-0 flex-1 font-semibold text-ink">{k.name}</span>
+                  <span className={`chip ${cls} !py-0 text-[9.5px]`}>{label}</span>
+                </div>
+                <p className="mt-1 text-[11.5px] leading-snug text-muted">{e.comentario}</p>
+                {e.propuesta && (
+                  <div className="mt-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5">
+                    <div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">{e.estado === "reemplazar" ? "Resultado clave que lo sustituye" : "Redacción sugerida"}</div>
+                    <div className="text-[12px] font-semibold text-ink">{e.propuesta.name}{e.propuesta.unit ? <span className="num font-normal text-muted"> · {e.propuesta.unit}{e.propuesta.goodDirection ? ` · mejor si ${e.propuesta.goodDirection === "down" ? "baja" : "sube"}` : ""}</span> : null}</div>
+                    {(e.propuesta.formula || e.propuesta.definition) && <div className="text-[11px] text-muted">{e.propuesta.definition ? e.propuesta.definition + " " : ""}{e.propuesta.formula ? `Fórmula: ${e.propuesta.formula}` : ""}</div>}
+                    {canEdit && <button type="button" onClick={() => aplicar(k, e.propuesta!)} className="mt-1 text-[11px] font-semibold text-cyan-deep hover:underline">Aplicar en {e.code} y revisar antes de guardar</button>}
+                  </div>
+                )}
+              </div>
+            ); })}
+          </div>
+          {val.v.faltantes.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Resultados clave que faltan para cubrir el objetivo{canEdit ? " · marca los que se crean" : ""}</div>
+              <KrChecklist krs={val.v.faltantes} chosen={val.chosen} onToggle={(n, v) => setVal({ ...val, chosen: val.chosen.map((c, m) => (m === n ? v : c)) })} onCrear={canEdit && !lleno ? (l) => void crear(l) : undefined} creando={creando} nota={nota} />
+            </div>
+          )}
+          <p className="text-[10.5px] leading-snug text-faint">Revisión del asistente, no una decisión: la tribu discute y el líder registra. Vuelve a validar después de los cambios.</p>
+        </div>
+      )}
+    </div>
   );
 }
 

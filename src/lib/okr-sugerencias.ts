@@ -38,14 +38,14 @@ export const ejemploPara = (leverId: string): OkrSugerido => OKR_EJEMPLOS[leverI
 export type ObjetivoEscrito = { name: string; desc?: string; indicator?: string };
 
 /** Con `objective` (el que escribió la tribu) el modelo propone sus resultados clave; sin él, propone OKR completos. */
-export function armarEncargo(cat: Catalog, lever: Lever, tribeName: string, templates: KrTemplate[], objective?: ObjetivoEscrito): { system: string; user: string } {
+export function armarEncargo(cat: Catalog, lever: Lever, tribeName: string, templates: KrTemplate[], objective?: ObjetivoEscrito, existing: string[] = []): { system: string; user: string } {
   const directivos = cat.objectives.filter((o) => !o.okr && o.lever === lever.id).map((o) => `- ${o.id} (${o.horizon ?? "?"}): ${o.name}${o.indicator ? ` · indicador: ${o.indicator}` : ""}${o.desc ? ` · ${o.desc}` : ""}`).join("\n");
   const propios = cat.objectives.filter((o) => o.okr && o.lever === lever.id).map((o) => `- ${o.name}`).join("\n");
   const plantillas = templates.map((t) => `- ${t.name} (${t.unit}${t.goodDirection === "down" ? ", mejor si baja" : ""})${t.formula ? ` · fórmula: ${t.formula}` : ""}`).join("\n");
   const system = `Eres un consultor de planeación estratégica que ayuda a una tribu a escribir sus OKR 2027 con el método 4Shine Empresas: un objetivo cualitativo y de 2 a 4 resultados clave (máximo 5) medibles, con unidad, sentido, frecuencia, definición y fórmula. Regla: al menos dos resultados clave de resultado de negocio (lo que cambia para el cliente, el colaborador o el margen), como máximo uno de hito. Nunca propongas actividades como resultados clave. Escribe en español de Ecuador, concreto y breve. Responde solo JSON con esta forma exacta:
 {"propuestas":[{"objective":{"name":"…","desc":"…","indicator":"…"},"why":"…","krs":[{"name":"…","unit":"…","goodDirection":"up|down","frequency":"Mensual|Trimestral|Semestral|Anual","definition":"…","formula":"…","target":null,"why":"…"}]}]}
 ${objective
-    ? `Devuelve exactamente 1 propuesta: en "objective" conserva el objetivo que escribió la tribu (puedes afinar la redacción solo si gana claridad, sin cambiar su intención) y propón 3 resultados clave que lo midan (nunca actividades). En "why" de cada resultado clave explica en una frase qué mide y por qué importa.`
+    ? `Devuelve exactamente 1 propuesta: en "objective" conserva el objetivo que escribió la tribu (puedes afinar la redacción solo si gana claridad, sin cambiar su intención) y propón 3 resultados clave que lo midan (nunca actividades)${existing.length ? "; el objetivo ya tiene resultados clave: no los repitas ni los reformules, propón solo los complementarios que falten para medirlo bien (si ya está bien cubierto, propón 1 o 2 alternativas claramente distintas)" : ""}. En "why" de cada resultado clave explica en una frase qué mide y por qué importa.`
     : `Devuelve exactamente 2 propuestas, cada una con 3 resultados clave. En "why" explica en una frase por qué es pertinente para esta palanca y tribu.`} En "target" deja null salvo que el contexto dé una meta explícita.`;
   const user = `Empresa: ${cat.company.name} (${cat.company.sector || "retail farmacéutico"}, ${cat.company.country === "EC" ? "Ecuador" : cat.company.department || ""}).
 Palanca: ${lever.name}${lever.indicator ? ` · indicador principal: ${lever.indicator}` : ""}${lever.desc ? ` · ${lever.desc}` : ""}.
@@ -56,13 +56,27 @@ ${propios ? `Objetivos que la tribu ya escribió hoy (no los repitas):\n${propio
 ${plantillas || "- (sin biblioteca)"}
 ${objective
     ? `Objetivo 2027 que escribió la tribu: «${objective.name}»${objective.desc ? ` · aspiración: ${objective.desc}` : ""}${objective.indicator ? ` · indicador impulsor: ${objective.indicator}` : ""}.
-Propón los 3 resultados clave técnicos más pertinentes para medir ese objetivo (al menos dos de resultado de negocio, como máximo uno de hito).`
+${existing.length ? `Resultados clave que este objetivo ya tiene (no los repitas):\n${existing.map((k) => `- ${k}`).join("\n")}\n` : ""}Propón los 3 resultados clave técnicos más pertinentes para medir ese objetivo (al menos dos de resultado de negocio, como máximo uno de hito).`
     : `Propón los 2 OKR 2027 más pertinentes para esta tribu, derivados de los objetivos directivos de su palanca, cada uno con 3 resultados clave técnicos.`}`;
   return { system, user };
 }
 
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const FREQ = ["Mensual", "Trimestral", "Semestral", "Anual"] as const;
+/** Lista de resultados clave tal como la devuelve el modelo: descarta los incompletos y normaliza unidad, sentido y frecuencia. */
+export function parseKrList(raw: unknown, max = 5): KrSugerido[] {
+  const krs: KrSugerido[] = [];
+  for (const k of (Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [])) {
+    if (krs.length >= max) break;
+    const kn = s(k?.name, 200), unit = s(k?.unit, 20) || "%"; if (kn.length < 5) continue;
+    const t = Number(k?.target);
+    krs.push({ name: kn, unit, goodDirection: k?.goodDirection === "down" ? "down" : "up", frequency: FREQ.find((f) => f === k?.frequency) ?? "Trimestral",
+      ...(s(k?.definition, 600) ? { definition: s(k?.definition, 600) } : {}), ...(s(k?.formula, 300) ? { formula: s(k?.formula, 300) } : {}),
+      target: k?.target === null || k?.target === undefined || !Number.isFinite(t) ? null : t, ...(s(k?.why, 300) ? { why: s(k?.why, 300) } : {}) });
+  }
+  return krs;
+}
+
 /** Valida la respuesta del modelo; descarta propuestas incompletas. */
 export function parseSugerencias(input: unknown): OkrSugerido[] {
   const raw = (input as { propuestas?: unknown })?.propuestas;
@@ -71,14 +85,7 @@ export function parseSugerencias(input: unknown): OkrSugerido[] {
   for (const p of raw as Record<string, unknown>[]) {
     const o = p?.objective as Record<string, unknown> | undefined;
     const name = s(o?.name, 200); if (name.length < 10) continue;
-    const krs: KrSugerido[] = [];
-    for (const k of (Array.isArray(p?.krs) ? (p.krs as Record<string, unknown>[]) : []).slice(0, 5)) {
-      const kn = s(k?.name, 200), unit = s(k?.unit, 20) || "%"; if (kn.length < 5) continue;
-      const t = Number(k?.target);
-      krs.push({ name: kn, unit, goodDirection: k?.goodDirection === "down" ? "down" : "up", frequency: FREQ.find((f) => f === k?.frequency) ?? "Trimestral",
-        ...(s(k?.definition, 600) ? { definition: s(k?.definition, 600) } : {}), ...(s(k?.formula, 300) ? { formula: s(k?.formula, 300) } : {}),
-        target: k?.target === null || k?.target === undefined || !Number.isFinite(t) ? null : t, ...(s(k?.why, 300) ? { why: s(k?.why, 300) } : {}) });
-    }
+    const krs = parseKrList(p?.krs);
     if (krs.length < 2) continue;
     out.push({ objective: { name, ...(s(o?.desc, 600) ? { desc: s(o?.desc, 600) } : {}), ...(s(o?.indicator, 200) ? { indicator: s(o?.indicator, 200) } : {}) }, krs, ...(s(p?.why, 300) ? { why: s(p?.why, 300) } : {}) });
   }
@@ -114,4 +121,57 @@ export function parseVinculo(input: unknown, candidatos: CandidatoOkr[]): Vincul
   const kpiRaw = typeof r?.kpi === "string" ? r.kpi.trim().toUpperCase() : "";
   const kpi = o.krs.some((k) => k.code === kpiRaw) ? kpiRaw : "";
   return { objective: o.id, kpi, why: typeof r?.why === "string" ? r.why.trim().slice(0, 300) : "" };
+}
+
+/* ═══ Validación de los resultados clave de un objetivo (asistente de la tribu) ═══ */
+
+export type KrDatos = { code: string; name: string; unit: string; goodDirection: "up" | "down"; frequency: string; baseline: number; target: number; owner: string; due: string; definition?: string; formula?: string; initiatives: number };
+export type KrPropuesta = { name: string; unit?: string; goodDirection?: "up" | "down"; frequency?: KrSugerido["frequency"]; definition?: string; formula?: string; target?: number | null };
+export type KrEvaluado = { code: string; estado: "ok" | "ajustar" | "reemplazar"; comentario: string; propuesta?: KrPropuesta };
+export type ValidacionOkr = { veredicto: "listo" | "ajustar" | "rehacer"; resumen: string; krs: KrEvaluado[]; faltantes: KrSugerido[] };
+
+/** Encargo: el modelo revisa el conjunto de resultados clave de un objetivo con las reglas del método (resultado y no actividad,
+    medible con fórmula, línea base y meta coherentes, de 2 a 4, al menos dos de negocio, máximo un hito, cobertura del objetivo). */
+export function armarValidacion(cat: Catalog, lever: Lever, tribeName: string, objective: ObjetivoEscrito, krs: KrDatos[], alertas: string[] = []): { system: string; user: string } {
+  const directivos = cat.objectives.filter((o) => !o.okr && o.lever === lever.id).map((o) => `- ${o.id} (${o.horizon ?? "?"}): ${o.name}${o.indicator ? ` · indicador: ${o.indicator}` : ""}`).join("\n");
+  const system = `Eres un consultor de planeación estratégica que revisa los resultados clave (KR) del OKR 2027 de una tribu con el método 4Shine Empresas. Reglas: (1) un KR es un resultado verificable, nunca una actividad ni un entregable (si empieza por «implementar», «diseñar», «capacitar», «elaborar» o similar, es actividad: pasa a iniciativa); (2) es medible: unidad clara, fórmula de cálculo y fuente; (3) tiene línea base real (0 solo si de verdad se parte de cero) y meta a 2027 ambiciosa pero alcanzable, coherente con el sentido (mejor si sube o si baja); (4) tiene dueño con autoridad y plazo; (5) el conjunto cubre el objetivo: de 2 a 4 KR (máximo 5), al menos dos de resultado de negocio (lo que cambia para el cliente, el colaborador o el margen), como máximo uno de hito, sin redundancias y con al menos uno que mueva el indicador principal de la palanca. Sé concreto, breve y útil para una tribu que está en una mesa de trabajo; español de Ecuador. Responde solo JSON con esta forma exacta:
+{"veredicto":"listo|ajustar|rehacer","resumen":"…","krs":[{"code":"…","estado":"ok|ajustar|reemplazar","comentario":"…","propuesta":{"name":"…","unit":"…","goodDirection":"up|down","frequency":"Mensual|Trimestral|Semestral|Anual","definition":"…","formula":"…","target":null}}],"faltantes":[{"name":"…","unit":"…","goodDirection":"up|down","frequency":"Mensual|Trimestral|Semestral|Anual","definition":"…","formula":"…","target":null,"why":"…"}]}
+En "krs" evalúa cada KR recibido, con su mismo "code"; incluye "propuesta" solo cuando el estado es "ajustar" o "reemplazar" (la redacción corregida del KR, o el KR de resultado que debe sustituir a la actividad). En "faltantes" propón únicamente los KR que hagan falta para cubrir el objetivo (lista vacía si el conjunto ya lo cubre); nunca más de 2. "veredicto": "listo" si todos los KR están bien y el conjunto cubre el objetivo; "ajustar" si hay correcciones puntuales; "rehacer" si la mayoría son actividades, no son medibles o no miden el objetivo. "resumen": dos frases como máximo, dirigidas a la tribu. En "target" deja null salvo que el contexto dé una meta explícita.`;
+  const lista = krs.map((k) => `- ${k.code}: ${k.name} · unidad ${k.unit} · mejor si ${k.goodDirection === "down" ? "baja" : "sube"} · ${k.frequency} · línea base ${k.baseline || "sin registrar"} · meta ${k.target || "sin registrar"} · dueño ${k.owner || "sin dueño"} · plazo ${k.due || "sin plazo"}${k.formula ? ` · fórmula: ${k.formula}` : ""}${k.definition ? ` · definición: ${k.definition}` : ""} · iniciativas vinculadas: ${k.initiatives}`).join("\n");
+  const user = `Empresa: ${cat.company.name} (${cat.company.sector || "retail farmacéutico"}, ${cat.company.country === "EC" ? "Ecuador" : cat.company.department || ""}).
+Palanca: ${lever.name}${lever.indicator ? ` · indicador principal: ${lever.indicator}` : ""}${lever.desc ? ` · ${lever.desc}` : ""}.
+Tribu: ${tribeName}.
+Objetivo del OKR 2027: «${objective.name}»${objective.desc ? ` · aspiración: ${objective.desc}` : ""}${objective.indicator ? ` · indicador impulsor: ${objective.indicator}` : ""}.
+Objetivos directivos de esta palanca (referencia):
+${directivos || "- (sin objetivos directivos cargados)"}
+Resultados clave registrados por la tribu (${krs.length}):
+${lista || "- (todavía ninguno)"}
+${alertas.length ? `Alertas automáticas de la plataforma:\n${alertas.map((a) => `- ${a}`).join("\n")}\n` : ""}Revisa cada resultado clave y el conjunto, y responde con el JSON indicado.`;
+  return { system, user };
+}
+
+/** Valida la respuesta del modelo: solo códigos de KR existentes, estados y veredictos conocidos; respuesta no interpretable = null. */
+export function parseValidacion(input: unknown, codes: string[]): ValidacionOkr | null {
+  const r = input && typeof input === "object" ? input as Record<string, unknown> : null;
+  if (!r) return null;
+  const veredicto = (["listo", "ajustar", "rehacer"] as const).find((v) => v === r.veredicto);
+  const resumen = s(r.resumen, 500);
+  if (!veredicto || !resumen) return null;
+  const prop = (p: unknown): KrPropuesta | undefined => {
+    const q = p && typeof p === "object" ? p as Record<string, unknown> : null; const name = s(q?.name, 200);
+    if (!q || name.length < 5) return undefined;
+    const t = Number(q.target);
+    return { name, ...(s(q.unit, 20) ? { unit: s(q.unit, 20) } : {}), ...(q.goodDirection === "up" || q.goodDirection === "down" ? { goodDirection: q.goodDirection } : {}),
+      ...(FREQ.find((f) => f === q.frequency) ? { frequency: FREQ.find((f) => f === q.frequency) } : {}), ...(s(q.definition, 600) ? { definition: s(q.definition, 600) } : {}),
+      ...(s(q.formula, 300) ? { formula: s(q.formula, 300) } : {}), target: q.target === null || q.target === undefined || !Number.isFinite(t) ? null : t };
+  };
+  const seen = new Set<string>(); const krs: KrEvaluado[] = [];
+  for (const k of (Array.isArray(r.krs) ? r.krs as Record<string, unknown>[] : [])) {
+    const code = s(k?.code, 20).toUpperCase(); if (!codes.includes(code) || seen.has(code)) continue; seen.add(code);
+    const estado = (["ok", "ajustar", "reemplazar"] as const).find((e) => e === k?.estado) ?? "ajustar";
+    const propuesta = estado === "ok" ? undefined : prop(k?.propuesta);
+    krs.push({ code, estado, comentario: s(k?.comentario, 400) || (estado === "ok" ? "Bien formulado." : "Revisar."), ...(propuesta ? { propuesta } : {}) });
+  }
+  for (const c of codes) if (!seen.has(c)) krs.push({ code: c, estado: "ajustar", comentario: "El asistente no se pronunció sobre este resultado clave; revísalo con las reglas." });
+  return { veredicto, resumen, krs, faltantes: parseKrList(r.faltantes, 2) };
 }
