@@ -25,7 +25,7 @@ import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Leve
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
-import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
+import { usePriorizacion, DECISION_CLS, HorizonHint, EvaluationForm, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
 
@@ -123,8 +123,8 @@ export default function ConvencionPage() {
       {tab === "itinerario" && <ItinerarioTab />}
       {tab === "guia" && <GuiaTab me={me} />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
-      {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} saving={saving} mutate={mutate} base={base} />}
-      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
+      {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} myTribe={me.responsibleId} saving={saving} mutate={mutate} base={base} />}
+      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} myTribe={me.responsibleId} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
       {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} onCatalogRefresh={() => void refetch()} me={me} />}
       {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} />}
     </div>
@@ -375,7 +375,7 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
 
 /* ═══ OKR del primer horizonte ═══ */
 
-function OkrTab({ cat, levers, horizon, canEdit, scope, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; scope: string | null; saving: boolean; mutate: Mutate; base: string }) {
+function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; scope: string | null; myTribe?: string; saving: boolean; mutate: Mutate; base: string }) {
   // primero los objetivos (los escribe cada tribu, a partir del objetivo directivo de su palanca), después sus resultados clave
   const allObjectives = okrObjectivesOf(cat, horizon);
   const directive = cat.objectives.filter((o) => o.horizon === horizon && !o.okr);
@@ -386,7 +386,8 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, saving, mutate, base }: 
   const [ejemplo, setEjemplo] = useState<string | null>(null);   // palanca cuyo ejemplo se muestra
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   // filtros: palanca y tribu (la tribu dueña de la palanca o de alguno de los KR); los objetivos no se filtran uno a uno
-  const [fLever, setFLever] = useState(""); const [fTribe, setFTribe] = useState("");
+  // quien pertenece a una tribu llega con su tribu filtrada y primero; puede quitar el filtro para ver las demás
+  const [fLever, setFLever] = useState(""); const [fTribe, setFTribe] = useState(myTribe && levers.some((l) => l.ownerId === myTribe) ? myTribe : "");
   const tribeOf = (o: CmiObjective) => { const l = levers.find((x) => x.id === o.lever); return l?.ownerId ?? ""; };
   // el líder de tribu solo edita el OKR de su tribu (ámbito); los demás objetivos los ve
   const canEditObj = (o: CmiObjective) => canEdit && (!scope || tribeOf(o) === scope);
@@ -397,7 +398,8 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, saving, mutate, base }: 
   // tribus del filtro: en la convención, todas (hay que elegir una para pedir sugerencias); si no, las que ya tienen objetivos o KR
   const tribes = convencion ? cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || levers.some((l) => l.ownerId === r.id))
     : cat.responsibles.filter((r) => allObjectives.some((o) => inTribe(o, r.id) && (tribeOf(o) === r.id || keyResultsOf(cat, o).some((k) => k.ownerId === r.id))));
-  const byLever = [...levers.filter((l) => !fLever || l.id === fLever).map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length || (convencion && g.key));   // en la convención, las palancas se ven siempre (con o sin tribu elegida)
+  const leversOrdenadas = [...levers].sort((a, b) => Number(b.ownerId === myTribe) - Number(a.ownerId === myTribe) || a.order - b.order);
+  const byLever = [...leversOrdenadas.filter((l) => !fLever || l.id === fLever).map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length || (convencion && g.key));   // en la convención, las palancas se ven siempre (con o sin tribu elegida)
   const high = issues.filter((i) => i.level === "alto").length;
   return (
     <>
@@ -422,7 +424,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, saving, mutate, base }: 
         <Card key={g.key} className="rise mb-5 overflow-hidden">
           <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)"}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
-              <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>
+              {canEdit && !scope && <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
               {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
@@ -609,10 +611,10 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 
 /* ═══ Iniciativas → resultado clave ═══ */
 
-function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; scope: string | null; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
+function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTribe, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; scope: string | null; myTribe?: string; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
   const objectives = okrObjectivesOf(cat, horizon);
   const krs = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
-  const [fTribe, setFTribe] = useState("");
+  const [fTribe, setFTribe] = useState(myTribe && cat.initiatives.some((i) => i.ownerId === myTribe) ? myTribe : "");
   const [nueva, setNueva] = useState(false);
   const [edit, setEdit] = useState<InitiativeFull | null>(null);
   // quien administra el catálogo edita todas; quien solo puede crear, edita y elimina las suyas
@@ -669,15 +671,15 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, me, s
           </div>
         </Card>
       </div>
-      {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} lockOwner={!!scope} saving={saving} onCancel={() => setNueva(false)}
+      {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
-      {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} saving={saving} onCancel={() => setEdit(null)}
+      {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setEdit(null)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) setEdit(null); return ok; }}
         onDelete={async () => { if (window.confirm(`¿Eliminar la iniciativa «${edit.name}»?`)) { const ok = await mutate("initiative", "delete", { id: edit.id }); if (ok) setEdit(null); } }} />}
       {link && (() => {
         const ini = cat.initiatives.find((i) => i.id === link)!;
         return (
-          <LinkForm cat={cat} horizon={horizon} ini={ini} saving={saving} onCancel={() => setLink(null)}
+          <LinkForm cat={cat} horizon={horizon} ini={ini} scope={scope} saving={saving} onCancel={() => setLink(null)}
             onSubmit={async (cmi, kpi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi, cmi }); if (ok) setLink(null); return ok; }} />
         );
       })()}
@@ -687,31 +689,16 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, me, s
 
 /** Iniciativa nueva creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el resultado clave principal que mueve. */
 /** Selector del OKR al que se vincula una iniciativa: objetivo de la tribu y, si ya tiene resultados clave, el KR principal. Con la IA, sugiere el vínculo a partir del nombre y de lo que logra. */
-function OkrPicker({ cat, horizon, value, onChange, initiative }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; initiative: { name: string; objetivo: string } }) {
-  const objectives = okrObjectivesOf(cat, horizon);
-  const sel = objectives.find((o) => o.id === value.cmi);
-  const krs = sel ? keyResultsOf(cat, sel) : [];
-  const [ia, setIa] = useState<{ loading: boolean; error: string | null; why: string | null; none?: boolean }>({ loading: false, error: null, why: null });
-  const puede = objectives.length > 0 && initiative.name.trim().length >= 5;
-  const sugerir = async () => {
-    setIa({ loading: true, error: null, why: null });
-    const res = await fetch("/api/td/okr/vincular", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon, initiative: { name: initiative.name.trim(), objetivo: initiative.objetivo.trim() } }) });
-    const j = await res.json().catch(() => null);
-    if (!res.ok) { setIa({ loading: false, error: j?.error ?? `Error ${res.status}`, why: null }); return; }
-    if (j.none || !j.objective) { setIa({ loading: false, error: null, why: j.why || "No hay evidentemente un OKR con el que se pueda vincular esta iniciativa. Analiza muy bien esta situación. ¿Vale la pena?", none: true }); return; }
-    // el vínculo es a un resultado clave concreto: si el OKR sugerido aún no tiene KR, no hay con qué vincular
-    if (!j.kpi) { setIa({ loading: false, error: null, why: `El OKR sugerido (${j.objective}) aún no tiene resultados clave; regístralos en OKR y vuelve a vincular.`, none: true }); return; }
-    onChange({ cmi: j.objective, kpi: j.kpi });
-    setIa({ loading: false, error: null, why: j.why || "Vínculo sugerido por el modelo." });
-  };
+function OkrPicker({ cat, horizon, value, onChange, scope }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; scope?: string | null }) {
+  // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
+  const objectives = okrObjectivesOf(cat, horizon).filter((o) => !scope || (cat.company.levers ?? []).find((l) => l.id === o.lever)?.ownerId === scope);
   const conKr = objectives.filter((o) => keyResultsOf(cat, o).length > 0);
-  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>Aún no hay OKR de las tribus en {horizonLabel(cat.company, horizon)}: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «OKR».</p>;
-  if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>Los OKR de las tribus aún no tienen resultados clave: las iniciativas se vinculan a un resultado clave concreto, no al objetivo. Regístralos primero en la pestaña «OKR» (etapa 3) y vuelve a vincular.</p>;
-  void sel; void krs;
+  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "Tu tribu aún no tiene su OKR registrado" : `Aún no hay OKR de las tribus en ${horizonLabel(cat.company, horizon)}`}: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «OKR».</p>;
+  if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "El OKR de tu tribu" : "Los OKR de las tribus"} aún no {scope ? "tiene" : "tienen"} resultados clave: las iniciativas se vinculan a un resultado clave concreto, no al objetivo. Regístralos primero en la pestaña «OKR» (etapa 3) y vuelve a vincular.</p>;
   return (
     <div className="space-y-2">
-      <Field label="Resultado clave que mueve (obligatorio)">
-        <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => keyResultsOf(cat, x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code }); setIa({ loading: false, error: null, why: null }); }} className={INPUT}>
+      <Field label={scope ? "Resultado clave de tu tribu que mueve (obligatorio)" : "Resultado clave que mueve (obligatorio)"}>
+        <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => keyResultsOf(cat, x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code }); }} className={INPUT}>
           <option value="">— elegir el resultado clave —</option>
           {objectives.map((o) => { const ks = keyResultsOf(cat, o); return (
             <optgroup key={o.id} label={`${o.id} · ${o.name.slice(0, 80)}`}>
@@ -721,12 +708,6 @@ function OkrPicker({ cat, horizon, value, onChange, initiative }: { cat: Cat; ho
         </select>
         <span className="mt-1 block text-[10.5px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto; el objetivo se toma del KR elegido.</span>
       </Field>
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => void sugerir()} disabled={!puede || ia.loading} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={puede ? "El modelo sugiere a qué OKR vincular esta iniciativa" : "Escribe primero el nombre de la iniciativa"}>{ia.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Sugerir OKR</button>
-        {ia.why && !ia.none && <span className="text-[11px] italic text-faint">{ia.why}</span>}
-        {ia.error && <span className="text-[11px] text-bad">{ia.error}</span>}
-      </div>
-      {ia.none && <p className="rounded-lg px-3 py-2 text-[12px] font-semibold text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 14%, white)" }}>{ia.why}</p>}
     </div>
   );
 }
@@ -737,7 +718,7 @@ function okrLinkOk(cat: Cat, horizon: string, v: { cmi: string; kpi: string }): 
 }
 
 /** Iniciativa creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el OKR (objetivo y KR principal) que mueve. */
-function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; lockOwner?: boolean; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
+function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false, scope = null, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; lockOwner?: boolean; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
   const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
   const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "" });
   const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
@@ -754,21 +735,21 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
         <Field label="Iniciativa"><input value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
-        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} initiative={f} />
+        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} />
         <p className="text-[11px] text-faint">Queda asociada al resultado clave elegido y a {horizonLabel(cat.company, horizon)}; así se califica en Priorización en vivo como las demás.</p>
       </div>
     </Modal>
   );
 }
 
-function LinkForm({ cat, horizon, ini, saving, onCancel, onSubmit }: { cat: Cat; horizon: string; ini: InitiativeFull; saving: boolean; onCancel: () => void; onSubmit: (cmi: string, kpi: string) => Promise<boolean> }) {
+function LinkForm({ cat, horizon, ini, scope = null, saving, onCancel, onSubmit }: { cat: Cat; horizon: string; ini: InitiativeFull; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (cmi: string, kpi: string) => Promise<boolean> }) {
   const [link, setLink] = useState({ cmi: okrObjectivesOf(cat, horizon).some((o) => o.id === ini.cmi) ? ini.cmi : "", kpi: ini.kpi });
   const ok = okrLinkOk(cat, horizon, link);
   return (
     <Modal title={`Vincular · ${ini.id}`} sub={ini.name} onClose={onCancel}
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} onClick={() => ok && onSubmit(link.cmi, link.kpi)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
-      <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} initiative={{ name: ini.name, objetivo: ini.objetivo }} />
+      <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} />
       <p className="mt-2 text-[11px] text-faint">Al vincular, la iniciativa queda asociada al resultado clave elegido (y al objetivo al que pertenece) y habilitada para calificar.</p>
     </Modal>
   );
@@ -776,7 +757,7 @@ function LinkForm({ cat, horizon, ini, saving, onCancel, onSubmit }: { cat: Cat;
 
 /* ═══ Priorización en vivo ═══ */
 
-function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh, me }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void; onCatalogRefresh: () => void; me: { role: string; responsibleId?: string } }) {
+function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh, me }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void; onCatalogRefresh: () => void; me: { role: string; responsibleId?: string; email: string } }) {
   // sesión de calificación por tribu (modo convención): el líder la abre, la cierra, ajusta el orden y guarda
   const convencion = cat.company.mode === "convencion";
   const sessions = prio?.sessions ?? cat.company.prioSessions ?? {};
@@ -784,7 +765,11 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const tribeOfLever = (leverId: string) => levers.find((l) => l.id === leverId)?.ownerId ?? "";
   // el ranking se agrupa por tribu (palanca, por defecto) o por resultado clave; el selector filtra un grupo
   const [mode, setMode] = useState<"tribu" | "resultado">("tribu");
-  const [sel, setSel] = useState("");
+  // quien pertenece a una tribu llega con su tribu filtrada y primero; puede quitar el filtro para ver las demás
+  const myLever = levers.find((l) => l.ownerId === me.responsibleId)?.id ?? "";
+  const [sel, setSel] = useState(myLever);
+  const enTribu = convencion && !!me.responsibleId && (me.role === "RESPONSABLE" || me.role === "LIDER");
+  const mySession = me.responsibleId ? sessionOf(sessions, me.responsibleId) : null;
   const [expected, setExpected] = useState(3);
   const rows = prio?.ranking ?? [];
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
@@ -794,8 +779,9 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const leverLabel = (l: Lever) => { const t = tribe(l.ownerId); return t ? `${t} · ${l.name}` : `${l.order}. ${l.name}`; };
   const krs = cat.kpis.filter((k) => cat.initiatives.some((i) => i.kpi === k.code));
   const groupKey = (i: Ini) => (mode === "tribu" ? objLever(i) : i.kpi && krs.some((k) => k.code === i.kpi) ? i.kpi : "");
+  const leversOrdenadas = [...levers].sort((a, b) => Number(b.id === myLever) - Number(a.id === myLever) || a.order - b.order);
   const groupDefs: { key: string; label: string }[] = mode === "tribu"
-    ? [...levers.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: "Sin palanca" }]
+    ? [...leversOrdenadas.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: "Sin palanca" }]
     : [...krs.map((k) => ({ key: k.code, label: `${k.code} · ${k.name}` })), { key: "", label: "Sin resultado clave" }];
   const list = cat.initiatives.filter((i) => !sel || groupKey(i) === sel);
   const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
@@ -813,6 +799,12 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const sub = (i: Ini) => (mode === "tribu" ? (i.kpi ? `KR ${i.kpi}` : "sin KR") : owner(i.ownerId));
   return (
     <>
+      {enTribu && mySession?.status === "abierta" && <CalificacionGuiada cat={cat} prio={prio} email={me.email} tribe={me.responsibleId!} onDone={() => { onRefresh(); }} />}
+      {enTribu && mySession?.status !== "abierta" && me.role === "RESPONSABLE" && (
+        <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}>
+          {mySession?.status === "cerrada" ? "La calificación de tu tribu aún no está abierta. Cuando el líder la abra, aquí aparecerá paso a paso cada iniciativa lista para calificar." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización. Abajo ves el ranking en vivo."}
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[11px]" role="group" aria-label="Agrupar el ranking">
           {(["tribu", "resultado"] as const).map((m) => (
@@ -1301,6 +1293,75 @@ function ItinerarioTab() {
 
 
 /* ═══ Sesión de calificación de la tribu (priorización en vivo, modo convención) ═══ */
+
+/* ═══ Calificación paso a paso: cuando el líder abre la calificación, cada miembro califica una a una las iniciativas de su tribu ═══ */
+
+function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; prio: PriorizacionData | null; email: string; tribe: string; onDone: () => void }) {
+  const rule = typeRuleOf(cat.company);
+  const list = cat.initiatives.filter((i) => i.ownerId === tribe && i.kpi);   // listas para calificar: vinculadas a un KR
+  const hechas = new Set((prio?.evaluations ?? []).filter((e) => e.by === email.toLowerCase()).map((e) => e.iniId));
+  const pendientes = list.filter((i) => !hechas.has(i.id));
+  const [salto, setSalto] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [plegado, setPlegado] = useState(false);
+  const cur = pendientes.length ? pendientes[salto % pendientes.length] : undefined;
+  const kr = cur ? cat.kpis.find((k) => k.code === cur.kpi) : undefined;
+  const obj = cur ? cat.objectives.find((o) => o.id === cur.cmi) : undefined;
+  const tribu = cat.responsibles.find((r) => r.id === tribe)?.dependencia ?? "tu tribu";
+  const guardar = async (ev: { scores: Record<string, number>; type: Record<string, string>; notes: Partial<Record<string, string>> }) => {
+    if (!cur) return false;
+    setSaving(true); setError(null);
+    const res = await fetch("/api/td/priorizacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: cur.id, evaluation: ev }) });
+    const j = await res.json().catch(() => null);
+    setSaving(false);
+    if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
+    setSalto(0); onDone(); return true;
+  };
+  const n = list.length, ok = n - pendientes.length;
+  return (
+    <Card className="rise mb-5 overflow-hidden border-2 border-cyan-deep/30">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 sm:px-5" style={{ background: "color-mix(in srgb, var(--cyan) 10%, white)" }}>
+        <Scale size={16} className="shrink-0 text-cyan-deep" />
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-extrabold text-ink">Califica las iniciativas de {tribu}</div>
+          <div className="text-[11.5px] text-muted">La calificación está abierta: una iniciativa a la vez, cuatro criterios de 1 a 4, una sola vez por persona.</div>
+        </div>
+        <div className="num text-[12px] font-bold text-ink">{ok} de {n}</div>
+        <button type="button" onClick={() => setPlegado((v) => !v)} className="btn-ghost !py-1 text-[11px]">{plegado ? "Mostrar" : "Ocultar"}</button>
+      </div>
+      <div className="h-1.5 bg-surface-2"><div className="h-1.5 transition-all" style={{ width: `${n ? Math.round((100 * ok) / n) : 0}%`, background: "var(--grad-brand)" }} /></div>
+      {!plegado && (
+        <div className="px-4 py-4 sm:px-5">
+          {n === 0 && <EmptyNote>Tu tribu aún no tiene iniciativas vinculadas a un resultado clave: el líder las vincula en «Iniciativas → KR» y entonces aparecen aquí.</EmptyNote>}
+          {n > 0 && !cur && (
+            <div className="rounded-xl px-4 py-5 text-center" style={{ background: "color-mix(in srgb, var(--ok) 10%, white)" }}>
+              <CheckCircle2 size={28} className="mx-auto text-ok" />
+              <div className="mt-2 text-[15px] font-extrabold text-ink">Listo: calificaste las {n} iniciativas de tu tribu</div>
+              <p className="mt-1 text-[12px] text-muted">El ranking de abajo se actualiza en vivo con las calificaciones de todos; el líder cierra, consolida y propone el trimestre de inicio.</p>
+            </div>
+          )}
+          {cur && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="num rounded-full bg-cyan-deep px-2.5 py-0.5 text-[11px] font-extrabold text-white">Paso {ok + 1} de {n}</span>
+                {pendientes.length > 1 && <button type="button" onClick={() => setSalto((s) => s + 1)} className="btn-ghost !py-1 text-[11px]" title="Dejar esta para después y pasar a la siguiente">Saltar por ahora</button>}
+              </div>
+              <div className="rounded-xl bg-surface-2/60 px-4 py-3">
+                <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{cur.id} · {obj?.id ?? ""}</div>
+                <div className="text-[15px] font-extrabold leading-snug text-ink">{cur.name}</div>
+                {cur.objetivo && <p className="mt-1 text-[12px] leading-snug text-ink-soft">{cur.objetivo}</p>}
+                {kr && <p className="mt-1.5 text-[11.5px] text-muted">Mueve el resultado clave <b className="text-ink">{kr.code} · {kr.name}</b>{obj ? ` del objetivo «${obj.name}»` : ""}.</p>}
+              </div>
+              {error && <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+              <EvaluationForm key={cur.id} saving={saving} rule={rule} confirmOnce onSave={(ev) => guardar(ev as never)} />
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { cat: Cat; sessions: NonNullable<Cat["company"]["prioSessions"]>; me: { role: string; responsibleId?: string }; rank: (items: Cat["initiatives"]) => Cat["initiatives"]; scoreOf: (id: string) => number | null; onChanged: () => void }) {
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));

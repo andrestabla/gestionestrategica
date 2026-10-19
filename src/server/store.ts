@@ -2096,8 +2096,12 @@ function saveItinerary(actor: SessionUser, it: Itinerary | undefined, what: stri
 export const itineraryOf = (): Itinerary | undefined => companyRec()?.itinerary;
 
 /** Carga o reemplaza el itinerario (manage_catalog); conserva publicación y enlace. */
+/** El itinerario y sus materiales los administra el equipo organizador: advisor, gerencia y admin con cuenta;
+    quien entra por el QR (aunque sea líder de tribu) solo lo ve. */
+const canItinerary = (actor: SessionUser) => can(actor, "manage_catalog") && !actor.qr && !tribeScope(actor);
+
 export function setItinerary(actor: SessionUser, input: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
-  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "El itinerario lo carga el advisor o la gerencia." };
+  if (!canItinerary(actor)) return { ok: false, status: 403, error: "El itinerario lo carga el advisor o la gerencia." };
   const p = parseItinerary(input); if (!p.ok) return { ok: false, status: 422, error: p.error };
   const prev = itineraryOf();
   const it: Itinerary = { ...p.itinerary, public: prev?.public ?? false, ...(prev?.token ? { token: prev.token } : {}), ...(prev?.tokenP ? { tokenP: prev.tokenP, publicP: prev.publicP ?? false } : {}) };
@@ -2114,7 +2118,7 @@ export function setItinerary(actor: SessionUser, input: unknown): { ok: true; it
 
 /** Publica o retira el enlace público; `regenerate` cambia el enlace (el anterior deja de valer). */
 export function publishItinerary(actor: SessionUser, on: boolean, regenerate = false, audience: "organizador" | "participantes" = "organizador"): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
-  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "El enlace público lo administra el advisor o la gerencia." };
+  if (!canItinerary(actor)) return { ok: false, status: 403, error: "El enlace público lo administra el advisor o la gerencia." };
   const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
   if (audience === "participantes") {
     const tokenP = regenerate || !prev.tokenP ? newToken() : prev.tokenP;
@@ -2221,7 +2225,7 @@ export async function resetPassword(token: string, password: unknown): Promise<{
 
 /** Registra un material (PDF ya guardado en el almacenamiento) en el itinerario. */
 export function addItineraryFile(actor: SessionUser, file: { id: string; name: string; size: number; group?: string; kind?: ItineraryFile["kind"]; url?: string }): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
-  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
+  if (!canItinerary(actor)) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
   const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
   if (!FILE_ID_RE.test(file.id)) return { ok: false, status: 422, error: "Identificador de archivo inválido." };
   const kind = file.kind ?? "pdf";
@@ -2234,7 +2238,7 @@ export function addItineraryFile(actor: SessionUser, file: { id: string; name: s
 }
 /** Quita un material del itinerario y de los momentos que lo enlazan (el objeto se borra aparte). */
 export function removeItineraryFile(actor: SessionUser, id: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
-  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
+  if (!canItinerary(actor)) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
   const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
   const key = String(id ?? "");
   if (!(prev.files ?? []).some((f) => f.id === key)) return { ok: false, status: 404, error: "El material no existe." };
@@ -2249,7 +2253,7 @@ export function removeItineraryFile(actor: SessionUser, id: unknown): { ok: true
 }
 /** Vincula materiales a un momento (lista completa de ids). */
 export function setMomentFiles(actor: SessionUser, momentId: unknown, fileIds: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
-  if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
+  if (!canItinerary(actor)) return { ok: false, status: 403, error: "Los materiales los administra el advisor o la gerencia." };
   const prev = itineraryOf(); if (!prev) return { ok: false, status: 404, error: "Esta empresa aún no tiene itinerario." };
   const mid = str(momentId, 24).toLowerCase();
   if (!prev.items.some((x) => x.id === mid)) return { ok: false, status: 422, error: "El momento no existe." };
@@ -2542,6 +2546,8 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (tribeScope(user) && ownerId !== tribeScope(user)) return fail(403, "Solo registras iniciativas de tu tribu: elige tu tribu como dueña.");
   const kpi = str(input.kpi, 20).toUpperCase();
   if (kpi && !c.kpis.some((k) => k.code === kpi)) return fail(422, "El KPI asociado no existe.");
+  // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
+  if (kpi && tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === kpi)?.cmi) !== tribeScope(user)) return fail(403, "Vincula la iniciativa a un resultado clave del OKR de tu tribu.");
   const start = str(input.start, 8), end = str(input.end, 8);
   if ((start && !QUARTER.test(start)) || (end && !QUARTER.test(end))) return fail(422, "Inicio y fin van en trimestres (AAAA-Tn).");
   if (start && end && periodIndex(start) > periodIndex(end)) return fail(422, "El fin no puede ser anterior al inicio.");

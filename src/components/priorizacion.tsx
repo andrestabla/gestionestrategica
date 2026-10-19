@@ -261,7 +261,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   );
 }
 
-function EvaluationForm({ initial, saving, rule, onSave, confirmOnce = false }: { confirmOnce?: boolean;
+export function EvaluationForm({ initial, saving, rule, onSave, confirmOnce = false }: { confirmOnce?: boolean;
   initial?: Evaluation; saving: boolean; rule: TypeRule;
   onSave: (ev: { scores: Record<CriterionKey, Level>; type: TypeMarks; notes: Partial<Record<CriterionKey, string>> }) => Promise<boolean>;
 }) {

@@ -76,6 +76,8 @@ test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas
     const ev = { scores: { D: 3, E: 3, M: 3, L: 3 }, type: Object.fromEntries(typeRuleOf(catalog().company).criteria.map((c) => [c.key, "ESTRATEGICO"])) };
     assert.ok(evaluateInitiative(lider, (mia as { id: string }).id, ev).ok);
     assert.ok(kr(advisor, "MAR-02", "MAR-O1").ok);
+    // el líder vincula únicamente a los resultados clave del OKR de su tribu
+    assert.equal((upsertInitiative(lider, { id: (mia as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MAR-02" }) as { status?: number }).status, 403);
     assert.ok(upsertInitiative(gerencia, { id: (ajena as { id: string }).id, name: "Gerencia sí edita cualquier iniciativa", capability: "DIR-1", cmi: "MAR-O1", ownerId: "R02", horizon: "H1", kpi: "MAR-02" }).ok);
     assert.ok(setPrioSession(otro, "R02", "abrir").ok);
     assert.equal((evaluateInitiative(lider, (ajena as { id: string }).id, ev) as { status?: number }).status, 403, "el líder no califica iniciativas de otra tribu");
@@ -86,6 +88,24 @@ test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas
     const issues = okrChecks(catalog(), "H1");
     assert.ok(issues.some((i) => i.kind === "kr-sin-iniciativa" && i.ref === "MS-02" && i.level === "alto"), "KR sin iniciativa: alerta alta");
     assert.ok(issues.some((i) => i.kind === "kr-incompleto" && i.ref === "MS-02" && /definición/.test(i.text)), "sin definición ni fórmula el KR está incompleto");
+  });
+  resetStore();
+});
+
+test("convención: el itinerario lo administra el equipo organizador; quien entra por el QR solo lo ve", async () => {
+  const { setItinerary, publishItinerary } = await import("../src/server/store");
+  const porQr: SessionUser = { email: "q@a.co", name: "Gerencia por QR", role: "LIDER", qr: true };
+  const IT = { title: "Convención de prueba", days: [{ id: "d1", title: "Día 1" }], items: [{ id: "d1-01", day: "d1", time: "8:00", minutes: 30, title: "Apertura", kind: "conferencia", who: "Relator", method: "Enmarcar.", materials: [], platform: "Deck" }] };
+  resetStore();
+  assert.ok((await createCompany(admin, { name: "Itinerario SA", template: "vacia" })).ok);
+  assert.ok((await updateCompany(admin, "itinerario-sa", { mode: "convencion", horizons: [{ id: "H1", label: "H1 · 2027", months: 12 }] })).ok);
+  await runWithTenant("itinerario-sa", async () => {
+    assert.ok(upsertResponsible(advisor, { cargo: "Líder de tribu", dependencia: "Tribu Uno", rolPlataforma: "LIDER" }).ok);
+    assert.equal((setItinerary(lider, IT) as { status?: number }).status, 403, "el líder de tribu no modifica el itinerario");
+    assert.equal((setItinerary(porQr, IT) as { status?: number }).status, 403, "quien entra por el QR no modifica el itinerario");
+    assert.ok(setItinerary(advisor, IT).ok);
+    assert.equal((publishItinerary(porQr, true) as { status?: number }).status, 403);
+    assert.ok(publishItinerary(advisor, true).ok);
   });
   resetStore();
 });
