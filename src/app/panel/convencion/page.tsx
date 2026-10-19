@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { templatesFor } from "@/lib/okr-plantillas";
 import { sessionOf, PRIO_STATUS_LABEL, type PrioSessionAction } from "@/lib/priorizacion-sesion";
 import { ejemploPara, type OkrSugerido, type KrSugerido, type ValidacionOkr, type KrPropuesta } from "@/lib/okr-sugerencias";
+import type { Evidencia } from "@/data/conocimiento-sector";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
@@ -262,16 +263,17 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
   const pillars = [...new Set(cat.objectives.map((o) => o.pillar).filter(Boolean))] as string[];
   // laboratorio de OKR: con palanca y objetivo escritos, el modelo propone los resultados clave; la tribu elige cuáles crear
   const tribe = cat.responsibles.find((r) => r.id === levers.find((l) => l.id === f.lever)?.ownerId);
-  const [sug, setSug] = useState<{ loading: boolean; error: string | null; okr: OkrSugerido | null; chosen: boolean[] }>({ loading: false, error: null, okr: null, chosen: [] });
+  const [sug, setSug] = useState<{ loading: boolean; error: string | null; okr: OkrSugerido | null; chosen: boolean[]; fuentes: Evidencia[] }>({ loading: false, error: null, okr: null, chosen: [], fuentes: [] });
+  const [verFuentes, setVerFuentes] = useState(false);
   const puedeSugerir = okr && !!f.lever && f.name.trim().length >= 10;
   const pedir = async () => {
-    setSug({ loading: true, error: null, okr: null, chosen: [] });
+    setSug({ loading: true, error: null, okr: null, chosen: [], fuentes: [] });
     const res = await fetch("/api/td/okr/sugerir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lever: f.lever, tribe: tribe?.id, objective: { name: f.name.trim(), desc: f.desc.trim(), indicator: f.indicator.trim() } }) });
     const j = await res.json().catch(() => null);
-    if (!res.ok) { setSug({ loading: false, error: j?.error ?? `Error ${res.status}`, okr: null, chosen: [] }); return; }
+    if (!res.ok) { setSug({ loading: false, error: j?.error ?? `Error ${res.status}`, okr: null, chosen: [], fuentes: [] }); return; }
     const p: OkrSugerido | undefined = j?.propuestas?.[0];
-    if (!p) { setSug({ loading: false, error: "El modelo no devolvió una propuesta utilizable; inténtalo de nuevo.", okr: null, chosen: [] }); return; }
-    setSug({ loading: false, error: null, okr: p, chosen: p.krs.map(() => true) });
+    if (!p) { setSug({ loading: false, error: "El modelo no devolvió una propuesta utilizable; inténtalo de nuevo.", okr: null, chosen: [], fuentes: [] }); return; }
+    setSug({ loading: false, error: null, okr: p, chosen: p.krs.map(() => true), fuentes: Array.isArray(j?.fuentes) ? j.fuentes : [] });
   };
   const krsElegidos = sug.okr ? sug.okr.krs.filter((_, n) => sug.chosen[n]) : [];
   const redaccionDistinta = !!sug.okr && sug.okr.objective.name.trim() !== f.name.trim();
@@ -302,6 +304,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
               <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : "Elige la palanca y escribe el objetivo"}>
                 {sug.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {sug.okr ? "Otra propuesta" : "Sugerir OKR"}
               </button>
+              {sug.okr && sug.fuentes.length > 0 && <FuentesButton onClick={() => setVerFuentes(true)} />}
               <span className="text-[11px] text-faint">{puedeSugerir ? `Resultados clave sugeridos para este objetivo${tribe ? ` y ${tribe.dependencia}` : ""}; eliges cuáles se crean.` : "Con la palanca y el objetivo escritos, el modelo propone sus resultados clave."}</span>
             </div>
             {sug.error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{sug.error}</p>}
@@ -319,12 +322,13 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
                   <label key={n} className="flex cursor-pointer items-start gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
                     <input type="checkbox" checked={!!sug.chosen[n]} onChange={(e) => setSug({ ...sug, chosen: sug.chosen.map((c, m) => (m === n ? e.target.checked : c)) })} className="mt-0.5" />
                     <span className="min-w-0">
-                      <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span>
+                      <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span><Refs n={k.sources} />
                       {(k.formula || k.definition) && <span className="block text-[11px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
                       {k.why && <span className="block text-[11px] italic text-faint">{k.why}</span>}
                     </span>
                   </label>
                 ))}
+                {verFuentes && <FuentesModal fuentes={sug.fuentes} usadas={usadasDe(sug.okr)} onClose={() => setVerFuentes(false)} />}
                 <p className="text-[11px] leading-snug text-faint">Se crean con línea base 0 y la meta sugerida (si la hay), dueño {tribe?.dependencia ?? "la tribu"} y plazo a fin de {horizons[0]?.label ?? "horizonte"}; la tribu fija base y meta reales en la mesa.</p>
               </div>
             )}
@@ -1291,6 +1295,55 @@ function OkrEjemploModal({ levers, lever, onClose, onUsar }: { levers: Lever[]; 
   );
 }
 
+/* ═══ Fuentes de las sugerencias: la base de conocimiento del sector y del país, con los hechos que el modelo citó ═══ */
+
+const TIPO_FUENTE: Record<Evidencia["fuente"]["tipo"], string> = { oficial: "fuente oficial", empresa: "información de la empresa", prensa: "prensa con datos citados", consultora: "consultora o benchmark de proveedor", academico: "publicación académica" };
+
+/** Números de hechos citados en una propuesta (objetivo y resultados clave). */
+function usadasDe(p: { sources?: number[]; krs: { sources?: number[] }[] } | null): number[] {
+  if (!p) return [];
+  return [...new Set([...(p.sources ?? []), ...p.krs.flatMap((k) => k.sources ?? [])])].sort((a, b) => a - b);
+}
+
+function Refs({ n }: { n?: number[] }) {
+  if (!n?.length) return null;
+  return <sup className="num ml-1 text-[9.5px] font-bold text-cyan-deep" title="Hechos de la base de conocimiento en los que se apoya (ver «Fuentes»)">{n.map((x) => `[${x}]`).join("")}</sup>;
+}
+
+function FuentesButton({ onClick }: { onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="btn-ghost !py-1.5 text-[11.5px]" title="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia"><BookOpen size={12} /> Fuentes</button>;
+}
+
+function FuentesModal({ fuentes, usadas, onClose }: { fuentes: Evidencia[]; usadas: number[]; onClose: () => void }) {
+  const citadas = fuentes.filter((e) => usadas.includes(e.n)), resto = fuentes.filter((e) => !usadas.includes(e.n));
+  const Item = ({ e, citada }: { e: Evidencia; citada: boolean }) => (
+    <li className={`rounded-xl px-3.5 py-2.5 text-[12px] ${citada ? "border border-cyan-deep/30 bg-cyan-wash/40" : "bg-surface-2/60"}`}>
+      <div className="flex items-start gap-2">
+        <span className={`num shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold ${citada ? "bg-cyan-deep text-white" : "bg-surface text-faint"}`}>[{e.n}]</span>
+        <div className="min-w-0 flex-1">
+          <p className="leading-snug text-ink">{e.hecho}</p>
+          {e.nota && <p className="mt-0.5 text-[11px] italic leading-snug text-faint">{e.nota}</p>}
+          <p className="mt-1 text-[11px] leading-snug text-muted"><span className="font-semibold text-ink-soft">{e.fuente.editor}</span> · {e.fuente.fecha} · {TIPO_FUENTE[e.fuente.tipo]} · <a href={e.fuente.url} target="_blank" rel="noreferrer" className="text-cyan-deep hover:underline">{e.fuente.titulo}</a></p>
+        </div>
+      </div>
+    </li>
+  );
+  return (
+    <Modal title="Fuentes de la sugerencia" sub={`base de conocimiento del sector y del país · ${fuentes.length} hechos con fuente verificable, ${citadas.length} citado${citadas.length === 1 ? "" : "s"} por el asistente`} onClose={onClose}
+      footer={<button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cerrar</button>}>
+      {citadas.length > 0 && <>
+        <div className="num mb-1.5 text-[10px] font-bold uppercase tracking-wider text-faint">Hechos citados en esta propuesta</div>
+        <ul className="space-y-1.5">{citadas.map((e) => <Item key={e.n} e={e} citada />)}</ul>
+      </>}
+      {resto.length > 0 && <>
+        <div className={`num mb-1.5 text-[10px] font-bold uppercase tracking-wider text-faint ${citadas.length ? "mt-3" : ""}`}>{citadas.length ? "Otros hechos que recibió el asistente para esta palanca" : "Hechos que recibió el asistente para esta palanca"}</div>
+        <ul className="space-y-1.5">{resto.map((e) => <Item key={e.n} e={e} citada={false} />)}</ul>
+      </>}
+      <p className="mt-3 text-[10.5px] leading-snug text-faint">El asistente solo puede citar hechos de esta base; las cifras de benchmarks de proveedores y de otros países son órdenes de magnitud, no metas de la empresa. Fuentes revisadas el 18 de octubre de 2026.</p>
+    </Modal>
+  );
+}
+
 /* ═══ Asistente de resultados clave: el modelo propone KR complementarios y revisa los registrados ═══ */
 
 const ESTADO_KR = { ok: ["bien", "chip-ok"], ajustar: ["ajustar", "chip-warn"], reemplazar: ["reemplazar", "chip-bad"] } as const;
@@ -1304,7 +1357,7 @@ function KrChecklist({ krs, chosen, onToggle, onCrear, creando, nota }: { krs: K
         <label key={n} className={`flex items-start gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px] ${onCrear ? "cursor-pointer" : ""}`}>
           {onCrear && <input type="checkbox" checked={!!chosen[n]} onChange={(e) => onToggle(n, e.target.checked)} className="mt-0.5" />}
           <span className="min-w-0">
-            <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span>
+            <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span><Refs n={k.sources} />
             {(k.formula || k.definition) && <span className="block text-[11px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
             {k.why && <span className="block text-[11px] italic text-faint">{k.why}</span>}
           </span>
@@ -1326,16 +1379,19 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
   const [error, setError] = useState<string | null>(null);
   const [sug, setSug] = useState<{ krs: KrSugerido[]; chosen: boolean[] } | null>(null);
   const [val, setVal] = useState<{ v: ValidacionOkr; chosen: boolean[] } | null>(null);
+  const [fuentes, setFuentes] = useState<Evidencia[]>([]);
+  const [verFuentes, setVerFuentes] = useState(false);
   const [creando, setCreando] = useState(false);
   const tribe = cat.responsibles.find((r) => r.id === tribeId)?.dependencia ?? "la tribu";
   const nota = `Se crean con línea base 0 y la meta sugerida (si la hay), dueño ${tribe} y plazo a fin de ${horizonLabel(cat.company, horizon)}; la tribu fija base y meta reales.`;
   const pedir = async (m: "sugerir" | "validar") => {
-    setModo(m); setLoading(true); setError(null); setSug(null); setVal(null);
+    setModo(m); setLoading(true); setError(null); setSug(null); setVal(null); setFuentes([]);
     const res = await fetch(m === "sugerir" ? "/api/td/okr/sugerir" : "/api/td/okr/validar", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(m === "sugerir" ? { lever: o.lever, tribe: tribeId, objective: { id: o.id, name: o.name, desc: o.desc ?? "", indicator: o.indicator ?? "" } } : { objective: o.id }) });
     const j = await res.json().catch(() => null);
     setLoading(false);
     if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return; }
+    setFuentes(Array.isArray(j?.fuentes) ? j.fuentes : []);
     if (m === "sugerir") {
       const p: OkrSugerido | undefined = j?.propuestas?.[0];
       if (!p) { setError("El asistente no devolvió una propuesta utilizable; inténtalo de nuevo."); return; }
@@ -1358,8 +1414,10 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
         <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-faint"><Sparkles size={12} /> Asistente</span>
         {canEdit && <button type="button" onClick={() => void pedir("sugerir")} disabled={loading || lleno} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={lleno ? "Este objetivo ya tiene el máximo de 5 resultados clave" : "El modelo propone resultados clave complementarios a los registrados; eliges cuáles se crean"}>{loading && modo === "sugerir" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Sugerir KR</button>}
         <button type="button" onClick={() => void pedir("validar")} disabled={loading || krs.length === 0} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={krs.length ? "El modelo revisa cada resultado clave y el conjunto: resultado y no actividad, medible, base y meta, cobertura del objetivo" : "Primero registra los resultados clave"}>{loading && modo === "validar" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Validar KR</button>
-        <span className="text-[11px] leading-snug text-faint">{canEdit ? "Propone KR que falten y revisa los registrados con las reglas del método; nada se guarda sin confirmarlo." : "Revisa los resultados clave de tu tribu con las reglas del método; el líder registra los cambios."}</span>
+        {fuentes.length > 0 && (sug || val) && <FuentesButton onClick={() => setVerFuentes(true)} />}
+        <span className="text-[11px] leading-snug text-faint">{canEdit ? "Propone KR que falten y revisa los registrados con las reglas del método y la base de conocimiento del sector; nada se guarda sin confirmarlo." : "Revisa los resultados clave de tu tribu con las reglas del método y la base de conocimiento del sector; el líder registra los cambios."}</span>
       </div>
+      {verFuentes && <FuentesModal fuentes={fuentes} usadas={sug ? usadasDe({ krs: sug.krs }) : val ? usadasDe({ krs: [...val.v.faltantes, ...val.v.krs] }) : []} onClose={() => setVerFuentes(false)} />}
       {error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
       {modo === "sugerir" && sug && (
         <div className="mt-2.5 space-y-1.5">
@@ -1379,7 +1437,7 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
                   <span className="min-w-0 flex-1 font-semibold text-ink">{k.name}</span>
                   <span className={`chip ${cls} !py-0 text-[9.5px]`}>{label}</span>
                 </div>
-                <p className="mt-1 text-[11.5px] leading-snug text-muted">{e.comentario}</p>
+                <p className="mt-1 text-[11.5px] leading-snug text-muted">{e.comentario}<Refs n={e.sources} /></p>
                 {e.propuesta && (
                   <div className="mt-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5">
                     <div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">{e.estado === "reemplazar" ? "Resultado clave que lo sustituye" : "Redacción sugerida"}</div>

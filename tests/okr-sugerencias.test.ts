@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseSugerencias, ejemploPara, OKR_EJEMPLOS, armarEncargo, armarVinculo, parseVinculo, armarValidacion, parseValidacion } from "../src/lib/okr-sugerencias";
 import { ANDINA_CATALOG, type Lever } from "../src/data/catalogo";
+import { evidenciaPara, BASES } from "../src/data/conocimiento-sector";
 
 test("ejemplo por palanca: un objetivo con tres resultados clave; palanca desconocida usa el genérico", () => {
   for (const k of Object.keys(OKR_EJEMPLOS)) { const e = ejemploPara(k); assert.ok(e.objective.name.length > 10); assert.equal(e.krs.length, 3); }
@@ -70,4 +71,35 @@ test("validación: solo códigos existentes, estados conocidos, propuesta solo s
   assert.equal(v!.krs[0].propuesta?.target, 80); assert.equal(v!.krs[1].propuesta, undefined); assert.match(v!.krs[2].comentario, /no se pronunció/);
   assert.deepEqual(v!.faltantes.map((k) => k.name), ["Market Share de farmacia (%)", "Clientes activos de alto valor"]);
   assert.equal(parseValidacion({ veredicto: "otro", resumen: "x", krs: [] }, ["MS-01"]), null); assert.equal(parseValidacion(null, []), null);
+});
+
+test("base de conocimiento: hechos numerados por palanca, con fuente, solo para el sector y país que cubre", () => {
+  const cresio = { sectorKey: "farmacias-ecuador", sector: "Farmacias", country: "EC" as const };
+  const ms = evidenciaPara(cresio, { id: "MS", name: "Market Share" });
+  assert.ok(ms.length >= 8 && ms.length <= 18); assert.deepEqual(ms.map((e) => e.n), ms.map((_, i) => i + 1));
+  assert.ok(ms.every((e) => e.fuente?.url.startsWith("https://") && e.hecho.length > 30));
+  assert.ok(ms.some((e) => /22\.238/.test(e.hecho)));
+  const mad = evidenciaPara(cresio, { id: "MAD", name: "Madurez organizacional · productividad y cultura" });
+  assert.match(mad[0].hecho, /rotación/i); assert.ok(mad.filter((e) => /rotación|eNPS|sucesores/i.test(e.hecho)).length >= 4);   // primero los temas propios de la palanca
+  assert.deepEqual(evidenciaPara({ sectorKey: "suministros-industriales", sector: "Suministros", country: "CO" }, { id: "X", name: "Ventas" }), []);
+  assert.ok(evidenciaPara({ sectorKey: "otro", sector: "Retail de salud y farmacias", country: "EC" }, { id: "MAR", name: "Margen" }).length > 0);
+  // la base no tiene hechos sin fuente ni fuentes repetidas
+  for (const b of BASES) {
+    const ids = new Set(b.fuentes.map((f) => f.id)); assert.equal(ids.size, b.fuentes.length);
+    for (const h of b.hechos) assert.ok(ids.has(h.fuente), h.id);
+  }
+});
+
+test("sugerencias con evidencia: el encargo lleva los hechos numerados y las citas se validan contra ellos", () => {
+  const lever = { id: "MS", name: "Market Share", order: 1 } as Lever;
+  const ev = evidenciaPara({ sectorKey: "farmacias-ecuador", sector: "Farmacias", country: "EC" }, lever);
+  const { system, user } = armarEncargo(ANDINA_CATALOG, lever, "Tribu", [], { name: "Elevar el Market Share a 12 %" }, [], ev);
+  assert.match(system, /no inventes cifras/); assert.ok(user.includes("[1] ")); assert.ok(user.includes("Base de conocimiento"));
+  const out = parseSugerencias({ propuestas: [{ objective: { name: "Elevar el Market Share a 12 %" }, sources: [1, 99, "2", 1], krs: [
+    { name: "Market Share de farmacia (%)", unit: "%", sources: [3, 0, 2.5, 2] }, { name: "PDV en funcionamiento", unit: "PDV", sources: "x" }] }] }, ev.length);
+  assert.deepEqual(out[0].sources, [1, 2]); assert.deepEqual(out[0].krs[0].sources, [3, 2]); assert.equal(out[0].krs[1].sources, undefined);
+  // sin base, ninguna cita sobrevive
+  assert.equal(parseSugerencias({ propuestas: [{ objective: { name: "Objetivo de prueba largo" }, krs: [{ name: "Uno de prueba", unit: "%", sources: [1] }, { name: "Dos de prueba", unit: "%" }] }] })[0].krs[0].sources, undefined);
+  const v = parseValidacion({ veredicto: "listo", resumen: "Bien.", krs: [{ code: "MS-01", estado: "ok", comentario: "Bien.", sources: [2] }], faltantes: [] }, ["MS-01"], 5);
+  assert.deepEqual(v!.krs[0].sources, [2]);
 });

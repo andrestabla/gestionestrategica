@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions";
 import { leversOf } from "@/data/catalogo";
 import { armarEncargo, parseSugerencias } from "@/lib/okr-sugerencias";
 import { keyResultsOf } from "@/lib/convencion";
+import { evidenciaPara } from "@/data/conocimiento-sector";
 
 // GET /api/td/okr/sugerir — si hay modelo configurado. POST { lever, tribe?, objective? }:
 // con `objective` (el que escribió la tribu; con `id` si ya está registrado, para no
@@ -35,11 +36,12 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   // con el id de un objetivo ya registrado, el modelo conoce sus KR y propone solo los complementarios
   const registrado = o && typeof o.id === "string" ? cat.objectives.find((x) => x.id === o.id && x.okr) : undefined;
   const existing = registrado ? keyResultsOf(cat, registrado).map((k) => k.name) : [];
-  const { system, user: prompt } = armarEncargo(cat, lever, tribeName, templates, objective, existing);
+  const fuentes = evidenciaPara(cat.company, lever);   // base de conocimiento del sector y del país, numerada
+  const { system, user: prompt } = armarEncargo(cat, lever, tribeName, templates, objective, existing, fuentes);
   try {
-    const propuestas = parseSugerencias(await chatJson(system, prompt));
+    const propuestas = parseSugerencias(await chatJson(system, prompt, { maxTokens: 2200 }), fuentes.length);
     if (!propuestas.length) return NextResponse.json({ error: "El modelo no devolvió propuestas utilizables; inténtalo de nuevo." }, { status: 502 });
-    return NextResponse.json({ propuestas, lever: lever.id, tribe: tribeId });
+    return NextResponse.json({ propuestas, lever: lever.id, tribe: tribeId, fuentes });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });
   }
