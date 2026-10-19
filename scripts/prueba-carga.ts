@@ -28,16 +28,18 @@ if (!password && !TOKEN_FIJO) { console.error("Falta CONTRASENA (contraseña del
 
 type Muestra = { op: string; ms: number; ok: boolean; status: number };
 const muestras: Muestra[] = [];
-const fallos: string[] = [];
+const fallos = new Map<string, number>();   // mensaje → veces
+const fallo = (msg: string) => fallos.set(msg, (fallos.get(msg) ?? 0) + 1);
 async function medir<T>(op: string, fn: () => Promise<Response>, parse: (r: Response) => Promise<T>): Promise<T | null> {
   const t0 = performance.now();
   try {
     const r = await fn(); const ms = performance.now() - t0;
     muestras.push({ op, ms, ok: r.ok, status: r.status });
-    if (!r.ok) { const e = await r.text().catch(() => ""); if (fallos.length < 20) fallos.push(`${op} → ${r.status} ${e.slice(0, 140)}`); return null; }
+    if (!r.ok) { const e = await r.text().catch(() => ""); fallo(`${op} → ${r.status} ${e.slice(0, 120)}`); return null; }
     return await parse(r);
   } catch (e) {
-    muestras.push({ op, ms: performance.now() - t0, ok: false, status: 0 }); if (fallos.length < 20) fallos.push(`${op} → ${(e as Error).message}`); return null;
+    // status 0 = no hubo respuesta (fallo de red o tiempo agotado desde esta máquina), no un error del servidor
+    muestras.push({ op, ms: performance.now() - t0, ok: false, status: 0 }); fallo(`${op} → sin respuesta (red o tiempo agotado): ${(e as Error).message.slice(0, 80)}`); return null;
   }
 }
 const json = (r: Response) => r.json();
@@ -61,6 +63,11 @@ const post = (cookie: string, path: string, body: unknown, method = "POST") => f
 
 async function main() {
   console.log(`Prueba de carga contra ${ORIGENES.join(" + ")} · ${LECTORES} lectores · ${EDITORES} editores · ${SEGUNDOS} s`);
+  // la red desde esta máquina: cinco peticiones en serie; si alguna pasa de 3 s, los resultados no serán representativos
+  const red: number[] = [];
+  for (let i = 0; i < 5; i++) { const t = performance.now(); try { await fetch(`${origen}/api/branding`, { signal: AbortSignal.timeout(15_000) }); } catch { /* cuenta como lenta */ } red.push(performance.now() - t); }
+  const lenta = red.filter((ms) => ms > 3000).length;
+  console.log(`Red desde esta máquina: ${red.map((ms) => `${ms.toFixed(0)} ms`).join(" · ")}${lenta ? ` · AVISO: ${lenta} de 5 por encima de 3 s, la conexión está inestable y los fallos «sin respuesta» serán de la red, no del servidor` : " · estable"}`);
   const admin = TOKEN_FIJO ? "" : await login();
   const cookieReal = TOKEN_FIJO ? "" : await activar(admin, slugReal);
   let token = TOKEN_FIJO ?? "";
@@ -120,7 +127,7 @@ async function main() {
           // consistencia: lo guardado se lee de vuelta (puede atender otra instancia)
           const vista = await medir("editar:leer-de-vuelta", () => get(c, "/api/td/catalogo"), json);
           const hallada = vista?.catalog?.initiatives?.find?.((i: { id: string; name: string }) => i.id === id);
-          if (!hallada || !/actualizada/.test(hallada.name)) { if (fallos.length < 20) fallos.push(`consistencia: ${id} no se leyó actualizada de vuelta`); muestras.push({ op: "consistencia", ms: 0, ok: false, status: 0 }); }
+          if (!hallada || !/actualizada/.test(hallada.name)) { fallo("consistencia: la iniciativa no se leyó actualizada de vuelta"); muestras.push({ op: "consistencia", ms: 0, ok: false, status: 599 }); }
           else muestras.push({ op: "consistencia", ms: 0, ok: true, status: 200 });
         }
         await sleep(300 + Math.random() * 700);
@@ -136,14 +143,14 @@ async function main() {
   // resumen
   const ops = [...new Set(muestras.map((m) => m.op))];
   const q = (xs: number[], p: number) => { if (!xs.length) return 0; const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
-  console.log("\nOperación".padEnd(34) + "n".padStart(6) + "errores".padStart(9) + "p50 ms".padStart(9) + "p95 ms".padStart(9) + "máx ms".padStart(9));
+  console.log("\nOperación".padEnd(34) + "n".padStart(6) + "servidor".padStart(10) + "red".padStart(6) + "p50 ms".padStart(9) + "p95 ms".padStart(9) + "máx ms".padStart(9));
   for (const op of ops) {
-    const xs = muestras.filter((m) => m.op === op), err = xs.filter((m) => !m.ok).length, ms = xs.filter((m) => m.ok).map((m) => m.ms);
-    console.log(op.padEnd(34) + String(xs.length).padStart(6) + String(err).padStart(9) + (op === "consistencia" ? "—".padStart(9) + "—".padStart(9) + "—".padStart(9) : q(ms, 0.5).toFixed(0).padStart(9) + q(ms, 0.95).toFixed(0).padStart(9) + Math.max(0, ...ms).toFixed(0).padStart(9)));
+    const xs = muestras.filter((m) => m.op === op), srv = xs.filter((m) => !m.ok && m.status !== 0).length, net = xs.filter((m) => m.status === 0).length, ms = xs.filter((m) => m.ok).map((m) => m.ms);
+    console.log(op.padEnd(34) + String(xs.length).padStart(6) + String(srv).padStart(10) + String(net).padStart(6) + (op === "consistencia" ? "—".padStart(9) + "—".padStart(9) + "—".padStart(9) : q(ms, 0.5).toFixed(0).padStart(9) + q(ms, 0.95).toFixed(0).padStart(9) + Math.max(0, ...ms).toFixed(0).padStart(9)));
   }
-  const total = muestras.length, errores = muestras.filter((m) => !m.ok).length;
-  console.log(`\nTotal: ${total} peticiones · ${errores} errores (${((100 * errores) / Math.max(1, total)).toFixed(2)} %)`);
-  if (fallos.length) { console.log("Primeros fallos:"); for (const f of fallos) console.log("  · " + f); }
-  console.log(errores === 0 ? "\nRESULTADO: OK" : errores / total < 0.01 ? "\nRESULTADO: aceptable (menos del 1 % de errores); revisar los fallos" : "\nRESULTADO: CON PROBLEMAS");
+  const total = muestras.length, servidor = muestras.filter((m) => !m.ok && m.status !== 0).length, redErr = muestras.filter((m) => m.status === 0).length;
+  console.log(`\nTotal: ${total} peticiones · ${servidor} errores del servidor (${((100 * servidor) / Math.max(1, total)).toFixed(2)} %) · ${redErr} sin respuesta por la red`);
+  if (fallos.size) { console.log("Fallos (veces · detalle):"); for (const [f, n] of [...fallos].sort((a, b) => b[1] - a[1])) console.log(`  · ${String(n).padStart(4)} × ${f}`); }
+  console.log(servidor === 0 ? "\nRESULTADO DEL SERVIDOR: OK" : servidor / total < 0.01 ? "\nRESULTADO DEL SERVIDOR: aceptable (menos del 1 % de errores); revisar los fallos" : "\nRESULTADO DEL SERVIDOR: CON PROBLEMAS");
 }
 main().catch((e) => { console.error(e.message); process.exit(1); });
