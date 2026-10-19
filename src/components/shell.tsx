@@ -236,7 +236,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   };
 
   // modo convención: solo las cinco secciones (y Administración para quien administra)
-  const NAV_CV = [{ href: "/panel/convencion?t=itinerario", label: "Itinerario", icon: CalendarDays, code: undefined as string | undefined }, ...ACCESS_TABS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }))];
+  const NAV_CV = [{ href: "/panel/convencion?t=itinerario", label: "Itinerario", icon: CalendarDays, code: undefined as string | undefined }, { href: "/panel/convencion?t=guia", label: "Guía del día 2", icon: BookOpen, code: undefined as string | undefined }, ...ACCESS_TABS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }))];
   const baseNav = convencion ? NAV_CV : NAV;
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
     ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2 }]

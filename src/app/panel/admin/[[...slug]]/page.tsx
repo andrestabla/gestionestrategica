@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, Card, CardHeader, Modal } from "@/components/ui";
+import { PageHeader, Card, CardHeader, Modal, StatCard } from "@/components/ui";
 import { AccessChip, useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { CompanyForm, type CompanyLite } from "@/components/company-form";
@@ -21,14 +21,72 @@ import { BrandingTab } from "./branding-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck } from "lucide-react"
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw } from "lucide-react"
+
+/* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
+
+type ActivityEvent = { id: string; at: string; actor: string; email: string; role: string; entity: string; entityId: string; change: string };
+const ROLE_SHORT: Record<string, string> = { ADMIN: "admin", CONSULTOR: "advisor", LIDER: "líder", RESPONSABLE: "miembro", DIRECTIVO: "directivo" };
+
+function ActividadTab() {
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [activeUsers, setActiveUsers] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState("");
+  const [rol, setRol] = useState("");
+  const [vivo, setVivo] = useState(true);
+  const [at, setAt] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const res = await fetch("/api/td/actividad?limit=300");
+    const j = await res.json().catch(() => null);
+    if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return; }
+    setError(null); setEvents(j.events); setActiveUsers(j.activeUsers); setAt(j.now);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!vivo) return; const id = setInterval(() => void load(), 10_000); return () => clearInterval(id); }, [vivo, load]);
+  const q = filtro.trim().toLowerCase();
+  const lista = events.filter((e) => (!rol || e.role === rol) && (!q || `${e.actor} ${e.email} ${e.change} ${e.entityId}`.toLowerCase().includes(q)));
+  const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const ahora = at ? Date.parse(at) : 0;   // la hora la pone el servidor en cada carga (nada impuro en el render)
+  const ultimos10 = events.filter((e) => ahora - Date.parse(e.at) < 10 * 60_000).length;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
+        <StatCard label="Personas activas" value={activeUsers} foot="con alguna acción en los últimos 10 min" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
+        <StatCard label="Acciones · 10 min" value={ultimos10} foot="registradas en la base" />
+        <StatCard label="Acciones cargadas" value={events.length} foot="las 300 más recientes" />
+        <Card className="rise p-4"><div className="label !text-[8.5px]">Actualizado</div><div className="num mt-1 text-[20px] font-extrabold text-ink">{at ? hora(at) : "—"}</div><div className="text-[10.5px] text-faint">{vivo ? "cada 10 segundos" : "en pausa"}</div></Card>
+      </div>
+      <Card className="rise overflow-hidden">
+        <CardHeader title="Actividad en vivo" sub="entradas por QR, OKR y KR registrados, iniciativas, calificaciones, decisiones y cambios de cuentas"
+          right={<span className="flex flex-wrap items-center gap-1.5">
+            <input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar persona, correo o acción…" className="input w-full !py-1.5 !text-[11.5px] sm:w-[220px]" />
+            <select value={rol} onChange={(e) => setRol(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[11.5px]"><option value="">Todos los roles</option>{Object.entries(ROLE_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost !py-1.5 text-[11.5px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
+          </span>} />
+        {error && <p className="px-5 py-3 text-[12px] text-bad">{error}</p>}
+        {lista.length === 0 && !error && <p className="px-5 py-6 text-[12.5px] text-muted">Sin actividad todavía{q || rol ? " con ese filtro" : ""}.</p>}
+        <ul className="divide-y divide-line">
+          {lista.map((e) => (
+            <li key={e.id} className="grid grid-cols-[64px_1fr] gap-x-3 gap-y-0.5 px-4 py-2 text-[12px] sm:grid-cols-[72px_200px_1fr] sm:px-5">
+              <span className="num text-[11px] text-faint">{hora(e.at)}</span>
+              <span className="min-w-0 truncate"><span className="font-semibold text-ink">{e.actor}</span> <span className="chip !py-0 text-[9px]">{ROLE_SHORT[e.role] ?? e.role}</span><span className="num block truncate text-[10px] text-faint sm:hidden">{e.email}</span></span>
+              <span className="col-start-2 min-w-0 text-ink-soft sm:col-start-3"><span className="num mr-1 text-[10.5px] text-faint">{e.entityId}</span>{e.change}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "empresas" | "usuarios" | "catalogo" | "permisos" | "integraciones" | "branding";
+type Tab = "empresas" | "usuarios" | "actividad" | "catalogo" | "permisos" | "integraciones" | "branding";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
+  { id: "actividad", label: "Actividad en vivo", icon: Activity },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "permisos", label: "Permisos de acceso", icon: KeyRound },
   { id: "integraciones", label: "Integraciones", icon: Plug },
@@ -46,7 +104,7 @@ export default function AdminPage() {
 
   // el consultor administra usuarios, roles y el catálogo (también el líder); el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "usuarios" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
+    t.id === "usuarios" || t.id === "actividad" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
@@ -81,6 +139,7 @@ export default function AdminPage() {
 
       {tab === "empresas" && <EmpresasTab />}
       {tab === "usuarios" && <UsersTab canCompanies={canCompanies} />}
+      {tab === "actividad" && <ActividadTab />}
       {tab === "catalogo" && <CatalogoTab />}
       {tab === "permisos" && <PermisosTab />}
       {tab === "integraciones" && <IntegracionesTab />}
@@ -232,11 +291,11 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   }, [canCompanies]);
   useEffect(() => { refetch(); }, [refetch]);
 
-  const mutate = async (method: "POST" | "PATCH", body: Record<string, unknown>) => {
+  const mutate = async (method: "POST" | "PATCH" | "DELETE", body: Record<string, unknown>) => {
     setSaving(true); setError(null);
-    const res = await fetch("/api/td/users", {
+    const res = await fetch(method === "DELETE" ? `/api/td/users?email=${encodeURIComponent(String(body.email))}` : "/api/td/users", {
       method, headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      ...(method === "DELETE" ? {} : { body: JSON.stringify(body) }),
     });
     const ok = res.ok;
     if (!ok) setError((await res.json().catch(() => null))?.error ?? `Error ${res.status}`);
@@ -285,7 +344,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
-            sub="roles válidos solo en esta empresa · los usuarios iniciales no se eliminan: se desactivan"
+            sub="roles válidos solo en esta empresa · desactivar conserva la cuenta; eliminar la borra (no la propia)"
             right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary !py-1.5 text-[11.5px]"><UserPlus size={12} /> Nueva cuenta</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-[12.5px]">
@@ -344,6 +403,12 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                         className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">
                         {u.active ? <PowerOff size={14} /> : <Power size={14} />}
                       </button>
+                      <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
+                        onClick={() => { if (window.confirm(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
+                        title="Eliminar la cuenta"
+                        className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40">
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -360,7 +425,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
 
       <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
         <ShieldCheck size={12} className="mt-0.5 shrink-0" />
-        Reglas del servidor: no puedes desactivar tu propia cuenta y debe quedar al menos un
+        Reglas del servidor: no puedes desactivar ni eliminar tu propia cuenta y debe quedar al menos un
         administrador activo. Contraseñas: al crear la cuenta se fija manual o automática y puede enviarse por correo;
         la llave de cada fila envía un enlace de restablecimiento de un solo uso (vale 60 minutos).
       </p>

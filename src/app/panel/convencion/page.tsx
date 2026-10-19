@@ -29,9 +29,10 @@ import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } fro
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
 
-type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
+type Tab = "itinerario" | "guia" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
   { id: "itinerario", label: "Itinerario", icon: CalendarDays, agenda: "Ruta de los dos días: metodología, materiales, plataforma y comentarios del equipo organizador" },
+  { id: "guia", label: "Guía del día 2", icon: BookOpen, agenda: "Qué hace cada tribu en la mesa y en la plataforma, etapa por etapa" },
   { id: "direccion", label: "Dirección 3x3", icon: Target, agenda: "Día 1 · mesa redonda y talleres 2027 / 2030 / 2033" },
   { id: "okr", label: "OKR", icon: Gauge, agenda: "Día 2 · laboratorio y validación cruzada de OKR" },
   { id: "iniciativas", label: "Iniciativas → KR", icon: Rocket, agenda: "Día 2 · iniciativas críticas para mover resultados" },
@@ -120,6 +121,7 @@ export default function ConvencionPage() {
       )}
 
       {tab === "itinerario" && <ItinerarioTab />}
+      {tab === "guia" && <GuiaTab me={me} />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
@@ -1054,10 +1056,11 @@ function Field({ label, help, children }: { label: string; help?: string; childr
 /** Botón «?» junto al rótulo: abre una nota breve de cómo se construye el campo (método 4Shine). */
 function FieldHelp({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
+  const [derecha, setDerecha] = useState(false);   // cerca del borde derecho (celular), la nota se abre hacia la izquierda
   return (
     <span className="relative ml-1 inline-flex">
-      <button type="button" onClick={(e) => { e.preventDefault(); setOpen((v) => !v); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label="Cómo se construye este campo" title="Cómo se construye este campo" className={`inline-flex h-4 w-4 items-center justify-center rounded-full ${open ? "bg-cyan-deep text-white" : "text-faint hover:bg-surface-2 hover:text-ink"}`}><HelpCircle size={11} /></button>
-      {open && <span className="absolute left-0 top-5 z-30 block w-64 rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-normal normal-case tracking-normal leading-snug text-ink shadow-lg sm:w-72">{text}</span>}
+      <button type="button" onClick={(e) => { e.preventDefault(); setDerecha(e.currentTarget.getBoundingClientRect().left + 270 > window.innerWidth); setOpen((v) => !v); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label="Cómo se construye este campo" title="Cómo se construye este campo" className={`inline-flex h-4 w-4 items-center justify-center rounded-full ${open ? "bg-cyan-deep text-white" : "text-faint hover:bg-surface-2 hover:text-ink"}`}><HelpCircle size={11} /></button>
+      {open && <span className={`absolute top-5 z-30 block w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-normal normal-case tracking-normal leading-snug text-ink shadow-lg sm:w-72 ${derecha ? "right-0" : "left-0"}`}>{text}</span>}
     </span>
   );
 }
@@ -1119,6 +1122,14 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
                   </div>
                   <p className="text-[11.5px] leading-snug text-muted">{def.what}</p>
                   <div className="num break-all rounded-lg bg-surface-2 px-3 py-2 text-[11px] text-ink">{row.url}</div>
+                  <div className="rounded-lg border border-line px-3 py-2">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-faint">Desde un computador, sin escanear</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                      <a href={shortUrl(row.url)} target="_blank" rel="noreferrer" className="num break-all text-[12.5px] font-bold text-cyan-deep hover:underline">{shortUrl(row.url)}</a>
+                      <button type="button" onClick={async () => { await navigator.clipboard.writeText(shortUrl(row.url)); setCopied("corta"); setTimeout(() => setCopied(null), 1500); }} className="btn-ghost !py-1 text-[11px]">{copied === "corta" ? <CheckCircle2 size={11} /> : <Copy size={11} />} Copiar</button>
+                    </div>
+                    <p className="mt-1 text-[10.5px] leading-snug text-faint">Lleva siempre al enlace vigente del QR, aunque se regenere. Se puede escribir a mano o proyectar junto al QR.</p>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary !py-1.5 text-[11.5px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
                     <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost !py-1.5 text-[11.5px]"><Download size={12} /> SVG</a>
@@ -1132,6 +1143,75 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
         </div>
       )}
     </Modal>
+  );
+}
+
+/** URL corta de la convención: «/<empresa>/acceder» redirige al enlace vigente del QR. */
+const shortUrl = (accessUrl: string) => accessUrl.replace(/\/acceso\/[^/?#]+.*$/, "/acceder");
+
+/* ═══ Guía del día 2: qué hace cada tribu en la mesa y en la plataforma ═══ */
+
+const ETAPAS: { n: number; hora: string; titulo: string; mesa: string[]; plataforma: string[]; entrega: string }[] = [
+  { n: 1, hora: "8:05", titulo: "Reconectar y reconfigurar", mesa: ["Cada tribu se sienta en su mesa por palanca, con su líder y su directivo acompañante.", "Se recuperan las conclusiones del día 1, el propósito y las reglas; la moderadora explica el marco de OKR (la palanca como objetivo)."], plataforma: ["Entrar por el QR único o por la URL corta: nombre, correo, tribu y rol.", "Dirección 3x3 es solo de consulta: los objetivos estratégicos no se modifican."], entrega: "Equipos conformados, foco común y reglas claras." },
+  { n: 2, hora: "8:50", titulo: "Asumir la palanca y su objetivo", mesa: ["La tribu recibe su palanca con indicador, meta y objetivo rector.", "Ese objetivo rector se copia tal cual en el F3: es el objetivo del único OKR de la tribu."], plataforma: ["En OKR ya está registrado el objetivo rector de cada palanca; no se reescribe."], entrega: "Un objetivo de OKR por tribu, derivado de su palanca." },
+  { n: 3, hora: "9:00", titulo: "Definir resultados clave", mesa: ["De 2 a 4 KR (máximo 5) en el F3: indicador, línea base, meta, unidad y dueño.", "Se depuran los tácticos, operativos o escritos como actividades.", "Al cierre: el líder registra, todos validan en su celular, el directivo acompañante complementa y se intercambia el F3 con la tribu par (Market Share con Margen, Fidelización con Madurez)."], plataforma: ["Solo el líder registra en OKR: «Sugerir KR» propone KR con fuentes; «+ Resultado clave» para escribirlos; cada campo tiene su ayuda «?».", "«Validar KR» revisa el conjunto con las reglas del método; un KR solo se registra completo.", "Los miembros ven y validan desde su celular."], entrega: "Un OKR completo por tribu, con KR medibles y suficientes." },
+  { n: 4, hora: "10:35", titulo: "Vincular iniciativas", mesa: ["Por cada KR, las iniciativas existentes o nuevas que lo mueven; nueva o de continuidad; dependencias, transversalidad y áreas; trimestre de inicio propuesto.", "Un KR sin iniciativa es una alerta: se crea la que lo mueve o se acepta que no tiene cómo cumplirse."], plataforma: ["Desde las 11:20, el líder registra en Iniciativas → KR: crear nuevas, vincular existentes o dejar fuera las que no mueven ningún KR.", "Vinculada = habilitada para calificar."], entrega: "Portafolio inicial causalmente vinculado a los KR." },
+  { n: 5, hora: "13:35", titulo: "Clasificar, priorizar y proponer inicio", mesa: ["Calibración con una iniciativa de ejemplo y explicación de la puntuación: cuatro criterios de 1 a 4; estratégica solo con 3 o 4 en D, E y M.", "Las tácticas quedan registradas con el área responsable.", "La tribu revisa su resultado y su portafolio con el directivo acompañante y prepara la socialización."], plataforma: ["El líder abre la calificación en Priorización en vivo; cada miembro califica una sola vez las iniciativas de su tribu.", "El líder cierra, consolida el ranking, propone el trimestre de inicio (T1 a T4 o después) y guarda.", "Portafolio muestra el ranking y el trimestre propuesto por palanca, en tiempo real."], entrega: "Ranking de iniciativas estratégicas y trimestre propuesto por tribu." },
+  { n: 6, hora: "15:35", titulo: "Socializar y desafiar", mesa: ["Quince minutos por tribu: su único OKR, sus KR, sus iniciativas priorizadas y el trimestre propuesto.", "Los directivos desafían supuestos, detectan dependencias entre tribus y plantean ajustes; el líder recalibra si es el caso."], plataforma: ["Se presenta desde la plataforma: OKR y Portafolio filtrados por la tribu que expone."], entrega: "Propuestas contrastadas con la visión corporativa." },
+  { n: 7, hora: "16:35", titulo: "Ratificar, secuenciar y comprometer", mesa: ["Con el portafolio completo visible, los directivos ratifican o ajustan el OKR de cada tribu, la prioridad y el trimestre definitivo de inicio (T1, T2, T3, T4, después o se descarta).", "La decisión se conecta con los primeros 90 días y el mecanismo de seguimiento."], plataforma: ["Gerencia y advisor registran la decisión y el trimestre definitivo en la ficha de cada iniciativa; el CSV del portafolio acompaña las conclusiones."], entrega: "Cuatro OKR ratificados, portafolio secuenciado y primeros 90 días identificados." },
+];
+
+function GuiaTab({ me }: { me: { role: string; responsibleId?: string; qr?: true } }) {
+  const rol = me.role === "LIDER" && me.responsibleId ? "lider" : me.role === "RESPONSABLE" ? "miembro" : me.role === "DIRECTIVO" ? "directivo" : "equipo";
+  const ROLES: { id: string; titulo: string; hace: string[] }[] = [
+    { id: "miembro", titulo: "Miembro de tribu", hace: ["Trabaja en el F3 con su tribu: resultados clave e iniciativas.", "Ve en su celular lo que el líder registra y lo valida antes de seguir.", "En Priorización en vivo califica, una sola vez, las iniciativas de su tribu cuando el líder abre la calificación.", "Ve el itinerario, OKR, Iniciativas → KR y Portafolio; no edita."] },
+    { id: "lider", titulo: "Líder de tribu", hace: ["Conduce la mesa y decide los empates; es el dueño del objetivo.", "Es quien registra en la plataforma: los KR de su OKR, las iniciativas y su vínculo con cada KR.", "Abre y cierra la calificación de su tribu, consolida el ranking, propone el trimestre de inicio y guarda.", "Solo puede editar lo de su tribu; presenta en la socialización."] },
+    { id: "directivo", titulo: "Directivo", hace: ["Acompaña una mesa: escucha las primeras definiciones y complementa; no decide las metas por la tribu.", "Llega a la socialización con preguntas preparadas sobre OKR e iniciativas.", "En la etapa 7 ratifica el OKR de cada tribu, la prioridad y el trimestre definitivo.", "Ve toda la convención; crea iniciativas si hace falta."] },
+    { id: "equipo", titulo: "Equipo 4Shine y gerencia", hace: ["Resuelve dudas del marco, no decide metas; vigila la regla de un solo OKR por tribu y de 2 a 4 KR.", "Proyecta OKR, Priorización en vivo y Portafolio en los momentos indicados.", "Registra decisiones y trimestres definitivos en la etapa 7."] },
+  ];
+  return (
+    <div className="space-y-5">
+      <Card className="rise p-5 sm:p-6">
+        <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Viernes 23 · de los objetivos a OKR y prioridades ejecutables</div>
+        <h2 className="mt-1 text-[18px] font-extrabold leading-tight text-ink sm:text-[22px]">Siete etapas: la palanca como objetivo del único OKR de cada tribu</h2>
+        <p className="mt-2 text-[13px] leading-relaxed text-muted">Cada tribu trabaja en papel (el formato F3) y <b className="text-ink">solo el líder registra en la plataforma</b>; todos los miembros ven y validan desde su celular. Dirección 3x3 es fuente de consulta: los objetivos estratégicos no se modifican. Un OKR por tribu, con el objetivo rector de la palanca y de 2 a 4 resultados clave (máximo 5). Todas las iniciativas se desarrollan en 2027: no hay horizontes, hay trimestre de inicio.</p>
+        <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+          {["Un solo OKR por tribu", "2 a 4 KR, máximo 5", "Cada KR con al menos una iniciativa", "Estratégica solo con 3 o 4 en D, E y M", "Trimestre de inicio T1 a T4 o después", "El líder registra, la tribu valida"].map((x) => <span key={x} className="chip chip-cyan !py-0.5">{x}</span>)}
+        </div>
+      </Card>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {ROLES.map((r) => (
+          <Card key={r.id} className={`rise p-4 sm:p-5 ${r.id === rol ? "ring-2 ring-cyan-deep/40" : ""}`}>
+            <div className="flex items-center gap-2"><Users size={14} className="text-cyan-deep" /><span className="text-[13.5px] font-extrabold text-ink">{r.titulo}</span>{r.id === rol && <span className="chip chip-cyan !py-0 text-[9.5px]">tu rol</span>}</div>
+            <ul className="mt-2 space-y-1 text-[12px] leading-snug text-ink-soft">{r.hace.map((h, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{h}</span></li>)}</ul>
+          </Card>
+        ))}
+      </div>
+      <div className="space-y-3">
+        {ETAPAS.map((e) => (
+          <Card key={e.n} className="rise overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2/60 px-4 py-2.5 sm:px-5">
+              <span className="num flex h-7 w-7 items-center justify-center rounded-full bg-cyan-deep text-[12px] font-extrabold text-white">{e.n}</span>
+              <span className="text-[14px] font-extrabold text-ink">{e.titulo}</span>
+              <span className="num ml-auto text-[11px] text-faint">{e.hora}</span>
+            </div>
+            <div className="grid gap-3 px-4 py-3 sm:grid-cols-2 sm:px-5">
+              <div><div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">En la mesa (F3)</div><ul className="mt-1 space-y-1 text-[12px] leading-snug text-ink-soft">{e.mesa.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}</ul></div>
+              <div><div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">En la plataforma</div><ul className="mt-1 space-y-1 text-[12px] leading-snug text-ink-soft">{e.plataforma.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}</ul></div>
+            </div>
+            <div className="border-t border-line px-4 py-2 text-[11.5px] text-muted sm:px-5"><b className="text-ink">Entregable:</b> {e.entrega}</div>
+          </Card>
+        ))}
+      </div>
+      <Card className="rise p-4 sm:p-5">
+        <div className="text-[13.5px] font-extrabold text-ink">Reglas de calidad de un resultado clave</div>
+        <ul className="mt-2 grid gap-1 text-[12px] leading-snug text-ink-soft sm:grid-cols-2">
+          {["Mide un resultado, no una actividad: si empieza por implementar, diseñar o capacitar, es una iniciativa.", "Tiene indicador con fórmula y fuente: otra persona podría calcularlo igual.", "Línea base real con fecha; si no se conoce, se nombra quién la consigue y cuándo (no se inventa).", "Meta a 2027-T4 ambiciosa pero alcanzable, distinta de la línea base y coherente con el sentido (sube o baja).", "Un dueño con autoridad y un plazo.", "Al menos una iniciativa que lo mueva."].map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}
+        </ul>
+        <div className="mt-3 text-[13.5px] font-extrabold text-ink">Cómo se califica una iniciativa</div>
+        <p className="mt-1 text-[12px] leading-snug text-ink-soft">Cuatro criterios de 1 (débil) a 4 (decisivo): <b>D</b> Dirección (40 %), <b>E</b> Ejecución (30 %), <b>M</b> Multiplicación (20 %) y <b>L</b> Liderazgo (10 %); los criterios de Cresio van dentro. Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Es estratégica solo con 3 o 4 en D, E y M; si alguno queda en 1 o 2 es táctica y se transfiere al área. El puntaje ordena; no aprueba: el directorio ratifica la decisión y el trimestre.</p>
+      </Card>
+    </div>
   );
 }
 

@@ -88,6 +88,7 @@ model Company {
   integrations    Integration[]
   branding        Branding?
   notifReads      NotifRead[]
+  auditEvents     AuditEvent[]
   captures        PracticeCapture[]
   evidences       Evidence[]
   testNotes       TestNote[]
@@ -495,4 +496,21 @@ model SuccessFactor {
   history      Json?
   note         String?
   reviewedAt   DateTime   @default(now())
+}
+
+// Registro de actividad de la empresa (quién hizo qué y cuándo): lo que ve Administración → Actividad en vivo.
+// Se escribe desde cualquier instancia; se lee desde la base, no desde la memoria de una instancia.
+model AuditEvent {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  at        DateTime @default(now())
+  actor     String
+  email     String   @default("")
+  role      String
+  entity    String
+  entityId  String
+  change    String
+
+  @@index([companyId, at])
 }

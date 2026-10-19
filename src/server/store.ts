@@ -39,6 +39,7 @@ export type AuditEntry = {
   id: number;
   at: string;               // ISO
   actor: string;            // nombre del usuario
+  email?: string;           // correo del usuario (para seguirlo en la actividad en vivo)
   role: string;
   entity: "task" | "evidence" | "branding";
   entityId: string;
@@ -798,6 +799,13 @@ async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   } catch { /* sin ámbito de petición: la promesa sigue su curso */ }
   await run;
 }
+/** Escritura que no cambia los datos de la empresa (auditoría): no sube la versión ni cuenta como error de la petición. */
+async function persistQuiet(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
+  if (!hasDb()) return;
+  const run = (async () => { try { await fn(await prisma()); } catch (e) { console.error(`[4shine] escritura (${what}) falló:`, (e as Error).message); } })();
+  try { const { after } = await serverImport("next/server") as { after?: (task: Promise<unknown>) => void }; after?.(run); } catch { /* sin ámbito de petición */ }
+  await run;
+}
 /** Sube la versión de datos de la empresa en la base y la refleja en memoria. Si otra instancia
     escribió entre medias (la versión devuelta no es la esperada), la memoria se marca desconocida
     para que el siguiente chequeo recargue. */
@@ -894,15 +902,27 @@ export type MutationResult =
   | { ok: false; status: number; error: string };
 
 function audit(actor: SessionUser, entity: "task" | "evidence" | "branding", entityId: string, change: string) {
-  auditLog().unshift({
-    id: auditLog().length + 1,
-    at: new Date().toISOString(),
-    actor: actor.name,
-    role: actor.role,
-    entity,
-    entityId,
-    change,
-  });
+  const at = new Date().toISOString();
+  auditLog().unshift({ id: auditLog().length + 1, at, actor: actor.name, email: actor.email, role: actor.role, entity, entityId, change });
+  // también en la base, para la actividad en vivo de Administración (todas las instancias la ven); sin subir la versión de datos
+  const st = g.tenants.get(currentTenant());
+  const companyId = st?.dbId ?? g.companies.get(currentTenant())?.dbId;
+  if (hasDb() && companyId) void persistQuiet("auditoría", (db) => db.auditEvent.create({ data: { companyId, at: new Date(at), actor: actor.name, email: actor.email, role: actor.role, entity, entityId, change: change.slice(0, 500) } }));
+}
+
+export type ActivityEvent = { id: string; at: string; actor: string; email: string; role: string; entity: string; entityId: string; change: string };
+/** Actividad reciente de la empresa, leída de la base (lo que hicieron todos, en cualquier instancia). */
+export async function activityFeed(opts: { since?: string; limit?: number } = {}): Promise<{ events: ActivityEvent[]; activeUsers: number }> {
+  const limit = Math.min(500, Math.max(1, opts.limit ?? 200));
+  const since = opts.since && !Number.isNaN(Date.parse(opts.since)) ? new Date(opts.since) : undefined;
+  if (!hasDb()) {
+    const events = auditLog().filter((a) => !since || new Date(a.at) > since).slice(0, limit).map((a) => ({ id: String(a.id), at: a.at, actor: a.actor, email: a.email ?? "", role: a.role, entity: a.entity, entityId: a.entityId, change: a.change }));
+    return { events, activeUsers: new Set(auditLog().filter((a) => Date.now() - Date.parse(a.at) < 10 * 60_000).map((a) => a.email ?? a.actor)).size };
+  }
+  const db = await prisma(); const companyId = cid();
+  const rows = await db.auditEvent.findMany({ where: { companyId, ...(since ? { at: { gt: since } } : {}) }, orderBy: { at: "desc" }, take: limit }) as { id: string; at: Date; actor: string; email: string; role: string; entity: string; entityId: string; change: string }[];
+  const recent = await db.auditEvent.findMany({ where: { companyId, at: { gt: new Date(Date.now() - 10 * 60_000) } }, select: { email: true, actor: true }, distinct: ["email"] }) as { email: string; actor: string }[];
+  return { events: rows.map((r) => ({ id: r.id, at: r.at.toISOString(), actor: r.actor, email: r.email, role: r.role, entity: r.entity, entityId: r.entityId, change: r.change })), activeUsers: recent.length };
 }
 
 /* ═══ Mutación: tarea ═══ */
@@ -2788,6 +2808,20 @@ export async function setUserPassword(
     create: { email: target.email.toLowerCase(), name: target.name, role: target.role, line: target.line ?? null, passwordHash: hash, companyId: target.role === "ADMIN" ? null : cid() },
   });
   audit(actor, "task", target.email, "contraseña fijada");
+  return { ok: true };
+}
+
+/** Elimina una cuenta de la empresa (no la propia). Sus calificaciones y su rastro en la actividad se conservan. */
+export function removeUser(actor: SessionUser, email: string): { ok: true } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
+  const key = email.trim().toLowerCase();
+  const u = users().find((x) => x.email.toLowerCase() === key);
+  if (!u) return { ok: false, status: 404, error: "El usuario no existe." };
+  if (key === actor.email.toLowerCase()) return { ok: false, status: 422, error: "No puedes eliminar tu propia cuenta." };
+  const i = users().indexOf(u); users().splice(i, 1);
+  notifRead().delete(u.email);
+  audit(actor, "task", u.email, `usuario eliminado (${u.name}, ${u.role})`);
+  void persist("usuario", async (db) => { await db.user.deleteMany({ where: { email: u.email, companyId: cid() } }); });
   return { ok: true };
 }
 

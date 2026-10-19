@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { randomBytes } from "crypto";
-import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword } from "@/server/store";
+import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword, removeUser, flushOrError } from "@/server/store";
 import { can } from "@/lib/permissions";
 import { passwordOk } from "@/lib/recuperacion";
 import { welcomeMail, passwordFromBytes } from "@/lib/correos";
 import { sendMail, mailConfigured } from "@/server/mail";
 import { originOf } from "@/app/api/td/convencion/acceso/route";
 
-// GET/POST/PATCH /api/td/users — administración de usuarios (manage_users).
+// GET/POST/PATCH/DELETE /api/td/users — administración de usuarios (manage_users).
 export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   if (!can(user, "manage_users")) {
     return NextResponse.json({ error: "Solo el equipo consultor administra usuarios." }, { status: 403 });
@@ -54,4 +54,13 @@ export const PATCH = withTenant(async (req: Request, _ctx: unknown, user) => {
   const result = updateUser(user, body.email, body);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ user: result.user });
+});
+
+export const DELETE = withTenant(async (req: Request, _ctx: unknown, user) => {
+  const email = new URL(req.url).searchParams.get("email") ?? "";
+  if (!email) return NextResponse.json({ error: "Falta el correo." }, { status: 400 });
+  const r = removeUser(user, email);
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const guardado = await flushOrError(); if (guardado) return NextResponse.json({ error: guardado }, { status: 500 });
+  return NextResponse.json({ ok: true });
 });
