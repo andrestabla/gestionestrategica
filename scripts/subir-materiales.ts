@@ -47,8 +47,8 @@ const VINCULOS: Record<string, string[]> = {
   "d1-06": ["formato-1-panelista"], "d1-07": ["formato-1-panelista"], "d1-08": ["formato-1-panelista"], "d1-11": ["formato-1-panelista"], "d1-12": ["formato-1-panelista"], "d1-22": ["formato-5-preguntas", "deck-02-mesa-redonda"], "d1-23": ["formato-5-preguntas", "deck-02-mesa-redonda"],   "d1-13": ["formato-2-lienzo", "deck-02-mesa-redonda"], "d1-15": ["deck-02-mesa-redonda", "formato-1-panelista"], "d1-16": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
   "d1-17": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"], "d1-18": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"], "d1-19": ["deck-02-mesa-redonda", "formato-1-panelista", "formato-2-lienzo"],
   "d1-20": ["deck-02-mesa-redonda", "formato-2-lienzo"], "d1-21": ["formato-2-lienzo"], "d1-24": ["formato-2-lienzo"], "d1-26": ["formato-2-lienzo"],
-  "d2-01": ["hoja-qr-secciones", "formato-3-tribu"], "d2-02": ["deck-03-okr"], "d2-03": ["deck-03-okr"], "d2-04": ["deck-03-okr", "formato-3-tribu"], "d2-05": ["formato-3-tribu"], "d2-06": ["formato-3-tribu"], "d2-07": ["formato-3-tribu"],
-  "d2-09": ["formato-3-tribu"], "d2-10": ["deck-03-okr"], "d2-11": ["deck-04-iniciativas", "formato-3-tribu"],
+  "d2-01": ["hoja-qr-secciones", "formato-3-tribu"], "d2-02": ["deck-03-okr"], "d2-03": ["deck-03-okr"], "d2-04": ["deck-03-okr", "formato-3-tribu"], "d2-05": ["formato-3-tribu"], "d2-07": ["formato-3-tribu", "deck-03-okr"],
+  "d2-09": ["formato-3-tribu", "deck-04-iniciativas"], "d2-11": ["deck-04-iniciativas", "formato-3-tribu"],
   "d2-14": ["deck-04-iniciativas"], "d2-15": ["formato-3-tribu"], "d2-16": ["deck-04-iniciativas"], "d2-17": ["deck-04-iniciativas"],
   "d2-19": ["formato-3-tribu"], "d2-22": ["deck-05-cierre"],
 };
