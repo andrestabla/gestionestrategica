@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
-import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, catalog, flushOrError } from "@/server/store";
+import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz 4Shine, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
@@ -22,12 +22,19 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
 // calificar, { id, decision, rationale } para decidir el tiempo, o
 // { id, horizon } para mover la iniciativa al horizonte (p. ej. el sugerido), o
 // { tribe, session: "abrir" | "cerrar" | "guardar" | "reabrir", order? } para que el
-// líder maneje la calificación de su tribu en la convención.
+// líder maneje la calificación de su tribu en la convención, o { tribe, session: "reiniciar" }
+// para que el advisor o el admin borren las calificaciones de la tribu y dejen la sesión sin abrir.
 // El store exige permisos (403) y las reglas de la matriz (422) con explicación.
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   // cada registro se confirma cuando la base ya lo tiene: así lo ven las demás instancias en su siguiente petición
   const guardar = async () => { const e = await flushOrError(); return e ? NextResponse.json({ error: e }, { status: 500 }) : null; };
+  if (body?.session === "reiniciar") {
+    const r = resetPrioSession(user, body.tribe);
+    if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+    const bad = await guardar(); if (bad) return bad;
+    return NextResponse.json({ removed: r.removed, sessions: catalog().company.prioSessions ?? {} });
+  }
   if (body?.session) {
     const r = setPrioSession(user, body.tribe, body.session, body.order);
     if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

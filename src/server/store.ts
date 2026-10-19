@@ -1949,6 +1949,39 @@ export function setPrioSession(user: SessionUser, tribeId: unknown, action: Prio
   return { ok: true, session: next };
 }
 
+/** Reinicia la calificación de una tribu (advisor o admin): borra las calificaciones de sus iniciativas y deja la sesión
+    sin abrir, como al inicio. Para repetir una calibración o limpiar pruebas antes de la sesión real. */
+export function resetPrioSession(user: SessionUser, tribeId: unknown): { ok: true; removed: number } | { ok: false; status: number; error: string } {
+  const c = cat();
+  const tribe = str(tribeId, 20);
+  if (!c.responsibles.some((r) => r.id === tribe)) return { ok: false, status: 422, error: "La tribu no existe." };
+  if (!(user.role === "CONSULTOR" || user.role === "ADMIN")) return { ok: false, status: 403, error: "Solo el advisor o el admin reinician la calificación de una tribu." };
+  const ids = new Set(c.initiatives.filter((i) => i.ownerId === tribe).map((i) => i.id));
+  const keys = [...evals().keys()].filter((k) => ids.has(k.split("|")[0]));
+  for (const k of keys) evals().delete(k);
+  const sessions = { ...(c.company.prioSessions ?? {}) };
+  delete sessions[tribe];
+  c.company.prioSessions = sessions;
+  const rec = g.companies.get(c.company.slug);
+  if (rec) {
+    rec.prioSessions = sessions;
+    if (hasDb() && rec.dbId) {
+      const dbId = rec.dbId;
+      void persist("reinicio de calificación", async (db) => {
+        if (keys.length) await db.initiativeEvaluation.deleteMany({ where: { companyId: dbId, id: { in: keys } } });
+        if (/^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "")) {
+          // se quita solo la clave de esta tribu, fusionando en la base como en setPrioSession
+          await db.$executeRaw`UPDATE "Company" SET "prioSessions" = (CASE WHEN jsonb_typeof("prioSessions") = 'object' THEN "prioSessions" ELSE '{}'::jsonb END) - ${tribe}::text WHERE "id" = ${dbId}`;
+        } else {
+          await db.company.update({ where: { id: dbId }, data: { prioSessions: sessions as never } });
+        }
+      });
+    }
+  }
+  audit(user, "task", `tribu:${tribe}`, `priorización en vivo: calificación reiniciada (${keys.length} calificaciones borradas)`);
+  return { ok: true, removed: keys.length };
+}
+
 export function decideInitiative(
   user: SessionUser,
   iniId: string,

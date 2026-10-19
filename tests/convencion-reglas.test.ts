@@ -37,7 +37,7 @@ test("convención: el líder no toca Dirección 3x3 pero sí escribe los OKR de 
 });
 
 test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas de su tribu; no decide ni califica otras tribus", async () => {
-  const { upsertKpi, removeKpi, upsertInitiative, removeInitiative, evaluateInitiative, decideInitiative, setPrioSession } = await import("../src/server/store");
+  const { upsertKpi, removeKpi, upsertInitiative, removeInitiative, evaluateInitiative, decideInitiative, setPrioSession, resetPrioSession, getEvaluations } = await import("../src/server/store");
   const otro: SessionUser = { email: "o@a.co", name: "Líder dos", role: "LIDER", responsibleId: "R02" };
   const gerencia: SessionUser = { email: "g@a.co", name: "Gerencia", role: "LIDER" };
   resetStore();
@@ -74,6 +74,13 @@ test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas
     assert.equal((setPrioSession(lider, "R02", "abrir") as { status?: number }).status, 403);
     assert.ok(setPrioSession(lider, "R01", "abrir").ok);
     const ev = { scores: { D: 3, E: 3, M: 3, L: 3 }, type: Object.fromEntries(typeRuleOf(catalog().company).criteria.map((c) => [c.key, "ESTRATEGICO"])) };
+    assert.ok(evaluateInitiative(lider, (mia as { id: string }).id, ev).ok);
+    // reiniciar la calificación de una tribu: solo advisor o admin; borra sus calificaciones y deja la sesión sin abrir
+    assert.equal((resetPrioSession(lider, "R01") as { status?: number }).status, 403);
+    const reinicio = resetPrioSession(advisor, "R01"); assert.ok(reinicio.ok); assert.equal((reinicio as { removed: number }).removed, 1);
+    assert.equal(getEvaluations((mia as { id: string }).id).length, 0);
+    assert.equal((evaluateInitiative(lider, (mia as { id: string }).id, ev) as { status?: number }).status, 403, "sin sesión abierta no se califica");
+    assert.ok(setPrioSession(lider, "R01", "abrir").ok, "la sesión vuelve a abrirse desde cero");
     assert.ok(evaluateInitiative(lider, (mia as { id: string }).id, ev).ok);
     assert.ok(kr(advisor, "MAR-02", "MAR-O1").ok);
     // solo se vincula a un resultado clave completo: con cifra en el nombre, base, meta, dueño, plazo y definición

@@ -14,6 +14,7 @@
 //      los editores (líderes de tribu por QR) crean y actualizan iniciativas y resultados clave, abren la calificación
 //      de su tribu, califican y comprueban que lo guardado se lee de vuelta (consistencia entre instancias).
 //   4. Borra la empresa desechable con sus cuentas y resume latencias (p50, p95, máximo) y errores por operación.
+export {};
 const arg = (k: string, d?: string) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 // --origen admite varias URL separadas por coma: cada petición va a una al azar (simula varias instancias)
 const ORIGENES = (arg("--origen") ?? "http://localhost:3000").split(",").map((s) => s.trim().replace(/\/$/, "")).filter(Boolean);
