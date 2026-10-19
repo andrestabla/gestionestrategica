@@ -169,15 +169,25 @@ export async function writeCatalog(db: Db, companyId: string, cat: Catalog) {
 /** Reconstruye el catálogo de una empresa desde la base. */
 export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string }): Promise<Catalog> {
   const companyId = company.dbId;
-  const row = await db.company.findUnique({ where: { id: companyId } });
-  const responsibles: Responsible[] = (await db.responsible.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
+  // todas las consultas a la vez: una ida y vuelta a la base en lugar de nueve en serie (cuenta cuando la base está lejos)
+  const [row, respRows, objRows, kpiRows, iniRows, personRows, taskRows, aRows, evRows] = await Promise.all([
+    db.company.findUnique({ where: { id: companyId } }),
+    db.responsible.findMany({ where: { companyId }, orderBy: { id: "asc" } }),
+    db.cmiObjective.findMany({ where: { companyId }, orderBy: { id: "asc" } }),
+    db.kpi.findMany({ where: { companyId }, include: { values: true }, orderBy: { code: "asc" } }),
+    db.initiative.findMany({ where: { companyId }, include: { successFactors: true }, orderBy: { code: "asc" } }),
+    db.person.findMany({ where: { companyId }, orderBy: { id: "asc" } }),
+    db.projectTask.findMany({ where: { companyId, archived: false }, orderBy: { id: "asc" } }),
+    db.assessment.findMany({ where: { companyId }, include: { scores: true }, orderBy: { period: "asc" } }),
+    db.evidence.findMany({ where: { companyId }, orderBy: { id: "asc" } }),
+  ]);
+  const responsibles: Responsible[] = respRows
     .map((r: Responsible) => ({ id: r.id, cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }));
-  const objectives: CmiObjective[] = (await db.cmiObjective.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
+  const objectives: CmiObjective[] = objRows
     .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null; lever: string | null; horizon: string | null; pillar: string | null; desc: string | null; indicator: string | null; okr?: boolean | null; parent?: string | null }) => ({
       id: o.id, perspective: o.perspective, name: o.name, kpis: (o.kpis as string[]) ?? [], line: o.line ?? undefined,
       ...(o.lever ? { lever: o.lever } : {}), ...(o.horizon ? { horizon: o.horizon } : {}), ...(o.pillar ? { pillar: o.pillar } : {}), ...(o.desc ? { desc: o.desc } : {}), ...(o.indicator ? { indicator: o.indicator } : {}), ...(o.okr ? { okr: true } : {}), ...(o.parent ? { parent: o.parent } : {}),
     }));
-  const kpiRows = await db.kpi.findMany({ where: { companyId }, include: { values: true }, orderBy: { code: "asc" } });
   const kpiCodeById = new Map<string, string>();
   const kpis: KpiFull[] = kpiRows.map((k: Record<string, unknown> & { values: { period: string; value: number; note: string | null }[] }) => {
     kpiCodeById.set(k.id as string, k.code as string);
@@ -191,7 +201,6 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
       series: k.values.map((v) => ({ period: v.period, value: v.value, ...(v.note ? { note: v.note } : {}) })).sort((a, b) => a.period.localeCompare(b.period)),
     };
   });
-  const iniRows = await db.initiative.findMany({ where: { companyId }, include: { successFactors: true }, orderBy: { code: "asc" } });
   const initiatives: InitiativeFull[] = iniRows.map((i: Record<string, unknown> & { successFactors: { name: string; state: string; history: unknown; note: string | null }[] }) => ({
     id: i.code as string, line: i.line as number, subsistema: (i.subsistema as InitiativeFull["subsistema"]) ?? "Dirección", cmi: (i.cmiObjective as string) ?? "",
     name: i.name as string, objetivo: (i.description as string) ?? "", horizon: i.horizon as InitiativeFull["horizon"],
@@ -205,9 +214,9 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
     nextMilestone: (i.nextMilestone as InitiativeFull["nextMilestone"]) ?? { date: "", text: "" },
     factors: i.successFactors.map((f) => ({ name: f.name, state: f.state as "VERDE" | "AMBAR" | "ROJO", history: (f.history as string[]) ?? [], ...(f.note ? { note: f.note } : {}) })),
   }));
-  const people: Person[] = (await db.person.findMany({ where: { companyId }, orderBy: { id: "asc" } }))
+  const people: Person[] = personRows
     .map((p: Person) => ({ id: p.id, name: p.name, cargo: p.cargo, dependencia: p.dependencia, email: p.email ?? "", responsibleId: p.responsibleId }));
-  const tasks: Task[] = (await db.projectTask.findMany({ where: { companyId, archived: false }, orderBy: { id: "asc" } }))
+  const tasks: Task[] = taskRows
     .map((t: Record<string, unknown>) => ({
       id: t.id as string, iniId: t.iniCode as string, title: t.title as string, desc: (t.desc as string) ?? "", assigneeId: t.assigneeId as string,
       coAssigneeIds: ((t.coAssigneeIds as string[]) ?? []).length ? (t.coAssigneeIds as string[]) : undefined,
@@ -215,7 +224,6 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
       requiresEvidence: Boolean(t.requiresEvidence), evidenceIds: ((t.evidenceIds as string[]) ?? []).length ? (t.evidenceIds as string[]) : undefined,
       dependsOn: ((t.dependsOn as string[]) ?? []).length ? (t.dependsOn as string[]) : undefined, note: (t.note as string) ?? undefined,
     }));
-  const aRows = await db.assessment.findMany({ where: { companyId }, include: { scores: true }, orderBy: { period: "asc" } });
   const assessments: AssessmentRecord[] = aRows.map((a: Record<string, unknown> & { scores: { line: number; dimension: string; value: number; target: number | null }[] }) => {
     let scores: AssessmentRecord["scores"] = null;
     if (a.scores.length) {
@@ -224,7 +232,6 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
     }
     return { id: a.id as string, label: a.label as string, period: a.period as string, status: a.status as AssessmentRecord["status"], note: (a.note as string) ?? "", scores };
   });
-  const evRows = await db.evidence.findMany({ where: { companyId }, orderBy: { id: "asc" } });
   const evidences: EvidenceFull[] = evRows.map((e: { id: string; practice: string; status: string; note: string | null }) => {
     const p = PRACTICES.find((x) => x.code === e.practice);
     return {

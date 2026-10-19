@@ -357,7 +357,9 @@ export async function hydrateFromDb(opts: { force?: boolean } = {}) {
   if (!hasDb()) return;
   await hydrateCompanies();
   const st = S();
-  if (st.hydrating) { await st.hydrating; return; }
+  // una lectura no espera a una recarga en curso si ya hay datos en memoria (ve el estado anterior, consistente);
+  // una escritura sí espera, para aplicarse sobre lo último
+  if (st.hydrating) { if (st.hydrated && !opts.force) return; await st.hydrating; return; }
   if (st.hydrated) {
     if (!st.dbId || (!opts.force && Date.now() - st.versionAt < VERSION_CHECK_MS)) return;
     st.versionAt = Date.now();
@@ -399,7 +401,15 @@ async function loadTenant(st: TenantState) {
       id: string; status: string; assigneeId: string; coAssigneeIds: unknown;
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
-    const rows = (await db.projectTask.findMany(W)) as (DbTaskRow & {
+    // el resto de la empresa, en paralelo: una ida y vuelta a la base en lugar de quince en serie
+    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows] = await Promise.all([
+      db.projectTask.findMany(W), db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } }), db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } }),
+      db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } }), db.initiativeOverride.findMany(W), db.initiativeEvaluation.findMany(W), db.initiativeDecision.findMany(W),
+      db.itineraryComment.findMany(W), db.user.findMany(W), db.integration.findMany(W), db.branding.findUnique({ where: { companyId } }), db.notifRead.findMany(W),
+      db.practiceCapture.findMany({ where: { companyId, cut: "A3" } }), db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } }),
+      db.testResponse.findMany(W), db.testNote.findMany(W),
+    ]);
+    const rows = rowsRaw as (DbTaskRow & {
       iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
       baseStart: Date | null; baseDue: Date | null; archived: boolean;
     })[];
@@ -429,24 +439,23 @@ async function loadTenant(st: TenantState) {
     }
     // gestor: comentarios y archivos adjuntos
     if (comments().length === 0) {
-      for (const c of await db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } })) comments().push({ id: c.id, taskId: c.taskId, author: c.author, role: c.role, text: c.text, at: c.at.toISOString() });
+      for (const c of commentRows) comments().push({ id: c.id, taskId: c.taskId, author: c.author, role: c.role, text: c.text, at: c.at.toISOString() });
     }
     if (uploads().length === 0) {
-      for (const u of await db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } })) uploads().push({ id: u.id, taskId: u.taskId, title: u.title, kind: u.kind, fileName: u.fileName, filePath: u.filePath, size: u.size, mime: u.mime, uploadedBy: u.uploadedBy, date: u.at.toISOString().slice(0, 10), status: u.status as EvidenceStatus });
+      for (const u of uploadRows) uploads().push({ id: u.id, taskId: u.taskId, title: u.title, kind: u.kind, fileName: u.fileName, filePath: u.filePath, size: u.size, mime: u.mime, uploadedBy: u.uploadedBy, date: u.at.toISOString().slice(0, 10), status: u.status as EvidenceStatus });
     }
     // KPI e iniciativas
-    for (const r of await db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } })) {
+    for (const r of reportRows) {
       const list = kpiReports().get(r.code) ?? [];
       if (!list.some((x) => x.period === r.period)) list.push({ code: r.code, period: r.period, value: r.value, note: r.note ?? undefined, by: r.by, at: r.at.toISOString() });
       kpiReports().set(r.code, list);
     }
-    for (const o of await db.initiativeOverride.findMany(W)) iniOverrides().set(o.code, o.data as InitiativeOverride);
+    for (const o of overrideRows) iniOverrides().set(o.code, o.data as InitiativeOverride);
     // priorización: evaluaciones de la matriz y decisiones de tiempo
-    for (const e of await db.initiativeEvaluation.findMany(W)) evals().set(e.id, e.data as Evaluation);
-    for (const d of await db.initiativeDecision.findMany(W)) decisions().set(d.code, d.data as DecisionRecord);
-    for (const c of await db.itineraryComment.findMany(W)) S().itinComments.set(c.id, c.data as ItineraryComment);
+    for (const e of evalRows) evals().set(e.id, e.data as Evaluation);
+    for (const d of decisionRows) decisions().set(d.code, d.data as DecisionRecord);
+    for (const c of itinCommentRows) S().itinComments.set(c.id, c.data as ItineraryComment);
     // usuarios de la empresa, integraciones, branding y notificaciones leídas
-    const dbUsers = await db.user.findMany(W);
     if (dbUsers.length) {
       const seedEmails = new Set(cat().seedUsers.map((u) => u.email));
       const list = users();
@@ -456,27 +465,25 @@ async function loadTenant(st: TenantState) {
         else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString() } : {}) });
       }
     }
-    for (const i of await db.integration.findMany(W)) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
-    const br = await db.branding.findUnique({ where: { companyId } });
+    for (const i of integrationRows) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
     if (br) Object.assign(branding(), br.data as Partial<Branding>);
-    for (const n of await db.notifRead.findMany(W)) notifRead().set(n.email, new Set(n.ids as string[]));
+    for (const n of notifRows) notifRead().set(n.email, new Set(n.ids as string[]));
     // diagnóstico: captura del corte en curso, corte publicado, respuestas y evidencias
-    for (const c of await db.practiceCapture.findMany({ where: { companyId, cut: "A3" } })) {
+    for (const c of captureRows) {
       capture().set(c.practice, {
         perception: c.perception ?? undefined, evidence: (c.evidence as VariableCapture["evidence"]) ?? undefined,
         level: c.level ?? undefined, note: c.note ?? undefined, by: c.by, at: c.at.toISOString(),
       });
     }
-    const a3 = await db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } });
     if (a3?.status === "PUBLICADA" && a3.scores.length) {
       const scores: Record<number, Record<string, CellScore>> = { 1: {}, 2: {}, 3: {}, 4: {} };
       for (const sc of a3.scores) scores[sc.line][sc.dimension] = { value: sc.value, target: sc.target ?? 0 };
       S().published = { id: "A3", label: a3.label, period: a3.period, status: "PUBLICADA", note: a3.note ?? "", scores };
     }
-    for (const t of await db.testResponse.findMany(W)) {
+    for (const t of testRows) {
       testStore().set(t.email, { email: t.email, name: t.name, role: t.role, cargo: t.cargo ?? undefined, objetivo: t.objetivo ?? undefined, at: t.at.toISOString(), r: t.answers as TestResponse["r"] });
     }
-    for (const n of await db.testNote.findMany(W)) {
+    for (const n of noteRows) {
       testNotes().set(n.participant, { restriccion: n.restriccion ?? undefined, evidencias: n.evidencias ?? undefined, accion: n.accion ?? undefined, noNecesita: n.noNecesita ?? undefined, by: n.by, at: n.at.toISOString() });
     }
     if (f2Store().length === 0) {
@@ -1844,6 +1851,7 @@ export function evaluateInitiative(
   // en modo convención, los miembros y líderes de tribu califican solo con la calificación de su tribu abierta, y una sola vez
   if (isCompanyMode(cat().company.mode) && cat().company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER")) {
     const ses = sessionOf(cat().company.prioSessions, base.ownerId);
+    if (ses.status !== "abierta") console.warn(`[4shine] calificación rechazada: tribu ${base.ownerId} estado ${ses.status} · sesiones en memoria ${JSON.stringify(cat().company.prioSessions ?? {})} · registro ${JSON.stringify(g.companies.get(cat().company.slug)?.prioSessions ?? {})} · versión ${S().version}`);
     if (ses.status !== "abierta") return { ok: false, status: 403, error: ses.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización." };
     if (evals().has(`${iniId}|${user.email.toLowerCase()}`)) return { ok: false, status: 409, error: "Ya calificaste esta iniciativa: cada miembro califica una sola vez." };
   }

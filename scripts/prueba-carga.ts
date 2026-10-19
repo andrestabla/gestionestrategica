@@ -15,11 +15,16 @@
 //      de su tribu, califican y comprueban que lo guardado se lee de vuelta (consistencia entre instancias).
 //   4. Borra la empresa desechable con sus cuentas y resume latencias (p50, p95, máximo) y errores por operación.
 const arg = (k: string, d?: string) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
-const origen = (arg("--origen") ?? "http://localhost:3000").replace(/\/$/, "");
+// --origen admite varias URL separadas por coma: cada petición va a una al azar (simula varias instancias)
+const ORIGENES = (arg("--origen") ?? "http://localhost:3000").split(",").map((s) => s.trim().replace(/\/$/, "")).filter(Boolean);
+const origenDe = () => ORIGENES[Math.floor(Math.random() * ORIGENES.length)];
+const origen = ORIGENES[0];
+// --token <qr>: usa una empresa desechable ya creada (slug prueba-carga) sin entrar como admin ni leer datos reales
+const TOKEN_FIJO = arg("--token");
 const slugReal = arg("--slug", "cresio")!, email = arg("--email", "andrestablarico@gmail.com")!, password = process.env.CONTRASENA ?? "";
 const LECTORES = Number(arg("--lectores", "100")), EDITORES = Number(arg("--editores", "12")), SEGUNDOS = Number(arg("--segundos", "40"));
 const SLUG = "prueba-carga";
-if (!password) { console.error("Falta CONTRASENA (contraseña del administrador)."); process.exit(1); }
+if (!password && !TOKEN_FIJO) { console.error("Falta CONTRASENA (contraseña del administrador)."); process.exit(1); }
 
 type Muestra = { op: string; ms: number; ok: boolean; status: number };
 const muestras: Muestra[] = [];
@@ -49,27 +54,32 @@ async function activar(cookie: string, slug: string): Promise<string> {
   const r = await fetch(`${origen}/api/auth/empresa?slug=${slug}&next=/${slug}/panel`, { headers: { cookie }, redirect: "manual" });
   const c = cookieDe(r); return c || cookie;
 }
-const get = (cookie: string, path: string) => fetch(`${origen}${path}`, { headers: { cookie } });
-const post = (cookie: string, path: string, body: unknown, method = "POST") => fetch(`${origen}${path}`, { method, headers: { cookie, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+// ninguna petición espera más de 30 s: una que no responde cuenta como error en vez de colgar la prueba
+const TIMEOUT_MS = 30_000;
+const get = (cookie: string, path: string) => fetch(`${origenDe()}${path}`, { headers: { cookie }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+const post = (cookie: string, path: string, body: unknown, method = "POST") => fetch(`${origenDe()}${path}`, { method, headers: { cookie, "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(TIMEOUT_MS) });
 
 async function main() {
-  console.log(`Prueba de carga contra ${origen} · ${LECTORES} lectores · ${EDITORES} editores · ${SEGUNDOS} s`);
-  const admin = await login();
-  const cookieReal = await activar(admin, slugReal);
-  // 1 · empresa desechable (si quedó una de otra corrida, se borra antes)
-  await post(admin, `/api/td/empresas?slug=${SLUG}`, {}, "DELETE").catch(() => null);
-  const creada = await post(admin, "/api/td/empresas", { name: "Prueba de carga", slug: SLUG, template: "demo", mode: "convencion", typeRule: "cresio", country: "EC", currency: "USD",
-    horizons: [{ id: "H1", label: "H1 · 2027", months: 12 }],
-    levers: [{ id: "MS", name: "Market Share", order: 1, ownerId: "R01" }, { id: "FID", name: "Fidelización", order: 2, ownerId: "R02" }, { id: "MAD", name: "Madurez", order: 3, ownerId: "R03" }, { id: "MAR", name: "Margen", order: 4, ownerId: "R05" }] });
-  if (!creada.ok) throw new Error(`crear empresa: ${(await creada.json().catch(() => ({}))).error ?? creada.status}`);
-  const cookiePrueba = await activar(await login(), SLUG);
-  const acceso = await (await post(cookiePrueba, "/api/td/convencion/acceso", { section: "convencion" })).json();
-  const token: string = acceso?.access?.[0]?.token; if (!token) throw new Error("sin token de acceso QR");
+  console.log(`Prueba de carga contra ${ORIGENES.join(" + ")} · ${LECTORES} lectores · ${EDITORES} editores · ${SEGUNDOS} s`);
+  const admin = TOKEN_FIJO ? "" : await login();
+  const cookieReal = TOKEN_FIJO ? "" : await activar(admin, slugReal);
+  let token = TOKEN_FIJO ?? "";
+  if (!TOKEN_FIJO) {
+    // 1 · empresa desechable (si quedó una de otra corrida, se borra antes)
+    await post(admin, `/api/td/empresas?slug=${SLUG}`, {}, "DELETE").catch(() => null);
+    const creada = await post(admin, "/api/td/empresas", { name: "Prueba de carga", slug: SLUG, template: "demo", mode: "convencion", typeRule: "cresio", country: "EC", currency: "USD",
+      horizons: [{ id: "H1", label: "H1 · 2027", months: 12 }],
+      levers: [{ id: "MS", name: "Market Share", order: 1, ownerId: "R01" }, { id: "FID", name: "Fidelización", order: 2, ownerId: "R02" }, { id: "MAD", name: "Madurez", order: 3, ownerId: "R03" }, { id: "MAR", name: "Margen", order: 4, ownerId: "R05" }] });
+    if (!creada.ok) throw new Error(`crear empresa: ${(await creada.json().catch(() => ({}))).error ?? creada.status}`);
+    const cookiePrueba = await activar(await login(), SLUG);
+    const acceso = await (await post(cookiePrueba, "/api/td/convencion/acceso", { section: "convencion" })).json();
+    token = acceso?.access?.[0]?.token; if (!token) throw new Error("sin token de acceso QR");
+  }
   const TRIBUS = ["R01", "R02", "R03", "R05"];
   try {
     // 2 · ráfaga de entradas por el QR
     console.log(`\n① Entrada por el QR: ${LECTORES + EDITORES} personas a la vez…`);
-    const entrar = (n: number, rol: "miembro" | "lider") => medir("qr-entrada", () => fetch(`${origen}/api/auth/acceso`, { method: "POST", headers: { "Content-Type": "application/json" },
+    const entrar = (n: number, rol: "miembro" | "lider") => medir("qr-entrada", () => fetch(`${origenDe()}/api/auth/acceso`, { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(TIMEOUT_MS),
       body: JSON.stringify({ tenant: SLUG, token, name: `${rol === "lider" ? "Editor" : "Lector"} de carga ${n}`, email: `carga-${rol}-${n}@ejemplo.test`, consent: true, responsibleId: TRIBUS[n % TRIBUS.length], entryRole: rol }) }),
       async (r) => ({ cookie: cookieDe(r), tribu: TRIBUS[n % TRIBUS.length] }));
     const t0 = performance.now();
@@ -116,12 +126,12 @@ async function main() {
         await sleep(300 + Math.random() * 700);
       }
     };
-    const nReal = Math.min(20, Math.floor(lectores.length / 5));
+    const nReal = cookieReal ? Math.min(20, Math.floor(lectores.length / 5)) : 0;
     await Promise.all([...lectores.map((s, i) => lector(s, i < nReal)), ...editores.map((s, n) => editor(s, n))]);
   } finally {
     // 4 · limpieza
-    const del = await post(admin, `/api/td/empresas?slug=${SLUG}`, {}, "DELETE");
-    console.log(`\n③ Empresa desechable ${del.ok ? "borrada con sus cuentas" : "NO borrada: elimínala en Administración → Empresas"}`);
+    if (admin) { const del = await post(admin, `/api/td/empresas?slug=${SLUG}`, {}, "DELETE"); console.log(`\n③ Empresa desechable ${del.ok ? "borrada con sus cuentas" : "NO borrada: elimínala en Administración → Empresas"}`); }
+    else console.log("\n③ Empresa desechable creada aparte: bórrala con el script que la creó.");
   }
   // resumen
   const ops = [...new Set(muestras.map((m) => m.op))];
