@@ -98,7 +98,8 @@ async function main() {
       const obj = await medir("editar:objetivo", () => post(c, "/api/td/catalogo", { entity: "objective", op: "upsert", data: { perspective: "clientes", name: `Objetivo de carga del editor ${n} para 2027`, kpis: [], lever, horizon: "H1", okr: true } }), json);
       const objId: string | undefined = obj?.id;
       if (objId) await medir("editar:kr", () => post(c, "/api/td/catalogo", { entity: "kpi", op: "upsert", data: { code: `CG${n}-01`, cmi: objId, name: `Resultado clave de carga ${n}`, unit: "%", baseline: 10, target: 20, ownerId: s.tribu, due: "2027-T4", frequency: "Trimestral", goodDirection: "up", definition: "Fórmula de prueba / fuente de prueba", formula: "a / b × 100", source: "prueba", series: [], line: 1 } }), json);
-      await medir("editar:abrir-calificacion", () => post(c, "/api/td/priorizacion", { tribe: s.tribu, session: "abrir" }), json);
+      // varios editores comparten tribu: si otro ya abrió la calificación, el 422 «ya está abierta» no es un fallo
+      await medir("editar:abrir-calificacion", async () => { const r = await post(c, "/api/td/priorizacion", { tribe: s.tribu, session: "abrir" }); return r.status === 422 && /desde el estado «abierta»/.test(await r.clone().text()) ? new Response("{}", { status: 200 }) : r; }, json);
       while (Date.now() < fin) {
         ronda++;
         const ini = await medir("editar:iniciativa-crear", () => post(c, "/api/td/catalogo", { entity: "initiative", op: "upsert", data: { name: `Iniciativa de carga ${n}-${ronda}`, capability: "DIR-1", cmi: objId ?? "OE-01", ownerId: s.tribu, horizon: "H1", kpi: objId ? `CG${n}-01` : "", objetivo: "Qué logra: prueba de carga" } }), json);

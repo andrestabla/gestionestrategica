@@ -43,7 +43,8 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
     const t = await tenantOf(user);
     if (t instanceof NextResponse) return t;
     return runWithTenant(t.slug, async () => {
-      await hydrateFromDb();
+      // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
+      await hydrateFromDb({ force: req.method !== "GET" });
       return handler(req, ctx, user);
     });
   };

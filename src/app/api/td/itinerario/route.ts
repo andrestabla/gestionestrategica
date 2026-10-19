@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile, addItineraryFile, itineraryFileOf } from "@/server/store";
+import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile, addItineraryFile, itineraryFileOf, flushOrError } from "@/server/store";
 import { deleteObject } from "@/server/storage";
 import { can } from "@/lib/permissions";
 import { itineraryPublicPath, participantsAsItinerary, fileIdFrom, fileKindOf, FILE_TYPES } from "@/lib/itinerario";
@@ -44,6 +44,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     default: return NextResponse.json({ error: "Operación desconocida" }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const guardado = await flushOrError(); if (guardado) return NextResponse.json({ error: guardado }, { status: 500 });
   const it = itineraryOf();
   return NextResponse.json({ ok: true, itinerary: it ?? null, comments: itineraryComments(), publicUrl: it?.token ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.token)}` : null, publicUrlP: it?.tokenP ? `${originOf(req)}${itineraryPublicPath(user.company!.slug, it.tokenP)}` : null });
 });

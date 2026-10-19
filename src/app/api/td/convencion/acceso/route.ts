@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../../_helpers";
-import { accessLinks, updateAccess } from "@/server/store";
+import { accessLinks, updateAccess, flushOrError } from "@/server/store";
 import { accessUrl } from "@/lib/acceso";
 
 // Origen público (detrás de Vercel llega en x-forwarded-*).
@@ -24,6 +24,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (!body?.section) return NextResponse.json({ error: "Falta la sección" }, { status: 400 });
   const r = updateAccess(user, body.section, { regenerate: !!body.regenerate, role: body.role });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const guardado = await flushOrError(); if (guardado) return NextResponse.json({ error: guardado }, { status: 500 });
   const origin = originOf(req), slug = user.company!.slug;
   return NextResponse.json({ access: r.access.map((a) => ({ ...a, url: accessUrl(origin, slug, a.token) })) });
 });

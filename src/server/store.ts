@@ -351,13 +351,15 @@ const VERSION_CHECK_MS = 1_000;
     versión de datos de la empresa con la de la base y, si otra instancia
     escribió, recarga. Así varias instancias serverless ven lo mismo con un
     retraso de un par de segundos; las peticiones concurrentes esperan la misma recarga. */
-export async function hydrateFromDb() {
+/** Sincroniza la memoria con la base. Las lecturas comprueban la versión como máximo una vez por segundo;
+    las escrituras (`force`) la comprueban siempre, para aplicar la mutación sobre lo último que guardó cualquier instancia. */
+export async function hydrateFromDb(opts: { force?: boolean } = {}) {
   if (!hasDb()) return;
   await hydrateCompanies();
   const st = S();
   if (st.hydrating) { await st.hydrating; return; }
   if (st.hydrated) {
-    if (Date.now() - st.versionAt < VERSION_CHECK_MS || !st.dbId) return;
+    if (!st.dbId || (!opts.force && Date.now() - st.versionAt < VERSION_CHECK_MS)) return;
     st.versionAt = Date.now();
     let remote: number | null = null;
     try {
@@ -761,17 +763,26 @@ export const getPlatformUsers = (): ManagedUser[] => g.platformUsers;
 // escritura lanzada sin esperar se perdería. `after()` de Next registra la
 // promesa para que la plataforma la complete antes de apagar la función; fuera
 // de una petición (pruebas, seed) no hay ámbito y se omite sin fallar.
-const pendingWrites = new Set<Promise<unknown>>();
+const pendingWrites = new Set<Promise<Error | null>>();
+/** Códigos renombrados al guardar (otra instancia usó el mismo): «empresa|código viejo» → código definitivo. */
+const rekeyed = new Map<string, string>();
+/** Código definitivo de una entidad creada en esta petición (si se renombró al guardarse, el nuevo; si no, el mismo). */
+export function finalId(id: string): string {
+  let cur = id;
+  for (let n = 0; n < 5; n++) { const next = rekeyed.get(`${currentTenant()}|${cur}`); if (!next) break; cur = next; }
+  return cur;
+}
 async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
   const st = g.tenants.get(currentTenant());   // empresa activa (si la escritura es de una empresa)
   if (st) st.writes++;
-  const run = (async () => {
+  const run = (async (): Promise<Error | null> => {
     try {
       const db = await prisma();
       await fn(db);
       await bumpVersion(db, st);
-    } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); }
+      return null;
+    } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); return e as Error; }
   })();
   pendingWrites.add(run); void run.finally(() => pendingWrites.delete(run));
   try {
@@ -801,6 +812,7 @@ async function createRekeying(db: AnyPrisma, label: string, current: () => strin
       const used = [...(await usedInDb()), current()];
       const fresh = nextFree(used);
       console.warn(`[4shine] ${label} ${current()} ya existía en la base (otra instancia): pasa a ${fresh}`);
+      rekeyed.set(`${currentTenant()}|${current()}`, fresh);
       rename(fresh);
     }
   }
@@ -809,7 +821,24 @@ async function createRekeying(db: AnyPrisma, label: string, current: () => strin
 
 /** Espera a que terminen todas las escrituras pendientes. Para scripts que corren fuera de una petición
     (carga del itinerario, seed): sin esto, el proceso puede terminar antes de que la base reciba la escritura. */
-export async function flushPersist() { while (pendingWrites.size) await Promise.allSettled([...pendingWrites]); }
+/** Espera a que terminen todas las escrituras pendientes y devuelve los errores que hubo. Las rutas que
+    escriben la llaman antes de responder: así el cliente recibe la confirmación (y el código definitivo)
+    solo cuando la base ya lo tiene, y cualquier otra instancia lo ve en su siguiente petición. */
+export async function flushPersist(): Promise<string[]> {
+  const errors: string[] = [];
+  while (pendingWrites.size) {
+    for (const r of await Promise.allSettled([...pendingWrites])) {
+      if (r.status === "fulfilled" && r.value) errors.push(r.value.message);
+      else if (r.status === "rejected") errors.push(String(r.reason));
+    }
+  }
+  return errors;
+}
+/** Respuesta de error si alguna escritura de la petición no llegó a la base. */
+export async function flushOrError(): Promise<string | null> {
+  const e = await flushPersist();
+  return e.length ? `No se pudo guardar en la base: ${e[0]}. Inténtalo de nuevo.` : null;
+}
 
 /* ═══ Lecturas ═══ */
 

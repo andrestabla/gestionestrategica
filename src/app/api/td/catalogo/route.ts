@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import {
-  tenantView, upsertResponsible, removeResponsible, upsertPerson, removePerson, upsertObjective, removeObjective,
-  upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, setLevers, evaluateInitiative,
-} from "@/server/store";
+import { tenantView, upsertResponsible, removeResponsible, upsertPerson, removePerson, upsertObjective, removeObjective, upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, setLevers, evaluateInitiative, flushOrError, finalId } from "@/server/store";
 
 // GET /api/td/catalogo — la vista completa de la empresa activa: catálogo
 // (objetivos, KPI, iniciativas, personas, tareas, mediciones, evidencias,
@@ -32,9 +29,10 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     case "kpi:delete": r = removeKpi(user, String(data.code ?? data.id ?? "").toUpperCase()); break;
     case "initiative:upsert": {
       r = upsertInitiative(user, data);
-      // la calificación D·E·M·L del formulario es la evaluación del usuario con la matriz
+      // la calificación D·E·M·L del formulario es la evaluación del usuario con la matriz (sobre el código definitivo)
       if (r.ok && data.evaluation && "id" in r && r.id) {
-        const ev = evaluateInitiative(user, String(r.id), { scores: data.evaluation.scores ?? {}, type: data.evaluation.type ?? {}, notes: data.evaluation.notes });
+        const guardado = await flushOrError(); if (guardado) return NextResponse.json({ error: guardado }, { status: 500 });
+        const ev = evaluateInitiative(user, finalId(String(r.id)), { scores: data.evaluation.scores ?? {}, type: data.evaluation.type ?? {}, notes: data.evaluation.notes });
         if (!ev.ok) return NextResponse.json({ error: `La iniciativa se guardó, pero la calificación no: ${ev.error}`, view: tenantView() }, { status: ev.status });
       }
       break;
@@ -46,5 +44,8 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     default: return NextResponse.json({ error: "Entidad u operación desconocida." }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
-  return NextResponse.json({ ...r, view: tenantView() });
+  // se responde cuando la base ya tiene el cambio, con el código definitivo (si otra instancia usó el mismo, cambió al guardarse)
+  const guardado = await flushOrError(); if (guardado) return NextResponse.json({ error: guardado }, { status: 500 });
+  const fin = { ...r, ...("id" in r && typeof r.id === "string" ? { id: finalId(r.id) } : {}), ...("code" in r && typeof r.code === "string" ? { code: finalId(r.code) } : {}) };
+  return NextResponse.json({ ...fin, view: tenantView() });
 });

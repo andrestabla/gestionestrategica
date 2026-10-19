@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { inTenant } from "@/app/api/td/_helpers";
-import { accessUser, companyBySlug, hydrateCompanies } from "@/server/store";
+import { accessUser, companyBySlug, hydrateCompanies, flushOrError } from "@/server/store";
 import { setSession } from "@/lib/session";
 import { sectionPath } from "@/lib/acceso";
 
@@ -16,7 +16,8 @@ export async function POST(req: Request) {
   await hydrateCompanies();
   const c = companyBySlug(tenant);
   if (!c || !c.active) return NextResponse.json({ error: "La empresa no existe o no está activa." }, { status: 404 });
-  const r = await inTenant(c.slug, () => accessUser(token, { name, email, consent, responsibleId, entryRole }));
+  // la cuenta nueva se confirma cuando la base ya la tiene: su siguiente petición puede atenderla otra instancia
+  const r = await inTenant(c.slug, async () => { const a = await accessUser(token, { name, email, consent, responsibleId, entryRole }); if (a.ok) { const e = await flushOrError(); if (e) return { ok: false as const, status: 500, error: e }; } return a; });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   await setSession(r.user);
   return NextResponse.json({ ok: true, user: r.user, created: r.created, next: sectionPath(c.slug, r.section) });
