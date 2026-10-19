@@ -1851,7 +1851,6 @@ export function evaluateInitiative(
   // en modo convención, los miembros y líderes de tribu califican solo con la calificación de su tribu abierta, y una sola vez
   if (isCompanyMode(cat().company.mode) && cat().company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER")) {
     const ses = sessionOf(cat().company.prioSessions, base.ownerId);
-    if (ses.status !== "abierta") console.warn(`[4shine] calificación rechazada: tribu ${base.ownerId} estado ${ses.status} · sesiones en memoria ${JSON.stringify(cat().company.prioSessions ?? {})} · registro ${JSON.stringify(g.companies.get(cat().company.slug)?.prioSessions ?? {})} · versión ${S().version}`);
     if (ses.status !== "abierta") return { ok: false, status: 403, error: ses.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización." };
     if (evals().has(`${iniId}|${user.email.toLowerCase()}`)) return { ok: false, status: 409, error: "Ya calificaste esta iniciativa: cada miembro califica una sola vez." };
   }
@@ -1916,7 +1915,9 @@ export function setPrioSession(user: SessionUser, tribeId: unknown, action: Prio
       // solo la sesión de esta tribu: en PostgreSQL se fusiona en la base (dos líderes en instancias distintas no se pisan)
       void persist("sesión de priorización", async (db) => {
         if (/^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "")) {
-          await db.$executeRaw`UPDATE "Company" SET "prioSessions" = COALESCE("prioSessions", '{}'::jsonb) || ${JSON.stringify({ [tribe]: next })}::jsonb WHERE "id" = ${dbId}`;
+          // solo se fusiona sobre un objeto: si la columna trae un null JSON (así nacen las empresas nuevas) o cualquier otra
+          // cosa, el operador || de jsonb concatenaría como lista ([null, {...}]) y la sesión se perdería al leerla
+          await db.$executeRaw`UPDATE "Company" SET "prioSessions" = (CASE WHEN jsonb_typeof("prioSessions") = 'object' THEN "prioSessions" ELSE '{}'::jsonb END) || ${JSON.stringify({ [tribe]: next })}::jsonb WHERE "id" = ${dbId}`;
         } else {
           await db.company.update({ where: { id: dbId }, data: { prioSessions: sessions as never } });
         }
