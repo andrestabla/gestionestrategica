@@ -22,6 +22,7 @@ const MATERIALES: { path: string; id: string; name: string; group: string }[] = 
   { path: `${BASE}/plantillas-imprimibles/F1-ficha-panelista.pdf`, id: "formato-1-panelista", name: "Formato F1 · Ficha del panelista (mesa redonda)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F2-lienzo-mesa-redonda-A2.pdf`, id: "formato-2-lienzo", name: "Formato F2 · Lienzo único de la mesa redonda (A2)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F3-formato-tribu-A3.pdf`, id: "formato-3-tribu", name: "Formato F3 · Formato de tribu: OKR 2027 e iniciativas (A3)", group: "plantilla" },
+  { path: `${BASE}/plantillas-imprimibles/F4-calificacion-plan-B.pdf`, id: "formato-4-calificacion", name: "Formato F4 · Calificación de iniciativas sin plataforma (plan B de la etapa 5)", group: "plantilla" },
   { path: `${BASE}/plantillas-imprimibles/F5-ficha-preguntas-tribu.pdf`, id: "formato-5-preguntas", name: "Formato F5 · Ficha de preguntas de la tribu (mesa redonda)", group: "plantilla" },
   { path: `${BASE}/qr/hoja-qr-secciones.pdf`, id: "hoja-qr-secciones", name: "QR único de la convención (hoja para imprimir)", group: "plantilla" },
   { path: `${BASE}/presentaciones/pdf/01-conferencia-apertura-crecer-exige-elegir.pdf`, id: "deck-01-apertura", name: "Deck 01 · Conferencia de apertura «Crecer exige elegir»", group: "presentacion" },
@@ -49,7 +50,7 @@ const VINCULOS: Record<string, string[]> = {
   "d1-20": ["deck-02-mesa-redonda", "formato-2-lienzo"], "d1-21": ["formato-2-lienzo"], "d1-24": ["formato-2-lienzo"], "d1-26": ["formato-2-lienzo"],
   "d2-01": ["hoja-qr-secciones", "formato-3-tribu"], "d2-02": ["deck-03-okr"], "d2-03": ["deck-03-okr"], "d2-04": ["deck-03-okr", "formato-3-tribu"], "d2-05": ["formato-3-tribu"], "d2-07": ["formato-3-tribu", "deck-03-okr"],
   "d2-09": ["formato-3-tribu", "deck-04-iniciativas"], "d2-11": ["deck-04-iniciativas", "formato-3-tribu"],
-  "d2-14": ["deck-04-iniciativas"], "d2-15": ["formato-3-tribu"], "d2-16": ["deck-04-iniciativas"], "d2-17": ["deck-04-iniciativas"],
+  "d2-14": ["deck-04-iniciativas", "formato-4-calificacion"], "d2-15": ["formato-3-tribu", "formato-4-calificacion"], "d2-16": ["deck-04-iniciativas", "formato-4-calificacion"], "d2-17": ["deck-04-iniciativas"],
   "d2-19": ["formato-3-tribu"], "d2-22": ["deck-05-cierre"],
 };
 
