@@ -81,13 +81,15 @@ export function PrioChip({ c, decision }: { c: Consolidated | undefined; decisio
 export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: number; horizon: string }) {
   const user = useUser();
   const cv = useCatalog();
-  const canEval = useCan("evaluate_initiatives", line);
   const ini = cv.catalog.initiatives.find((i) => i.id === iniId);
+  // el ámbito se decide por la tribu dueña (miembros y líderes de tribu) o por la capacidad
+  const canEval = useCan("evaluate_initiatives", ini ? { line, ownerId: ini.ownerId } : line) && !(cv.catalog.company.mode === "convencion" && user.role === "LIDER" && !!user.responsibleId && ini?.ownerId !== user.responsibleId);
   const linked = !!ini?.kpi;   // sin resultado clave no se califica
   // modo convención: la tribu califica solo con su calificación abierta por el líder, y cada miembro una sola vez
   const convencion = cv.catalog.company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER");
   const session = sessionOf(cv.catalog.company.prioSessions, ini?.ownerId);
-  const canDecide = useCan("decide_initiatives");
+  // en la convención el líder de tribu propone; decide y ratifica el directorio con gerencia y el advisor
+  const canDecide = useCan("decide_initiatives") && !(cv.catalog.company.mode === "convencion" && user.role === "LIDER" && !!user.responsibleId);
   const refetchCatalog = useCatalogRefetch();
   const { data, refetch } = usePriorizacion(iniId);
   // convención: trimestre de inicio (propuesto por la tribu, ratificado por el directorio) en lugar del horizonte

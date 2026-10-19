@@ -27,7 +27,7 @@ import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
 
 type Tab = "itinerario" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
@@ -51,6 +51,8 @@ export default function ConvencionPage() {
   const me = useUser();
   // quien entró por el QR (o no administra el catálogo) ve la agenda de participantes, no el itinerario del equipo organizador
   const guest = !!me.qr || !(me.role === "ADMIN" || me.role === "CONSULTOR" || me.role === "LIDER");
+  // en la convención, el líder de tribu (con tribu asignada) solo edita el OKR, los KR y las iniciativas de su tribu; gerencia, advisor y admin, todo
+  const tribeScope = isConvencion(v.catalog.company) && me.role === "LIDER" && me.responsibleId ? me.responsibleId : null;
   const agendaOf = (t: (typeof TABS)[number]) => t.id === "itinerario" && guest ? "Agenda de los dos días: horario, momento, quién lo conduce y descripción" : t.agenda;
   const router = useRouter();
   const pathname = usePathname();
@@ -119,8 +121,8 @@ export default function ConvencionPage() {
 
       {tab === "itinerario" && <ItinerarioTab />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
-      {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} saving={saving} mutate={mutate} base={base} />}
-      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
+      {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} saving={saving} mutate={mutate} base={base} />}
+      {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
       {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} onCatalogRefresh={() => void refetch()} me={me} />}
       {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} />}
     </div>
@@ -371,7 +373,7 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
 
 /* ═══ OKR del primer horizonte ═══ */
 
-function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; saving: boolean; mutate: Mutate; base: string }) {
+function OkrTab({ cat, levers, horizon, canEdit, scope, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; scope: string | null; saving: boolean; mutate: Mutate; base: string }) {
   // primero los objetivos (los escribe cada tribu, a partir del objetivo directivo de su palanca), después sus resultados clave
   const allObjectives = okrObjectivesOf(cat, horizon);
   const directive = cat.objectives.filter((o) => o.horizon === horizon && !o.okr);
@@ -384,6 +386,8 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
   // filtros: palanca y tribu (la tribu dueña de la palanca o de alguno de los KR); los objetivos no se filtran uno a uno
   const [fLever, setFLever] = useState(""); const [fTribe, setFTribe] = useState("");
   const tribeOf = (o: CmiObjective) => { const l = levers.find((x) => x.id === o.lever); return l?.ownerId ?? ""; };
+  // el líder de tribu solo edita el OKR de su tribu (ámbito); los demás objetivos los ve
+  const canEditObj = (o: CmiObjective) => canEdit && (!scope || tribeOf(o) === scope);
   const inTribe = (o: CmiObjective, t: string) => !t || tribeOf(o) === t || keyResultsOf(cat, o).some((k) => k.ownerId === t);
   const objectives = allObjectives.filter((o) => (!fLever || o.lever === fLever) && inTribe(o, fTribe));
   // en la convención se ven siempre las palancas (aunque aún no tengan objetivos de la tribu); los objetivos directivos no aparecen aquí
@@ -417,7 +421,7 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
           <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)"}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
               <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>
-              {canEdit && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
+              {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
             {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</EmptyNote></div>}
@@ -432,30 +436,30 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
                       <div className="text-[14px] font-extrabold leading-snug text-ink">{o.name}</div>
                       {o.indicator && <div className="mt-0.5 text-[11px] text-muted">Indicador impulsor: {o.indicator}</div>}
                     </div>
-                    {canEdit && o.okr && <button onClick={() => setObj(o)} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar el objetivo"><Pencil size={13} /></button>}
-                    {canEdit && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:!py-1.5 sm:text-[11px]"><Plus size={12} /> Resultado clave</button>}
+                    {canEditObj(o) && o.okr && <button onClick={() => setObj(o)} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar el objetivo"><Pencil size={13} /></button>}
+                    {canEditObj(o) && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:!py-1.5 sm:text-[11px]"><Plus size={12} /> Resultado clave</button>}
                   </div>
                   {krs.length > 0 && (
                     <div className="mt-3 space-y-2 sm:hidden">
                       {krs.map((k) => {
-                        const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code);
+                        const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code); const noIni = issues.find((i) => i.kind === "kr-sin-iniciativa" && i.ref === k.code);
                         const body = (
                           <>
                             <div className="flex items-start gap-2">
                               <span className="num shrink-0 text-[11px] font-extrabold text-cyan-deep">{k.code}</span>
                               <span className="min-w-0 flex-1 text-[13px] font-semibold leading-snug text-ink">{k.name}</span>
-                              {canEdit && <Pencil size={13} className="mt-0.5 shrink-0 text-faint" />}
+                              {canEditObj(o) && <Pencil size={13} className="mt-0.5 shrink-0 text-faint" />}
                             </div>
                             <div className="num mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-muted">
                               <span>Base <b className="text-ink">{k.baseline || "—"}</b> → Meta <b className="text-ink">{k.target || "—"}</b> {k.unit}</span>
                               <span>{k.ownerId ? owner(k.ownerId) : <span className="text-warn">sin dueño</span>}</span>
                               <span>{k.due ?? <span className="text-warn">sin plazo</span>}</span>
                               <span>{initiativesOfKr(cat, k.code).length} inic.</span>
-                              {bad && <span className="chip chip-warn !py-0 text-[9.5px]" title={bad.text}>incompleto</span>}
+                              {bad && <span className="chip chip-warn !py-0 text-[9.5px]" title={bad.text}>incompleto</span>}{noIni && <span className="chip chip-bad !py-0 text-[9.5px]" title={noIni.text}>sin iniciativa</span>}
                             </div>
                           </>
                         );
-                        return canEdit
+                        return canEditObj(o)
                           ? <button key={k.code} type="button" onClick={() => setKr({ obj: o, kpi: k })} className="block w-full rounded-xl bg-surface-2/60 px-3 py-2.5 text-left active:bg-cyan-wash">{body}</button>
                           : <div key={k.code} className="rounded-xl bg-surface-2/60 px-3 py-2.5">{body}</div>;
                       })}
@@ -467,18 +471,18 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
                         <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="py-1 pr-2">KR</th><th className="py-1 pr-2">Resultado clave</th><th className="num py-1 pr-2 text-right">Base</th><th className="num py-1 pr-2 text-right">Meta</th><th className="py-1 pr-2">Unidad</th><th className="py-1 pr-2">Dueño</th><th className="py-1 pr-2">Plazo</th><th className="num py-1 pr-2 text-right">Inic.</th><th /></tr></thead>
                         <tbody>
                           {krs.map((k) => {
-                            const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code);
+                            const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code); const noIni = issues.find((i) => i.kind === "kr-sin-iniciativa" && i.ref === k.code);
                             return (
                               <tr key={k.code} className="border-t border-line">
                                 <td className="num py-1.5 pr-2 font-bold text-cyan-deep">{k.code}</td>
-                                <td className="py-1.5 pr-2 font-semibold text-ink">{k.name}{bad && <span className="ml-1 chip chip-warn !py-0 text-[9px]" title={bad.text}>incompleto</span>}</td>
+                                <td className="py-1.5 pr-2 font-semibold text-ink">{k.name}{bad && <span className="ml-1 chip chip-warn !py-0 text-[9px]" title={bad.text}>incompleto</span>}{noIni && <span className="ml-1 chip chip-bad !py-0 text-[9px]" title={noIni.text}>sin iniciativa</span>}</td>
                                 <td className="num py-1.5 pr-2 text-right text-muted">{k.baseline || "—"}</td>
                                 <td className="num py-1.5 pr-2 text-right font-bold text-ink">{k.target || "—"}</td>
                                 <td className="py-1.5 pr-2 text-muted">{k.unit}</td>
                                 <td className="py-1.5 pr-2 text-muted">{k.ownerId ? owner(k.ownerId) : <span className="text-warn">sin dueño</span>}</td>
                                 <td className="num py-1.5 pr-2 text-muted">{k.due ?? <span className="text-warn">sin plazo</span>}</td>
                                 <td className="num py-1.5 pr-2 text-right text-muted">{initiativesOfKr(cat, k.code).length}</td>
-                                <td className="py-1.5 text-right">{canEdit && <button onClick={() => setKr({ obj: o, kpi: k })} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar"><Pencil size={12} /></button>}</td>
+                                <td className="py-1.5 text-right">{canEditObj(o) && <button onClick={() => setKr({ obj: o, kpi: k })} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar"><Pencil size={12} /></button>}</td>
                               </tr>
                             );
                           })}
@@ -486,12 +490,12 @@ function OkrTab({ cat, levers, horizon, canEdit, saving, mutate, base }: { cat: 
                       </table>
                     </div>
                   )}
-                  <AsistenteKr cat={cat} o={o} krs={krs} tribeId={levers.find((l) => l.id === o.lever)?.ownerId ?? ""} horizon={horizon} canEdit={canEdit} mutate={mutate} onEditKr={(k) => setKr({ obj: o, kpi: k })} />
+                  <AsistenteKr cat={cat} o={o} krs={krs} tribeId={levers.find((l) => l.id === o.lever)?.ownerId ?? ""} horizon={horizon} canEdit={canEditObj(o)} mutate={mutate} onEditKr={(k) => setKr({ obj: o, kpi: k })} />
                   {healthKpisOf(cat, o).length > 0 && (
                     <p className="mt-2 text-[10.5px] leading-snug text-faint"><span className="font-semibold text-muted">Métricas</span> (sin plazo, no cuentan como resultado clave): {healthKpisOf(cat, o).map((k) => `${k.code} ${k.name}`).join(" · ")}</p>
                   )}
-                  {mine.filter((i) => i.kind !== "kr-incompleto").length > 0 && (
-                    <ul className="mt-2 space-y-0.5">{mine.filter((i) => i.kind !== "kr-incompleto").map((i, n) => <li key={n} className={`text-[11px] ${i.level === "alto" ? "text-bad" : "text-warn"}`}>• {i.text}</li>)}</ul>
+                  {mine.filter((i) => i.kind !== "kr-incompleto" && i.kind !== "kr-sin-iniciativa").length > 0 && (
+                    <ul className="mt-2 space-y-0.5">{mine.filter((i) => i.kind !== "kr-incompleto" && i.kind !== "kr-sin-iniciativa").map((i, n) => <li key={n} className={`text-[11px] ${i.level === "alto" ? "text-bad" : "text-warn"}`}>• {i.text}</li>)}</ul>
                   )}
                 </div>
               );
@@ -531,7 +535,17 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const num = (s: string) => { const n = Number(String(s).replace(",", ".")); return Number.isFinite(n) ? n : 0; };
-  const ok = f.code.trim().length >= 2 && f.name.trim().length >= 3 && f.unit.trim() && /^\d{4}(-T[1-4])?$/.test(f.due.trim().toUpperCase());
+  // un resultado clave se valida solo con todos sus campos: nombre, línea base, meta, unidad, dueño, plazo, frecuencia y definición con fórmula y fuente
+  const faltan: string[] = [];
+  if (f.name.trim().length < 3) faltan.push("resultado clave");
+  if (f.baseline.trim() === "" || !Number.isFinite(Number(f.baseline.replace(",", ".")))) faltan.push("línea base");
+  if (f.target.trim() === "" || !Number.isFinite(Number(f.target.replace(",", ".")))) faltan.push("meta");
+  else if (f.baseline.trim() !== "" && num(f.target) === num(f.baseline)) faltan.push("meta distinta de la línea base");
+  if (!f.unit.trim()) faltan.push("unidad");
+  if (!f.ownerId) faltan.push("dueño");
+  if (!/^\d{4}(-T[1-4])?$/.test(f.due.trim().toUpperCase())) faltan.push("plazo");
+  if (f.definition.trim().length < 10) faltan.push("definición con fórmula y fuente");
+  const ok = f.code.trim().length >= 2 && faltan.length === 0;
   // biblioteca de plantillas de KR del objetivo: prellena el formulario; la tribu fija base, meta, dueño y plazo
   // plantillas: las del objetivo directivo que concreta (o del propio id); si no hay, todas las de la palanca del objetivo
   const templates = initial ? [] : (() => {
@@ -570,21 +584,22 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
           </Field>
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
-          <Field label="Código"><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} disabled={!!initial} className={`${INPUT} num`} /></Field>
-          <Field label="Resultado clave"><input value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>
+          <Field label="Código" help={KR_AYUDA.code}><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} disabled={!!initial} className={`${INPUT} num`} /></Field>
+          <Field label="Resultado clave" help={KR_AYUDA.name}><input value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Field label="Línea base"><input type="number" step="any" value={f.baseline} onChange={set("baseline")} className={`${INPUT} num`} /></Field>
-          <Field label="Meta"><input type="number" step="any" value={f.target} onChange={set("target")} className={`${INPUT} num`} /></Field>
-          <Field label="Unidad"><input value={f.unit} onChange={set("unit")} className={INPUT} /></Field>
-          <Field label="Mejor si"><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option></select></Field>
+          <Field label="Línea base" help={KR_AYUDA.baseline}><input type="number" step="any" value={f.baseline} onChange={set("baseline")} className={`${INPUT} num`} /></Field>
+          <Field label="Meta" help={KR_AYUDA.target}><input type="number" step="any" value={f.target} onChange={set("target")} className={`${INPUT} num`} /></Field>
+          <Field label="Unidad" help={KR_AYUDA.unit}><input value={f.unit} onChange={set("unit")} className={INPUT} /></Field>
+          <Field label="Mejor si" help={KR_AYUDA.goodDirection}><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option></select></Field>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Field label="Dueño"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{cat.responsibles.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
-          <Field label="Plazo (AAAA o AAAA-Tn)"><input value={f.due} onChange={set("due")} className={`${INPUT} num`} /></Field>
-          <Field label="Frecuencia"><select value={f.frequency} onChange={set("frequency")} className={INPUT}>{["Mensual", "Trimestral", "Semestral", "Anual"].map((x) => <option key={x} value={x}>{x}</option>)}</select></Field>
+          <Field label="Dueño" help={KR_AYUDA.ownerId}><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{cat.responsibles.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
+          <Field label="Plazo (AAAA o AAAA-Tn)" help={KR_AYUDA.due}><input value={f.due} onChange={set("due")} className={`${INPUT} num`} /></Field>
+          <Field label="Frecuencia" help={KR_AYUDA.frequency}><select value={f.frequency} onChange={set("frequency")} className={INPUT}>{["Mensual", "Trimestral", "Semestral", "Anual"].map((x) => <option key={x} value={x}>{x}</option>)}</select></Field>
         </div>
-        <Field label="Definición y fuente (opcional)"><input value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula y de dónde sale el dato" className={INPUT} /></Field>
+        <Field label="Definición, fórmula y fuente" help={KR_AYUDA.definition}><input value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula (fórmula) y de dónde sale el dato" className={INPUT} /></Field>
+        {faltan.length > 0 && <p className="text-[11px] leading-snug text-warn">Para registrar el resultado clave completa: {faltan.join(", ")}. Toca «?» en cada campo si tienes dudas.</p>}
       </div>
     </Modal>
   );
@@ -592,14 +607,15 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 
 /* ═══ Iniciativas → resultado clave ═══ */
 
-function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
+function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; scope: string | null; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
   const objectives = okrObjectivesOf(cat, horizon);
   const krs = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
   const [fTribe, setFTribe] = useState("");
   const [nueva, setNueva] = useState(false);
   const [edit, setEdit] = useState<InitiativeFull | null>(null);
   // quien administra el catálogo edita todas; quien solo puede crear, edita y elimina las suyas
-  const mine = (i: InitiativeFull) => canEdit || (canCreate && (i.createdBy ?? "").toLowerCase() === me.toLowerCase());
+  // el líder de tribu (ámbito) edita solo las de su tribu; el directivo por QR, las que creó
+  const mine = (i: InitiativeFull) => scope ? i.ownerId === scope : canEdit || (canCreate && (i.createdBy ?? "").toLowerCase() === me.toLowerCase());
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
   const unlinked = cat.initiatives.filter((i) => (!i.kpi || !krs.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe));
   const [link, setLink] = useState<string | null>(null);
@@ -651,9 +667,9 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, me, saving, 
           </div>
         </Card>
       </div>
-      {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} saving={saving} onCancel={() => setNueva(false)}
+      {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} lockOwner={!!scope} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
-      {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} saving={saving} onCancel={() => setEdit(null)}
+      {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} saving={saving} onCancel={() => setEdit(null)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) setEdit(null); return ok; }}
         onDelete={async () => { if (window.confirm(`¿Eliminar la iniciativa «${edit.name}»?`)) { const ok = await mutate("initiative", "delete", { id: edit.id }); if (ok) setEdit(null); } }} />}
       {link && (() => {
@@ -712,7 +728,7 @@ function okrLinkOk(cat: Cat, horizon: string, v: { cmi: string; kpi: string }): 
 }
 
 /** Iniciativa creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el OKR (objetivo y KR principal) que mueve. */
-function InitiativeForm({ cat, horizon, initial, defaultOwner, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
+function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; lockOwner?: boolean; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
   const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
   const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "" });
   const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
@@ -728,7 +744,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, saving, onCancel,
       <div className="space-y-2.5">
         <Field label="Iniciativa"><input value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
-        <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
+        <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} initiative={f} />
         <p className="text-[11px] text-faint">Queda asociada al OKR elegido y a {horizonLabel(cat.company, horizon)}; con resultado clave se califica en Priorización en vivo como las demás.</p>
       </div>
@@ -1031,9 +1047,34 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="label !text-[8.5px]">{label}</span><div className="mt-1">{children}</div></label>;
+function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
+  return <label className="block min-w-0"><span className="label flex items-center !text-[8.5px]">{label}{help && <FieldHelp text={help} />}</span><div className="mt-1">{children}</div></label>;
 }
+
+/** Botón «?» junto al rótulo: abre una nota breve de cómo se construye el campo (método 4Shine). */
+function FieldHelp({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative ml-1 inline-flex">
+      <button type="button" onClick={(e) => { e.preventDefault(); setOpen((v) => !v); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label="Cómo se construye este campo" title="Cómo se construye este campo" className={`inline-flex h-4 w-4 items-center justify-center rounded-full ${open ? "bg-cyan-deep text-white" : "text-faint hover:bg-surface-2 hover:text-ink"}`}><HelpCircle size={11} /></button>
+      {open && <span className="absolute left-0 top-5 z-30 block w-64 rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-normal normal-case tracking-normal leading-snug text-ink shadow-lg sm:w-72">{text}</span>}
+    </span>
+  );
+}
+
+/** Ayuda de cada campo del resultado clave. */
+const KR_AYUDA = {
+  code: "Identificador único: prefijo de la palanca y número consecutivo (p. ej. MS-01). Se asigna solo; no hace falta cambiarlo.",
+  name: "Qué resultado verificable se logra, no qué actividad se hace: nombra el indicador (p. ej. «PDV en funcionamiento», «Market Share de farmacia (%)»). Si empieza por implementar, diseñar o capacitar, es una iniciativa, no un KR.",
+  baseline: "El valor real de hoy, con fecha y fuente en la definición. Si aún no se conoce, no inventes un número: anota en la definición quién lo consigue y cuándo, y deja 0 mientras tanto (el KR quedará marcado como incompleto).",
+  target: "El valor a alcanzar a 2027-T4: ambicioso pero alcanzable, coherente con el sentido (sube o baja), con el objetivo rector y con las metas de las otras palancas. Debe ser distinto de la línea base.",
+  unit: "En qué se mide: %, PDV, días, puntos, USD, clientes. La misma unidad para la línea base y la meta.",
+  goodDirection: "Sentido del indicador: «sube» cuando más es mejor (ventas, NPS, cobertura); «baja» cuando menos es mejor (rotación, días al punto de equilibrio, tiempo de espera).",
+  ownerId: "Quien responde por el resultado y tiene autoridad para moverlo: la tribu o el líder de escuadrón. Un solo dueño por KR.",
+  due: "Cuándo se cumple la meta: un año (2027) o un trimestre (2027-T4). En la convención todos los resultados clave cierran a 2027-T4.",
+  frequency: "Cada cuánto se mide y se revisa: mensual para resultados operativos, trimestral para los de negocio; anual solo si no existe una fuente intermedia.",
+  definition: "Cómo se calcula (la fórmula) y de dónde sale el dato (sistema, área, encuesta, fecha de corte), para que otra persona lo calcule igual. Obligatoria: sin fórmula y fuente el KR no se valida.",
+} as const;
 
 /* ═══ QR de acceso por sección ═══ */
 

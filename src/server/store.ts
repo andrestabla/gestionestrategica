@@ -1802,12 +1802,12 @@ export function evaluateInitiative(
   const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
   if (!base.kpi) return { ok: false, status: 422, error: "La iniciativa aún no está vinculada a un resultado clave: el líder de la tribu la vincula en «Iniciativas → KR» y entonces queda habilitada para calificar." };
-  if (!can(user, "evaluate_initiatives", base)) {
+  if (!can(user, "evaluate_initiatives", base) || (tribeScope(user) && base.ownerId !== tribeScope(user))) {
     return {
       ok: false, status: 403,
       error: user.role === "ADMIN"
         ? "El administrador de la plataforma no evalúa iniciativas."
-        : user.role === "RESPONSABLE"
+        : user.role === "RESPONSABLE" || tribeScope(user)
           ? `Evalúas las iniciativas de tu ámbito (${scopeName(user)}); esta es de ${resName(user, base)}.`
           : "Tu rol no evalúa la priorización.",
     };
@@ -1897,8 +1897,8 @@ export function decideInitiative(
 ): { ok: true; decision: DecisionRecord } | { ok: false; status: number; error: string } {
   const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
-  if (!can(user, "decide_initiatives")) {
-    return { ok: false, status: 403, error: "La decisión de tiempo la toma la gerencia o el advisor; tu rol evalúa o consulta." };
+  if (!can(user, "decide_initiatives") || tribeScope(user)) {
+    return { ok: false, status: 403, error: tribeScope(user) ? "La decisión y el trimestre definitivo los ratifica el directorio con gerencia y el advisor; el líder de tribu propone." : "La decisión de tiempo la toma la gerencia o el advisor; tu rol evalúa o consulta." };
   }
   const d = input.decision as Decision;
   if (!["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR"].includes(d)) {
@@ -2245,6 +2245,17 @@ function canCatalog(user: SessionUser): CatResult | null {
   return can(user, "manage_catalog") ? null : fail(403, "El catálogo lo editan el advisor y el líder de la empresa (o el admin de la plataforma).");
 }
 
+/** Ámbito de tribu en la convención: el líder de tribu (LIDER con tribu asignada, p. ej. por el QR) solo toca su OKR,
+    sus KR, sus iniciativas y la calificación de su tribu; gerencia (LIDER sin tribu), advisor y admin ven todo. */
+function tribeScope(user: SessionUser): string | null {
+  return cat().company.mode === "convencion" && user.role === "LIDER" && user.responsibleId ? user.responsibleId : null;
+}
+const tribeOfObjective = (c: ReturnType<typeof cat>, objectiveId: string | undefined): string | undefined => {
+  const o = c.objectives.find((x) => x.id === objectiveId);
+  return (c.company.levers ?? []).find((l) => l.id === o?.lever)?.ownerId;
+};
+const OTRA_TRIBU = "Solo puedes editar el OKR, los resultados clave y las iniciativas de tu tribu.";
+
 export function upsertResponsible(user: SessionUser, input: Partial<Responsible>): CatResult & { id?: string } {
   const denied = canCatalog(user); if (denied) return denied;
   const c = cat();
@@ -2328,6 +2339,12 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   const okr = input.okr === true;
   // en la convención los objetivos directivos (Dirección 3x3) son fuente de consulta: el líder de tribu solo escribe los OKR de su tribu
   if (c.company.mode === "convencion" && user.role === "LIDER" && !okr) return fail(403, "Durante la convención los objetivos de Dirección 3x3 no se modifican: son la fuente de consulta de las tribus. Escribe los OKR de tu tribu en la sección OKR.");
+  const scope = tribeScope(user);
+  if (scope) {
+    const prevTribe = tribeOfObjective(c, str(input.id, 10));
+    const tribe = (c.company.levers ?? []).find((l) => l.id === lever)?.ownerId;
+    if ((str(input.id, 10) && prevTribe !== scope) || tribe !== scope) return fail(403, OTRA_TRIBU);
+  }
   const parent = str(input.parent, 10).toUpperCase() || undefined;
   if (parent && !c.objectives.some((x) => x.id === parent && !x.okr)) return fail(422, "El objetivo directivo que concreta no existe.");
   const id = str(input.id, 10) || (okr ? nextCode(`${lever ?? "OK"}-O`, c.objectives.map((o) => o.id), 1) : nextCode("OE-", c.objectives.map((o) => o.id), 2));
@@ -2354,6 +2371,7 @@ export function removeObjective(user: SessionUser, id: string): CatResult {
   const prevObj = c.objectives.find((o) => o.id === id);
   if (!prevObj) return fail(404, "El objetivo no existe.");
   if (c.company.mode === "convencion" && user.role === "LIDER" && !prevObj.okr) return fail(403, "Durante la convención los objetivos de Dirección 3x3 no se modifican: son la fuente de consulta de las tribus.");
+  if (tribeScope(user) && tribeOfObjective(c, id) !== tribeScope(user)) return fail(403, OTRA_TRIBU);
   const refs = [...c.kpis.filter((k) => k.cmi === id).map((k) => `KPI ${k.code}`), ...c.initiatives.filter((i) => i.cmi === id).map((i) => `iniciativa ${i.id}`)];
   if (refs.length) return fail(422, `No se puede eliminar: lo usan ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}.`);
   c.objectives = c.objectives.filter((o) => o.id !== id);
@@ -2373,6 +2391,10 @@ export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult
   const line = int(input.line, 1, 4, 1);
   const cmi = str(input.cmi, 10);
   if (cmi && !c.objectives.some((o) => o.id === cmi)) return fail(422, "El objetivo del cuadro de mando no existe.");
+  if (tribeScope(user)) {
+    const prevKpi = c.kpis.find((x) => x.code === code);
+    if (tribeOfObjective(c, cmi) !== tribeScope(user) || (prevKpi && tribeOfObjective(c, prevKpi.cmi) !== tribeScope(user))) return fail(403, OTRA_TRIBU);
+  }
   const ownerId = str(input.ownerId, 10);
   if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable del dato no existe en el catálogo.");
   const frequency = (["Mensual", "Trimestral", "Semestral", "Anual"] as const).find((f) => f === input.frequency) ?? "Trimestral";
@@ -2405,6 +2427,7 @@ export function removeKpi(user: SessionUser, code: string): CatResult {
   const denied = canCatalog(user); if (denied) return denied;
   const c = cat();
   if (!c.kpis.some((k) => k.code === code)) return fail(404, "El KPI no existe.");
+  if (tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === code)?.cmi) !== tribeScope(user)) return fail(403, OTRA_TRIBU);
   const refs = [...c.objectives.filter((o) => o.kpis.includes(code)).map((o) => `objetivo ${o.id}`), ...c.initiatives.filter((i) => i.kpi === code).map((i) => `iniciativa ${i.id}`)];
   if (refs.length) return fail(422, `No se puede eliminar: lo usan ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}.`);
   c.kpis = c.kpis.filter((k) => k.code !== code);
@@ -2440,6 +2463,7 @@ export function clearOkr(user: SessionUser): CatResult & { removed?: number; unl
 /** Iniciativas: quien administra el catálogo edita todas; quien solo puede crearlas
     (líder de tribu, directivo por QR) edita y elimina únicamente las suyas. */
 function canInitiative(user: SessionUser, prev: InitiativeFull | undefined): CatResult | null {
+  if (tribeScope(user) && prev && prev.ownerId !== tribeScope(user)) return fail(403, OTRA_TRIBU);
   if (can(user, "manage_catalog")) return null;
   if (!can(user, "create_initiatives")) return fail(403, "Las iniciativas las crean el advisor, el líder de tribu y los directivos.");
   if (prev && (prev.createdBy ?? "").toLowerCase() !== user.email.toLowerCase()) return fail(403, "Solo puedes editar o eliminar las iniciativas que creaste.");
@@ -2457,6 +2481,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (!c.objectives.some((o) => o.id === cmi)) return fail(422, "El objetivo del cuadro de mando es obligatorio y debe existir.");
   const ownerId = str(input.ownerId, 10);
   if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable no existe en el catálogo.");
+  if (tribeScope(user) && ownerId !== tribeScope(user)) return fail(403, "Solo registras iniciativas de tu tribu: elige tu tribu como dueña.");
   const kpi = str(input.kpi, 20).toUpperCase();
   if (kpi && !c.kpis.some((k) => k.code === kpi)) return fail(422, "El KPI asociado no existe.");
   const start = str(input.start, 8), end = str(input.end, 8);

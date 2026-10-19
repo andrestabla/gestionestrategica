@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
 import { createCompany, updateCompany, resetStore, upsertResponsible, setLevers, upsertObjective, removeObjective, catalog } from "../src/server/store";
 import { okrChecks } from "../src/lib/convencion";
+import { typeRuleOf } from "../src/data/catalogo";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
@@ -31,6 +32,60 @@ test("convención: el líder no toca Dirección 3x3 pero sí escribe los OKR de 
     assert.ok(removeObjective(lider, "MS-O2").ok);
     assert.ok(!okrChecks(catalog(), "H1").some((i) => i.kind === "palanca-muchos-objetivos" || i.kind === "palanca-sin-okr"), "con un solo OKR no hay alerta");
     assert.ok(upsertObjective(advisor, { id: "OE-01", perspective: "clientes", name: "Ajuste ratificado por el relator", kpis: [], lever: "MS", horizon: "H1" }).ok);
+  });
+  resetStore();
+});
+
+test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas de su tribu; no decide ni califica otras tribus", async () => {
+  const { upsertKpi, removeKpi, upsertInitiative, removeInitiative, evaluateInitiative, decideInitiative, setPrioSession } = await import("../src/server/store");
+  const otro: SessionUser = { email: "o@a.co", name: "Líder dos", role: "LIDER", responsibleId: "R02" };
+  const gerencia: SessionUser = { email: "g@a.co", name: "Gerencia", role: "LIDER" };
+  resetStore();
+  assert.ok((await createCompany(admin, { name: "Ambito SA", template: "vacia" })).ok);
+  assert.ok((await updateCompany(admin, "ambito-sa", { mode: "convencion", horizons: [{ id: "H1", label: "H1 · 2027", months: 12 }] })).ok);
+  await runWithTenant("ambito-sa", async () => {
+    assert.ok(upsertResponsible(advisor, { cargo: "Líder de tribu", dependencia: "Tribu Uno", rolPlataforma: "LIDER" }).ok);
+    assert.ok(upsertResponsible(advisor, { cargo: "Líder de tribu", dependencia: "Tribu Dos", rolPlataforma: "LIDER" }).ok);
+    assert.ok(setLevers(advisor, [{ id: "MS", name: "Market Share", order: 1, ownerId: "R01" }, { id: "MAR", name: "Margen", order: 2, ownerId: "R02" }]).ok);
+    assert.ok(upsertObjective(advisor, { id: "MS-O1", perspective: "clientes", name: "Objetivo rector de Market Share", kpis: [], lever: "MS", horizon: "H1", okr: true }).ok);
+    assert.ok(upsertObjective(advisor, { id: "MAR-O1", perspective: "financiera", name: "Objetivo rector de Margen", kpis: [], lever: "MAR", horizon: "H1", okr: true }).ok);
+    // objetivos: solo el de su palanca
+    assert.equal((upsertObjective(lider, { id: "MAR-O1", perspective: "financiera", name: "Intento sobre la otra tribu", kpis: [], lever: "MAR", horizon: "H1", okr: true }) as { status?: number }).status, 403);
+    assert.equal((upsertObjective(lider, { perspective: "financiera", name: "Objetivo nuevo en palanca ajena", kpis: [], lever: "MAR", horizon: "H1", okr: true }) as { status?: number }).status, 403);
+    assert.ok(upsertObjective(lider, { id: "MS-O1", perspective: "clientes", name: "Objetivo rector de Market Share (ajustado)", kpis: [], lever: "MS", horizon: "H1", okr: true }).ok);
+    // resultados clave: solo bajo el objetivo de su tribu
+    const kr = (u: SessionUser, code: string, cmi: string) => upsertKpi(u, { code, cmi, name: `Resultado clave ${code}`, unit: "%", baseline: 1, target: 2, ownerId: "R01", due: "2027-T4", definition: "Fórmula y fuente" });
+    assert.ok(kr(lider, "MS-01", "MS-O1").ok);
+    assert.equal((kr(lider, "MAR-01", "MAR-O1") as { status?: number }).status, 403);
+    assert.ok(kr(advisor, "MAR-01", "MAR-O1").ok);
+    assert.equal((upsertKpi(lider, { code: "MAR-01", cmi: "MS-O1", name: "Robo de un KR ajeno", unit: "%" }) as { status?: number }).status, 403);
+    assert.equal((removeKpi(lider, "MAR-01") as { status?: number }).status, 403);
+    assert.ok(removeKpi(otro, "MAR-01").ok);
+    // iniciativas: solo las de su tribu, y las nuevas con su tribu como dueña
+    const ini = (u: SessionUser, extra: Record<string, unknown>) => upsertInitiative(u, { name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", horizon: "H1", ...extra });
+    assert.equal((ini(lider, { ownerId: "R02" }) as { status?: number }).status, 403);
+    const mia = ini(lider, { ownerId: "R01" }); assert.ok(mia.ok);
+    const ajena = ini(otro, { ownerId: "R02", cmi: "MAR-O1" }); assert.ok(ajena.ok);
+    assert.equal((upsertInitiative(lider, { id: (ajena as { id: string }).id, name: "Edición de una iniciativa ajena", capability: "DIR-1", cmi: "MAR-O1", ownerId: "R02", horizon: "H1" }) as { status?: number }).status, 403);
+    assert.equal((removeInitiative(lider, (ajena as { id: string }).id) as { status?: number }).status, 403);
+    assert.ok(upsertInitiative(gerencia, { id: (ajena as { id: string }).id, name: "Gerencia sí edita cualquier iniciativa", capability: "DIR-1", cmi: "MAR-O1", ownerId: "R02", horizon: "H1" }).ok);
+    // calificación: el líder de tribu abre la de su tribu y no califica las de otra; no decide
+    assert.ok(upsertInitiative(lider, { id: (mia as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MS-01" }).ok);
+    assert.equal((setPrioSession(lider, "R02", "abrir") as { status?: number }).status, 403);
+    assert.ok(setPrioSession(lider, "R01", "abrir").ok);
+    const ev = { scores: { D: 3, E: 3, M: 3, L: 3 }, type: Object.fromEntries(typeRuleOf(catalog().company).criteria.map((c) => [c.key, "ESTRATEGICO"])) };
+    assert.ok(evaluateInitiative(lider, (mia as { id: string }).id, ev).ok);
+    assert.ok(kr(advisor, "MAR-02", "MAR-O1").ok);
+    assert.ok(upsertInitiative(gerencia, { id: (ajena as { id: string }).id, name: "Gerencia sí edita cualquier iniciativa", capability: "DIR-1", cmi: "MAR-O1", ownerId: "R02", horizon: "H1", kpi: "MAR-02" }).ok);
+    assert.ok(setPrioSession(otro, "R02", "abrir").ok);
+    assert.equal((evaluateInitiative(lider, (ajena as { id: string }).id, ev) as { status?: number }).status, 403, "el líder no califica iniciativas de otra tribu");
+    assert.equal((decideInitiative(lider, (mia as { id: string }).id, { decision: "IMPLEMENTAR" }) as { status?: number }).status, 403);
+    // reglas de calidad: un KR sin definición queda incompleto y uno sin iniciativa es alerta alta
+    assert.ok(!okrChecks(catalog(), "H1").some((i) => i.kind === "kr-sin-iniciativa"), "todos los KR tienen iniciativa");
+    assert.ok(upsertKpi(advisor, { code: "MS-02", cmi: "MS-O1", name: "Resultado sin definición", unit: "%", baseline: 1, target: 2, ownerId: "R01", due: "2027-T4" }).ok);
+    const issues = okrChecks(catalog(), "H1");
+    assert.ok(issues.some((i) => i.kind === "kr-sin-iniciativa" && i.ref === "MS-02" && i.level === "alto"), "KR sin iniciativa: alerta alta");
+    assert.ok(issues.some((i) => i.kind === "kr-incompleto" && i.ref === "MS-02" && /definición/.test(i.text)), "sin definición ni fórmula el KR está incompleto");
   });
   resetStore();
 });

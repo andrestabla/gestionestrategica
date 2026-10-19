@@ -82,8 +82,10 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
       if (!(k.target > 0)) missing.push("meta");
       if (!k.ownerId) missing.push("dueño");
       if (!k.due) missing.push("plazo");
+      if (!(k.definition?.trim() || k.formula?.trim())) missing.push("definición y fórmula");
       if (missing.length) out.push({ level: "alto", kind: "kr-incompleto", ref: k.code, text: `${k.code} sin ${missing.join(", ")}.` });
-      if (initiativesOfKr(cat, k.code).length === 0) out.push({ level: "medio", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva.` });
+      // regla de la convención: cada resultado clave debe tener al menos una iniciativa que lo mueva
+      if (initiativesOfKr(cat, k.code).length === 0) out.push({ level: "alto", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva: vincula una existente o crea la que lo mueve.` });
     }
   }
   // convención: un solo OKR por tribu, cuyo objetivo es el objetivo rector de la palanca
