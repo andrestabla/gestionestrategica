@@ -41,7 +41,7 @@ test("objetivos: palanca y horizonte válidos; matriz palanca × horizonte y che
     const r1 = upsertObjective(actor, { id: "R01", } as never); void r1;
     const resp = (await import("../src/server/store")).upsertResponsible(actor, { cargo: "Líder", dependencia: "Tribu", rolPlataforma: "RESPONSABLE" });
     assert.ok(resp.ok);
-    assert.ok(upsertKpi(actor, { code: "KR-1", line: 1, cmi: "OE-01", name: "Participación de mercado", unit: "%", frequency: "Trimestral", ownerId: resp.id, baseline: 8, target: 10, goodDirection: "up", series: [], due: "2027-T4", definition: "Ventas propias / ventas del mercado × 100" } as never).ok, "KR completo");
+    assert.ok(upsertKpi(actor, { code: "KR-1", line: 1, cmi: "OE-01", name: "Participación de mercado del 8 al 10 %", unit: "%", frequency: "Trimestral", ownerId: resp.id, baseline: 8, target: 10, goodDirection: "up", series: [], due: "2027-T4", definition: "Ventas propias / ventas del mercado × 100" } as never).ok, "KR completo");
     assert.ok(!upsertKpi(actor, { code: "KR-X", line: 1, cmi: "OE-01", name: "Plazo malo", unit: "%", frequency: "Trimestral", ownerId: resp.id, baseline: 1, target: 2, goodDirection: "up", series: [], due: "mañana" } as never).ok, "plazo inválido");
     assert.ok(upsertKpi(actor, { code: "KR-2", line: 1, cmi: "OE-01", name: "Sin meta ni plazo", unit: "%", frequency: "Trimestral", ownerId: "", baseline: 0, target: 0, goodDirection: "up", series: [] } as never).ok);
     // KR-2 sin plazo pasa a KPI de salud en cuanto el objetivo tiene un KR con plazo (KR-1)

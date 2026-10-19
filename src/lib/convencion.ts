@@ -13,6 +13,25 @@ import { horizonsOf, leversOf, isConvencion } from "@/data/catalogo";
 import type { CmiObjective, InitiativeFull, KpiFull } from "@/data/cmi";
 import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
 
+/** Qué le falta a un resultado clave para estar completo: nombre con una cifra real (cuánto), línea base,
+    meta distinta de la base, unidad, dueño, plazo y definición con fórmula y fuente. Solo un KR completo
+    se valida y recibe iniciativas. */
+export function krFaltantes(k: KpiFull): string[] {
+  const out: string[] = [];
+  const nombre = (k.name ?? "").replace(k.code, "").trim();
+  if (nombre.length < 3) out.push("resultado clave");
+  else if (!/\d/.test(nombre)) out.push("cifra real en el nombre del resultado (cuánto)");
+  if (!(k.baseline > 0 || (k.series ?? []).length > 0)) out.push("línea base");
+  if (!(k.target > 0)) out.push("meta");
+  else if (k.target === k.baseline) out.push("meta distinta de la línea base");
+  if (!k.unit?.trim()) out.push("unidad");
+  if (!k.ownerId) out.push("dueño");
+  if (!/^\d{4}(-T[1-4])?$/i.test((k.due ?? "").trim())) out.push("plazo");
+  if (!((k.definition?.trim().length ?? 0) >= 10 || k.formula?.trim())) out.push("definición con fórmula y fuente");
+  return out;
+}
+export const krCompleto = (k: KpiFull): boolean => krFaltantes(k).length === 0;
+
 export type OkrIssue = {
   level: "alto" | "medio";
   kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "iniciativa-sin-kr" | "palanca-muchos-objetivos" | "palanca-sin-okr";
@@ -77,13 +96,8 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
     else if (krs.length > KR_MAX) out.push({ level: "alto", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene ${krs.length} resultados clave; el máximo es 5 (lo recomendado, de 2 a 4).` });
     else if (krs.length > KR_IDEAL_MAX) out.push({ level: "medio", kind: "objetivo-muchos-kr", ref: o.id, text: `${o.id} tiene 5 resultados clave: es el máximo; lo recomendado es de 2 a 4.` });
     for (const k of krs) {
-      const missing: string[] = [];
-      if (!(k.baseline > 0 || k.series.length > 0)) missing.push("línea base");
-      if (!(k.target > 0)) missing.push("meta");
-      if (!k.ownerId) missing.push("dueño");
-      if (!k.due) missing.push("plazo");
-      if (!(k.definition?.trim() || k.formula?.trim())) missing.push("definición y fórmula");
-      if (missing.length) out.push({ level: "alto", kind: "kr-incompleto", ref: k.code, text: `${k.code} sin ${missing.join(", ")}.` });
+      const missing = krFaltantes(k);
+      if (missing.length) out.push({ level: "alto", kind: "kr-incompleto", ref: k.code, text: `${k.code} sin ${missing.join(", ")}: hasta completarlo no se valida ni recibe iniciativas.` });
       // regla de la convención: cada resultado clave debe tener al menos una iniciativa que lo mueva
       if (initiativesOfKr(cat, k.code).length === 0) out.push({ level: "alto", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva: vincula una existente o crea la que lo mueve.` });
     }

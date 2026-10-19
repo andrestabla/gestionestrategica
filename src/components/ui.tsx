@@ -241,3 +241,13 @@ export function ModuleCard({ href, code, title, desc, tags }: {
     </Link>
   );
 }
+
+
+/** Campo de una línea «lógica» que se adapta al ancho de la pantalla: el texto largo baja de línea en vez de
+    perderse hacia la derecha, y crece en alto según el contenido. Enter no inserta saltos (se comporta como un input). */
+export function AutoTextarea({ value, onChange, className = "", multiline = false, ...rest }: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange"> & { value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void; multiline?: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { const el = ref.current; if (!el) return; el.style.height = "0px"; el.style.height = `${el.scrollHeight}px`; }, [value]);
+  return <textarea ref={ref} value={value} onChange={onChange} rows={1} className={`${className} resize-none overflow-hidden leading-snug`} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+    onKeyDown={(e) => { if (!multiline && e.key === "Enter") e.preventDefault(); rest.onKeyDown?.(e); }} {...Object.fromEntries(Object.entries(rest).filter(([k]) => k !== "onKeyDown"))} />;
+}

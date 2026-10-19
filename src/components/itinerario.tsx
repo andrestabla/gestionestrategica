@@ -5,7 +5,7 @@
 // metodológicos o logísticos del equipo organizador. Sirve dentro de la
 // plataforma (modo sesión) y en el enlace público (modo público).
 import { useMemo, useState } from "react";
-import { Modal } from "@/components/ui";
+import { Modal, AutoTextarea } from "@/components/ui";
 import { ITINERARY_KINDS, COMMENT_KINDS, materialHref, fileKindOf, linkHost, URL_RE, type Itinerary, type ItineraryItem, type ItineraryComment, type ItineraryKind, type CommentKind, type ItineraryFile } from "@/lib/itinerario";
 import { consentSummary } from "@/lib/consentimiento";
 import { MessageSquare, CheckCircle2, Trash2, Link2, RefreshCw, Upload, Globe, Lock, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, ArrowUp, ArrowDown, FileText, Presentation, ExternalLink } from "lucide-react";
@@ -253,14 +253,14 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
         {editing ? (
           <div className="space-y-2.5 rounded-xl border border-line px-3.5 py-3">
             <div className="grid gap-2 sm:grid-cols-[1fr_90px_90px]">
-              <label className="block"><span className="label !text-[9px]">Título</span><input value={f.title} onChange={set("title")} className="input mt-1 !py-2 text-[13px]" /></label>
+              <label className="block"><span className="label !text-[9px]">Título</span><AutoTextarea value={f.title} onChange={set("title")} className="input mt-1 !py-2 text-[13px]" /></label>
               <label className="block"><span className="label !text-[9px]">Hora</span><input value={f.time} onChange={set("time")} className="input mt-1 !py-2 text-[13px]" placeholder="8:05" /></label>
               <label className="block"><span className="label !text-[9px]">Minutos</span><input type="number" min={0} value={f.minutes} onChange={set("minutes")} className="input mt-1 !py-2 text-[13px]" /></label>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
               <label className="block"><span className="label !text-[9px]">Tipo</span><select value={f.kind} onChange={set("kind")} className="input mt-1 !py-2 text-[13px]">{(Object.keys(ITINERARY_KINDS) as ItineraryKind[]).map((k) => <option key={k} value={k}>{ITINERARY_KINDS[k]}</option>)}</select></label>
               <label className="block"><span className="label !text-[9px]">Día</span><select value={f.day} onChange={set("day")} className="input mt-1 !py-2 text-[13px]">{days.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</select></label>
-              <label className="block"><span className="label !text-[9px]">Quién conduce</span><input value={f.who} onChange={set("who")} className="input mt-1 !py-2 text-[13px]" /></label>
+              <label className="block"><span className="label !text-[9px]">Quién conduce</span><AutoTextarea value={f.who} onChange={set("who")} className="input mt-1 !py-2 text-[13px]" /></label>
             </div>
             <label className="block"><span className="label !text-[9px]">Descripción del momento (lo que ven los participantes)</span><textarea value={f.description} onChange={set("description")} rows={3} maxLength={500} className="input mt-1 !py-2 text-[13px]" /></label>
             <label className="block"><span className="label !text-[9px]">Metodología · dinámica y resultado</span><textarea value={f.method} onChange={set("method")} rows={5} maxLength={1200} className="input mt-1 !py-2 text-[13px]" /></label>
@@ -353,8 +353,8 @@ function HeaderForm({ itinerary, busy, onClose, onSave }: { itinerary: Omit<Itin
   return (
     <Modal title="Encabezado del itinerario" onClose={onClose} footer={<><button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button><button type="button" disabled={busy || title.trim().length < 3} onClick={() => void onSave(title.trim(), sub.trim() || undefined)} className="btn-primary !py-2 text-[12px] disabled:opacity-40">Guardar</button></>}>
       <div className="space-y-2.5">
-        <label className="block"><span className="label !text-[9px]">Título</span><input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} className="input mt-1 !py-2 text-[13px]" /></label>
-        <label className="block"><span className="label !text-[9px]">Subtítulo</span><input value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
+        <label className="block"><span className="label !text-[9px]">Título</span><AutoTextarea value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} className="input mt-1 !py-2 text-[13px]" /></label>
+        <label className="block"><span className="label !text-[9px]">Subtítulo</span><AutoTextarea value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
       </div>
     </Modal>
   );
@@ -365,8 +365,8 @@ function DayForm({ day, busy, onClose, onSave }: { day: { id: string; title: str
   return (
     <Modal title={`Día · ${day.id}`} onClose={onClose} footer={<><button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button><button type="button" disabled={busy || title.trim().length < 3} onClick={() => void onSave(title.trim(), sub.trim() || undefined)} className="btn-primary !py-2 text-[12px] disabled:opacity-40">Guardar</button></>}>
       <div className="space-y-2.5">
-        <label className="block"><span className="label !text-[9px]">Título del día</span><input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className="input mt-1 !py-2 text-[13px]" placeholder="Día 1 · miércoles 22 de octubre" /></label>
-        <label className="block"><span className="label !text-[9px]">Subtítulo</span><input value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
+        <label className="block"><span className="label !text-[9px]">Título del día</span><AutoTextarea value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className="input mt-1 !py-2 text-[13px]" placeholder="Día 1 · miércoles 22 de octubre" /></label>
+        <label className="block"><span className="label !text-[9px]">Subtítulo</span><AutoTextarea value={sub} onChange={(e) => setSub(e.target.value)} maxLength={200} className="input mt-1 !py-2 text-[13px]" /></label>
       </div>
     </Modal>
   );
@@ -386,8 +386,8 @@ function LinkForm({ busy, onAdd, label = "Añadir enlace", className = "" }: { b
   if (!open) return <button type="button" onClick={() => setOpen(true)} className={`btn-ghost !py-1.5 text-[11.5px] ${className}`}><Link2 size={12} /> {label}</button>;
   return (
     <div className={`flex w-full flex-wrap items-end gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-2 ${className}`}>
-      <label className="block min-w-[160px] flex-1"><span className="label !text-[9px]">Nombre</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={160} className="input mt-1 !py-1.5 text-[12.5px]" placeholder="Presentación de la tribu" /></label>
-      <label className="block min-w-[200px] flex-[2]"><span className="label !text-[9px]">URL</span><input value={url} onChange={(e) => setUrl(e.target.value)} maxLength={600} inputMode="url" className="input mt-1 !py-1.5 text-[12.5px]" placeholder="https://…" /></label>
+      <label className="block min-w-[160px] flex-1"><span className="label !text-[9px]">Nombre</span><AutoTextarea value={name} onChange={(e) => setName(e.target.value)} maxLength={160} className="input mt-1 !py-1.5 text-[12.5px]" placeholder="Presentación de la tribu" /></label>
+      <label className="block min-w-[200px] flex-[2]"><span className="label !text-[9px]">URL</span><AutoTextarea value={url} onChange={(e) => setUrl(e.target.value)} maxLength={600} inputMode="url" className="input mt-1 !py-1.5 text-[12.5px]" placeholder="https://…" /></label>
       <button type="button" onClick={() => setOpen(false)} className="btn-ghost !py-1.5 text-[11.5px]">Cancelar</button>
       <button type="button" disabled={busy || !ok} onClick={async () => { if (await onAdd(name.trim(), url.trim())) { setName(""); setUrl(""); setOpen(false); } }} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Añadir</button>
     </div>

@@ -17,14 +17,14 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
 import Link from "next/link";
-import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea } from "@/components/ui";
 import { AccessChip, useCan, useBase, useUser } from "@/components/user-context";
 import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Lever } from "@/data/catalogo";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
-import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
+import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, EvaluationForm, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
@@ -299,7 +299,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
             : <Field label="Horizonte"><select value={f.horizon} onChange={set("horizon")} className={INPUT}><option value="">— sin horizonte —</option>{horizons.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></Field>}
         </div>
         {okr && parents.length > 0 && <p className="text-[11px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
-        <Field label={okr ? (initial?.parent ? "Objetivo del OKR · objetivo rector de la palanca (se adopta tal cual)" : "Objetivo 2027 de la tribu") : "Objetivo"}><input value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
+        <Field label={okr ? (initial?.parent ? "Objetivo del OKR · objetivo rector de la palanca (se adopta tal cual)" : "Objetivo 2027 de la tribu") : "Objetivo"}><AutoTextarea value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
         <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
         <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder="¿Cómo mediremos ese avance? (complementa el indicador de la palanca)" className={INPUT} /></Field>
         {okr && (
@@ -542,6 +542,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
   // un resultado clave se valida solo con todos sus campos: nombre, línea base, meta, unidad, dueño, plazo, frecuencia y definición con fórmula y fuente
   const faltan: string[] = [];
   if (f.name.trim().length < 3) faltan.push("resultado clave");
+  else if (!/\d/.test(f.name.replace(f.code, ""))) faltan.push("una cifra real en el nombre del resultado (cuánto)");
   if (f.baseline.trim() === "" || !Number.isFinite(Number(f.baseline.replace(",", ".")))) faltan.push("línea base");
   if (f.target.trim() === "" || !Number.isFinite(Number(f.target.replace(",", ".")))) faltan.push("meta");
   else if (f.baseline.trim() !== "" && num(f.target) === num(f.baseline)) faltan.push("meta distinta de la línea base");
@@ -589,7 +590,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
           <Field label="Código" help={KR_AYUDA.code}><input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} disabled={!!initial} className={`${INPUT} num`} /></Field>
-          <Field label="Resultado clave" help={KR_AYUDA.name}><input value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>
+          <Field label="Resultado clave" help={KR_AYUDA.name}><AutoTextarea value={f.name} onChange={set("name")} placeholder="Qué resultado verificable y cuánto" className={INPUT} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Field label="Línea base" help={KR_AYUDA.baseline}><input type="number" step="any" value={f.baseline} onChange={set("baseline")} className={`${INPUT} num`} /></Field>
@@ -602,7 +603,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
           <Field label="Plazo (AAAA o AAAA-Tn)" help={KR_AYUDA.due}><input value={f.due} onChange={set("due")} className={`${INPUT} num`} /></Field>
           <Field label="Frecuencia" help={KR_AYUDA.frequency}><select value={f.frequency} onChange={set("frequency")} className={INPUT}>{["Mensual", "Trimestral", "Semestral", "Anual"].map((x) => <option key={x} value={x}>{x}</option>)}</select></Field>
         </div>
-        <Field label="Definición, fórmula y fuente" help={KR_AYUDA.definition}><input value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula (fórmula) y de dónde sale el dato" className={INPUT} /></Field>
+        <Field label="Definición, fórmula y fuente" help={KR_AYUDA.definition}><AutoTextarea value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula (fórmula) y de dónde sale el dato" className={INPUT} /></Field>
         {faltan.length > 0 && <p className="text-[11px] leading-snug text-warn">Para registrar el resultado clave completa: {faltan.join(", ")}. Toca «?» en cada campo si tienes dudas.</p>}
       </div>
     </Modal>
@@ -613,7 +614,10 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 
 function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTribe, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; scope: string | null; myTribe?: string; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
   const objectives = okrObjectivesOf(cat, horizon);
-  const krs = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
+  // en esta sección solo entran los resultados clave completos; los incompletos se terminan en «OKR»
+  const todosKr = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
+  const krs = todosKr.filter((x) => krCompleto(x.k));
+  const incompletos = todosKr.filter((x) => !krCompleto(x.k));
   const [fTribe, setFTribe] = useState(myTribe && cat.initiatives.some((i) => i.ownerId === myTribe) ? myTribe : "");
   const [nueva, setNueva] = useState(false);
   const [edit, setEdit] = useState<InitiativeFull | null>(null);
@@ -621,7 +625,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
   // el líder de tribu (ámbito) edita solo las de su tribu; el directivo por QR, las que creó
   const mine = (i: InitiativeFull) => scope ? i.ownerId === scope : canEdit || (canCreate && (i.createdBy ?? "").toLowerCase() === me.toLowerCase());
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
-  const unlinked = cat.initiatives.filter((i) => (!i.kpi || !krs.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe));
+  const unlinked = cat.initiatives.filter((i) => (!i.kpi || !todosKr.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe));
   const [link, setLink] = useState<string | null>(null);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   const leverName = (o: CmiObjective) => levers.find((l) => l.id === o.lever)?.name ?? "";
@@ -634,7 +638,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
-        <StatCard label="Resultados clave" value={krs.length} foot={`en ${horizonLabel(cat.company, horizon)}`} />
+        <StatCard label="Resultados clave completos" value={krs.length} unit={incompletos.length ? `+ ${incompletos.length} incompletos` : undefined} foot={`en ${horizonLabel(cat.company, horizon)}`} />
         <StatCard label="KR con iniciativa" value={krs.filter((x) => initiativesOfKr(cat, x.k.code).length > 0).length} unit={`de ${krs.length}`} foot="al menos una iniciativa los mueve" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Iniciativas sin KR" value={unlinked.length} unit={`de ${cat.initiatives.length}`} foot="no mueven un resultado clave del horizonte" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
@@ -654,7 +658,13 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
                 </div>
               );
             })}
-            {krs.length === 0 && <div className="px-5 py-4"><EmptyNote>Sin resultados clave en {horizonLabel(cat.company, horizon)}: defínelos en «OKR».</EmptyNote></div>}
+            {krs.length === 0 && <div className="px-5 py-4"><EmptyNote>Sin resultados clave completos en {horizonLabel(cat.company, horizon)}: defínelos o complétalos en «OKR».</EmptyNote></div>}
+            {incompletos.filter((x) => !fTribe || levers.find((l) => l.id === x.o.lever)?.ownerId === fTribe).length > 0 && (
+              <div className="px-5 py-3 text-[11.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, white)" }}>
+                <b>No reciben iniciativas todavía</b> (complétalos en «OKR»):
+                <ul className="mt-1 space-y-0.5">{incompletos.filter((x) => !fTribe || levers.find((l) => l.id === x.o.lever)?.ownerId === fTribe).map(({ k }) => <li key={k.code}><span className="num font-bold text-ink">{k.code}</span> · {k.name} <span className="text-faint">· sin {krFaltantes(k).join(", ")}</span></li>)}</ul>
+              </div>
+            )}
           </div>
         </Card>
         <Card className="rise rise-1 overflow-hidden">
@@ -692,21 +702,24 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
 function OkrPicker({ cat, horizon, value, onChange, scope }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; scope?: string | null }) {
   // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
   const objectives = okrObjectivesOf(cat, horizon).filter((o) => !scope || (cat.company.levers ?? []).find((l) => l.id === o.lever)?.ownerId === scope);
-  const conKr = objectives.filter((o) => keyResultsOf(cat, o).length > 0);
+  // solo los resultados clave completos reciben iniciativas (nombre con cifra, base, meta, dueño, plazo y definición)
+  const krsDe = (o: CmiObjective) => keyResultsOf(cat, o).filter(krCompleto);
+  const conKr = objectives.filter((o) => krsDe(o).length > 0);
+  const hayIncompletos = objectives.some((o) => keyResultsOf(cat, o).length > 0);
   if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "Tu tribu aún no tiene su OKR registrado" : `Aún no hay OKR de las tribus en ${horizonLabel(cat.company, horizon)}`}: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «OKR».</p>;
-  if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "El OKR de tu tribu" : "Los OKR de las tribus"} aún no {scope ? "tiene" : "tienen"} resultados clave: las iniciativas se vinculan a un resultado clave concreto, no al objetivo. Regístralos primero en la pestaña «OKR» (etapa 3) y vuelve a vincular.</p>;
+  if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "El OKR de tu tribu" : "Los OKR de las tribus"} aún no {scope ? "tiene" : "tienen"} resultados clave {hayIncompletos ? "completos" : ""}: las iniciativas se vinculan a un resultado clave completo (nombre con cifra, línea base, meta, dueño, plazo y definición con fórmula). {hayIncompletos ? "Complétalos" : "Regístralos"} primero en la pestaña «OKR» (etapa 3) y vuelve a vincular.</p>;
   return (
     <div className="space-y-2">
       <Field label={scope ? "Resultado clave de tu tribu que mueve (obligatorio)" : "Resultado clave que mueve (obligatorio)"}>
-        <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => keyResultsOf(cat, x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code }); }} className={INPUT}>
+        <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => krsDe(x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code }); }} className={INPUT}>
           <option value="">— elegir el resultado clave —</option>
-          {objectives.map((o) => { const ks = keyResultsOf(cat, o); return (
+          {objectives.map((o) => { const ks = krsDe(o); return (
             <optgroup key={o.id} label={`${o.id} · ${o.name.slice(0, 80)}`}>
-              {ks.length === 0 ? <option disabled value="">sin resultados clave todavía (regístralos en OKR)</option> : ks.map((k) => <option key={k.code} value={k.code}>{k.code} · {k.name}</option>)}
+              {ks.length === 0 ? <option disabled value="">{keyResultsOf(cat, o).length ? "sin resultados clave completos (complétalos en OKR)" : "sin resultados clave todavía (regístralos en OKR)"}</option> : ks.map((k) => <option key={k.code} value={k.code}>{k.code} · {k.name}</option>)}
             </optgroup>
           ); })}
         </select>
-        <span className="mt-1 block text-[10.5px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto; el objetivo se toma del KR elegido.</span>
+        <span className="mt-1 block text-[10.5px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto y completo; el objetivo se toma del KR elegido. Los KR incompletos no aparecen hasta completarse en «OKR».</span>
       </Field>
     </div>
   );
@@ -732,7 +745,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
-        <Field label="Iniciativa"><input value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
+        <Field label="Iniciativa"><AutoTextarea value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} />
@@ -1067,7 +1080,7 @@ function FieldHelp({ text }: { text: string }) {
 /** Ayuda de cada campo del resultado clave. */
 const KR_AYUDA = {
   code: "Identificador único: prefijo de la palanca y número consecutivo (p. ej. MS-01). Se asigna solo; no hace falta cambiarlo.",
-  name: "Qué resultado verificable se logra, no qué actividad se hace: nombra el indicador (p. ej. «PDV en funcionamiento», «Market Share de farmacia (%)»). Si empieza por implementar, diseñar o capacitar, es una iniciativa, no un KR.",
+  name: "Qué resultado verificable se logra y cuánto, con la cifra real (p. ej. «Market Share de farmacia del 12 % al 15 %», «45 PDV en funcionamiento»). Sin una cifra en el nombre el KR queda incompleto: no se valida ni recibe iniciativas. Si empieza por implementar, diseñar o capacitar, es una iniciativa, no un KR.",
   baseline: "El valor real de hoy, con fecha y fuente en la definición. Si aún no se conoce, no inventes un número: anota en la definición quién lo consigue y cuándo, y deja 0 mientras tanto (el KR quedará marcado como incompleto).",
   target: "El valor a alcanzar a 2027-T4: ambicioso pero alcanzable, coherente con el sentido (sube o baja), con el objetivo rector y con las metas de las otras palancas. Debe ser distinto de la línea base.",
   unit: "En qué se mide: %, PDV, días, puntos, USD, clientes. La misma unidad para la línea base y la meta.",

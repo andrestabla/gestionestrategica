@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile, addItineraryFile, itineraryFileOf, flushOrError } from "@/server/store";
+import { canItinerary, itineraryOf, itineraryComments, setItinerary, publishItinerary, addItineraryComment, resolveItineraryComment, deleteItineraryComment, setMomentFiles, removeItineraryFile, addItineraryFile, itineraryFileOf, flushOrError } from "@/server/store";
 import { deleteObject } from "@/server/storage";
 import { can } from "@/lib/permissions";
 import { itineraryPublicPath, participantsAsItinerary, fileIdFrom, fileKindOf, FILE_TYPES } from "@/lib/itinerario";
@@ -17,7 +17,7 @@ import { originOf } from "../convencion/acceso/route";
 // name, url, group?) o retirar un material (op: "removeFile", id).
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const it = itineraryOf();
-  const manage = can(user, "manage_catalog") && !user.qr;
+  const manage = canItinerary(user);   // advisor, gerencia y admin con cuenta; el líder de tribu y quien entra por el QR solo ven
   return NextResponse.json({
     itinerary: it ? (manage ? it : participantsAsItinerary(it)) : null,
     audience: manage ? "organizador" : "participantes",

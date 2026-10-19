@@ -54,7 +54,7 @@ test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas
     assert.equal((upsertObjective(lider, { perspective: "financiera", name: "Objetivo nuevo en palanca ajena", kpis: [], lever: "MAR", horizon: "H1", okr: true }) as { status?: number }).status, 403);
     assert.ok(upsertObjective(lider, { id: "MS-O1", perspective: "clientes", name: "Objetivo rector de Market Share (ajustado)", kpis: [], lever: "MS", horizon: "H1", okr: true }).ok);
     // resultados clave: solo bajo el objetivo de su tribu
-    const kr = (u: SessionUser, code: string, cmi: string) => upsertKpi(u, { code, cmi, name: `Resultado clave ${code}`, unit: "%", baseline: 1, target: 2, ownerId: "R01", due: "2027-T4", definition: "Fórmula y fuente" });
+    const kr = (u: SessionUser, code: string, cmi: string) => upsertKpi(u, { code, cmi, name: `Resultado clave ${code} al 15 %`, unit: "%", baseline: 1, target: 2, ownerId: "R01", due: "2027-T4", definition: "Fórmula y fuente" });
     assert.ok(kr(lider, "MS-01", "MS-O1").ok);
     assert.equal((kr(lider, "MAR-01", "MAR-O1") as { status?: number }).status, 403);
     assert.ok(kr(advisor, "MAR-01", "MAR-O1").ok);
@@ -76,6 +76,11 @@ test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas
     const ev = { scores: { D: 3, E: 3, M: 3, L: 3 }, type: Object.fromEntries(typeRuleOf(catalog().company).criteria.map((c) => [c.key, "ESTRATEGICO"])) };
     assert.ok(evaluateInitiative(lider, (mia as { id: string }).id, ev).ok);
     assert.ok(kr(advisor, "MAR-02", "MAR-O1").ok);
+    // solo se vincula a un resultado clave completo: con cifra en el nombre, base, meta, dueño, plazo y definición
+    assert.ok(upsertKpi(advisor, { code: "MS-09", cmi: "MS-O1", name: "Resultado sin cifra ni meta", unit: "%", ownerId: "R01" }).ok);
+    const incompleto = upsertInitiative(lider, { id: (mia as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MS-09" }) as { status?: number; error?: string };
+    assert.equal(incompleto.status, 422); assert.match(incompleto.error ?? "", /incompleto/);
+    assert.ok(removeKpi(advisor, "MS-09").ok);
     // el líder vincula únicamente a los resultados clave del OKR de su tribu
     assert.equal((upsertInitiative(lider, { id: (mia as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MAR-02" }) as { status?: number }).status, 403);
     assert.ok(upsertInitiative(gerencia, { id: (ajena as { id: string }).id, name: "Gerencia sí edita cualquier iniciativa", capability: "DIR-1", cmi: "MAR-O1", ownerId: "R02", horizon: "H1", kpi: "MAR-02" }).ok);

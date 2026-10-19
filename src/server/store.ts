@@ -18,6 +18,7 @@ import {
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
+import { krFaltantes } from "@/lib/convencion";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -2098,7 +2099,7 @@ export const itineraryOf = (): Itinerary | undefined => companyRec()?.itinerary;
 /** Carga o reemplaza el itinerario (manage_catalog); conserva publicación y enlace. */
 /** El itinerario y sus materiales los administra el equipo organizador: advisor, gerencia y admin con cuenta;
     quien entra por el QR (aunque sea líder de tribu) solo lo ve. */
-const canItinerary = (actor: SessionUser) => can(actor, "manage_catalog") && !actor.qr && !tribeScope(actor);
+export const canItinerary = (actor: SessionUser): boolean => can(actor, "manage_catalog") && !actor.qr && !tribeScope(actor);
 
 export function setItinerary(actor: SessionUser, input: unknown): { ok: true; itinerary: Itinerary } | { ok: false; status: number; error: string } {
   if (!canItinerary(actor)) return { ok: false, status: 403, error: "El itinerario lo carga el advisor o la gerencia." };
@@ -2546,6 +2547,11 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (tribeScope(user) && ownerId !== tribeScope(user)) return fail(403, "Solo registras iniciativas de tu tribu: elige tu tribu como dueña.");
   const kpi = str(input.kpi, 20).toUpperCase();
   if (kpi && !c.kpis.some((k) => k.code === kpi)) return fail(422, "El KPI asociado no existe.");
+  // convención: una iniciativa solo se vincula a un resultado clave completo (nombre con cifra, base, meta, dueño, plazo y definición)
+  if (kpi && c.company.mode === "convencion") {
+    const faltan = krFaltantes(c.kpis.find((k) => k.code === kpi)!);
+    if (faltan.length) return fail(422, `El resultado clave ${kpi} está incompleto (sin ${faltan.join(", ")}): complétalo en OKR antes de vincularle iniciativas.`);
+  }
   // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
   if (kpi && tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === kpi)?.cmi) !== tribeScope(user)) return fail(403, "Vincula la iniciativa a un resultado clave del OKR de tu tribu.");
   const start = str(input.start, 8), end = str(input.end, 8);
