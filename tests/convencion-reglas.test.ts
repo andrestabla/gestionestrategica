@@ -81,6 +81,12 @@ test("convención: el líder de tribu solo toca el OKR, los KR y las iniciativas
     const incompleto = upsertInitiative(lider, { id: (mia as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MS-09" }) as { status?: number; error?: string };
     assert.equal(incompleto.status, 422); assert.match(incompleto.error ?? "", /incompleto/);
     assert.ok(removeKpi(advisor, "MS-09").ok);
+    // cada resultado clave recibe como máximo dos iniciativas
+    const segunda = ini(lider, { ownerId: "R01", kpi: "MS-01" }); assert.ok(segunda.ok, "segunda iniciativa en MS-01");
+    const tercera = ini(lider, { ownerId: "R01", kpi: "MS-01" }) as { status?: number; error?: string };
+    assert.equal(tercera.status, 422); assert.match(tercera.error ?? "", /máximo 2/);
+    assert.ok(upsertInitiative(lider, { id: (segunda as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MS-01" }).ok, "editar una ya vinculada no cuenta de nuevo");
+    assert.ok(removeInitiative(lider, (segunda as { id: string }).id).ok);
     // el líder vincula únicamente a los resultados clave del OKR de su tribu
     assert.equal((upsertInitiative(lider, { id: (mia as { id: string }).id, name: "Iniciativa de prueba larga", capability: "DIR-1", cmi: "MS-O1", ownerId: "R01", horizon: "H1", kpi: "MAR-02" }) as { status?: number }).status, 403);
     assert.ok(upsertInitiative(gerencia, { id: (ajena as { id: string }).id, name: "Gerencia sí edita cualquier iniciativa", capability: "DIR-1", cmi: "MAR-O1", ownerId: "R02", horizon: "H1", kpi: "MAR-02" }).ok);

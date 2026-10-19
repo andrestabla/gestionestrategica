@@ -119,10 +119,10 @@ async function main() {
       await medir("editar:abrir-calificacion", async () => { const r = await post(c, "/api/td/priorizacion", { tribe: s.tribu, session: "abrir" }); return r.status === 422 && /desde el estado «abierta»/.test(await r.clone().text()) ? new Response("{}", { status: 200 }) : r; }, json);
       while (Date.now() < fin) {
         ronda++;
-        const ini = await medir("editar:iniciativa-crear", () => post(c, "/api/td/catalogo", { entity: "initiative", op: "upsert", data: { name: `Iniciativa de carga ${n}-${ronda}`, capability: "DIR-1", cmi: objId ?? "OE-01", ownerId: s.tribu, horizon: "H1", kpi: objId ? `CG${n}-01` : "", objetivo: "Qué logra: prueba de carga" } }), json);
+        const ini = await medir("editar:iniciativa-crear", () => post(c, "/api/td/catalogo", { entity: "initiative", op: "upsert", data: { name: `Iniciativa de carga ${n}-${ronda}`, capability: "DIR-1", cmi: objId ?? "OE-01", ownerId: s.tribu, horizon: "H1", kpi: objId && ronda <= 2 ? `CG${n}-01` : "", objetivo: "Qué logra: prueba de carga" } }), json);
         const id: string | undefined = ini?.id;
         if (id) {
-          await medir("editar:iniciativa-actualizar", () => post(c, "/api/td/catalogo", { entity: "initiative", op: "upsert", data: { id, name: `Iniciativa de carga ${n}-${ronda} (actualizada)`, capability: "DIR-1", cmi: objId ?? "OE-01", ownerId: s.tribu, horizon: "H1", kpi: objId ? `CG${n}-01` : "", start: "2027-T2", end: "2027-T4", objetivo: "Qué logra: prueba de carga" } }), json);
+          await medir("editar:iniciativa-actualizar", () => post(c, "/api/td/catalogo", { entity: "initiative", op: "upsert", data: { id, name: `Iniciativa de carga ${n}-${ronda} (actualizada)`, capability: "DIR-1", cmi: objId ?? "OE-01", ownerId: s.tribu, horizon: "H1", kpi: objId && ronda <= 2 ? `CG${n}-01` : "", start: "2027-T2", end: "2027-T4", objetivo: "Qué logra: prueba de carga" } }), json);
           if (objId) await medir("editar:calificar", () => post(c, "/api/td/priorizacion", { id, evaluation: { scores: { D: 3, E: 3, M: 3, L: 2 }, type: {} } }), json);
           // consistencia: lo guardado se lee de vuelta (puede atender otra instancia)
           const vista = await medir("editar:leer-de-vuelta", () => get(c, "/api/td/catalogo"), json);

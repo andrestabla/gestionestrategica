@@ -31,10 +31,12 @@ export function krFaltantes(k: KpiFull): string[] {
   return out;
 }
 export const krCompleto = (k: KpiFull): boolean => krFaltantes(k).length === 0;
+/** Cada resultado clave recibe como máximo dos iniciativas: las que de verdad lo mueven. */
+export const KR_INI_MAX = 2;
 
 export type OkrIssue = {
   level: "alto" | "medio";
-  kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "iniciativa-sin-kr" | "palanca-muchos-objetivos" | "palanca-sin-okr";
+  kind: "objetivo-sin-kr" | "objetivo-pocos-kr" | "objetivo-muchos-kr" | "objetivo-sin-palanca" | "kr-incompleto" | "kr-sin-iniciativa" | "kr-muchas-iniciativas" | "iniciativa-sin-kr" | "palanca-muchos-objetivos" | "palanca-sin-okr";
   ref: string;       // id del objetivo, código del KR o id de la iniciativa
   text: string;
 };
@@ -99,7 +101,9 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
       const missing = krFaltantes(k);
       if (missing.length) out.push({ level: "alto", kind: "kr-incompleto", ref: k.code, text: `${k.code} sin ${missing.join(", ")}: hasta completarlo no se valida ni recibe iniciativas.` });
       // regla de la convención: cada resultado clave debe tener al menos una iniciativa que lo mueva
-      if (initiativesOfKr(cat, k.code).length === 0) out.push({ level: "alto", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva: vincula una existente o crea la que lo mueve.` });
+      const nIni = initiativesOfKr(cat, k.code).length;
+      if (nIni === 0) out.push({ level: "alto", kind: "kr-sin-iniciativa", ref: k.code, text: `${k.code} no tiene ninguna iniciativa que lo mueva: vincula una existente o crea la que lo mueve.` });
+      else if (nIni > KR_INI_MAX) out.push({ level: "alto", kind: "kr-muchas-iniciativas", ref: k.code, text: `${k.code} tiene ${nIni} iniciativas; el máximo es ${KR_INI_MAX} por resultado clave: deja solo las que de verdad lo mueven.` });
     }
   }
   // convención: un solo OKR por tribu, cuyo objetivo es el objetivo rector de la palanca

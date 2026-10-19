@@ -24,7 +24,7 @@ import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Lever } from "@/data/catalogo";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
-import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
+import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, EvaluationForm, type PriorizacionData } from "@/components/priorizacion";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
@@ -644,14 +644,14 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         <Card className="rise overflow-hidden">
-          <CardHeader title="Qué mueve cada resultado clave" sub="depurar: solo las iniciativas que efectivamente alteran el KR" />
+          <CardHeader title="Qué mueve cada resultado clave" sub={`depurar: solo las iniciativas que efectivamente alteran el KR (máximo ${KR_INI_MAX} por KR)`} />
           <div className="divide-y divide-line">
             {krs.map(({ k, o }) => {
               const inis = initiativesOfKr(cat, k.code).filter((i) => !fTribe || i.ownerId === fTribe);
               if (fTribe && inis.length === 0) return null;
               return (
                 <div key={k.code} className="px-5 py-3">
-                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className="text-[10px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
+                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className={`num text-[10px] font-bold ${initiativesOfKr(cat, k.code).length > KR_INI_MAX ? "text-bad" : "text-faint"}`}>{initiativesOfKr(cat, k.code).length} de {KR_INI_MAX}</span><span className="text-[10px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
                   {inis.length === 0 ? <p className="mt-1 text-[11px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
                     <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[10px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
                   )}
@@ -699,7 +699,9 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
 
 /** Iniciativa nueva creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el resultado clave principal que mueve. */
 /** Selector del OKR al que se vincula una iniciativa: objetivo de la tribu y, si ya tiene resultados clave, el KR principal. Con la IA, sugiere el vínculo a partir del nombre y de lo que logra. */
-function OkrPicker({ cat, horizon, value, onChange, scope }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; scope?: string | null }) {
+function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; scope?: string | null; iniId?: string }) {
+  // cada resultado clave recibe como máximo dos iniciativas (sin contar la que se está editando)
+  const ocupadas = (code: string) => cat.initiatives.filter((i) => i.kpi === code && i.id !== iniId).length;
   // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
   const objectives = okrObjectivesOf(cat, horizon).filter((o) => !scope || (cat.company.levers ?? []).find((l) => l.id === o.lever)?.ownerId === scope);
   // solo los resultados clave completos reciben iniciativas (nombre con cifra, base, meta, dueño, plazo y definición)
@@ -715,11 +717,11 @@ function OkrPicker({ cat, horizon, value, onChange, scope }: { cat: Cat; horizon
           <option value="">— elegir el resultado clave —</option>
           {objectives.map((o) => { const ks = krsDe(o); return (
             <optgroup key={o.id} label={`${o.id} · ${o.name.slice(0, 80)}`}>
-              {ks.length === 0 ? <option disabled value="">{keyResultsOf(cat, o).length ? "sin resultados clave completos (complétalos en OKR)" : "sin resultados clave todavía (regístralos en OKR)"}</option> : ks.map((k) => <option key={k.code} value={k.code}>{k.code} · {k.name}</option>)}
+              {ks.length === 0 ? <option disabled value="">{keyResultsOf(cat, o).length ? "sin resultados clave completos (complétalos en OKR)" : "sin resultados clave todavía (regístralos en OKR)"}</option> : ks.map((k) => { const n = ocupadas(k.code); const lleno = n >= KR_INI_MAX && value.kpi !== k.code; return <option key={k.code} value={k.code} disabled={lleno}>{k.code} · {k.name} · {n} de {KR_INI_MAX}{lleno ? " (lleno)" : ""}</option>; })}
             </optgroup>
           ); })}
         </select>
-        <span className="mt-1 block text-[10.5px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto y completo; el objetivo se toma del KR elegido. Los KR incompletos no aparecen hasta completarse en «OKR».</span>
+        <span className="mt-1 block text-[10.5px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto y completo; el objetivo se toma del KR elegido. Cada KR recibe máximo {KR_INI_MAX} iniciativas; los incompletos no aparecen hasta completarse en «OKR».</span>
       </Field>
     </div>
   );
@@ -748,7 +750,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
         <Field label="Iniciativa"><AutoTextarea value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
-        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} />
+        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} />
         <p className="text-[11px] text-faint">Queda asociada al resultado clave elegido y a {horizonLabel(cat.company, horizon)}; así se califica en Priorización en vivo como las demás.</p>
       </div>
     </Modal>
@@ -762,7 +764,7 @@ function LinkForm({ cat, horizon, ini, scope = null, saving, onCancel, onSubmit 
     <Modal title={`Vincular · ${ini.id}`} sub={ini.name} onClose={onCancel}
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} onClick={() => ok && onSubmit(link.cmi, link.kpi)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
-      <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} />
+      <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={ini.id} />
       <p className="mt-2 text-[11px] text-faint">Al vincular, la iniciativa queda asociada al resultado clave elegido (y al objetivo al que pertenece) y habilitada para calificar.</p>
     </Modal>
   );
@@ -1167,7 +1169,7 @@ const ETAPAS: { n: number; hora: string; titulo: string; mesa: string[]; platafo
   { n: 1, hora: "8:05", titulo: "Reconectar y reconfigurar", mesa: ["Cada tribu se sienta en su mesa por palanca, con su líder y su directivo acompañante.", "Se recuperan las conclusiones del día 1, el propósito y las reglas; la moderadora explica el marco de OKR (la palanca como objetivo)."], plataforma: ["Entrar por el QR único o por la URL corta: nombre, correo, tribu y rol.", "Dirección 3x3 es solo de consulta: los objetivos estratégicos no se modifican."], entrega: "Equipos conformados, foco común y reglas claras." },
   { n: 2, hora: "8:50", titulo: "Asumir la palanca y su objetivo", mesa: ["La tribu recibe su palanca con indicador, meta y objetivo rector.", "Ese objetivo rector se copia tal cual en el F3: es el objetivo del único OKR de la tribu."], plataforma: ["En OKR ya está registrado el objetivo rector de cada palanca; no se reescribe."], entrega: "Un objetivo de OKR por tribu, derivado de su palanca." },
   { n: 3, hora: "9:00", titulo: "Definir resultados clave", mesa: ["De 2 a 4 KR (máximo 5) en el F3: indicador, línea base, meta, unidad y dueño.", "Se depuran los tácticos, operativos o escritos como actividades.", "Al cierre: el líder registra, todos validan en su celular, el directivo acompañante complementa y se intercambia el F3 con la tribu par (Market Share con Margen, Fidelización con Madurez)."], plataforma: ["Solo el líder registra en OKR: «Sugerir KR» propone KR con fuentes; «+ Resultado clave» para escribirlos; cada campo tiene su ayuda «?».", "«Validar KR» revisa el conjunto con las reglas del método; un KR solo se registra completo.", "Los miembros ven y validan desde su celular."], entrega: "Un OKR completo por tribu, con KR medibles y suficientes." },
-  { n: 4, hora: "10:35", titulo: "Vincular iniciativas", mesa: ["Por cada KR, las iniciativas existentes o nuevas que lo mueven; nueva o de continuidad; dependencias, transversalidad y áreas; trimestre de inicio propuesto.", "Un KR sin iniciativa es una alerta: se crea la que lo mueve o se acepta que no tiene cómo cumplirse."], plataforma: ["Desde las 11:20, el líder registra en Iniciativas → KR: crear nuevas, vincular existentes o dejar fuera las que no mueven ningún KR.", "Vinculada = habilitada para calificar."], entrega: "Portafolio inicial causalmente vinculado a los KR." },
+  { n: 4, hora: "10:35", titulo: "Vincular iniciativas", mesa: ["Por cada KR, las iniciativas existentes o nuevas que lo mueven; nueva o de continuidad; dependencias, transversalidad y áreas; trimestre de inicio propuesto.", "Un KR sin iniciativa es una alerta: se crea la que lo mueve o se acepta que no tiene cómo cumplirse. Cada KR recibe máximo 2 iniciativas: las que de verdad lo mueven."], plataforma: ["Desde las 11:20, el líder registra en Iniciativas → KR: crear nuevas, vincular existentes o dejar fuera las que no mueven ningún KR.", "Vinculada = habilitada para calificar."], entrega: "Portafolio inicial causalmente vinculado a los KR." },
   { n: 5, hora: "13:35", titulo: "Clasificar, priorizar y proponer inicio", mesa: ["Calibración con una iniciativa de ejemplo y explicación de la puntuación: cuatro criterios de 1 a 4; estratégica solo con 3 o 4 en D, E y M.", "Las tácticas quedan registradas con el área responsable.", "La tribu revisa su resultado y su portafolio con el directivo acompañante y prepara la socialización."], plataforma: ["El líder abre la calificación en Priorización en vivo; cada miembro califica una sola vez las iniciativas de su tribu.", "El líder cierra, consolida el ranking, propone el trimestre de inicio (T1 a T4 o después) y guarda.", "Portafolio muestra el ranking y el trimestre propuesto por palanca, en tiempo real."], entrega: "Ranking de iniciativas estratégicas y trimestre propuesto por tribu." },
   { n: 6, hora: "15:35", titulo: "Socializar y desafiar", mesa: ["Quince minutos por tribu: su único OKR, sus KR, sus iniciativas priorizadas y el trimestre propuesto.", "Los directivos desafían supuestos, detectan dependencias entre tribus y plantean ajustes; el líder recalibra si es el caso."], plataforma: ["Se presenta desde la plataforma: OKR y Portafolio filtrados por la tribu que expone."], entrega: "Propuestas contrastadas con la visión corporativa." },
   { n: 7, hora: "16:35", titulo: "Ratificar, secuenciar y comprometer", mesa: ["Con el portafolio completo visible, los directivos ratifican o ajustan el OKR de cada tribu, la prioridad y el trimestre definitivo de inicio (T1, T2, T3, T4, después o se descarta).", "La decisión se conecta con los primeros 90 días y el mecanismo de seguimiento."], plataforma: ["Gerencia y advisor registran la decisión y el trimestre definitivo en la ficha de cada iniciativa; el CSV del portafolio acompaña las conclusiones."], entrega: "Cuatro OKR ratificados, portafolio secuenciado y primeros 90 días identificados." },

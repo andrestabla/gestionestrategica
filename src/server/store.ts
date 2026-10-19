@@ -18,7 +18,7 @@ import {
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
-import { krFaltantes } from "@/lib/convencion";
+import { krFaltantes, KR_INI_MAX } from "@/lib/convencion";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -2551,6 +2551,9 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (kpi && c.company.mode === "convencion") {
     const faltan = krFaltantes(c.kpis.find((k) => k.code === kpi)!);
     if (faltan.length) return fail(422, `El resultado clave ${kpi} está incompleto (sin ${faltan.join(", ")}): complétalo en OKR antes de vincularle iniciativas.`);
+    // y recibe como máximo dos iniciativas
+    const otras = c.initiatives.filter((i) => i.kpi === kpi && i.id !== str(input.id, 10)).length;
+    if (otras >= KR_INI_MAX) return fail(422, `El resultado clave ${kpi} ya tiene ${otras} iniciativas (máximo ${KR_INI_MAX} por KR): desvincula una o elige otro resultado clave.`);
   }
   // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
   if (kpi && tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === kpi)?.cmi) !== tribeScope(user)) return fail(403, "Vincula la iniciativa a un resultado clave del OKR de tu tribu.");
