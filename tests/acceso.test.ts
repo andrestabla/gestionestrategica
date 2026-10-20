@@ -13,7 +13,7 @@ const junta: SessionUser = { email: "j@a.co", name: "Junta", role: "DIRECTIVO" }
 const inAndina = <T,>(fn: () => Promise<T> | T) => runWithTenant("andina", async () => fn());
 
 test("acceso único de la convención: se crea una vez, se conserva y solo lo regenera quien administra usuarios", async () => {
-  await inAndina(() => {
+  await inAndina(async () => {
     resetStore();
     const r1 = accessLinks(advisor); assert.equal(r1.ok, true);
     const a1 = (r1 as { access: { section: string; token: string; role: string }[] }).access;
@@ -30,6 +30,16 @@ test("acceso único de la convención: se crea una vez, se conserva y solo lo re
     assert.equal(accessSectionOf(cv.token), "convencion");
     assert.equal(updateAccess(advisor, "otra", {}).ok, false);
     assert.equal(updateAccess(advisor, "convencion", { role: "ADMIN" }).ok, false);
+    // desactivar el QR: el token sigue siendo el mismo, pero nadie entra hasta volver a activarlo
+    const off = updateAccess(advisor, "convencion", { enabled: false }); assert.equal(off.ok, true);
+    assert.equal((off as typeof r1 & { access: { enabled: boolean; token: string }[] }).access[0].enabled, false);
+    assert.equal((off as typeof r1 & { access: { enabled: boolean; token: string }[] }).access[0].token, cv.token);
+    const tribe = catalog().responsibles[0].id;
+    const bloqueado = await accessUser(cv.token, { name: "Persona Bloqueada", email: "bloqueada@cresio.ec", consent: true, responsibleId: tribe, entryRole: "miembro" });
+    assert.equal(bloqueado.ok, false); assert.equal((bloqueado as { status: number }).status, 403);
+    const on = updateAccess(advisor, "convencion", { enabled: true }); assert.equal(on.ok, true);
+    assert.equal((on as typeof r1 & { access: { enabled: boolean }[] }).access[0].enabled, true);
+    assert.equal((await accessUser(cv.token, { name: "Persona Bloqueada", email: "bloqueada@cresio.ec", consent: true, responsibleId: tribe, entryRole: "miembro" })).ok, true);
   });
 });
 

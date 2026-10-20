@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { hydrateCompanies, companyBySlug } from "@/server/store";
+import { accessEnabled } from "@/lib/acceso";
+import { AccesoCerrado } from "../acceso/[token]/page";
 
 // /<empresa>/acceder: URL corta y memorizable para quien entra desde un computador (sin escanear el QR).
 // Lleva al enlace vigente del QR de la convención; si se regenera el QR, esta URL sigue valiendo.
@@ -19,5 +21,6 @@ export default async function AccederPage() {
       </main>
     );
   }
+  if (!accessEnabled(c.access, "convencion")) return <AccesoCerrado name={c.name} />;
   redirect(`/${c.slug}/acceso/${token}`);
 }

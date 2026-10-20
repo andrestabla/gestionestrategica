@@ -13,7 +13,7 @@ export type AccessSection = "convencion";
 /** Pestañas de la convención (el menú) a las que lleva el acceso. */
 export type AccessTab = "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 export type AccessRole = Extract<Role, "LIDER" | "DIRECTIVO">;
-export type AccessEntry = { token: string; role: AccessRole; at: string };
+export type AccessEntry = { token: string; role: AccessRole; at: string; enabled?: boolean };   // enabled: false = QR desactivado (nadie entra, ni por la URL corta)
 export type AccessConfig = Partial<Record<AccessSection, AccessEntry>>;
 /** Rol que elige quien entra por el QR: miembro de tribu, líder de tribu o directivo (sin tribu). */
 export type EntryRole = "miembro" | "lider" | "directivo";
@@ -62,10 +62,13 @@ export function parseAccess(input: unknown): { ok: true; access?: AccessConfig }
     const token = typeof e?.token === "string" ? e.token : "";
     const role = isAccessRole(e?.role) ? e!.role : accessSection(k).role;
     if (!TOKEN_RE.test(token)) return { ok: false, error: `El token de la sección ${k} no es válido.` };
-    out[k] = { token, role, at: typeof e?.at === "string" ? e.at : new Date().toISOString() };
+    out[k] = { token, role, at: typeof e?.at === "string" ? e.at : new Date().toISOString(), ...(e?.enabled === false ? { enabled: false } : {}) };
   }
   return { ok: true, access: Object.keys(out).length ? out : undefined };
 }
+
+/** ¿El acceso de la sección está activo? (por defecto sí; el organizador lo desactiva para cerrar la entrada por QR). */
+export const accessEnabled = (access: AccessConfig | undefined, section: AccessSection): boolean => access?.[section]?.enabled !== false;
 
 /** Sección a la que da acceso un token, o null. */
 export function sectionOfToken(access: AccessConfig | undefined, token: string): AccessSection | null {

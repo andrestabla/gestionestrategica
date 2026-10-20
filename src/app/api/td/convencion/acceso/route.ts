@@ -11,7 +11,8 @@ export function originOf(req: Request): string {
 }
 
 // GET /api/td/convencion/acceso — enlaces de acceso de las cinco secciones
-// (token, rol y URL del QR). POST { section, regenerate?, role? } los cambia.
+// (token, rol, URL del QR y si está activo). POST { section, regenerate?, role?, enabled? } los cambia:
+// enabled false desactiva el QR (nadie entra, ni por la URL corta) hasta volver a activarlo.
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const r = accessLinks(user);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
@@ -22,7 +23,7 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   if (!body?.section) return NextResponse.json({ error: "Falta la sección" }, { status: 400 });
-  const r = updateAccess(user, body.section, { regenerate: !!body.regenerate, role: body.role });
+  const r = updateAccess(user, body.section, { regenerate: !!body.regenerate, role: body.role, enabled: typeof body.enabled === "boolean" ? body.enabled : undefined });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   const guardado = await flushOrError(); if (guardado) return NextResponse.json({ error: guardado }, { status: 500 });
   const origin = originOf(req), slug = user.company!.slug;

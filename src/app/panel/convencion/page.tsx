@@ -1095,7 +1095,7 @@ const KR_AYUDA = {
 
 /* ═══ QR de acceso por sección ═══ */
 
-type AccessRow = { section: AccessSection; label: string; role: "LIDER" | "DIRECTIVO"; token: string; url: string; what: string };
+type AccessRow = { section: AccessSection; label: string; role: "LIDER" | "DIRECTIVO"; token: string; url: string; what: string; enabled: boolean };
 
 function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void }) {
   const [rows, setRows] = useState<AccessRow[] | null>(null);
@@ -1128,10 +1128,14 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
             return (
               <div key={row.section} className="grid gap-4 rounded-2xl border border-line p-4 sm:grid-cols-[200px_1fr]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} alt={`QR de acceso a ${row.label}`} className="w-[200px] rounded-xl border border-line bg-white p-2" />
+                <div className="relative w-[200px]">
+                  <img src={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} alt={`QR de acceso a ${row.label}`} className={`w-[200px] rounded-xl border border-line bg-white p-2 ${row.enabled ? "" : "opacity-25 grayscale"}`} />
+                  {!row.enabled && <span className="absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-lg bg-ink px-2 py-1.5 text-center text-[11px] font-extrabold text-white">QR desactivado</span>}
+                </div>
                 <div className="min-w-0 space-y-2.5 text-[12.5px]">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[14px] font-extrabold text-ink">{row.label}</span>
+                    <span className={`chip !py-0 text-[9.5px] ${row.enabled ? "chip-ok" : "chip-bad"}`}>{row.enabled ? "activo: se puede entrar" : "desactivado: nadie entra"}</span>
                     <span className="chip chip-gold !py-0 text-[9.5px]">miembro: ve y califica lo de su tribu · líder: además registra OKR y vincula iniciativas</span>
                   </div>
                   <p className="text-[11.5px] leading-snug text-muted">{def.what}</p>
@@ -1148,12 +1152,13 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
                     <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary !py-1.5 text-[11.5px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
                     <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost !py-1.5 text-[11.5px]"><Download size={12} /> SVG</a>
                     <button type="button" onClick={() => { if (confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post(row.section, { regenerate: true }); }} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40"><RefreshCw size={12} /> Regenerar</button>
+                    <button type="button" onClick={() => { if (row.enabled ? confirm("Al desactivar, nadie podrá entrar escaneando el QR ni por la URL corta hasta que lo actives de nuevo. Quien ya está dentro conserva su sesión. ¿Desactivar?") : true) void post(row.section, { enabled: !row.enabled }); }} disabled={busy} className={`!py-1.5 text-[11.5px] disabled:opacity-40 ${row.enabled ? "btn-ghost" : "btn-primary"}`} title={row.enabled ? "Cerrar la entrada por QR y por la URL corta" : "Volver a permitir la entrada"}>{row.enabled ? "Desactivar QR" : "Activar QR"}</button>
                   </div>
                 </div>
               </div>
             );
           })}
-          <p className="text-[11px] text-muted">{meta.agenda}. Imprime el QR en cada mesa y proyéctalo al abrir cada bloque. Quien ya tiene cuenta conserva su rol; quien entra como líder recibe el permiso de edición solo durante esa sesión. Al cerrar la convención, «Regenerar» invalida el enlace.</p>
+          <p className="text-[11px] text-muted">{meta.agenda}. Imprime el QR en cada mesa y proyéctalo al abrir cada bloque. Quien ya tiene cuenta conserva su rol; quien entra como líder recibe el permiso de edición solo durante esa sesión. «Desactivar QR» cierra la entrada (QR y URL corta) sin cambiar el enlace: sirve antes de empezar y al cerrar cada día; «Regenerar» invalida el enlace para siempre.</p>
         </div>
       )}
     </Modal>

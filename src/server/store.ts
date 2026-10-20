@@ -23,7 +23,7 @@ import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
 import { parsePrioSessions, nextStatus, sessionOf, type PrioSessionAction } from "@/lib/priorizacion-sesion";
-import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe } from "@/lib/acceso";
+import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe, accessEnabled } from "@/lib/acceso";
 import { randomBytes } from "crypto";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile, URL_RE } from "@/lib/itinerario";
@@ -2020,7 +2020,7 @@ function saveAccess(actor: SessionUser, access: AccessConfig | undefined, what: 
   if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("acceso", (db) => db.company.update({ where: { id: dbId }, data: { access: (access && Object.keys(access).length ? access : null) as never } })); }
 }
 
-export type AccessInfo = { section: AccessSection; label: string; role: AccessRole; token: string; at: string; what: string };
+export type AccessInfo = { section: AccessSection; label: string; role: AccessRole; token: string; at: string; what: string; enabled: boolean };
 
 /** Enlaces de acceso de las cinco secciones (manage_users). Crea el token de
     cada sección la primera vez; después lo conserva hasta que se regenere. */
@@ -2033,12 +2033,13 @@ export function accessLinks(actor: SessionUser): { ok: true; access: AccessInfo[
     if (!access[s.id]) { access[s.id] = { token: newToken(), role: s.role, at: new Date().toISOString() }; changed = true; }
   }
   if (changed) saveAccess(actor, access, "enlaces de acceso por sección creados");
-  return { ok: true, access: ACCESS_SECTIONS.map((s) => ({ section: s.id, label: s.label, role: access[s.id]!.role, token: access[s.id]!.token, at: access[s.id]!.at, what: s.what })) };
+  return { ok: true, access: ACCESS_SECTIONS.map((s) => ({ section: s.id, label: s.label, role: access[s.id]!.role, token: access[s.id]!.token, at: access[s.id]!.at, what: s.what, enabled: access[s.id]!.enabled !== false })) };
 }
 
 /** Regenera el token de una sección (los QR impresos con el anterior dejan de valer)
     o cambia el rol que reciben quienes entran por ella. */
-export function updateAccess(actor: SessionUser, section: unknown, patch: { regenerate?: boolean; role?: unknown }): { ok: true; access: AccessInfo[] } | { ok: false; status: number; error: string } {
+/** También activa o desactiva el acceso: desactivado, nadie entra por el QR ni por la URL corta hasta volver a activarlo. */
+export function updateAccess(actor: SessionUser, section: unknown, patch: { regenerate?: boolean; role?: unknown; enabled?: boolean }): { ok: true; access: AccessInfo[] } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Los enlaces de acceso los administra el advisor o el administrador." };
   if (!isAccessSection(section)) return { ok: false, status: 422, error: "Sección desconocida." };
   const cur = accessLinks(actor); if (!cur.ok) return cur;
@@ -2047,8 +2048,9 @@ export function updateAccess(actor: SessionUser, section: unknown, patch: { rege
   const e = { ...access[section]! };
   if (patch.role !== undefined) { if (!isAccessRole(patch.role)) return { ok: false, status: 422, error: "Rol inválido: DIRECTIVO (consulta y evalúa) o LIDER (edita)." }; e.role = patch.role; }
   if (patch.regenerate) { e.token = newToken(); e.at = new Date().toISOString(); }
+  if (typeof patch.enabled === "boolean") { if (patch.enabled) delete e.enabled; else e.enabled = false; }
   access[section] = e;
-  saveAccess(actor, access, `acceso ${accessSection(section).label}: ${patch.regenerate ? "token regenerado" : ""}${patch.role ? ` rol ${e.role}` : ""}`.trim());
+  saveAccess(actor, access, `acceso ${accessSection(section).label}: ${[patch.regenerate ? "token regenerado" : "", patch.role ? `rol ${e.role}` : "", typeof patch.enabled === "boolean" ? (patch.enabled ? "QR activado" : "QR desactivado") : ""].filter(Boolean).join(", ")}`);
   return accessLinks(actor);
 }
 
@@ -2063,6 +2065,7 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   if (!rec || !rec.active) return { ok: false, status: 404, error: "La empresa no está activa." };
   const section = accessSectionOf(String(token ?? ""));
   if (!section) return { ok: false, status: 404, error: "Este enlace de acceso ya no es válido. Pide el QR vigente de la sección." };
+  if (!accessEnabled(rec.access, section)) return { ok: false, status: 403, error: "El acceso por QR está desactivado en este momento. El equipo organizador lo activa cuando empiece el bloque." };
   const email = String(input.email ?? "").trim().toLowerCase();
   const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "Escribe un correo válido: es tu identificación en la plataforma." };
