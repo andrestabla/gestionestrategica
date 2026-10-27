@@ -519,7 +519,7 @@ export type CompanyInput = {
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
 
-/** Valida la regla de tipo: un identificador de regla predefinida («4shine»,
+/** Valida la regla de tipo: un identificador de regla predefinida («4shine» = regla general,
     «cresio»), o una regla propia con 2 a 6 criterios y un mínimo de marcas. */
 export function parseTypeRule(input: unknown): { ok: true; rule?: TypeRule } | { ok: false; error: string } {
   if (input === undefined || input === null || input === "") return { ok: true, rule: undefined };
@@ -1595,7 +1595,7 @@ export function saveF2Response(
   return { ok: true, response, total: f2Store().length };
 }
 
-/* ═══ Corte en curso: lo capturado en la plataforma como fuentes del 4Shine-OD ═══
+/* ═══ Corte en curso: lo capturado en la plataforma como fuentes del diagnóstico de capacidades ═══
    F1 = autoevaluaciones por persona (cada quien captura las prácticas de su
    capacidad); F2 = encuesta anónima; F3 = marcas de evidencia y nivel por
    dimensión (promedio redondeado de los niveles de sus prácticas); test =
@@ -1817,7 +1817,7 @@ export function updateInitiative(
   return { ok: true, initiative: effectiveInitiatives().find((i) => i.id === id)! };
 }
 
-/* ═══ Matriz 4Shine de priorización ═══
+/* ═══ Matriz de priorización ═══
    Cada evaluador califica D·E·M·L (1–4) y marca estratégico/táctico; la
    plataforma consolida por promedio y aplica las reglas de la matriz. La
    decisión de tiempo (implementar, preparar, backlog, renunciar) la toma la
@@ -3141,7 +3141,7 @@ export type Branding = {
 };
 
 export const DEFAULT_BRANDING: Branding = {
-  platformName: "4Shine Empresas", showPlatformName: true,
+  platformName: "Gestión estratégica", showPlatformName: true,
   institutionName: "Andina Suministros",
   shortName: "Andina",
   tagline: "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.",
@@ -3152,8 +3152,8 @@ export const DEFAULT_BRANDING: Branding = {
   loginLayout: "image-left",
   loginTitle: "Iniciar sesión", showLoginTitle: true,
   loginWelcome: "Entra con la cuenta que te asignó el advisor de tu empresa.", showLoginWelcome: true,
-  loginSupport: "Soporte: soporte@4shine.co", showLoginSupport: false,
-  heroTitle: "Plataforma de gestión estratégica 4Shine Empresas", showHeroTitle: true,
+  loginSupport: "Soporte: soporte@algoritmot.com", showLoginSupport: false,
+  heroTitle: "Plataforma de gestión estratégica de Algoritmo T", showHeroTitle: true,
   heroMessages: [], showHeroMessages: true,
   heroSupport: "", showHeroSupport: false,
   overlayColor: "#0d1830", overlayOpacity: 55,

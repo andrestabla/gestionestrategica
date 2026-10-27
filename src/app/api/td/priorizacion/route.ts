@@ -4,7 +4,7 @@ import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
 import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError } from "@/server/store";
 
-// GET /api/td/priorizacion[?id=] — evaluaciones de la matriz 4Shine, el
+// GET /api/td/priorizacion[?id=] — evaluaciones de la matriz de priorización, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const id = new URL(req.url).searchParams.get("id");

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// 4Shine-OD · Motor de calificación del diagnóstico (documento técnico v2.0,
+// diagnóstico de capacidades · Motor de calificación del diagnóstico (documento técnico v2.0,
 // secciones 7 y 8). Funciones puras, sin UI ni red, equivalentes a las del
 // diagnóstico en línea (od.js) para que ambos lean igual las mismas respuestas.
 //   Test:   promedio por capacidad, cobertura, etapa (hipótesis), patrones.

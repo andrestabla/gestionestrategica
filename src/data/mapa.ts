@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// 4Shine Empresas · El mapa: 4 capacidades → 17 dimensiones → 68 prácticas →
+// Gestión estratégica · El mapa: 4 capacidades → 17 dimensiones → 68 prácticas →
 // 68 evidencias, con la escala de madurez, las 15 metodologías, los 15
-// frameworks, las 5 etapas y los dos instrumentos del diagnóstico 4Shine-OD.
+// frameworks, las 5 etapas y los dos instrumentos del diagnóstico de capacidades.
 // Fuente única: src/data/4shine.json, exportado desde los generadores de la
-// línea (4Shine Empresas/_generadores/export_plataforma.py). No se edita aquí.
+// línea (Gestión estratégica/_generadores/export_plataforma.py). No se edita aquí.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import raw from "./4shine.json";

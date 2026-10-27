@@ -170,7 +170,7 @@ function PanelHome() {
       <div className="rise rise-4">
         <div className="kicker mb-4">Módulos de la plataforma</div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico 4Shine-OD"
+          <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
             desc="Radar de capacidades, mapa de calor de las 17 dimensiones, evidencia por práctica y serie de mediciones."
             tags={["17 dimensiones", "68 evidencias"]} />
           <ModuleCard href={`${base}/panel/benchmark`} code="M2" title="Benchmark"
@@ -183,7 +183,7 @@ function PanelHome() {
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
             tags={[`${v.kpis.length} indicadores`]} />
           <ModuleCard href={`${base}/panel/ruta`} code="M5" title="Mapa de ruta"
-            desc="Roadmap por horizontes con Gantt y la matriz 4Shine de priorización (D·E·M·L)."
+            desc="Roadmap por horizontes con Gantt y la matriz de priorización (D·E·M·L)."
             tags={["2026–2028"]} />
           <ModuleCard href={`${base}/panel/iniciativas`} code="M6" title="Seguimiento de iniciativas"
             desc="Avance, presupuesto en tres estados y factores críticos de éxito en semáforo."

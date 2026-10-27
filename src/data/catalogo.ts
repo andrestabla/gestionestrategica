@@ -2,7 +2,7 @@
 // Catálogo de una empresa: todo lo que la plataforma gestiona POR EMPRESA y
 // que antes vivía como constantes de Andina (objetivos, KPI, iniciativas,
 // personas, tareas del plan, mediciones, evidencias, finanzas y territorio).
-// El mapa 4Shine (capacidades, dimensiones, prácticas) no está aquí: es la
+// El mapa de capacidades (capacidades, dimensiones, prácticas) no está aquí: es la
 // definición del sistema y es igual para todas las empresas.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ export type CompanyInfo = {
   currency?: "COP" | "USD"; // moneda de las cifras financieras
   horizons?: Horizon[];     // horizontes del roadmap y de la priorización (vacío = corto/mediano)
   levers?: Lever[];         // palancas estratégicas (hilo conductor de objetivos, OKR e iniciativas)
-  typeRule?: TypeRule;      // regla estratégica/táctica de la matriz (vacío = regla 4Shine: 3 de 4 marcas)
+  typeRule?: TypeRule;      // regla estratégica/táctica de la matriz (vacío = regla general: 3 de 4 marcas)
   krTemplates?: KrTemplate[]; // plantillas de resultados clave por objetivo (biblioteca para el laboratorio de OKR)
   prioSessions?: PrioSessions; // sesión de calificación por tribu en la priorización en vivo (abierta, en revisión, guardada; orden del líder)
   mode?: CompanyMode;       // completa (todos los módulos) o convencion (solo Dirección, OKR, Iniciativas → KR, Priorización y Portafolio)
@@ -63,7 +63,7 @@ export type Lever = { id: string; name: string; order: number; ownerId?: string;
 /** ¿La empresa opera en modo convención (menú reducido a las cinco secciones)? */
 export const isConvencion = (c: Pick<CompanyInfo, "mode"> | null | undefined): boolean => c?.mode === "convencion";
 
-/** Regla de tipo (estratégica o táctica) de la empresa; sin definición rige la de 4Shine. */
+/** Regla de tipo (estratégica o táctica) de la empresa; sin definición rige la regla general. */
 export const typeRuleOf = (c: Pick<CompanyInfo, "typeRule"> | null | undefined): TypeRule =>
   Array.isArray(c?.typeRule?.criteria) ? c!.typeRule! : DEFAULT_TYPE_RULE;
 
@@ -105,7 +105,7 @@ export type Catalog = {
   assessments: AssessmentRecord[];     // mediciones publicadas y en captura
   financials: Financials | null;
   territories: Territory[];
-  demoResponses: OdResponse[];         // fuentes demo del 4Shine-OD (solo la plantilla)
+  demoResponses: OdResponse[];         // fuentes demo del diagnóstico de capacidades (solo la plantilla)
   seedEvaluations: Evaluation[];       // matriz de priorización demo
   seedDecisions: DecisionRecord[];
   seedUsers: SeedUser[];               // cuentas iniciales de la empresa
@@ -144,7 +144,7 @@ export function evidencesForMap(): EvidenceFull[] {
   }));
 }
 
-/** Catálogo vacío: la empresa arranca con el mapa 4Shine (y sus 68 evidencias
+/** Catálogo vacío: la empresa arranca con el mapa de capacidades (y sus 68 evidencias
     por verificar) y sin portafolio. */
 export function emptyCatalog(company: CompanyInfo): Catalog {
   return {

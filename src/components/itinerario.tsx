@@ -49,7 +49,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
   const [showFiles, setShowFiles] = useState(false);
   const files = itinerary.files ?? [];
   const fileHref = (f: ItineraryFile) => materialHref(f, publicRef);
-  // identidad visual del evento: con tema, cabecera oscura con el color de acento del cliente; sin tema, la identidad 4Shine
+  // identidad visual del evento: con tema, cabecera oscura con el color de acento del cliente; sin tema, la identidad de la plataforma
   const th = itinerary.theme;
   const accent = th?.accent ?? "#D4AF37", bg = th?.bg ?? "#0D1B2A";
   // con foto de fondo, un velo oscuro casi opaco sobre la mitad izquierda (donde va el texto) que se abre hacia la derecha: contraste garantizado sobre cualquier foto
@@ -87,7 +87,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
               <img src={itinerary.logo} alt={company?.name ?? "Empresa"} className="h-10 w-auto max-w-[200px] object-contain" />
             </div>
           )}
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>{th?.label ?? `${company?.name ?? ""} · 4Shine Empresas`}{audience === "participantes" ? " · agenda" : " · equipo organizador"}</div>
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>{th?.label ?? `${company?.name ?? ""} · Gestión estratégica`}{audience === "participantes" ? " · agenda" : " · equipo organizador"}</div>
           <h1 className={`mt-1.5 text-[26px] leading-[1.05] sm:text-[36px] ${titleCls}`} style={th?.image ? { textShadow: "0 1px 12px rgba(0,0,0,.6)" } : undefined}>{itinerary.title}</h1>
           {itinerary.sub && <p className="mt-1.5 max-w-2xl text-[13.5px] text-white/75">{itinerary.sub}</p>}
           {th?.tagline && <><div className="mt-4 h-[3px] w-16 rounded-full" style={{ background: accent }} /><p className="mt-2 text-[14px] italic text-white/90">«{th.tagline}»</p></>}

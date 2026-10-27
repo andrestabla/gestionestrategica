@@ -2,7 +2,7 @@
 
 // M6 · Seguimiento profundo con ruta por iniciativa:
 //   /panel/iniciativas            → listado del portafolio
-//   /panel/iniciativas/priorizacion → portafolio ordenado con la matriz 4Shine
+//   /panel/iniciativas/priorizacion → portafolio ordenado con la matriz de priorización
 //   /panel/iniciativas/<id>       → ficha a pantalla completa (i1…i8)
 // La ficha declara responsable, objetivo CMI, meta de resultado, acciones,
 // presupuesto en tres estados, motores de riesgo, factores con historial y
@@ -341,7 +341,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
         </div>
       </div>
 
-      {/* matriz 4Shine de priorización: evaluación por roles y decisión de tiempo */}
+      {/* matriz de priorización: evaluación por roles y decisión de tiempo */}
       <MatrizPanel iniId={i.id} line={i.line} horizon={i.horizon} />
 
       {/* detalle */}
@@ -490,7 +490,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
       <div className="rise mb-5 flex flex-wrap items-center gap-2">
         <button onClick={onBack} className="btn-ghost" title="Volver al listado (Esc)"><ArrowLeft size={13} /> Iniciativas</button>
       </div>
-      <PageHeader kicker="M6 · Priorización" title="Portafolio priorizado con la matriz 4Shine"
+      <PageHeader kicker="M6 · Priorización" title="Portafolio priorizado con la matriz de priorización"
         desc="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. El puntaje ordena las alternativas dentro de cada horizonte y sugiere el horizonte: elegible, con capacidad y 65 o más puntos, el primero; elegible con capacidad por resolver o entre 50 y 64, el siguiente; el resto, el último. Para competir como prioridad crítica D debe ser 3 o 4. La decisión de tiempo la registra la gerencia."
         actions={<AccessChip module="iniciativas" />} />
 

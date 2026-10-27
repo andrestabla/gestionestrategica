@@ -1,6 +1,6 @@
 "use client";
 
-// M1 · Diagnóstico 4Shine-OD con rutas profundas:
+// M1 · Diagnóstico de capacidades con rutas profundas:
 //   /panel/diagnostico                      → resumen: radar, mapa de calor, fuentes y señales
 //   /panel/diagnostico/capacidad/<n>        → una capacidad y sus dimensiones
 //   /panel/diagnostico/dimension/<DIR-1>    → una dimensión: prácticas, evidencia y fuentes
@@ -91,7 +91,7 @@ export default function DiagnosticoPage() {
   return (
     <CutCtx.Provider value={cut}>
       <div className="no-print">
-      <PageHeader kicker="M1 · Diagnóstico 4Shine-OD" title="Capacidad organizacional de la empresa"
+      <PageHeader kicker="M1 · Diagnóstico de capacidades" title="Capacidad organizacional de la empresa"
         desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico completo de tres fuentes sobre las 68 prácticas del mapa. Madurez = 0,40 × evidencia + 0,30 × dirección + 0,30 × equipos, con techo de evidencia."
         actions={<AccessChip module="madurez" />} />
       <div className="rise mb-6 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
@@ -629,7 +629,7 @@ function InformeTest({ id }: { id: string }) {
             <div className="text-[12px] text-muted">{String(resp.meta.cargo ?? "")} · {fecha.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
+          <img src="/ge-logo-negro.png" alt="Gestión estratégica" className="h-7 object-contain" />
         </div>
 
         <div className="mt-4 grid gap-5 md:grid-cols-2">
@@ -699,9 +699,9 @@ function InformeDiagnostico() {
       </div>
       <div className="panel mb-5 px-7 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><div className="kicker">Diagnóstico 4Shine-OD · {label}</div><h2 className="text-[20px] font-extrabold tracking-tight text-ink">{v.catalog.company.name}</h2><div className="text-[12px] text-muted">{C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}</div></div>
+          <div><div className="kicker">Diagnóstico de capacidades · {label}</div><h2 className="text-[20px] font-extrabold tracking-tight text-ink">{v.catalog.company.name}</h2><div className="text-[12px] text-muted">{C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}</div></div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
+          <img src="/ge-logo-negro.png" alt="Gestión estratégica" className="h-7 object-contain" />
         </div>
         {head(1, "Radar de las cuatro capacidades", "lectura ejecutiva con el umbral de brecha y el titular del patrón")}
         <div className="grid gap-5 md:grid-cols-[300px_1fr] md:items-center">

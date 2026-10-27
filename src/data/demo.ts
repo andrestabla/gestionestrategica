@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// 4Shine Empresas · Datos ilustrativos de Andina Suministros (empresa
+// Gestión estratégica · Datos ilustrativos de Andina Suministros (empresa
 // ficticia de distribución de suministros industriales, 85 colaboradores,
 // sedes en Bogotá, Medellín y Cali). Fuente única del modo demo y del seed.
 // Los valores son de ejemplo; la información real se produce con el
-// diagnóstico 4Shine-OD y la instalación de los frameworks.
+// diagnóstico de capacidades y la instalación de los frameworks.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { CAPS, DIMS, LEVELS as MAP_LEVELS } from "@/data/mapa";
@@ -137,7 +137,7 @@ export const TERRITORIES: Territory[] = [
 
 export const DEMO_USERS = [
   { email: "andrestablarico@gmail.com", name: "Andrés Tabla Rico", role: "ADMIN", password: "4shine-demo-2026" },
-  { email: "advisor@4shine.co", name: "Advisor 4Shine", role: "CONSULTOR", password: "4shine-demo-2026" },
+  { email: "advisor@algoritmot.com", name: "Advisor", role: "CONSULTOR", password: "4shine-demo-2026" },
   { email: "gerencia@andina.example", name: "Laura Restrepo", role: "LIDER", password: "4shine-demo-2026" },
   { email: "operaciones@andina.example", name: "Carolina Vélez", role: "RESPONSABLE", line: 3, password: "4shine-demo-2026" },
   { email: "junta@andina.example", name: "Junta de socios", role: "DIRECTIVO", password: "4shine-demo-2026" },

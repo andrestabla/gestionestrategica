@@ -3,7 +3,7 @@
 // /login — acceso dirigido por el branding (Administración → Branding):
 // layout (imagen izq/der o centrado), textos con visibilidad, overlay,
 // imágenes en rotación aleatoria, logos y loader. Sin configuración
-// guardada, rinde el tema 4Shine por defecto.
+// guardada, rinde el tema de la plataforma por defecto.
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -119,10 +119,10 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
         ) : (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/4shine-logo-blanco.png" alt="4Shine" className="h-8 object-contain" />
+            <img src="/ge-logo-blanco.png" alt="Gestión estratégica" className="h-8 object-contain" />
           </>
         )}
-        {b?.showPlatformName && !b?.logoDark && !b?.logoLight && (
+        {b?.showPlatformName && !b?.logoDark && !b?.logoLight && b.platformName !== "Gestión estratégica" && (
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/60">
             · {b.platformName}
           </span>
@@ -133,7 +133,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           <h1 className="mt-4 max-w-[20ch] text-[34px] font-extrabold leading-[1.15] tracking-tight text-white">
             {b ? b.heroTitle : (
               <>Plataforma de gestión estratégica{" "}
-                <span style={{ color: "#D4AF37" }}>4Shine Empresas</span></>
+                <span style={{ color: "#F1BA5B" }}>de Algoritmo T</span></>
             )}
           </h1>
         )}
@@ -160,10 +160,10 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
         ) : (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/4shine-logo-negro.png" alt="4Shine" className="h-7 object-contain" />
-            <span className="text-[15px] font-extrabold text-ink">
-              {b?.showPlatformName ? b.platformName : "4Shine Empresas"}
-            </span>
+            <img src="/ge-logo-negro.png" alt="Gestión estratégica" className="h-8 object-contain" />
+            {b?.showPlatformName && b.platformName !== "Gestión estratégica" && (
+              <span className="text-[15px] font-extrabold text-ink">{b.platformName}</span>
+            )}
           </>
         )}
       </div>

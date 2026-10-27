@@ -1,6 +1,6 @@
 "use client";
 
-// Matriz 4Shine de priorización en la ficha de iniciativa: consolidado del
+// Matriz de priorización en la ficha de iniciativa: consolidado del
 // comité, evaluación propia (según rol y capacidad) y decisión de tiempo
 // (gerencia y advisor). La UI refleja la matriz de permisos; el servidor la
 // exige (403/422) y explica el motivo.
@@ -66,10 +66,10 @@ export const DECISION_CLS: Record<Decision, string> = { IMPLEMENTAR: "chip chip-
 
 /** Chip compacto para listados: puntaje consolidado + decisión. */
 export function PrioChip({ c, decision }: { c: Consolidated | undefined; decision?: Decision | null }) {
-  if (!c || c.n === 0) return <span className="chip" title="Sin validación con los criterios de tipo y la matriz 4Shine">Sin priorizar</span>;
+  if (!c || c.n === 0) return <span className="chip" title="Sin validación con los criterios de tipo y la matriz de priorización">Sin priorizar</span>;
   return (
     <>
-      <span className="chip" title={`Matriz 4Shine · D ${c.avg.D} · E ${c.avg.E} · M ${c.avg.M} · L ${c.avg.L} · ${c.n} evaluador${c.n > 1 ? "es" : ""}`}
+      <span className="chip" title={`Matriz de priorización · D ${c.avg.D} · E ${c.avg.E} · M ${c.avg.M} · L ${c.avg.L} · ${c.n} evaluador${c.n > 1 ? "es" : ""}`}
         style={{ color: SCORE_COLOR(c.score), fontWeight: 800 }}>
         {c.score} pts
       </span>
@@ -297,7 +297,7 @@ export function EvaluationForm({ initial, saving, rule, onSave, confirmOnce = fa
           ))}
         </div>
       </div>}
-      <div className="px-1 text-[11px] font-bold text-ink">{rule.criteria.length ? `Criterios ${rule.criteria.length + 1} a ${validationCriteriaCount(rule)} · matriz 4Shine de priorización, de 1 a 4` : "Cuatro criterios de la matriz 4Shine, de 1 a 4 · los criterios de Cresio van dentro de D, E y M"}</div>
+      <div className="px-1 text-[11px] font-bold text-ink">{rule.criteria.length ? `Criterios ${rule.criteria.length + 1} a ${validationCriteriaCount(rule)} · matriz de priorización, de 1 a 4` : "Cuatro criterios de la matriz de priorización, de 1 a 4 · los criterios de Cresio van dentro de D, E y M"}</div>
       {CRITERIA.map((cr, i) => (
         <div key={cr.key} className="rounded-xl bg-surface-2/60 px-3.5 py-3">
           <div className="flex items-start gap-2">

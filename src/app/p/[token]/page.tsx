@@ -44,7 +44,7 @@ export default async function PublicView(
       <header className="mb-8 flex flex-wrap items-center gap-4">
         <AlgoritmoMark size={34} />
         <div className="min-w-0 flex-1">
-          <div className="kicker">4Shine Empresas · Plataforma de gestión estratégica</div>
+          <div className="kicker">Gestión estratégica · plataforma de Algoritmo T</div>
           <h1 className="text-[22px] font-extrabold tracking-tight text-ink">{INSTITUTION.name}</h1>
         </div>
         <span className="chip chip-cyan"><Eye size={11} /> Vista pública de solo lectura</span>

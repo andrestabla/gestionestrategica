@@ -11,7 +11,7 @@ export const ITINERARY_KINDS: Record<ItineraryKind, string> = {
   conferencia: "Conferencia", plenaria: "Plenaria", taller: "Taller", mesa: "Mesa redonda", break: "Break", energizacion: "Energización", logistica: "Logística",
 };
 export type ItineraryDay = { id: string; title: string; sub?: string };
-/** Identidad visual del evento (concepto del cliente): rótulo, lema y colores. Sin tema, la vista usa la identidad 4Shine. */
+/** Identidad visual del evento (concepto del cliente): rótulo, lema y colores. Sin tema, la vista usa la identidad de la plataforma. */
 export type ItineraryTheme = { label?: string; tagline?: string; accent?: string; bg?: string; image?: string };   // image: foto de fondo de la cabecera (ruta /… o https://…), con velo oscuro para el contraste
 export type ItineraryItem = {
   id: string; day: string; time: string; minutes: number; title: string; kind: ItineraryKind; who: string;

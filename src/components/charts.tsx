@@ -354,7 +354,7 @@ export function PeerBars({ peers, nationalAvg, refLabel = "media nacional" }:
   );
 }
 
-/* ─── Matriz de priorización 4Shine: capacidad (L) × impacto (D) ───────────
+/* ─── Matriz de priorización: capacidad (L) × impacto (D) ───────────
    Las dos reglas de la matriz definen los cuadrantes: D ≥ 3 para competir como
    prioridad crítica y L ≥ 3 para implementar ahora. */
 
@@ -369,7 +369,7 @@ export function PriorityMatrix({ items, onSelect, selected }: {
   const mx = px(2.5), my = py(2.5);   // umbral: nivel 3 redondeado
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
-      aria-label="Matriz de priorización 4Shine: capacidad de ejecución contra impacto en el resultado">
+      aria-label="Matriz de priorización: capacidad de ejecución contra impacto en el resultado">
       <rect x={mx} y={16} width={W - 12 - mx} height={my - 16} rx={10} fill="#eaf4ee" opacity=".9" />
       <rect x={pad} y={16} width={mx - pad} height={my - 16} rx={10} fill="var(--cyan-wash)" opacity=".8" />
       <rect x={mx} y={my} width={W - 12 - mx} height={H - pad - my} rx={10} fill="var(--gold-wash)" opacity=".7" />

@@ -24,7 +24,7 @@ type Entry = {
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-/** Índice de búsqueda: el mapa 4Shine (fijo) más el portafolio de la empresa activa. */
+/** Índice de búsqueda: el mapa de capacidades (fijo) más el portafolio de la empresa activa. */
 function buildIndex(v: TenantView): Entry[] {
   const e: Entry[] = [];
   for (const p of PRACTICES) {
@@ -85,7 +85,7 @@ function buildIndex(v: TenantView): Entry[] {
   }
   const MODULES: [string, string, string][] = [
     ["Panel", "estado general", "/panel"],
-    ["Diagnóstico (M1)", "4Shine-OD: capacidades, dimensiones y prácticas", "/panel/diagnostico"],
+    ["Diagnóstico (M1)", "diagnóstico de capacidades: capacidades, dimensiones y prácticas", "/panel/diagnostico"],
     ["Test de capacidad empresarial", "etapa, perfil y prioridad", "/panel/diagnostico/test"],
     ["Brechas priorizadas", "cuello de botella y nivel de acompañamiento", "/panel/diagnostico/brechas"],
     ["Benchmark (M2)", "posición sectorial y territorio", "/panel/benchmark"],
@@ -96,7 +96,7 @@ function buildIndex(v: TenantView): Entry[] {
     ["Proyectos (GP)", "plan de trabajo", "/panel/proyectos"],
     ["Inteligencia (M7)", "BI por sector", "/panel/bi"],
     ["Informe ejecutivo", "pieza imprimible para la junta", "/panel/informe/ejecutivo"],
-    ["Metodología", "el sistema 4Shine Empresas", "/panel/metodologia"],
+    ["Metodología", "el modelo de gestión estratégica", "/panel/metodologia"],
   ];
   for (const [title, sub, href] of MODULES) {
     e.push({ id: href, group: "Módulos", title, sub, href, haystack: norm(`${title} ${sub}`) });

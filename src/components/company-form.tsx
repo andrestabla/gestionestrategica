@@ -103,7 +103,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         </div>
         <div>
           <select value={f.typeRule} onChange={set("typeRule")} className="input !py-2 text-[12px]" title="Regla con la que la matriz clasifica cada iniciativa como estratégica o táctica">
-            <option value="4shine">Tipo estratégica/táctica · regla 4Shine (4 marcas: contribución, profundidad, alcance, permanencia; 3 o más = estratégica)</option>
+            <option value="4shine">Tipo estratégica/táctica · regla general (4 marcas: contribución, profundidad, alcance, permanencia; 3 o más = estratégica)</option>
             <option value="cresio">Tipo estratégica/táctica · regla Cresio (3 criterios obligatorios: impacto, transversalidad, potencial y madurez)</option>
             {f.typeRule === "propia" && <option value="propia">Tipo estratégica/táctica · regla propia (definida por API)</option>}
           </select>
@@ -111,7 +111,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         </div>
         {!initial && (
           <select value={f.template} onChange={set("template")} className="input !py-2 text-[12px]">
-            <option value="vacia">Empezar vacía (solo el mapa 4Shine)</option>
+            <option value="vacia">Empezar vacía (solo el mapa de capacidades)</option>
             <option value="demo">Copiar la plantilla demo (objetivos, KPI, iniciativas, personas y tareas de ejemplo)</option>
           </select>
         )}

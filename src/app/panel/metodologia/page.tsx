@@ -1,8 +1,8 @@
 "use client";
 
-// Metodología · la guía de lectura de la plataforma: el sistema 4Shine
+// Metodología · la guía de lectura de la plataforma: el modelo de gestión estratégica
 // Empresas tal como lo definen el Dossier v2.0, la Matriz de capacidades
-// v2.0, el 4Shine-OD v2.0 y los frameworks. Todo se lee de las MISMAS
+// v2.0, el diagnóstico de capacidades v2.0 y los frameworks. Todo se lee de las MISMAS
 // fuentes que usa el motor (src/data/4shine.json): si una definición
 // cambia en los generadores de la línea, esta página cambia con ella.
 
@@ -22,7 +22,7 @@ const ACTION_LABEL: Record<Action, string> = {
   edit_tasks: "Crear y editar tareas del gestor",
   edit_initiatives: "Editar iniciativas (avance, factores, bitácora)",
   create_initiatives: "Crear iniciativas y editar o eliminar las propias",
-  evaluate_initiatives: "Evaluar con la matriz 4Shine de priorización",
+  evaluate_initiatives: "Evaluar con la matriz de priorización",
   decide_initiatives: "Decidir el tiempo: implementar, preparar, backlog o renunciar",
   report_kpi: "Registrar valores de KPI",
   capture_maturity: "Capturar la autoevaluación de un corte",
@@ -55,7 +55,7 @@ export default function MetodologiaPage() {
   ];
   return (
     <>
-      <PageHeader kicker="Metodología" title="El sistema 4Shine Empresas"
+      <PageHeader kicker="Metodología" title="El modelo de gestión estratégica"
         desc="Ninguna empresa puede sostener un crecimiento superior a la capacidad organizacional que ha desarrollado para dirigir, liderar, ejecutar y multiplicar. La plataforma gestiona esa capacidad: la diagnostica con evidencia, la prioriza y la instala con frameworks."
         actions={<AccessChip module="metodologia" />} />
       <div className="rise mb-6 flex flex-wrap gap-1.5">{NAVL.map(([id, l]) => <a key={id} href={`#${id}`} className="chip">{l}</a>)}</div>
@@ -108,7 +108,7 @@ export default function MetodologiaPage() {
         <div className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-muted">Condiciones frecuentes en las empresas de la región que afectan la lectura: {REGION.map((r) => r.name.toLowerCase()).join(", ")}. La adaptabilidad no es una quinta capacidad: es una condición transversal del sistema.</div>
       </Section>
 
-      <Section id="diagnostico" icon={Radar} title="El diagnóstico 4Shine-OD" sub="Dos instrumentos en secuencia y tres fuentes que se contrastan.">
+      <Section id="diagnostico" icon={Radar} title="El diagnóstico de capacidades" sub="Dos instrumentos en secuencia y tres fuentes que se contrastan.">
         <div className="grid gap-4 px-5 pb-5 lg:grid-cols-2">
           <div className="rounded-xl bg-surface-2 px-4 py-3"><div className="text-[13px] font-bold text-ink">1 · Test de capacidad empresarial</div><p className="mt-1 text-[12px] leading-relaxed text-muted">24 preguntas, seis por capacidad, más el desafío dominante. Entrega la etapa, el perfil de capacidades con su cobertura, la restricción principal y la acción a 90 días. Una práctica declarada y no demostrada queda como máximo en nivel 2. Una diferencia de dos o más puntos entre participantes activa una conversación de contraste.</p></div>
           <div className="rounded-xl bg-surface-2 px-4 py-3"><div className="text-[13px] font-bold text-ink">2 · Diagnóstico completo</div><p className="mt-1 text-[12px] leading-relaxed text-muted">F1, autoevaluación directiva: 68 afirmaciones, una por práctica. F2, percepción de equipos: 40 afirmaciones anónimas. F3, evidencia documental: 68 evidencias revisadas tal como están y el nivel de cada dimensión asignado con la rúbrica.</p></div>

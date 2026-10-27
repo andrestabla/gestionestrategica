@@ -466,5 +466,5 @@ export function executiveSummary(v: TenantView) {
 }
 
 
-// La priorización del portafolio usa la matriz 4Shine (src/lib/priorizacion.ts):
+// La priorización del portafolio usa la matriz de priorización (src/lib/priorizacion.ts):
 // D impacto, E evidencia, M sostenibilidad y L capacidad, en escala 1–4.

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Matriz 4Shine de priorización (Dossier · convención de prioridades).
+// Matriz de priorización (Dossier · convención de prioridades).
 //   Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4          → 25 a 100
 //   Para competir como prioridad crítica, D debe ser 3 o 4.
 //   Con L = 1 o 2, se resuelve primero la capacidad de la siguiente etapa.
@@ -94,7 +94,7 @@ export type TypeRule = {
   notes?: Partial<Record<CriterionKey, string>>;  // criterios de la empresa incluidos dentro de D, E, M o L (sin marcas aparte)
 };
 
-/** Reglas predefinidas. 4Shine: cuatro marcas comunes, tres o más = estratégica.
+/** Reglas predefinidas. General («4shine»): cuatro marcas comunes, tres o más = estratégica.
     Cresio: tres criterios propios, los tres obligatorios; lo de continuidad y
     mejora continua pasa como táctico al área de mayor responsabilidad. */
 export const TYPE_RULES: Record<"4shine" | "cresio", TypeRule> = {
@@ -122,11 +122,11 @@ export function typeRuleLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
 
 /** Cuántos criterios valida una iniciativa: los de tipo de la regla de la empresa más los cuatro de la matriz. */
 export function validationCriteriaCount(rule: TypeRule = DEFAULT_TYPE_RULE): number { return rule.criteria.length + CRITERIA.length; }
-/** Texto de la validación completa: «7 criterios: 1 a 3 de tipo (…); 4 a 7 de priorización (matriz 4Shine)». */
+/** Texto de la validación completa: «7 criterios: 1 a 3 de tipo (…); 4 a 7 de priorización (matriz de priorización)». */
 export function validationLabel(rule: TypeRule = DEFAULT_TYPE_RULE): string {
   const k = rule.criteria.length, n = validationCriteriaCount(rule);
-  if (k === 0) return "4 criterios de la matriz 4Shine (D, E, M y L, de 1 a 4); los criterios de Cresio van dentro: impacto en los objetivos → D, transversalidad → E, potencial y madurez → E y M";
-  return `${n} criterios: 1 a ${k} de tipo (${typeRuleLabel(rule)}); ${k + 1} a ${n} de priorización con la matriz 4Shine, de 1 a 4`;
+  if (k === 0) return "4 criterios de la matriz de priorización (D, E, M y L, de 1 a 4); los criterios de Cresio van dentro: impacto en los objetivos → D, transversalidad → E, potencial y madurez → E y M";
+  return `${n} criterios: 1 a ${k} de tipo (${typeRuleLabel(rule)}); ${k + 1} a ${n} de priorización con la matriz de priorización, de 1 a 4`;
 }
 
 export type Decision = "IMPLEMENTAR" | "PREPARAR" | "BACKLOG" | "RENUNCIAR";
@@ -162,7 +162,7 @@ export function score(s: Record<CriterionKey, number>): number {
 
 /** Tipo de iniciativa a partir de las marcas según la regla de la empresa:
     estratégica cuando al menos `min` de sus criterios apuntan a estratégico
-    (regla 4Shine: tres de cuatro; regla Cresio: los tres). */
+    (regla general: tres de cuatro; regla Cresio: los tres). */
 export function typeOf(marks: TypeMarks, rule: TypeRule = DEFAULT_TYPE_RULE, scores?: Partial<Record<CriterionKey, number>>): TypeMark {
   // sin criterios de tipo, el tipo sale de la calificación: 3 o 4 en los criterios indicados (por defecto D; Cresio: D, E y M) = estratégica
   if (rule.criteria.length === 0) return (rule.strategicScores ?? ["D"]).every((k) => (scores?.[k] ?? 0) >= 3) ? "ESTRATEGICO" : "TACTICO";

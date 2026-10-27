@@ -1,6 +1,6 @@
 // Catálogo de una empresa ↔ base de datos. `writeCatalog` siembra (o copia la
 // plantilla) y `readCatalog` reconstruye el catálogo para hidratar el estado
-// de una empresa que no es la demo. El mapa 4Shine no se persiste.
+// de una empresa que no es la demo. El mapa de capacidades no se persiste.
 
 import type { Catalog, CompanyInfo } from "@/data/catalogo";
 import type { KpiFull, InitiativeFull, AssessmentRecord, EvidenceFull, CmiObjective, Responsible, CellScore } from "@/data/cmi";

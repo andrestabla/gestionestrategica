@@ -52,7 +52,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
       <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 sm:px-8">
         <AlgoritmoMark size={26} />
         <div className="min-w-0 leading-tight">
-          <div className="truncate text-[13.5px] font-extrabold tracking-tight text-ink">4Shine Empresas</div>
+          <div className="truncate text-[13.5px] font-extrabold tracking-tight text-ink">Gestión estratégica</div>
           <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-faint">Administración de la plataforma</div>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -87,7 +87,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
           <div className="rise rise-1 panel px-6 py-10 text-center">
             <Building2 size={28} className="mx-auto text-faint" />
             <p className="mt-3 text-[14px] font-bold text-ink">Aún no hay empresas</p>
-            <p className="mx-auto mt-1 max-w-md text-[12.5px] text-muted">Crea la primera: puede partir vacía (solo el mapa 4Shine) o copiar la plantilla demo.</p>
+            <p className="mx-auto mt-1 max-w-md text-[12.5px] text-muted">Crea la primera: puede partir vacía (solo el mapa de capacidades) o copiar la plantilla demo.</p>
             <button onClick={() => setCreating(true)} className="btn-primary mt-5 !py-2 text-[12.5px]"><Plus size={13} /> Nueva empresa</button>
           </div>
         ) : (

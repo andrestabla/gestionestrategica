@@ -13,8 +13,8 @@ export const passwordOk = (p: unknown): p is string => typeof p === "string" && 
 
 /** Texto del correo (plano y HTML), con la cabecera y el pie comunes. */
 export function resetMail(name: string, link: string, minutes = RESET_MINUTES, company?: string): { subject: string; text: string; html: string } {
-  const subject = "Restablecer tu contraseña · 4Shine Empresas";
-  const text = mailText({ company, body: `Hola ${name},\n\nRecibimos una solicitud para restablecer la contraseña de tu cuenta en la plataforma de gestión estratégica 4Shine Empresas.\n\nAbre este enlace (vale ${minutes} minutos y una sola vez):\n${link}\n\nSi no pediste el cambio, ignora este correo: tu contraseña sigue igual.` });
+  const subject = "Restablecer tu contraseña · Gestión estratégica";
+  const text = mailText({ company, body: `Hola ${name},\n\nRecibimos una solicitud para restablecer la contraseña de tu cuenta en la plataforma Gestión estratégica Empresas.\n\nAbre este enlace (vale ${minutes} minutos y una sola vez):\n${link}\n\nSi no pediste el cambio, ignora este correo: tu contraseña sigue igual.` });
   const html = mailLayout({ title: "Restablecer tu contraseña", company, preheader: `Enlace para crear una contraseña nueva (vale ${minutes} minutos).`, body:
     `<p style="margin:0 0 10px">Hola ${esc(name)},</p><p style="margin:0 0 10px">Recibimos una solicitud para restablecer la contraseña de tu cuenta. El enlace vale <b>${minutes} minutos</b> y una sola vez.</p>${mailButton(link, "Crear una contraseña nueva")}<p style="font-size:12.5px;color:#5B6775;word-break:break-all;margin:0 0 8px">Si el botón no abre, copia este enlace: ${esc(link)}</p><p style="font-size:12.5px;color:#5B6775;margin:0">Si no pediste el cambio, ignora este correo: tu contraseña sigue igual.</p>` });
   return { subject, text, html };

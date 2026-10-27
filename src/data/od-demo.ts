@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Respuestas ilustrativas del diagnóstico 4Shine-OD de Andina Suministros:
+// Respuestas ilustrativas del diagnóstico de capacidades de Andina Suministros:
 // 5 autoevaluaciones directivas, 9 respuestas de equipos, la evidencia
 // documental del advisor y 3 tests. Generadas de forma determinista con el
 // MISMO procedimiento que la demo del diagnóstico en línea, de modo que la
@@ -47,7 +47,7 @@ function build(): Response[] {
       r3[p.code] = L >= 4 ? (j < 3 ? "V" : "P") : L === 3 ? (j < 2 ? "V" : "P") : L === 2 ? (j < 1 ? "V" : j < 3 ? "P" : "N") : (j < 1 ? "P" : "N");
     });
   });
-  out.push({ tipo: "f3", meta: { empresa: DEMO_COMPANY, nombre: "Advisor 4Shine" }, r: r3, lv });
+  out.push({ tipo: "f3", meta: { empresa: DEMO_COMPANY, nombre: "Advisor" }, r: r3, lv });
   const tests: [string, number, string][] = [["Gerente general", 0.9, "C"], ["Jefe de operaciones", 0, "B"], ["Gerente comercial", 0.4, "C"]];
   const cb: Record<number, number> = { 1: 3.3, 2: 2.5, 3: 2.6, 4: 2.1 };
   tests.forEach((t, i) => {

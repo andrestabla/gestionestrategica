@@ -1,4 +1,4 @@
-// Evaluaciones demo de la matriz 4Shine de priorización: tres evaluadores
+// Evaluaciones demo de la matriz de priorización: tres evaluadores
 // (advisor, gerencia y junta) sobre el portafolio de Andina, y las decisiones
 // de tiempo tomadas por la gerencia. Ilustrativas; la plataforma las reemplaza
 // con las evaluaciones reales de la convención.
@@ -10,7 +10,7 @@ const ev = (iniId: string, by: string, name: string, role: string, D: 1|2|3|4, E
   type: { contribucion: strategic >= 1 ? "ESTRATEGICO" : "TACTICO", profundidad: strategic >= 2 ? "ESTRATEGICO" : "TACTICO", alcance: strategic >= 3 ? "ESTRATEGICO" : "TACTICO", permanencia: strategic >= 4 ? "ESTRATEGICO" : "TACTICO" },
   notes, at: "2027-02-18T15:00:00.000Z",
 });
-const ADV = ["advisor@4shine.co", "Advisor 4Shine", "CONSULTOR"] as const;
+const ADV = ["advisor@algoritmot.com", "Advisor", "CONSULTOR"] as const;
 const GER = ["gerencia@andina.example", "Laura Restrepo", "LIDER"] as const;
 const JUN = ["junta@andina.example", "Junta de socios", "DIRECTIVO"] as const;
 

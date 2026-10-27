@@ -33,8 +33,8 @@ export function SurveyForm({ token, company }: { token: string; company: string 
       <header className="px-6 py-5 text-white" style={{ background: "var(--grad-deep)" }}>
         <div className="mx-auto flex max-w-[860px] items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/4shine-logo-blanco.png" alt="4Shine" className="h-7 object-contain" />
-          <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Diagnóstico 4Shine-OD · Percepción de equipos</div><div className="truncate text-[15px] font-extrabold">{company}</div></div>
+          <img src="/ge-logo-blanco.png" alt="Gestión estratégica" className="h-7 object-contain" />
+          <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Diagnóstico de capacidades · Percepción de equipos</div><div className="truncate text-[15px] font-extrabold">{company}</div></div>
           <span className="chip ml-auto hidden sm:inline-flex" style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}><ShieldCheck size={11} /> Anónima</span>
         </div>
       </header>
@@ -92,7 +92,7 @@ export function SurveyForm({ token, company }: { token: string; company: string 
           </>
         )}
       </main>
-      <footer className="px-6 pb-8 text-center text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">Sistema 4Shine® · Diagnóstico 4Shine-OD · Fuente 2</footer>
+      <footer className="px-6 pb-8 text-center text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">Gestión estratégica · Diagnóstico de capacidades · Fuente 2</footer>
     </div>
   );
 }

@@ -342,7 +342,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
           <Field label="Pilar corporativo"><input list="pilares" value={f.pillar} onChange={set("pillar")} placeholder="p. ej. El ser humano" className={INPUT} /><datalist id="pilares">{pillars.map((p) => <option key={p} value={p} />)}</datalist></Field>
           <Field label="Perspectiva del cuadro de mando"><select value={f.perspective} onChange={set("perspective")} className={INPUT}>{PERSPECTIVES.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
         </div>}
-        {!okr && <Field label="Capacidad 4Shine dominante (opcional)"><select value={f.line} onChange={set("line")} className={INPUT}><option value="">—</option>{LINES.map((l) => <option key={l.n} value={l.n}>{l.code} · {l.name}</option>)}</select></Field>}
+        {!okr && <Field label="Capacidad dominante (opcional)"><select value={f.line} onChange={set("line")} className={INPUT}><option value="">—</option>{LINES.map((l) => <option key={l.n} value={l.n}>{l.code} · {l.name}</option>)}</select></Field>}
       </div>
     </Modal>
   );
@@ -1067,7 +1067,7 @@ function Field({ label, help, children }: { label: string; help?: string; childr
   return <label className="block min-w-0"><span className="label flex items-center !text-[8.5px]">{label}{help && <FieldHelp text={help} />}</span><div className="mt-1">{children}</div></label>;
 }
 
-/** Botón «?» junto al rótulo: abre una nota breve de cómo se construye el campo (método 4Shine). */
+/** Botón «?» junto al rótulo: abre una nota breve de cómo se construye el campo (método de la plataforma). */
 function FieldHelp({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const [derecha, setDerecha] = useState(false);   // cerca del borde derecho (celular), la nota se abre hacia la izquierda
@@ -1186,7 +1186,7 @@ function GuiaTab({ me }: { me: { role: string; responsibleId?: string; qr?: true
     { id: "miembro", titulo: "Miembro de tribu", hace: ["Trabaja en el F3 con su tribu: resultados clave e iniciativas.", "Ve en su celular lo que el líder registra y lo valida antes de seguir.", "En Priorización en vivo califica, una sola vez, las iniciativas de su tribu cuando el líder abre la calificación.", "Ve el itinerario, OKR, Iniciativas → KR y Portafolio; no edita."] },
     { id: "lider", titulo: "Líder de tribu", hace: ["Conduce la mesa y decide los empates; es el dueño del objetivo.", "Es quien registra en la plataforma: los KR de su OKR, las iniciativas y su vínculo con cada KR.", "Abre y cierra la calificación de su tribu, consolida el ranking, propone el trimestre de inicio y guarda.", "Solo puede editar lo de su tribu; presenta en la socialización."] },
     { id: "directivo", titulo: "Directivo", hace: ["Acompaña una mesa: escucha las primeras definiciones y complementa; no decide las metas por la tribu.", "Llega a la socialización con preguntas preparadas sobre OKR e iniciativas.", "En la etapa 7 ratifica el OKR de cada tribu, la prioridad y el trimestre definitivo.", "Ve toda la convención; crea iniciativas si hace falta."] },
-    { id: "equipo", titulo: "Equipo 4Shine y gerencia", hace: ["Resuelve dudas del marco, no decide metas; vigila la regla de un solo OKR por tribu y de 2 a 4 KR.", "Proyecta OKR, Priorización en vivo y Portafolio en los momentos indicados.", "Registra decisiones y trimestres definitivos en la etapa 7."] },
+    { id: "equipo", titulo: "Equipo facilitador y gerencia", hace: ["Resuelve dudas del marco, no decide metas; vigila la regla de un solo OKR por tribu y de 2 a 4 KR.", "Proyecta OKR, Priorización en vivo y Portafolio en los momentos indicados.", "Registra decisiones y trimestres definitivos en la etapa 7."] },
   ];
   return (
     <div className="space-y-5">

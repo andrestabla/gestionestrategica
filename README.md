@@ -1,23 +1,23 @@
-# 4Shine Empresas · Plataforma de gestión estratégica
+# Gestión estratégica · plataforma de Algoritmo T
 
 Plataforma de gestión estratégica construida sobre la base de PGTD (Algoritmo T)
-con el lenguaje y las definiciones del sistema 4Shine Empresas: el diagnóstico
+con el lenguaje y las definiciones del modelo de capacidades: el diagnóstico
 como sistema de gestión, no como documento.
 
 ## Módulos
 
 | Código | Módulo | Qué hace |
 |---|---|---|
-| M1 | Diagnóstico 4Shine-OD | Resumen (radar de capacidades, mapa de calor de 17 dimensiones, tres fuentes, señales), capacidades, dimensiones con sus 68 prácticas y evidencias, test de capacidad empresarial, brechas priorizadas con nivel de acompañamiento y captura del corte A3 |
+| M1 | Diagnóstico de capacidades | Resumen (radar de capacidades, mapa de calor de 17 dimensiones, tres fuentes, señales), capacidades, dimensiones con sus 68 prácticas y evidencias, test de capacidad empresarial, brechas priorizadas con nivel de acompañamiento y captura del corte A3 |
 | M2 | Benchmark | Posición de la empresa frente a las sociedades de su CIIU que reportan a Supersociedades: crecimiento, márgenes, ROA y endeudamiento en percentiles, cuadrante margen × crecimiento con pares comparables y mapa del sector por departamento |
 | M3 | Estrategia | Cuadro de mando de cuatro perspectivas: objetivo → resultados clave (KPI) → dimensión que instala → iniciativa |
 | M4 | Indicadores | KPI con ficha, serie, semáforo, proyección y reporte de valores |
-| M5 | Ruta | Gantt por horizontes, matriz 4Shine capacidad (L) × impacto (D) y orden del portafolio con D·E·M·L, las mismas variables que se evalúan en M6 |
-| M6 | Iniciativas | Avance, presupuesto, factores críticos, bitácora; cada iniciativa instala una dimensión con un framework. Matriz 4Shine de priorización: evaluación por roles (D·E·M·L, estratégico/táctico), consolidado del comité, decisión de tiempo con reglas y portafolio ordenado por horizonte |
+| M5 | Ruta | Gantt por horizontes, matriz de priorización capacidad (L) × impacto (D) y orden del portafolio con D·E·M·L, las mismas variables que se evalúan en M6 |
+| M6 | Iniciativas | Avance, presupuesto, factores críticos, bitácora; cada iniciativa instala una dimensión con un framework. Matriz de priorización de priorización: evaluación por roles (D·E·M·L, estratégico/táctico), consolidado del comité, decisión de tiempo con reglas y portafolio ordenado por horizonte |
 | GP | Proyectos | Tareas con responsables, dependencias, evidencia, kanban, cronograma y carga |
 | M7 | Inteligencia | El sector en cifras con datos reales de Supersociedades (tamaño, concentración, departamentos, actividades CIIU, diez mayores) y la puerta a los observatorios de Algoritmo T |
 | — | Informe | Pieza imprimible para la junta |
-| — | Metodología | El sistema 4Shine Empresas leído de las mismas fuentes que usa el motor |
+| — | Metodología | El modelo de gestión estratégica leído de las mismas fuentes que usa el motor |
 | — | Administración | Usuarios, permisos, integraciones y branding |
 
 ## Multiempresa (tenants)
@@ -35,7 +35,7 @@ personas, tareas), priorización, archivos, branding e integraciones.
   valen solo dentro de su empresa; el login resuelve la empresa del usuario y
   la sesión la lleva. No se crean administradores dentro de una empresa.
 - **Catálogo por empresa** (`src/data/catalogo.ts`): Andina Suministros es la
-  plantilla demo. Una empresa nueva nace vacía (solo el mapa 4Shine) o
+  plantilla demo. Una empresa nueva nace vacía (solo el mapa de capacidades) o
   copiando la plantilla (objetivos, KPI, iniciativas, personas y tareas de
   ejemplo); su catálogo vive en la base (`src/server/catalog-db.ts`).
 - **Contexto de petición** (`src/server/tenant.ts`): cada ruta de la API corre
@@ -126,7 +126,7 @@ portal llevan las tildes como U+FFFD y los valores vienen en miles de pesos;
 el script lo resuelve. La API `/api/td/sector` entrega el resumen y la
 comparación.
 
-## Matriz 4Shine de priorización (M6)
+## Matriz de priorización de priorización (M6)
 
 Cada iniciativa se evalúa con cuatro criterios en escala 1–4 con descriptores:
 D impacto en el resultado (40 %), E evidencia de la siguiente etapa (30 %),
@@ -250,7 +250,7 @@ captura del corte A3 (`PracticeCapture`), publicación (`Assessment` y
 informe (`TestNote`), encuesta anónima de equipos (`TeamResponse`) y
 verificación de evidencia (`Evidence`). Las tareas del gestor ya persistían.
 La memoria sigue siendo la fuente de lectura; la base es write-through. El
-mapa 4Shine no se persiste: es la definición del sistema (`src/data/4shine.json`).
+mapa de capacidades no se persiste: es la definición del sistema (`src/data/4shine.json`).
 
 También persisten los reportes de KPI (`KpiReport`), los cambios de iniciativas
 (`InitiativeOverride`), los comentarios y archivos del gestor (`TaskComment`,

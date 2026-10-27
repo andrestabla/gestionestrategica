@@ -178,7 +178,7 @@ const NAV = [
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin de la plataforma",
-  CONSULTOR: "Advisor 4Shine",
+  CONSULTOR: "Advisor",
   LIDER: "Líder de la empresa",
   RESPONSABLE: "Responsable de ámbito",
   DIRECTIVO: "Junta o directivo",
@@ -311,7 +311,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           )}
           {!collapsed && !(brand?.logoDark || brand?.logoLight) && (
             <div className="leading-tight">
-              <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "4Shine Empresas"}</div>
+              <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "Gestión estratégica"}</div>
               <div className="text-[8.5px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 Algoritmo T
               </div>
@@ -358,7 +358,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
                 ) : (
                   <>
                     <AlgoritmoMark size={24} />
-                    <span className="text-[13.5px] font-extrabold text-white">{brand?.platformName ?? "4Shine Empresas"}</span>
+                    <span className="text-[13.5px] font-extrabold text-white">{brand?.platformName ?? "Gestión estratégica"}</span>
                   </>
                 )}
               </div>
@@ -415,7 +415,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
         <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px]">{children}</main>
 
         <footer className="px-8 pb-6 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">
-          Sistema 4Shine® · 4Shine Empresas · Plataforma de gestión estratégica · Algoritmo T
+          Gestión estratégica · plataforma de Algoritmo T
         </footer>
       </div>
 

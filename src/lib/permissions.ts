@@ -8,7 +8,7 @@
 //  ADMIN       — administrador de la plataforma (sin empresa propia): crea y
 //                administra empresas, usuarios, integraciones y branding. No
 //                opera la medición. Los demás roles valen solo dentro de su empresa.
-//  CONSULTOR   — advisor 4Shine: configura el diagnóstico, verifica
+//  CONSULTOR   — advisor: configura el diagnóstico, verifica
 //                evidencia y publica mediciones. Edición completa.
 //  LIDER       — líder de la empresa: administra iniciativas, tareas y KPI
 //                de todas las capacidades. No configura el diagnóstico.
@@ -32,7 +32,7 @@ export type Action =
   | "edit_tasks"        // crear/editar/mover tareas del gestor
   | "edit_initiatives"  // avance, factores, bitácora de iniciativas
   | "create_initiatives" // crear iniciativas y editar o eliminar las propias (quien administra el catálogo edita todas)
-  | "evaluate_initiatives" // calificar con la matriz 4Shine de priorización (D·E·M·L y tipo)
+  | "evaluate_initiatives" // calificar con la matriz de priorización (D·E·M·L y tipo)
   | "decide_initiatives"   // decidir el tiempo: implementar, preparar, backlog o renunciar
   | "report_kpi"        // registrar valores de KPI
   | "capture_maturity"  // capturar celdas de una medición en curso

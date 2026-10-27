@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// 4Shine Empresas · Modelo de gestión de Andina Suministros (empresa
+// Gestión estratégica · Modelo de gestión de Andina Suministros (empresa
 // ilustrativa): directorio de responsables, cuadro de mando con objetivos
 // y resultados clave (OKR) por perspectiva, catálogo de KPI con serie,
 // evidencias del mapa, iniciativas con acciones y bitácora, y la serie de
-// mediciones del diagnóstico 4Shine-OD.
+// mediciones del diagnóstico de capacidades.
 // Valores ilustrativos: la información real se produce con el diagnóstico
 // y la instalación de los frameworks en cada empresa.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -491,7 +491,7 @@ export type AssessmentRecord = {
 };
 
 // La medición vigente (A2) ES la consolidación de las respuestas demo del
-// 4Shine-OD; la línea base (A1) queda ligeramente por debajo en las
+// diagnóstico de capacidades; la línea base (A1) queda ligeramente por debajo en las
 // dimensiones que las iniciativas ya movieron. Meta a 24 meses: cruzar el
 // umbral con margen y llegar a gestionada donde ya está instalada.
 export const CONSOLIDATED = consolidate(OD_RESPONSES);
@@ -508,7 +508,7 @@ const scoresOf = (shift: (code: string) => number) => {
 
 export const SCORES_HISTORY: AssessmentRecord[] = [
   {
-    id: "A1", label: "Línea base · Diagnóstico 4Shine-OD", period: "2026-08", status: "PUBLICADA",
+    id: "A1", label: "Línea base · Diagnóstico de capacidades", period: "2026-08", status: "PUBLICADA",
     note: "Primera aplicación completa: 5 autoevaluaciones, 9 respuestas de equipos y 68 evidencias verificadas por el advisor.",
     scores: scoresOf((c) => MOVED[c] ?? 0.1),
   },

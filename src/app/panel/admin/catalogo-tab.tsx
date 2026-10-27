@@ -4,7 +4,7 @@
 // (responsables, personas, objetivos, KPI, iniciativas, finanzas y
 // territorio). Toda mutación va a POST /api/td/catalogo { entity, op, data }
 // y, si el servidor responde 200, se recarga la vista con useCatalogRefetch().
-// El mapa 4Shine (capacidades, dimensiones, prácticas) no se edita aquí: es
+// El mapa de capacidades (capacidades, dimensiones, prácticas) no se edita aquí: es
 // la definición del sistema y es igual para todas las empresas.
 
 import { useState, type ReactNode } from "react";
@@ -116,7 +116,7 @@ export function CatalogoTab() {
         <h2 className="text-[18px] font-extrabold leading-tight text-ink">Catálogo de {c.company.name}</h2>
         <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-muted">
           Lo que la plataforma gestiona por empresa: cargos y personas, el cuadro de mando (objetivos y KPI),
-          el portafolio de iniciativas, las cifras financieras y el territorio. El mapa 4Shine no se edita: es del sistema.
+          el portafolio de iniciativas, las cifras financieras y el territorio. El mapa de capacidades no se edita: es del sistema.
         </p>
       </div>
 
@@ -682,7 +682,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
   const payload = (): IniPayload => ({
     line: num(f.line), subsistema: f.subsistema, cmi: f.cmi, name: f.name.trim(), objetivo: f.objetivo.trim(), horizon: f.horizon,
     // los cuatro campos heredados del prototipo (impacto, factibilidad, urgencia, dependencia) ya no se editan:
-    // la calificación es la matriz 4Shine (D·E·M·L) y se registra como evaluación del usuario
+    // la calificación es la matriz de priorización (D·E·M·L) y se registra como evaluación del usuario
     impact: initial?.impact ?? 3, feasibility: initial?.feasibility ?? 3, urgency: initial?.urgency ?? 3, dependency: initial?.dependency ?? 3, status: f.status,
     start: f.start.trim().toUpperCase(), end: f.end.trim().toUpperCase(), ownerId: f.ownerId, metaResultado: f.metaResultado.trim(),
     budgetPlanned: num(f.budgetPlanned), budgetCommitted: num(f.budgetCommitted), budgetExecuted: num(f.budgetExecuted),

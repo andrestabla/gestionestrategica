@@ -46,11 +46,11 @@ export async function testStorage(): Promise<{ ok: true; detail: string } | { ok
   try {
     const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
     const client = await s3(); const key = `_prueba/${Date.now()}.txt`;
-    await client.send(new PutObjectCommand({ Bucket: cfg.bucket, Key: key, Body: Buffer.from("prueba de acceso 4Shine Empresas"), ContentType: "text/plain" }));
+    await client.send(new PutObjectCommand({ Bucket: cfg.bucket, Key: key, Body: Buffer.from("prueba de acceso Gestión estratégica"), ContentType: "text/plain" }));
     const got = await client.send(new GetObjectCommand({ Bucket: cfg.bucket, Key: key }));
     const text = await got.Body?.transformToString?.();
     await client.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
-    if (!text?.includes("4Shine")) return { ok: false, error: "El objeto de prueba no se pudo leer de vuelta." };
+    if (!text?.includes("Gestión estratégica")) return { ok: false, error: "El objeto de prueba no se pudo leer de vuelta." };
     return { ok: true, detail: `Bucket «${cfg.bucket}» en la cuenta …${cfg.accountId.slice(-6)}: escritura, lectura y borrado correctos.` };
   } catch (e) {
     return { ok: false, error: `No se pudo acceder al bucket: ${(e as Error).message}` };

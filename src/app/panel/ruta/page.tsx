@@ -1,6 +1,6 @@
 "use client";
 
-// M5 · Mapa de ruta: Gantt por trimestres + la matriz 4Shine de priorización
+// M5 · Mapa de ruta: Gantt por trimestres + la matriz de priorización
 // (las mismas variables D·E·M·L que se evalúan en Iniciativas).
 
 import { useState } from "react";
@@ -60,7 +60,7 @@ export default function RutaPage() {
         </Card>
 
         <Card className="rise rise-2">
-          <CardHeader title="Matriz 4Shine de priorización" sub="capacidad de ejecución (L) × impacto en el resultado (D) del consolidado · tamaño: puntaje" />
+          <CardHeader title="Matriz de priorización" sub="capacidad de ejecución (L) × impacto en el resultado (D) del consolidado · tamaño: puntaje" />
           <div className="px-5 py-4">
             <PriorityMatrix onSelect={setSel} selected={sel}
               items={evaluated.map((r) => ({ id: r.id, name: r.name, D: r.c.avg.D, L: r.c.avg.L, score: r.c.score, horizon: r.horizon, color: hColor(r.horizon) }))} />
@@ -72,7 +72,7 @@ export default function RutaPage() {
         </Card>
       </div>
 
-      {/* orden del portafolio con la matriz 4Shine */}
+      {/* orden del portafolio con la matriz de priorización */}
       <Card className="rise rise-2 mb-5">
         <CardHeader title="Orden del portafolio"
           sub="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 · ordena dentro de cada horizonte y sugiere el horizonte · la decisión de tiempo la registra la gerencia" />
@@ -153,7 +153,7 @@ export default function RutaPage() {
               <div className="font-mono text-[12.5px] text-ink">{fmtCOP(ini.budgetPlanned)}</div>
             </div>
             <div className="sm:col-span-2">
-              <div className="label mb-1">Matriz 4Shine de priorización</div>
+              <div className="label mb-1">Matriz de priorización</div>
               {selC && selC.n > 0 ? (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-muted">
                   {CRITERIA.map((c) => <span key={c.key}>{c.key} <b className="text-ink">{selC.avg[c.key]}</b></span>)}
