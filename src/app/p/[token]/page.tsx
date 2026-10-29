@@ -3,7 +3,7 @@
 // Server component: no expone APIs ni interacción de edición.
 
 import { notFound } from "next/navigation";
-import { verifyPublicToken } from "@/lib/public-token";
+import { verifyPublicToken, splitSignedLink } from "@/lib/public-token";
 import { LINES, fmtCOP, fmtNum } from "@/data/demo";
 import { executiveSummary } from "@/lib/logic";
 import { hydrateCompanies, companyBySlug, tenantView } from "@/server/store";
@@ -28,10 +28,12 @@ export default async function PublicView(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  const [slug, ...rest] = token.split("-");
+  const link = splitSignedLink(token);
+  if (!link) notFound();
+  const { slug, token: firma } = link;
   await hydrateCompanies();
   const company = companyBySlug(slug);
-  if (!company?.active || !verifyPublicToken(slug, rest.join("-"))) notFound();
+  if (!company?.active || !verifyPublicToken(slug, firma)) notFound();
   const INSTITUTION = company;
 
   const { s, scores } = await inTenant(slug, async () => { const v = tenantView(); return { s: executiveSummary(v), scores: scoresOf(v) }; });

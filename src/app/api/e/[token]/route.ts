@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySurveyToken } from "@/lib/public-token";
+import { verifySurveyToken, splitSignedLink } from "@/lib/public-token";
 import { saveF2Response, hydrateCompanies, companyBySlug } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 
@@ -8,9 +8,10 @@ import { inTenant } from "@/app/api/td/_helpers";
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   await hydrateCompanies();
   const { token } = await params;
-  const [slug, ...rest] = token.split("-");
-  const company = companyBySlug(slug);
-  if (!company?.active || !verifySurveyToken(slug, rest.join("-"))) {
+  const link = splitSignedLink(token);
+  const slug = link?.slug ?? "", firma = link?.token ?? "";
+  const company = link ? companyBySlug(slug) : null;
+  if (!company?.active || !verifySurveyToken(slug, firma)) {
     return NextResponse.json({ error: "Enlace no válido" }, { status: 404 });
   }
   const body = await req.json().catch(() => null);

@@ -28,6 +28,8 @@ import { useMaturity } from "@/lib/use-maturity";
 import { hasInstrument, instrumentLabel, type Instrument } from "@/lib/instrumentos";
 import type { VariableCapture, TestResponse, TestNotes, F1Response } from "@/server/store";
 import type { Response } from "@/lib/od";
+import { lecturaF1 } from "@/lib/f1";
+import { InformeIA } from "@/components/informe-ia";
 import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText,
@@ -610,17 +612,8 @@ function useF1() {
   return { data, refetch };
 }
 
-/** Promedio por dimensión y por capacidad de una respuesta (solo lo contestado). */
-function f1Lectura(r: Record<string, number>) {
-  const dims = DIMS.map((d) => { const vals = d.prac.map((p) => r[p.code]); return { d, m: avg(vals), n: vals.filter((x) => typeof x === "number").length }; });
-  const caps = CAPS.map((c) => {
-    const xs = dims.filter((x) => x.d.cap === c.name);
-    return { cap: c, m: avg(xs.map((x) => x.m)), n: xs.reduce((a, x) => a + x.n, 0), tot: xs.reduce((a, x) => a + x.d.prac.length, 0) };
-  });
-  const answered = dims.reduce((a, x) => a + x.n, 0);
-  const prios = dims.filter((x) => x.m != null && x.m < THRESHOLD).map((x) => ({ ...x, p: (THRESHOLD - (x.m as number)) * DRAG_WEIGHT(x.d.code) })).sort((a, b) => b.p - a.p);
-  return { dims, caps, answered, prios };
-}
+/** Promedio por dimensión y por capacidad de una respuesta (solo lo contestado): regla compartida con el informe con IA. */
+const f1Lectura = lecturaF1;
 
 const f1Fecha = (iso: string) => new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
 
@@ -723,6 +716,7 @@ function AutoevaluacionTab() {
             </div>
             <div className="border-t border-line px-5 py-3 text-[12px] text-muted">El consolidado entra al corte en curso como Fuente 1: en <Link href="/panel/diagnostico" className="font-bold text-cyan-deep hover:underline">Resumen</Link> se cruza con la percepción de equipos y la evidencia.</div>
           </Card>
+          <InformeIA kind="consolidado" canShare titulo="Análisis consolidado con IA" />
         </>
       )}
     </>
@@ -902,6 +896,7 @@ function ResultadoF1({ email }: { email: string | null }) {
           <div className="border-t border-line px-5 py-3 text-[12px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con la percepción de los equipos y la evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</div>
         </Card>
       </div>
+      <InformeIA kind="f1" email={email && canAll ? f.email : null} titulo={email && canAll && f.email.toLowerCase() !== (data.mine?.email ?? "").toLowerCase() ? `Análisis con IA · ${f.name}` : "Tu análisis con IA"} />
     </>
   );
 }

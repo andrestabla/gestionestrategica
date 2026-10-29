@@ -32,6 +32,7 @@ import { can } from "@/lib/permissions";
 import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
+import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
 
 /* ═══ Estado ═══ */
 
@@ -157,6 +158,7 @@ export type TenantState = {
   kpiReports: Map<string, KpiReport[]>;
   tests: Map<string, TestResponse>;
   f1: Map<string, F1Response>;
+  informes: Map<string, InformeGuardado>;   // análisis con IA del diagnóstico, clave kind|subject
   f2: F2Response[];
   testNotes: Map<string, TestNotes>;
   iniOverrides: Map<string, InitiativeOverride>;
@@ -211,7 +213,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     // línea base del cronograma: las fechas del plan aprobado se congelan;
     // las reprogramaciones mueven las vigentes y el deslizamiento se mide contra esta.
     baselines: new Map(catalog.tasks.map((t) => [t.id, { start: t.start, due: t.due }])),
-    capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f1: new Map(), f2: [], testNotes: new Map(),
+    capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f1: new Map(), informes: new Map(), f2: [], testNotes: new Map(),
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
@@ -417,12 +419,12 @@ async function loadTenant(st: TenantState) {
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
     // el resto de la empresa, en paralelo: una ida y vuelta a la base en lugar de quince en serie
-    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows] = await Promise.all([
+    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows, informeRows] = await Promise.all([
       db.projectTask.findMany(W), db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } }), db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } }),
       db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } }), db.initiativeOverride.findMany(W), db.initiativeEvaluation.findMany(W), db.initiativeDecision.findMany(W),
       db.itineraryComment.findMany(W), db.user.findMany(W), db.integration.findMany(W), db.branding.findUnique({ where: { companyId } }), db.notifRead.findMany(W),
       db.practiceCapture.findMany({ where: { companyId, cut: "A3" } }), db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } }),
-      db.testResponse.findMany(W), db.testNote.findMany(W), db.f1Response.findMany(W),
+      db.testResponse.findMany(W), db.testNote.findMany(W), db.f1Response.findMany(W), db.diagnosticReport.findMany(W),
     ]);
     const rows = rowsRaw as (DbTaskRow & {
       iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
@@ -500,6 +502,9 @@ async function loadTenant(st: TenantState) {
     }
     for (const f of f1Rows) {
       f1Store().set(f.email, { email: f.email, name: f.name, role: f.role, cargo: f.cargo ?? undefined, at: f.at.toISOString(), r: f.answers as F1Response["r"] });
+    }
+    for (const i of informeRows) {
+      informes().set(`${i.kind}|${i.subject}`, { kind: i.kind as InformeKind, subject: i.subject, inputHash: i.inputHash, informe: i.content as InformeIA, model: i.model, by: i.by, at: i.at.toISOString() });
     }
     for (const n of noteRows) {
       testNotes().set(n.participant, { restriccion: n.restriccion ?? undefined, evidencias: n.evidencias ?? undefined, accion: n.accion ?? undefined, noNecesita: n.noNecesita ?? undefined, by: n.by, at: n.at.toISOString() });
@@ -1641,6 +1646,32 @@ export function saveF1Response(
     await db.f1Response.upsert({ where: { companyId_email: { companyId, email: response.email } }, update: data, create: { email: response.email, companyId, ...data } });
   });
   return { ok: true, response, answered };
+}
+
+/* ═══ Análisis con IA del diagnóstico ═══
+   Un informe por persona (su autoevaluación) y uno consolidado. Se guarda con la huella de las
+   respuestas que lo originaron: si cambian, la plataforma avisa que está desactualizado. */
+
+function informes() { return S().informes; }
+
+export const getInforme = (kind: InformeKind, subject: string): InformeGuardado | null => informes().get(`${kind}|${subject}`) ?? null;
+
+/** Cuántas autoevaluaciones hay (para la vista pública del consolidado, que no lleva sesión). */
+export const f1CountForPublic = (): number => f1Store().size;
+
+export function saveInforme(user: SessionUser, kind: InformeKind, subject: string, inputHash: string, informe: InformeIA, model = "openai")
+  : { ok: true; saved: InformeGuardado } | { ok: false; status: number; error: string } {
+  if (!hasInstrument(cat().company, "f1")) return { ok: false, status: 403, error: `${instrumentLabel("f1")}: no está habilitada para esta empresa.` };
+  if (kind === "consolidado" && !can(user, "view_f1_all")) return { ok: false, status: 403, error: "El consolidado lo generan el administrador y el advisor." };
+  if (kind === "f1" && subject !== user.email.toLowerCase() && !F1_CAN_SEE_ALL(user)) return { ok: false, status: 403, error: "Solo puedes generar el análisis de tu propia autoevaluación." };
+  const saved: InformeGuardado = { kind, subject, inputHash, informe, model, by: user.email, at: new Date().toISOString() };
+  informes().set(`${kind}|${subject}`, saved);
+  void persist("informe con IA", async (db) => {
+    const companyId = cid();
+    const data = { inputHash, content: informe, model, by: user.email, at: new Date(saved.at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind, subject } }, update: data, create: { companyId, kind, subject, ...data } });
+  });
+  return { ok: true, saved };
 }
 
 function f2Store() { return S().f2; }
@@ -3111,7 +3142,15 @@ export function r2FromEnv(): IntegrationConfig | null {
   if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET) return null;
   return { enabled: true, fields: { accountId: R2_ACCOUNT_ID, accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY, bucket: R2_BUCKET }, updatedBy: "Variables de entorno del despliegue" };
 }
-const envIntegration = (key: IntegrationKey): IntegrationConfig | null => (key === "ses" ? sesFromEnv() : key === "r2" ? r2FromEnv() : null);
+/** OpenAI configurado por variables de entorno del despliegue: OPENAI_API_KEY y, opcional, OPENAI_MODEL.
+    Así el análisis con IA del diagnóstico funciona para todas las empresas sin configurarlo una por una. */
+export function openaiFromEnv(): IntegrationConfig | null {
+  const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
+  if (!apiKey) return null;
+  return { enabled: true, fields: { apiKey, model: (process.env.OPENAI_MODEL ?? "").trim() || "gpt-4o-mini" }, updatedBy: "Variables de entorno del despliegue" };
+}
+
+const envIntegration = (key: IntegrationKey): IntegrationConfig | null => (key === "ses" ? sesFromEnv() : key === "r2" ? r2FromEnv() : key === "openai" ? openaiFromEnv() : null);
 
 /** Configuración que rige para una integración: la guardada en la plataforma
     si está activa y completa; si no, la del entorno. Sirve también fuera de

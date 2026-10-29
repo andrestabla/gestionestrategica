@@ -3,7 +3,7 @@
 // token y entrega el formulario cliente.
 
 import { notFound } from "next/navigation";
-import { verifySurveyToken } from "@/lib/public-token";
+import { verifySurveyToken, splitSignedLink } from "@/lib/public-token";
 import { hydrateCompanies, companyBySlug } from "@/server/store";
 import { SurveyForm } from "./form";
 import { hasInstrument } from "@/lib/instrumentos";
@@ -12,9 +12,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SurveyPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const [slug, ...rest] = token.split("-");
+  const link = splitSignedLink(token);
+  if (!link) notFound();
+  const { slug, token: firma } = link;
   await hydrateCompanies();
   const company = companyBySlug(slug);
-  if (!company?.active || !verifySurveyToken(slug, rest.join("-")) || !hasInstrument(company, "f2")) notFound();
+  if (!company?.active || !verifySurveyToken(slug, firma) || !hasInstrument(company, "f2")) notFound();
   return <SurveyForm token={token} company={company.name} />;
 }

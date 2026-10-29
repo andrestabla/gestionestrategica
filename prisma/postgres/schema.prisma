@@ -76,6 +76,7 @@ model Company {
   testResponses   TestResponse[]
   teamResponses   TeamResponse[]
   f1Responses     F1Response[]
+  diagnosticReports DiagnosticReport[]
   responsibles    Responsible[]
   objectives      CmiObjective[]
   people          Person[]
@@ -211,6 +212,22 @@ model F1Response {
   at        DateTime @default(now())
 
   @@id([companyId, email])
+}
+
+/// Análisis con IA del diagnóstico (informe profundo y cualitativo): uno por persona (kind f1, subject = email)
+/// y uno consolidado (kind consolidado). inputHash fija las respuestas con las que se generó: si cambian, está desactualizado.
+model DiagnosticReport {
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind      String
+  subject   String
+  inputHash String
+  content   Json
+  model     String
+  by        String
+  at        DateTime @default(now())
+
+  @@id([companyId, kind, subject])
 }
 
 model TestResponse {
