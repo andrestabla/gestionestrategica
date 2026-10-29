@@ -48,7 +48,7 @@ export function contextoMetodo(dimsDetalle: string[] = []): string {
   ].filter(Boolean).join("\n");
 }
 
-const SISTEMA = `Eres el advisor senior de 4Shine Empresas. Escribes informes de diagnóstico para comités directivos de empresas medianas en Colombia y Ecuador: profundos, concretos, en español neutro de Colombia, con tono profesional y directo, sin halagos vacíos ni jerga de moda. Cada afirmación se apoya en las cifras recibidas y en el método; donde falte evidencia, lo dices como hipótesis. Nunca inventes datos que no estén en la entrada. No uses listas de viñetas dentro de los párrafos. Responde únicamente con el JSON pedido.`;
+const SISTEMA = `Eres el advisor senior de 4Shine Empresas. Escribes informes de diagnóstico para comités directivos de empresas medianas en Colombia y Ecuador: profundos, concretos, en español neutro de Colombia, con tono profesional y directo, sin halagos vacíos ni jerga de moda. Cada afirmación se apoya en las cifras recibidas y en el método; donde falte evidencia, lo dices como hipótesis. Nunca inventes datos que no estén en la entrada. Reglas estrictas: (1) una dimensión o capacidad marcada «—» no tiene respuesta: no es brecha, ni fortaleza, ni hallazgo; solo puedes decir que está pendiente de responder y no entra en prioridades ni en patrones; (2) las brechas y prioridades salen únicamente de dimensiones con puntaje bajo el umbral; si no hay ninguna, dilo y propone como prioridad completar la lectura; (3) si hay una sola autoevaluación no existe dispersión ni desacuerdo entre miembros: no lo menciones; (4) escribe los decimales con coma (2,5) y conserva los códigos de dimensión tal como llegan. No uses listas de viñetas dentro de los párrafos. Responde únicamente con el JSON pedido.`;
 
 const FORMATO = `Devuelve un JSON con exactamente estas claves:
 {
@@ -60,8 +60,12 @@ const FORMATO = `Devuelve un JSON con exactamente estas claves:
  "patrones": string (80-140 palabras: relaciones entre brechas, causa raíz probable, etapa de crecimiento que sugiere),
  "prioridades": [{"orden": 1, "dimension": "código · nombre", "framework": string, "primer_paso": string (acción concreta para los próximos 90 días, con responsable sugerido)}] (tres),
  "preguntas": string[] (cuatro a seis preguntas incómodas y útiles para la sesión de devolución con el comité),
- "nota_metodologica": string (40-70 palabras sobre qué fuentes faltan y cómo cambia la lectura al incorporarlas)
+ "nota_metodologica": string (40-70 palabras sobre qué fuentes faltan y cómo cambia la lectura al incorporarlas)__EXTRA__
 }`;
+const EXTRA_CONSOLIDADO = `,
+ "dispersion": [{"dimension": "código · nombre", "lectura": string (qué conversación abre ese desacuerdo)}] (solo las dimensiones listadas como dispersas en la entrada; lista vacía si hay una sola autoevaluación o no hay dispersión),
+ "nivel_acompanamiento": {"nivel": "Focus|Growth Partner|Enterprise Elite|Sin intervención estructural", "por_que": string (30-60 palabras; parte del nivel que indica la regla del método y matiza solo con lo que la lectura sustenta)}`;
+const formato = (kind: InformeKind) => FORMATO.replace("__EXTRA__", kind === "consolidado" ? EXTRA_CONSOLIDADO : "");
 
 export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; cargo?: string }; lectura: LecturaF1; fecha: string }): { system: string; user: string } {
   const { empresa, persona, lectura, fecha } = args;
@@ -78,31 +82,34 @@ export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; c
     "Promedio por dimensión:", lineas,
     lectura.prios.length ? `Dimensiones bajo el umbral ordenadas por arrastre: ${lectura.prios.map((x) => `${x.d.code} (${fmt(x.m)})`).join(", ")}.` : "Ninguna dimensión bajo el umbral.",
     "",
+    lectura.answered < 68 ? `LECTURA PARCIAL: faltan ${68 - lectura.answered} afirmaciones; las dimensiones con «—» no se interpretan.` : "",
     "Escribe el informe para esta persona: es su propia lectura, individual y confidencial; háblale de «tu lectura» y «la organización», distingue lo que declara de lo que habría que demostrar, y cierra con lo que conviene llevar a la conversación del comité.",
-    FORMATO,
+    formato("f1"),
   ].filter(Boolean).join("\n");
   return { system: SISTEMA, user };
 }
 
-export function encargoConsolidado(args: { empresa: Empresa; C: Consolidated; rec: Recommendation; n: number; dispersion: { code: string; name: string; sd: number | null }[]; fecha: string }): { system: string; user: string } {
-  const { empresa, C, rec, n, dispersion, fecha } = args;
+export function encargoConsolidado(args: { empresa: Empresa; C: Consolidated; rec: Recommendation; n: number; dispersion: { code: string; name: string; sd: number | null }[]; fecha: string; cobertura?: number[] }): { system: string; user: string } {
+  const { empresa, C, rec, n, dispersion, fecha, cobertura } = args;
   const dimsFoco = C.priorities.slice(0, 6).map((d) => d.code);
   const caps = C.caps.map((c) => `${c.name}: F1 ${fmt(c.f1)} · F2 ${fmt(c.f2)} · F3 ${fmt(c.f3)} · madurez ${fmt(c.m)}`).join("\n");
   const dims = C.dims.map((d) => `${d.code} ${d.name}: F1 ${fmt(d.f1)} · madurez ${fmt(d.m)} · base «${d.base}»${d.flags.length ? ` · banderas: ${d.flags.map((f) => f.key).join(", ")}` : ""}`).join("\n");
-  const disp = dispersion.filter((x) => x.sd != null).sort((a, b) => (b.sd ?? 0) - (a.sd ?? 0)).slice(0, 6).map((x) => `${x.code} ${x.name}: desviación ${fmt(x.sd)}`).join("; ");
+  const disp = n < 2 ? "" : dispersion.filter((x) => x.sd != null).sort((a, b) => (b.sd ?? 0) - (a.sd ?? 0)).slice(0, 6).map((x) => `${x.code} ${x.name}: desviación ${fmt(x.sd)}`).join("; ");
   const user = [
     contextoMetodo(dimsFoco),
     "",
     `EMPRESA: ${empresa.name}${empresa.sector ? ` · ${empresa.sector}` : ""}.`,
     empresa.levers?.length ? `Prioridades estratégicas declaradas: ${empresa.levers.map((l) => `${l.name}${l.desc ? ` (${l.desc})` : ""}`).join("; ")}.` : "",
     `LECTURA CONSOLIDADA del comité al ${fecha}: ${n} autoevaluaciones directivas (Fuente 1)${C.okF2 ? `, ${C.f2n} respuestas de equipos (Fuente 2)` : ", sin percepción de equipos"}${C.hasF3 ? ", con evidencia documental (Fuente 3)" : ", sin evidencia documental"}.`,
+    cobertura?.length ? `Cobertura: cada persona respondió ${cobertura.join(", ")} de 68 afirmaciones; las dimensiones con «—» no tienen respuesta y no se interpretan.` : "",
     "Por capacidad:", caps,
     "Por dimensión:", dims,
     disp ? `Dispersión entre miembros del comité (donde no coinciden): ${disp}.` : "Sin dispersión relevante entre miembros.",
     `Nivel de acompañamiento que sugiere la regla del método: ${rec.level}. ${rec.text} ${rec.notNeeded}`,
     "",
-    "Escribe el informe para el comité directivo y su advisor: lectura colectiva, dónde la dirección se ve de forma distinta entre sí (dispersión) y qué significa, hipótesis de causa raíz, y la ruta de acompañamiento. Añade dos claves más al JSON: \"dispersion\": [{\"dimension\": \"código · nombre\", \"lectura\": string}] (las dimensiones con más desacuerdo y qué conversación abren) y \"nivel_acompanamiento\": {\"nivel\": string, \"por_que\": string}.",
-    FORMATO,
+    n === 1 ? "Hay una sola autoevaluación: el consolidado coincide con esa lectura individual y no hay dispersión que interpretar." : "",
+    "Escribe el informe para el comité directivo y su advisor: lectura colectiva, dónde la dirección se ve de forma distinta entre sí (dispersión, si la hay) y qué significa, hipótesis de causa raíz, y la ruta de acompañamiento.",
+    formato("consolidado"),
   ].filter(Boolean).join("\n");
   return { system: SISTEMA, user };
 }

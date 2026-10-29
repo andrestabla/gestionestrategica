@@ -61,3 +61,17 @@ test("parseInforme rechaza un informe sin resumen o sin capacidades", () => {
   assert.throws(() => parseInforme({ titulo: "x" }), /incompleto/);
   assert.throws(() => parseInforme(null));
 });
+
+test("con una sola autoevaluación el encargo no pide dispersión y avisa la lectura parcial", () => {
+  const r = respuestas((code) => (code === "DIR-2.1" ? 2 : 0));
+  const parcial = Object.fromEntries(Object.entries(r).filter(([, v]) => v > 0));
+  const L = lecturaF1(parcial);
+  const f1 = encargoF1({ empresa, persona: { nombre: "Ana" }, lectura: L, fecha: "hoy" }).user;
+  assert.ok(f1.includes("LECTURA PARCIAL: faltan 67 afirmaciones"));
+  const items = [{ tipo: "f1" as const, meta: { nombre: "P" }, r: parcial }];
+  const C = consolidate(items);
+  const u = encargoConsolidado({ empresa, C, rec: recommend(C), n: 1, dispersion: DIMS.map((d) => ({ code: d.code, name: d.name, sd: 1.2 })), fecha: "hoy", cobertura: [1] }).user;
+  assert.ok(u.includes("una sola autoevaluación")); assert.ok(!u.includes("Dispersión entre miembros"));
+  assert.ok(u.includes("cada persona respondió 1 de 68"));
+  assert.ok(u.includes('"nivel_acompanamiento": {"nivel"'));
+});

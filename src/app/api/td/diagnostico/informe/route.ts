@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { withTenant } from "../../_helpers";
 import { catalog, getF1Responses, F1_CAN_SEE_ALL, platformResponses, getInforme, saveInforme, flushOrError } from "@/server/store";
 import { chatJson, iaDisponible } from "@/server/ia";
+import { effectiveIntegration } from "@/server/store";
 import { can } from "@/lib/permissions";
 import { consolidate, recommend, sdev } from "@/lib/od";
 import { lecturaF1 } from "@/lib/f1";
@@ -40,7 +41,7 @@ function entrada(user: { email: string; role: string }, url: URL) {
   const C = consolidate(platformResponses());
   const lecturas = all.map((f) => lecturaF1(f.r));
   const dispersion = DIMS.map((d, i) => ({ code: d.code, name: d.name, sd: sdev(lecturas.map((L) => L.dims[i].m).filter((m): m is number => m != null)) }));
-  return { kind, subject: "consolidado", inputHash: hash(all.map((f) => [f.email, f.r])), encargo: () => encargoConsolidado({ empresa, C, rec: recommend(C), n: all.length, dispersion, fecha: hoy() }), share: true } as const;
+  return { kind, subject: "consolidado", inputHash: hash(all.map((f) => [f.email, f.r])), encargo: () => encargoConsolidado({ empresa, C, rec: recommend(C), n: all.length, dispersion, fecha: hoy(), cobertura: lecturas.map((L) => L.answered) }), share: true } as const;
 }
 
 function respuesta(e: Exclude<ReturnType<typeof entrada>, { error: string }>, origin: string) {
@@ -68,7 +69,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   let informe;
   try { informe = parseInforme(await chatJson(system, prompt, { maxTokens: 3200, timeoutMs: 55_000 })); }
   catch (err) { return NextResponse.json({ error: (err as Error).message }, { status: 502 }); }
-  const r = saveInforme(user, e.kind, e.subject, e.inputHash, informe);
+  const r = saveInforme(user, e.kind, e.subject, e.inputHash, informe, effectiveIntegration("openai")?.fields.model?.trim() || "gpt-4o-mini");
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   const bad = await flushOrError(); if (bad) return NextResponse.json({ error: bad }, { status: 500 });
   return NextResponse.json(respuesta(e, new URL(req.url).origin));
