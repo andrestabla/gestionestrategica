@@ -31,6 +31,7 @@ import type { Response } from "@/lib/od";
 import { lecturaF1 } from "@/lib/f1";
 import { InformeIA } from "@/components/informe-ia";
 import { ModoFocal, pedirPantallaCompleta, teclaNumero, irAlSiguientePendiente, focalArriba, ITEM_CLS } from "@/components/modo-focal";
+import { UnaAUna, SelectorVista, useVista, type Pantalla } from "@/components/una-a-una";
 import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText,
@@ -494,6 +495,7 @@ function ResponderTest() {
   const [msg, setMsg] = useState<string | null>(null);
   const [saved, setSaved] = useState<TestResponse | null>(null);
   const router = useRouter();
+  const [vista, setVista] = useVista();
   useEffect(() => { if (mine) { setR(mine.r); setCargo(mine.cargo ?? ""); setObjetivo(mine.objetivo ?? ""); } }, [mine]);
   const answered = TEST_QUESTIONS.filter((q) => r[q.n] != null && r[q.n] !== "").length;
   const set = (n: number | string, v: number | string | undefined) => setR((prev) => { const next = { ...prev }; if (v === undefined) delete next[n]; else next[n] = v; return next; });
@@ -545,13 +547,50 @@ function ResponderTest() {
       </>
     );
   }
+  const introTest = (
+    <Card className="rise rise-1 mb-5">
+      <CardHeader title="Antes de comenzar" sub="Responde pensando en cómo funciona realmente la empresa en los últimos seis meses. Elige la respuesta que puedas sostener con ejemplos concretos; si no sabes, marca «Sin información»." />
+      <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
+        <label className="text-[12px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => setCargo(e.target.value)} /></label>
+        <label className="text-[12px] font-bold uppercase tracking-wider text-faint">Principal objetivo de crecimiento a doce meses<input className="input mt-1 font-normal normal-case tracking-normal" value={objetivo} onChange={(e) => setObjetivo(e.target.value)} /></label>
+      </div>
+      <div className="grid gap-1.5 px-5 pb-5 sm:grid-cols-5">{LEVELS.map((l) => <div key={l.n} className="rounded-lg bg-surface-2 px-3 py-2 text-[12px]"><b className="text-ink">{l.n} · {l.name}</b><div className="text-muted">{l.desc}</div></div>)}</div>
+    </Card>
+  );
+  const q25 = (
+    <Card className="mb-5">
+      <CardHeader title="25 · El desafío dominante" sub="¿Cuál de estas frases describe mejor el desafío de tu empresa hoy? Elige una sola." />
+      <div className="space-y-2 px-5 pb-5">
+        {TEST.q25.map((o) => (
+          <button key={o.k} type="button" onClick={() => set(25, o.k)} className={`flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left text-[12.5px] transition-all ${r[25] === o.k ? "border-navy bg-cyan-wash" : "border-line bg-surface hover:border-gold"}`}>
+            <b className="num text-cyan-deep">{o.k}</b><span className="text-ink-soft">{o.text}</span>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+  const pantallasTest: Pantalla[] = [
+    { kind: "libre", id: "intro", node: introTest },
+    ...TEST.bloques.flatMap((b, bi) => b.qs.map((q) => ({ kind: "item" as const, id: String(q.n), grupo: `Bloque ${bi + 1} de 4 · ${b.cap}`, grupoDesc: b.pregunta, code: String(q.n), texto: q.q, demo: q.demo, niveles: LEVELS.map((l) => ({ n: l.n, name: l.name, desc: l.desc })), guia: GUIDES.test[String(q.n)], value: r[q.n], onSet: (v: number | string | undefined) => set(q.n, v), ni: true }))),
+    { kind: "libre", id: "q25", node: q25 },
+    { kind: "libre", id: "fin", node: (
+      <Card className="rise p-6 text-center">
+        <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-deep">Fin del test</div>
+        <div className="mt-1 text-[18px] font-extrabold text-ink">{answered} de 24 preguntas con número{r[25] ? " y el desafío dominante elegido" : ""}</div>
+        <p className="mx-auto mt-2 max-w-[48ch] text-[13px] text-muted">{answered < 12 ? `Se necesitan al menos 12 preguntas con número; llevas ${answered}. Usa el mapa de puntos para volver a las pendientes.` : "Puedes volver a cualquier pregunta con el mapa de puntos antes de enviar. Se guarda una respuesta por persona; la última reemplaza a la anterior."}</p>
+        <button onClick={submit} disabled={busy || answered < 12} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
+      </Card>
+    ) },
+  ];
   return (
     <ModoFocal kicker="Test de capacidad empresarial · puerta de entrada" title="25 preguntas sobre cómo funciona la empresa" color="var(--navy)"
       progress={{ n: answered, total: 24, label: "con número" }} status={sinGuardar ? "Se guarda al enviar" : undefined} onExit={salir} exitLabel="Participantes"
-      footer={<>
+      footer={vista === "una" ? undefined : <>
         <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
         <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
       </>}>
+      <div className="mb-4 flex justify-end"><SelectorVista vista={vista} onChange={setVista} /></div>
+      {vista === "lista" ? (<>
       <Card className="rise rise-1 mb-5">
         <CardHeader title="Antes de comenzar" sub="Responde pensando en cómo funciona realmente la empresa en los últimos seis meses. Elige la respuesta que puedas sostener con ejemplos concretos; si no sabes, marca «Sin información»." />
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
@@ -601,6 +640,7 @@ function ResponderTest() {
         </div>
       </Card>
       </div>
+      </>) : <UnaAUna key={mine ? "con" : "sin"} pantallas={pantallasTest} color="var(--navy)" etiqueta="preguntas" />}
       {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
     </ModoFocal>
   );
@@ -744,6 +784,7 @@ function ResponderF1() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const router = useRouter();
+  const [vista, setVista] = useVista();
   useEffect(() => { if (data && !loaded) { if (data.mine) { setR(data.mine.r); setCargo(data.mine.cargo ?? ""); } setLoaded(true); } }, [data, loaded]);
   const total = PRACTICES.length;
   const answered = Object.keys(r).length;
@@ -775,12 +816,37 @@ function ResponderF1() {
   const responder = (code: string, v: number) => { const cambia = r[code] !== v; set(code, v); if (cambia) irAlSiguientePendiente(code); };
   const salir = async () => { if (dirty) await save(true); router.push("/panel/diagnostico/autoevaluacion"); };
   const irAlPaso = (i: number) => { setStep(i); focalArriba(); };
+  const setValor = (code: string, v: number | string | undefined) => { setR((prev) => { const next = { ...prev }; if (v === undefined) delete next[code]; else next[code] = Number(v); return next; }); setDirty(true); };
+  const introF1 = (
+    <Card className="rise rise-1 mb-5">
+      <CardHeader title="Antes de comenzar" sub="responde según lo que la empresa hace de forma recurrente y podría demostrar; si dudas entre dos números, elige el menor" />
+      <div className="grid gap-4 px-5 pb-5 lg:grid-cols-[260px_1fr]">
+        <label className="text-[12px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => { setCargo(e.target.value); setDirty(true); }} /></label>
+        <EscalaF1 />
+      </div>
+    </Card>
+  );
+  const ultimo = step === CAPS.length - 1;
+  const pantallasF1: Pantalla[] = [
+    ...(step === 0 ? [{ kind: "libre" as const, id: "intro", node: introF1 }] : []),
+    ...dims.flatMap((d) => d.prac.map((p) => ({ kind: "item" as const, id: p.code, grupo: `${d.code} · ${d.name}`, grupoDesc: d.defn, code: p.code, texto: p.f1, niveles: MAPA.escalaF1.map((l, i) => ({ n: i + 1, name: l.name, desc: l.desc })), guia: GUIDES.f1[p.code], value: r[p.code], onSet: (v: number | string | undefined) => setValor(p.code, v) }))),
+    { kind: "libre", id: "fin", node: (
+      <div className="panel rise p-6 text-center" style={{ borderTop: `3px solid ${cap.color}` }}>
+        <div className="text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: cap.color }}>Paso {step + 1} de 4 · {cap.name}</div>
+        <div className="mt-1 text-[18px] font-extrabold text-ink">{stepN(cap)} de {stepTot(cap)} afirmaciones respondidas</div>
+        <p className="mx-auto mt-2 max-w-[48ch] text-[13px] text-muted">{stepN(cap) < stepTot(cap) ? "Puedes dejar pendientes y volver después: el avance se guarda solo. Usa el mapa de puntos para ir a las que faltan." : ultimo ? "Completaste las cuatro capacidades. Guarda y mira tu lectura." : "Paso completo. Sigue con la siguiente capacidad."}</p>
+        {ultimo
+          ? <button type="button" onClick={finish} disabled={saving || answered === 0} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi lectura</button>
+          : <button type="button" onClick={() => irAlPaso(step + 1)} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px]">Paso {step + 2}: {CAPS[step + 1].name} <ArrowRight size={13} /></button>}
+      </div>
+    ) },
+  ];
   return (
     <ModoFocal kicker={`Fuente 1 · Autoevaluación directiva · paso ${step + 1} de 4`} title={cap.name} color={cap.color}
       progress={{ n: answered, total, label: "afirmaciones" }}
       status={saving ? "Guardando…" : dirty ? "Cambios sin guardar" : savedAt ? `Guardado ${savedAt}` : "El avance se guarda solo"}
       onExit={salir} exitLabel="Autoevaluación"
-      footer={<>
+      footer={vista === "una" ? undefined : <>
         <button type="button" onClick={() => irAlPaso(Math.max(0, step - 1))} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>
         <span className="hidden text-[12px] text-muted sm:inline">{stepN(cap)} de {stepTot(cap)} en este paso · puedes cerrar y seguir después.</span>
         {step < CAPS.length - 1
@@ -797,6 +863,8 @@ function ResponderF1() {
           </button>
         ); })}
       </div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="rounded-xl px-4 py-2 text-white" style={{ background: cap.color }}><span className="text-[11px] font-bold uppercase tracking-[0.18em] opacity-80">{cap.code} · {cap.verb}</span> <b className="ml-2 text-[13px]">{cap.q}</b></div><SelectorVista vista={vista} onChange={setVista} /></div>
+      {vista === "lista" ? (<>
       {step === 0 && (
         <Card className="rise rise-1 mb-5">
           <CardHeader title="Antes de comenzar" sub="responde según lo que la empresa hace de forma recurrente y podría demostrar; si dudas entre dos números, elige el menor" />
@@ -806,7 +874,6 @@ function ResponderF1() {
           </div>
         </Card>
       )}
-      <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: cap.color }}><div className="text-[12px] font-bold uppercase tracking-[0.18em] opacity-80">{cap.code} · {cap.verb}</div><div className="text-[16px] font-extrabold">{cap.name}</div><div className="text-[12px] opacity-85">{cap.q}</div></div>
       {dims.map((d) => (
         <div key={d.code} className="mb-5">
           <div className="mb-2 mt-4 px-1"><div className="text-[14px] font-extrabold text-ink">{d.code} · {d.name}</div><p className="text-[12px] leading-snug text-muted">{d.defn}</p></div>
@@ -833,6 +900,7 @@ function ResponderF1() {
           })}
         </div>
       ))}
+      </>) : <UnaAUna key={`${step}-${loaded ? 1 : 0}`} pantallas={pantallasF1} color={cap.color} />}
       {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
     </ModoFocal>
   );

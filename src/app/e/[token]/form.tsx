@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { CAPS, DIMS, F2_GENERAL, GUIDES, MAPA } from "@/data/mapa";
 import { Loader2, Send, CheckCircle2, ShieldCheck } from "lucide-react";
 import { ModoFocal, teclaNumero, irAlSiguientePendiente, ITEM_CLS } from "@/components/modo-focal";
+import { UnaAUna, SelectorVista, useVista, type Pantalla } from "@/components/una-a-una";
 
 const SCALE = MAPA.escalaF2;
 
@@ -29,16 +30,50 @@ export function SurveyForm({ token, company }: { token: string; company: string 
   };
   const groups = [...CAPS.map((c) => c.name), "Una mirada general"];
   const responder = (code: string, n: number) => { const cambia = r[code] !== n; setR((p) => ({ ...p, [code]: n })); if (cambia) irAlSiguientePendiente(code); };
+  const [vista, setVista] = useVista();
+  const intro = (
+    <div className="panel mb-5 px-7 py-6">
+      <h1 className="text-[24px] font-extrabold tracking-tight text-ink">Cómo funciona esta empresa en el día a día</h1>
+      <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">Responde según tu experiencia real en {company} durante los últimos seis meses. No hay respuestas correctas: buscamos entender cómo funciona la organización, no evaluar personas.</p>
+      <p className="mt-2 text-[13px] leading-relaxed text-muted"><b className="text-ink">Tu respuesta es anónima.</b> No se pide tu nombre ni tu correo, no se guarda desde dónde respondes y solo se reportan agregados con un mínimo de cinco respuestas por grupo. Son 40 afirmaciones; toma entre 15 y 20 minutos.</p>
+      <div className="mt-4 grid gap-1.5 sm:grid-cols-5">
+        {SCALE.map((e) => <div key={e.n} className="rounded-lg bg-surface-2 px-3 py-2 text-[12px]"><b className="text-ink">{e.n} · {e.name}</b><div className="text-muted">{e.desc}</div></div>)}
+      </div>
+      <label className="mt-4 block text-[12px] font-bold uppercase tracking-wider text-faint">Área (opcional)<input className="input mt-1 font-normal normal-case tracking-normal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Comercial, operaciones, administración…" /></label>
+    </div>
+  );
+  const abiertaNode = (
+    <div className="panel mb-5 px-5 py-4">
+      <p className="text-[13.5px] font-semibold text-ink">Si pudieras cambiar una sola cosa de cómo funciona esta empresa, ¿cuál sería?</p>
+      <p className="text-[12px] text-muted">Opcional y anónima. Se cita sin nombre en la devolución.</p>
+      <textarea className="input mt-2 min-h-[80px]" value={abierta} onChange={(e) => setAbierta(e.target.value)} maxLength={600} />
+    </div>
+  );
+  const pantallas: Pantalla[] = [
+    { kind: "libre", id: "intro", node: intro },
+    ...items.map((q) => ({ kind: "item" as const, id: q.code, grupo: q.cap, code: q.code, texto: q.text, niveles: SCALE.map((e, i) => ({ n: i + 1, name: e.name, desc: e.desc })), guia: GUIDES.f2[q.code], value: r[q.code], onSet: (v: number | string | undefined) => setR((p) => { const next = { ...p }; if (v === undefined) delete next[q.code]; else next[q.code] = Number(v); return next; }) })),
+    { kind: "libre", id: "abierta", node: abiertaNode },
+    { kind: "libre", id: "fin", node: (
+      <div className="panel px-6 py-7 text-center">
+        <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-deep">Fin de la encuesta</div>
+        <div className="mt-1 text-[18px] font-extrabold text-ink">{answered} de 40 afirmaciones respondidas</div>
+        <p className="mx-auto mt-2 max-w-[48ch] text-[13px] text-muted">{answered < 30 ? `Se necesitan al menos 30; llevas ${answered}. Usa el mapa de puntos para volver a las pendientes.` : "Tu respuesta es anónima y se suma a las demás. Puedes volver a cualquier afirmación antes de enviar."}</p>
+        <button onClick={submit} disabled={busy || answered < 30} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar mi respuesta</button>
+      </div>
+    ) },
+  ];
 
   if (done === null) {
     return (
       <ModoFocal marca kicker="Diagnóstico de capacidades · Percepción de equipos" title={company} color="var(--navy)"
         progress={{ n: answered, total: 40, label: "al menos 30" }}
         extra={<span className="chip hidden sm:inline-flex"><ShieldCheck size={11} /> Anónima</span>}
-        footer={<>
+        footer={vista === "una" ? undefined : <>
           <span className="num text-[12px] text-muted">{answered} de 40 respondidas · se necesitan al menos 30</span>
           <button onClick={submit} disabled={busy || answered < 30} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar mi respuesta</button>
         </>}>
+        <div className="mb-4 flex justify-end"><SelectorVista vista={vista} onChange={setVista} /></div>
+        {vista === "lista" ? (<>
         <div className="panel mb-5 px-7 py-6">
           <h1 className="text-[24px] font-extrabold tracking-tight text-ink">Cómo funciona esta empresa en el día a día</h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">Responde según tu experiencia real en {company} durante los últimos seis meses. No hay respuestas correctas: buscamos entender cómo funciona la organización, no evaluar personas.</p>
@@ -77,6 +112,7 @@ export function SurveyForm({ token, company }: { token: string; company: string 
           <p className="text-[12px] text-muted">Opcional y anónima. Se cita sin nombre en la devolución.</p>
           <textarea className="input mt-2 min-h-[80px]" value={abierta} onChange={(e) => setAbierta(e.target.value)} maxLength={600} />
         </div>
+        </>) : <UnaAUna pantallas={pantallas} color="var(--navy)" />}
         {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
       </ModoFocal>
     );
