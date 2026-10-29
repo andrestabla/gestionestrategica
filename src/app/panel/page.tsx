@@ -6,7 +6,9 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isConvencion } from "@/data/catalogo";
+import { isConvencion, horizonsOf } from "@/data/catalogo";
+import { DIMS, PRACTICES } from "@/data/mapa";
+import { PERSPECTIVES } from "@/data/cmi";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
 import { MaturityRadar, ScoreGauge } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
@@ -16,6 +18,9 @@ import { prevScores } from "@/lib/vista";
 import { buildAlerts, executiveSummary } from "@/lib/logic";
 import { useMaturity } from "@/lib/use-maturity";
 import { ArrowRight, ShieldAlert, AlertTriangle, Info } from "lucide-react";
+
+/** «3 objetivos», «1 objetivo»: conteo con su sustantivo. */
+const cuenta = (n: number, singular: string, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
 
 const SEV_META = {
   1: { icon: ShieldAlert, color: "var(--bad)", label: "Críticas" },
@@ -54,6 +59,9 @@ function PanelHome() {
     { planned: 0, executed: 0 },
   );
   const budgetPct = budget.planned ? Math.round((budget.executed / budget.planned) * 100) : 0;
+  // etiquetas de los módulos: lo que hay en el catálogo de esta empresa, no cifras fijas
+  const horizons = horizonsOf(v.catalog.company);
+  const roadmap = horizons.length > 1 ? `${horizons[0].label} → ${horizons[horizons.length - 1].label}` : horizons[0].label;
   const serie = summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ");
 
   return (
@@ -127,7 +135,7 @@ function PanelHome() {
       <div className="rise rise-2 mb-5 grid gap-4 sm:grid-cols-3">
         <StatCard label="Iniciativas en ejecución"
           value={initiatives.filter((i) => i.status === "EN_CURSO").length}
-          unit={`de ${initiatives.length}`} foot="Roadmap 2026–2028" />
+          unit={`de ${initiatives.length}`} foot={`Roadmap ${roadmap}`} />
         <StatCard label="Presupuesto ejecutado"
           value={budgetPct} unit="%"
           foot={`${fmtCOP(budget.executed)} de ${fmtCOP(budget.planned)}`}
@@ -171,20 +179,20 @@ function PanelHome() {
         <div className="kicker mb-4">Módulos de la plataforma</div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
-            desc="Radar de capacidades, mapa de calor de las 17 dimensiones, evidencia por práctica y serie de mediciones."
-            tags={["17 dimensiones", "68 evidencias"]} />
+            desc={`Radar de capacidades, mapa de calor de las ${DIMS.length} dimensiones, evidencia por práctica y serie de mediciones.`}
+            tags={[cuenta(DIMS.length, "dimensión", "dimensiones"), cuenta(PRACTICES.length, "evidencia")]} />
           <ModuleCard href={`${base}/panel/benchmark`} code="M2" title="Benchmark"
             desc="Posición sectorial frente a pares comparables y presencia territorial por departamento."
-            tags={["Sector", "Territorio"]} />
+            tags={[v.catalog.company.sector || "Sector", cuenta(v.catalog.territories?.length ?? 0, "departamento")]} />
           <ModuleCard href={`${base}/panel/estrategia`} code="M3" title="Estrategia · cuadro de mando y OKR"
             desc="Objetivo, resultados clave, dimensión que instala e iniciativa: la trazabilidad completa, navegable."
-            tags={["4 perspectivas", "10 objetivos"]} />
+            tags={[cuenta(PERSPECTIVES.length, "perspectiva"), cuenta(v.catalog.objectives.length, "objetivo")]} />
           <ModuleCard href={`${base}/panel/kpi`} code="M4" title="Indicadores"
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
-            tags={[`${v.kpis.length} indicadores`]} />
+            tags={[cuenta(v.kpis.length, "indicador", "indicadores")]} />
           <ModuleCard href={`${base}/panel/ruta`} code="M5" title="Mapa de ruta"
             desc="Roadmap por horizontes con Gantt y la matriz de priorización (D·E·M·L)."
-            tags={["2026–2028"]} />
+            tags={[roadmap, cuenta(initiatives.length, "iniciativa")]} />
           <ModuleCard href={`${base}/panel/iniciativas`} code="M6" title="Seguimiento de iniciativas"
             desc="Avance, presupuesto en tres estados y factores críticos de éxito en semáforo."
             tags={[fmtCOP(budget.planned)]} />
