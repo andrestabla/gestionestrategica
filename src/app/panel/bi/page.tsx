@@ -57,26 +57,26 @@ export default function BiPage() {
           <div className="px-5 pb-4">
             <div className="grid grid-cols-3 gap-2 text-center">
               {[["Top 5", s.concentration.top5Share], ["Top 10", s.concentration.top10Share], ["Top 20", s.concentration.top20Share]].map(([l, v]) => (
-                <div key={l as string} className="rounded-xl bg-surface-2/60 px-2 py-2.5"><div className="num text-[18px] font-extrabold text-ink">{fmtNum(v as number, 1)} %</div><div className="text-[10px] uppercase tracking-wide text-faint">{l}</div></div>
+                <div key={l as string} className="rounded-xl bg-surface-2/60 px-2 py-2.5"><div className="num text-[18px] font-extrabold text-ink">{fmtNum(v as number, 1)} %</div><div className="text-[12px] uppercase tracking-wide text-faint">{l}</div></div>
               ))}
             </div>
             <div className="mt-4 space-y-2">
               {s.sizes.map((b) => (
-                <div key={b.band} className="flex items-center gap-2 text-[11.5px]">
+                <div key={b.band} className="flex items-center gap-2 text-[12px]">
                   <span className="w-32 shrink-0 text-ink-soft">{b.band}</span>
                   <div className="h-[8px] flex-1 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${(b.n / maxSize) * 100}%`, background: "var(--grad-brand)" }} /></div>
                   <span className="num w-8 text-right font-bold text-ink">{b.n}</span>
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[10.5px] leading-snug text-faint">{s.concentration.top20Share >= 60 ? "Sector concentrado" : "Sector fragmentado"}: las veinte mayores suman {fmtNum(s.concentration.top20Share, 0)} % de los ingresos y el {smallPct} % de las sociedades está en la franja «{smallBand.band}» ({s.units}).</p>
+            <p className="mt-3 text-[12px] leading-snug text-faint">{s.concentration.top20Share >= 60 ? "Sector concentrado" : "Sector fragmentado"}: las veinte mayores suman {fmtNum(s.concentration.top20Share, 0)} % de los ingresos y el {smallPct} % de las sociedades está en la franja «{smallBand.band}» ({s.units}).</p>
           </div>
         </Card>
         <Card className="rise rise-2">
           <CardHeader title="Dónde está el sector" sub={`participación en ingresos por ${unitName} del domicilio`} />
           <div className="space-y-2 px-5 pb-4">
             {s.departments.slice(0, 8).map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-[11.5px]">
+              <div key={d.name} className="flex items-center gap-2 text-[12px]">
                 <span className="w-32 shrink-0 truncate text-ink-soft">{d.name}</span>
                 <div className="h-[8px] flex-1 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${(d.share / maxDept) * 100}%`, background: "var(--cyan-deep)" }} /></div>
                 <span className="num w-14 text-right font-bold text-ink">{fmtNum(d.share, 1)} %</span>
@@ -90,9 +90,9 @@ export default function BiPage() {
           <div className="space-y-2.5 px-5 pb-4">
             {s.byCiiu.map((c) => (
               <div key={c.code} className="rounded-xl bg-surface-2/60 px-3 py-2.5">
-                <div className="flex items-center gap-2"><span className="num text-[10.5px] font-extrabold text-cyan-deep">{c.code}</span><span className="num ml-auto text-[10.5px] text-faint">{c.n} soc. · {fmtMillones(c.revenue)}</span></div>
-                <div className="mt-0.5 text-[11.5px] leading-snug text-ink">{c.name}</div>
-                <div className="num mt-1 text-[10.5px] text-muted">crecimiento mediano {fmtNum(c.growthP50 ?? 0, 1)} % · margen operacional {fmtNum(c.opMarginP50 ?? 0, 1)} %</div>
+                <div className="flex items-center gap-2"><span className="num text-[12px] font-extrabold text-cyan-deep">{c.code}</span><span className="num ml-auto text-[12px] text-faint">{c.n} soc. · {fmtMillones(c.revenue)}</span></div>
+                <div className="mt-0.5 text-[12px] leading-snug text-ink">{c.name}</div>
+                <div className="num mt-1 text-[12px] text-muted">crecimiento mediano {fmtNum(c.growthP50 ?? 0, 1)} % · margen operacional {fmtNum(c.opMarginP50 ?? 0, 1)} %</div>
               </div>
             ))}
           </div>
@@ -103,7 +103,7 @@ export default function BiPage() {
         <CardHeader title={`Las diez mayores del sector en ${year}`} sub={`ingresos de actividades ordinarias, crecimiento y margen operacional · ${s.units}`} />
         <div className="overflow-x-auto px-2 pb-3">
           <table className="w-full text-[12px]">
-            <thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Sociedad</th><th className="px-2 py-2">{unitName[0].toUpperCase() + unitName.slice(1)}</th><th className="px-2 py-2">CIIU</th><th className="num px-2 py-2 text-right">Ingresos</th><th className="num px-2 py-2 text-right">Crecimiento</th><th className="num px-2 py-2 text-right">Margen op.</th></tr></thead>
+            <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Sociedad</th><th className="px-2 py-2">{unitName[0].toUpperCase() + unitName.slice(1)}</th><th className="px-2 py-2">CIIU</th><th className="num px-2 py-2 text-right">Ingresos</th><th className="num px-2 py-2 text-right">Crecimiento</th><th className="num px-2 py-2 text-right">Margen op.</th></tr></thead>
             <tbody>
               {s.peers.slice(0, 10).map((p) => (
                 <tr key={p.nit} className="border-t border-line">
@@ -118,7 +118,7 @@ export default function BiPage() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-start gap-2 border-t border-line px-5 py-3 text-[11px] leading-relaxed text-faint">
+        <div className="flex flex-wrap items-start gap-2 border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">
           <Database size={12} className="mt-0.5 shrink-0" />
           <span><b className="text-muted">{s.source.name}.</b> {s.source.note} Datasets: {s.source.datasets.map((d, i) => <span key={d.id}>{i > 0 && " · "}<a href={d.url} target="_blank" rel="noreferrer" className="text-cyan-deep hover:underline">{d.name}</a></span>)}. Consulta del {s.source.fetchedAt}; se actualiza con <code className="num">npm run sector:fetch</code>.</span>
         </div>
@@ -136,12 +136,12 @@ export default function BiPage() {
             <CardHeader title={`Demanda y competencia por ${unitName}`} sub={`población del censo, sociedades del sector domiciliadas allí y su facturación por habitante · ${s.units}`} />
             <div className="overflow-x-auto px-2 pb-3">
               <table className="w-full min-w-[640px] text-[12px]">
-                <thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{unitName[0].toUpperCase() + unitName.slice(1)}</th><th className="px-2 py-2">Presencia</th><th className="num px-2 py-2 text-right">Población</th><th className="num px-2 py-2 text-right">% nacional</th><th className="num px-2 py-2 text-right">Sociedades</th><th className="num px-2 py-2 text-right">Ingresos sector</th><th className="num px-2 py-2 text-right">USD / habitante</th></tr></thead>
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{unitName[0].toUpperCase() + unitName.slice(1)}</th><th className="px-2 py-2">Presencia</th><th className="num px-2 py-2 text-right">Población</th><th className="num px-2 py-2 text-right">% nacional</th><th className="num px-2 py-2 text-right">Sociedades</th><th className="num px-2 py-2 text-right">Ingresos sector</th><th className="num px-2 py-2 text-right">USD / habitante</th></tr></thead>
                 <tbody>
                   {demand.map((d) => (
                     <tr key={d.name} className={`border-t border-line ${d.presence === "ninguna" && d.population >= 400000 ? "bg-gold-wash/30" : ""}`}>
                       <td className="px-3 py-2 font-semibold text-ink">{d.name}</td>
-                      <td className="px-2 py-2"><span className={`${PRESENCE_CLS[d.presence]} !py-0 text-[9.5px]`}>{PRESENCE_LABEL[d.presence]}{d.weight ? ` · peso ${d.weight}` : ""}</span></td>
+                      <td className="px-2 py-2"><span className={`${PRESENCE_CLS[d.presence]} !py-0 text-[11px]`}>{PRESENCE_LABEL[d.presence]}{d.weight ? ` · peso ${d.weight}` : ""}</span></td>
                       <td className="num px-2 py-2 text-right font-bold text-ink">{fmtNum(d.population, 0)}</td>
                       <td className="num px-2 py-2 text-right text-muted">{fmtNum(d.share, 1)} %</td>
                       <td className="num px-2 py-2 text-right text-muted">{d.companies || "—"}</td>
@@ -152,7 +152,7 @@ export default function BiPage() {
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-wrap items-start gap-2 border-t border-line px-5 py-3 text-[11px] leading-relaxed text-faint">
+            <div className="flex flex-wrap items-start gap-2 border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">
               <Database size={12} className="mt-0.5 shrink-0" />
               <span><b className="text-muted">{EC_POPULATION_SOURCE.name}.</b> {EC_POPULATION_SOURCE.note} Las sociedades y sus ingresos son las del ranking de la SCVS por {unitName} del domicilio: una {unitName} con mucha población y pocos ingresos declarados del sector (en verde) es demanda atendida desde otra {unitName} o por farmacias independientes fuera del ranking. Las filas sombreadas son {unitName}s de más de 400 mil habitantes sin presencia ni plan.</span>
             </div>
@@ -169,20 +169,20 @@ export default function BiPage() {
               <div key={t.name} className="rounded-xl bg-surface-2/60 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-extrabold text-ink">{t.name}</span>
-                  <span className={`${PRESENCE_CLS[t.presence]} !py-0 text-[9.5px]`}>{PRESENCE_LABEL[t.presence]}</span>
-                  <span className="num ml-auto text-[10.5px] text-faint">{count} soc. · {fmtNum(revenue, 0)}</span>
+                  <span className={`${PRESENCE_CLS[t.presence]} !py-0 text-[11px]`}>{PRESENCE_LABEL[t.presence]}</span>
+                  <span className="num ml-auto text-[12px] text-faint">{count} soc. · {fmtNum(revenue, 0)}</span>
                 </div>
                 <ul className="mt-2 space-y-1">
                   {top.map((p) => (
-                    <li key={p.nit} className="flex items-center gap-2 text-[11.5px]">
+                    <li key={p.nit} className="flex items-center gap-2 text-[12px]">
                       <Users size={10} className="shrink-0 text-faint" />
                       <span className="truncate text-ink-soft" title={p.name}>{shortName(p.name, 3)}</span>
                       <span className="num ml-auto shrink-0 font-bold text-ink">{fmtNum(p.revenue, 0)}</span>
-                      <span className="num w-12 shrink-0 text-right text-[10px]" style={{ color: (p.growth ?? 0) >= 0 ? "var(--ok)" : "var(--bad)" }}>{p.growth !== null ? `${fmtNum(p.growth, 0)} %` : "—"}</span>
+                      <span className="num w-12 shrink-0 text-right text-[12px]" style={{ color: (p.growth ?? 0) >= 0 ? "var(--ok)" : "var(--bad)" }}>{p.growth !== null ? `${fmtNum(p.growth, 0)} %` : "—"}</span>
                     </li>
                   ))}
                 </ul>
-                {t.reading && <p className="mt-2 text-[10.5px] italic leading-snug text-faint">{t.reading}</p>}
+                {t.reading && <p className="mt-2 text-[12px] italic leading-snug text-faint">{t.reading}</p>}
               </div>
             ))}
           </div>

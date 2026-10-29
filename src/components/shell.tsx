@@ -39,7 +39,7 @@ function PublicLinkButton() {
   return (
     <button onClick={share} disabled={state === "busy"}
       className="btn-ghost hidden sm:inline-flex"
-      title="Genera el enlace público de solo lectura, lo copia al portapapeles y lo abre">
+      title="Genera el enlace público de solo lectura, lo copia al portapapeles y lo abre" aria-label="Genera el enlace público de solo lectura, lo copia al portapapeles y lo abre">
       <Share2 size={13} />
       {state === "copied" ? "Enlace copiado" : "Vista pública"}
     </button>
@@ -55,8 +55,8 @@ type Notif = {
 
 const NOTIF_ICON = (n: Notif) => {
   if (n.mention) return { Icon: AtSign, color: "var(--cyan-deep)" };
-  if (n.severity === 1) return { Icon: ShieldAlert, color: "var(--bad)" };
-  if (n.severity === 2) return { Icon: AlertTriangle, color: "var(--warn)" };
+  if (n.severity === 1) return { Icon: ShieldAlert, color: "var(--bad-text)" };
+  if (n.severity === 2) return { Icon: AlertTriangle, color: "var(--warn-text)" };
   return { Icon: Info, color: "var(--muted)" };
 };
 
@@ -108,7 +108,7 @@ function NotificationsBell() {
         title="Notificaciones">
         <Bell size={16} />
         {unread > 0 && (
-          <span className="num absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[8.5px] font-extrabold text-white"
+          <span className="num absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[11px] font-extrabold text-white"
             style={{ background: "var(--bad)" }}>
             {unread > 99 ? "99+" : unread}
           </span>
@@ -124,7 +124,7 @@ function NotificationsBell() {
             </span>
             {unread > 0 && (
               <button onClick={() => markRead(items.filter((i) => !i.read).map((i) => i.id))}
-                className="flex items-center gap-1 text-[10.5px] font-semibold text-muted hover:text-cyan-deep">
+                className="flex items-center gap-1 text-[12px] font-semibold text-muted hover:text-cyan-deep">
                 <CheckCheck size={11} /> Marcar todas
               </button>
             )}
@@ -149,7 +149,7 @@ function NotificationsBell() {
                   <Icon size={14} className="mt-0.5 shrink-0" style={{ color }} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] font-bold text-ink">{n.title}</span>
-                    <span className="block text-[10.5px] leading-snug text-muted">{n.detail}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{n.detail}</span>
                   </span>
                   {!n.read && <i className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: "var(--cyan)" }} />}
                 </button>
@@ -265,12 +265,12 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   // bloque de empresa: nombre de la activa y, para el admin, el paso a la pantalla de elección
   const companyBlock = (
     <>
-      {user.role === "ADMIN" && <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/35">Empresa activa</div>}
+      {user.role === "ADMIN" && <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/35">Empresa activa</div>}
       <div className="text-[12.5px] font-bold text-white">{brand?.shortName ?? company?.shortName ?? "Sin empresa"}</div>
-      <div className="mt-0.5 text-[10.5px] leading-snug text-white/40">{brand?.institutionName ?? company?.name ?? "Elige una empresa para operar"}</div>
+      <div className="mt-0.5 text-[12px] leading-snug text-white/40">{brand?.institutionName ?? company?.name ?? "Elige una empresa para operar"}</div>
       {user.role === "ADMIN" && companies.length > 0 && (
         <Link href="/empresas" onClick={() => setOpen(false)}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white/[0.08] px-2.5 py-1.5 text-[11px] font-bold text-white/85 transition-colors hover:bg-white/[0.14] hover:text-white">
+          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white/[0.08] px-2.5 py-1.5 text-[12px] font-bold text-white/85 transition-colors hover:bg-white/[0.14] hover:text-white">
           <ArrowRightLeft size={12} /> Cambiar de empresa
         </Link>
       )}
@@ -284,7 +284,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
         const active = isActive(item.href);
         return (
           <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
-            title={mini ? item.label : undefined}
+            title={item.code ? `${item.label} · ${item.code}` : mini ? item.label : undefined}
             className={`group relative flex items-center rounded-xl text-[13px] font-medium transition-all duration-150 ${
               mini ? "justify-center px-0 py-[10px]" : "gap-3 px-3 py-[9px]"
             } ${
@@ -298,11 +298,6 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
             <item.icon size={mini ? 18 : 16} strokeWidth={active ? 2.4 : 1.9}
               className={active ? "text-cyan-fill" : ""} />
             {!mini && <span className="flex-1">{item.label}</span>}
-            {!mini && item.code && (
-              <span className={`num text-[9px] tracking-wider ${active ? "text-cyan-fill/90" : "text-white/25"}`}>
-                {item.code}
-              </span>
-            )}
           </Link>
         );
       })}
@@ -312,6 +307,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   return (
     <div className="flex min-h-screen">
       {/* rail escritorio */}
+      <a href="#contenido" className="skip-link">Saltar al contenido</a>
       <aside
         className="fixed inset-y-0 left-0 z-40 hidden flex-col transition-[width] duration-200 lg:flex"
         style={{ background: "var(--grad-deep)", width: collapsed ? RAIL_W_MIN : RAIL_W }}>
@@ -327,7 +323,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           {!collapsed && !(brand?.logoDark || brand?.logoLight) && (
             <div className="leading-tight">
               <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "Gestión estratégica"}</div>
-              <div className="text-[8.5px] font-semibold uppercase tracking-[0.16em] text-white/35">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 Algoritmo T
               </div>
             </div>
@@ -344,14 +340,14 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
             </div>
           )}
           <button onClick={toggleRail}
-            title={collapsed ? "Expandir menú" : "Contraer menú"}
+            title={collapsed ? "Expandir menú" : "Contraer menú"} aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
             className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white ${
               collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
             {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
             {!collapsed && "Contraer menú"}
           </button>
           <button onClick={logout}
-            title={collapsed ? "Cerrar sesión" : undefined}
+            title={collapsed ? "Cerrar sesión" : undefined} aria-label={collapsed ? "Cerrar sesión" : undefined}
             className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white ${
               collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
             <LogOut size={14} /> {!collapsed && "Cerrar sesión"}
@@ -406,7 +402,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
                 : (current?.label ?? "Panel")}
             </span>
             {current?.code && !(acomp && path.startsWith("/panel/convencion")) && (
-              <span className="num text-[10px] font-bold tracking-wider text-faint">{current.code}</span>
+              <span className="num text-[12px] font-bold tracking-wider text-faint">{current.code}</span>
             )}
           </div>
 
@@ -417,21 +413,21 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
             {/* la vista pública de la plataforma completa no aplica a la convención: se oculta en ese modo */}
             {!convencion && <span className="hidden sm:inline-flex"><PublicLinkButton /></span>}
             <div className="flex items-center gap-2.5 pl-1">
-              <div className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold text-white shadow-md"
+              <div className="grid h-8 w-8 place-items-center rounded-full text-[12px] font-bold text-white shadow-md"
                 style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>
                 {user.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
               </div>
               <div className="hidden leading-tight md:block">
                 <div className="text-[12px] font-bold text-ink">{user.name}</div>
-                <div className="text-[10px] text-faint">{ROLE_LABEL[user.role] ?? user.role}</div>
+                <div className="text-[12px] text-faint">{ROLE_LABEL[user.role] ?? user.role}</div>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px]">{children}</main>
+        <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none">{children}</main>
 
-        <footer className="px-8 pb-6 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">
+        <footer className="px-8 pb-6 pt-2 text-[12px] font-medium uppercase tracking-[0.14em] text-faint/70">
           Gestión estratégica · plataforma de Algoritmo T
         </footer>
       </div>

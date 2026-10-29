@@ -196,7 +196,7 @@ export default function EjecutivoTab() {
   const delta = (l: { value: number; prev: number | null }) =>
     l.prev === null ? null : Math.round((l.value - l.prev) * 10) / 10;
 
-  const sortBtn = "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-bold uppercase tracking-wide transition-colors";
+  const sortBtn = "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-bold uppercase tracking-wide transition-colors";
   const sortOn = "bg-cyan-wash text-cyan-deep";
   const sortOff = "text-faint hover:text-muted";
 
@@ -242,11 +242,11 @@ export default function EjecutivoTab() {
 
         {/* compositor: qué secciones lleva la pieza */}
         <div className="mb-5 flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5">
-          <span className="mr-1 text-[10.5px] font-bold uppercase tracking-wide text-faint">Secciones del informe</span>
+          <span className="mr-1 text-[12px] font-bold uppercase tracking-wide text-faint">Secciones del informe</span>
           {SECTIONS.map(([key, label]) => (
             <button key={key}
               onClick={() => setOn((prev) => ({ ...prev, [key]: !prev[key] }))}
-              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              className={`rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors ${
                 on[key] ? "border-cyan bg-cyan-wash text-cyan-deep" : "border-line text-faint hover:text-muted"
               }`}>
               {label}
@@ -275,7 +275,7 @@ export default function EjecutivoTab() {
                 {fmtNum(s.maturity.institution.value, 1)}
                 <span className="text-[14px] font-semibold text-faint"> / 5</span>
               </div>
-              <div className="num mt-1 text-[10.5px] text-faint">meta {fmtNum(s.maturity.institution.target, 1)} a 24 meses</div>
+              <div className="num mt-1 text-[12px] text-faint">meta {fmtNum(s.maturity.institution.target, 1)} a 24 meses</div>
             </div>
           </div>
         </div>
@@ -308,7 +308,7 @@ export default function EjecutivoTab() {
             </li>
             <li>
               Planes de trabajo: <b className="text-ink">{gp ? `${gp.stats.byStatus.HECHA}/${gp.stats.total}` : "…"}</b> tareas hechas,{" "}
-              <b style={{ color: "var(--bad)" }}>{gp?.stats.overdue ?? "…"}</b> vencidas y {gp?.stats.byStatus.BLOQUEADA ?? "…"} bloqueadas al corte.
+              <b style={{ color: "var(--bad-text)" }}>{gp?.stats.overdue ?? "…"}</b> vencidas y {gp?.stats.byStatus.BLOQUEADA ?? "…"} bloqueadas al corte.
             </li>
           </ul>
         </Card>
@@ -348,7 +348,7 @@ export default function EjecutivoTab() {
                           const c = scores[l.n]?.[d.key];
                           if (!c) return null;
                           return (
-                            <div key={d.key} className="flex items-center gap-2 text-[11.5px]">
+                            <div key={d.key} className="flex items-center gap-2 text-[12px]">
                               <span className="w-[150px] shrink-0 text-muted">{d.name}</span>
                               <div className="relative h-[6px] flex-1 overflow-hidden rounded-full bg-surface">
                                 <div className="h-full rounded-full" style={{ width: `${(c.value / 5) * 100}%`, background: meta.color, opacity: 0.75 }} />
@@ -359,7 +359,7 @@ export default function EjecutivoTab() {
                             </div>
                           );
                         })}
-                        <Link href={`/panel/diagnostico/capacidad/${l.n}`} className="inline-flex items-center gap-1 pt-1 text-[11px] font-bold text-cyan-deep hover:underline">
+                        <Link href={`/panel/diagnostico/capacidad/${l.n}`} className="inline-flex items-center gap-1 pt-1 text-[12px] font-bold text-cyan-deep hover:underline">
                           Ver prácticas y evidencia <ExternalLink size={11} />
                         </Link>
                       </div>
@@ -374,7 +374,7 @@ export default function EjecutivoTab() {
           <Card>
             <CardHeader title="Mapa de calor de las 17 dimensiones" sub="madurez de la medición vigente" />
             <div className="px-5 pb-5 pt-2"><MaturityHeatmap scores={scores} /></div>
-            <div className="border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
+            <div className="border-t border-line px-5 py-2.5 text-[12px] text-faint">
               Alertas del motor: {s.alertCounts.critical} críticas · {s.alertCounts.warning} advertencias · {s.alertCounts.info} informativas.
               Acciones del roadmap: {s.actions.done}/{s.actions.total} hechas ({s.actions.late} vencidas).
             </div>
@@ -398,7 +398,7 @@ export default function EjecutivoTab() {
                     <div className="truncate text-[12px] font-bold text-ink group-hover:text-cyan-deep">
                       {line.code} {line.short} · {b.dimName}
                     </div>
-                    <div className="text-[10.5px] text-muted">
+                    <div className="text-[12px] text-muted">
                       nivel {fmtNum(b.value, 1)} · meta {fmtNum(b.target, 1)} · brecha {fmtNum(b.target - b.value, 1)}
                     </div>
                   </div>
@@ -425,7 +425,7 @@ export default function EjecutivoTab() {
                   style={{ background: a.severity === 1 ? "var(--bad)" : "var(--warn)" }} />
                 <div className="min-w-0">
                   <div className="text-[12px] font-bold leading-snug text-ink">{a.title}</div>
-                  <div className="text-[10.5px] leading-snug text-muted">{a.detail}{a.owner ? ` — ${a.owner}` : ""}</div>
+                  <div className="text-[12px] leading-snug text-muted">{a.detail}{a.owner ? ` — ${a.owner}` : ""}</div>
                 </div>
               </div>
             ))}
@@ -448,7 +448,7 @@ export default function EjecutivoTab() {
                   </div>
                 } />
               <div className="px-5 pb-4">
-                <table className="w-full text-[11.5px]">
+                <table className="w-full text-[12px]">
                   <tbody>
                     {kpisSorted.map((k) => (
                       <tr key={k.code} onClick={() => router.push("/panel/kpi")}
@@ -483,7 +483,7 @@ export default function EjecutivoTab() {
                 } />
               <div className="px-5 pb-4">
                 <div className="mb-3"><BudgetBar planned={s.budget.planned} committed={s.budget.committed} executed={s.budget.executed} /></div>
-                <table className="w-full text-[11.5px]">
+                <table className="w-full text-[12px]">
                   <tbody>
                     {inisSorted.map((i) => (
                       <tr key={i.id} onClick={() => router.push(`/panel/iniciativas/${i.id}`)}
@@ -519,7 +519,7 @@ export default function EjecutivoTab() {
                   const pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
                   return (
                     <Link key={i.id} href={`/panel/proyectos/${i.id}`} className="group block">
-                      <div className="mb-0.5 flex items-baseline justify-between text-[11.5px]">
+                      <div className="mb-0.5 flex items-baseline justify-between text-[12px]">
                         <span className="truncate pr-2 font-semibold text-ink-soft group-hover:text-cyan-deep">
                           {i.id.toUpperCase()} · {i.name}
                         </span>
@@ -536,10 +536,10 @@ export default function EjecutivoTab() {
             <div className="space-y-4">
               {gpDerived.overdue.length > 0 && (
                 <div>
-                  <div className="label mb-2" style={{ color: "var(--bad)" }}>Vencidas al corte</div>
+                  <div className="label mb-2" style={{ color: "var(--bad-text)" }}>Vencidas al corte</div>
                   {gpDerived.overdue.slice(0, 4).map((t) => (
-                    <Link key={t.id} href={`/panel/proyectos/${t.iniId}`} className="group flex items-baseline gap-2 py-1 text-[11.5px]">
-                      <span className="num shrink-0 font-bold" style={{ color: "var(--bad)" }}>{t.due}</span>
+                    <Link key={t.id} href={`/panel/proyectos/${t.iniId}`} className="group flex items-baseline gap-2 py-1 text-[12px]">
+                      <span className="num shrink-0 font-bold" style={{ color: "var(--bad-text)" }}>{t.due}</span>
                       <span className="truncate text-ink-soft group-hover:text-cyan-deep">{t.title}</span>
                       <span className="num ml-auto shrink-0 text-faint">{gpDerived.person(t.assigneeId).split(" ")[0]}</span>
                     </Link>
@@ -549,7 +549,7 @@ export default function EjecutivoTab() {
               <div>
                 <div className="label mb-2">Próximos hitos</div>
                 {gpDerived.upcoming.map((t) => (
-                  <Link key={t.id} href={`/panel/proyectos/${t.iniId}`} className="group flex items-baseline gap-2 py-1 text-[11.5px]">
+                  <Link key={t.id} href={`/panel/proyectos/${t.iniId}`} className="group flex items-baseline gap-2 py-1 text-[12px]">
                     <span className="num shrink-0 font-bold text-cyan-deep">{t.due}</span>
                     <span className="truncate text-ink-soft group-hover:text-cyan-deep">{t.title}</span>
                     <span className="num ml-auto shrink-0 text-faint">{gpDerived.person(t.assigneeId).split(" ")[0]}</span>
@@ -566,7 +566,7 @@ export default function EjecutivoTab() {
         <Card className="mt-5">
           <CardHeader title="Objetivos estratégicos" sub="salud por objetivo del mapa: KPI en meta y peor riesgo de sus iniciativas" />
           <div className="px-5 pb-4">
-            <table className="w-full text-[11.5px]">
+            <table className="w-full text-[12px]">
               <tbody>
                 {s.objectives.map((o) => {
                   const obj = v.catalog.objectives.find((c) => c.id === o.id);
@@ -598,7 +598,7 @@ export default function EjecutivoTab() {
           <CardHeader title="Nota del consultor" sub="lectura cualitativa del corte — se guarda localmente y sale impresa como texto" />
           <div className="px-5 pb-5">
             <div className="no-print">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[10.5px] text-faint">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] text-faint">
                 <PenLine size={11} /> Escribe aquí la interpretación que acompaña los números.
               </div>
               <textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={5}
@@ -612,7 +612,7 @@ export default function EjecutivoTab() {
         </Card>
       )}
 
-      <p className="mt-5 text-[10px] leading-relaxed text-faint">
+      <p className="mt-5 text-[12px] leading-relaxed text-faint">
         Generado por la PGTD · Algoritmo T S.A.S. · datos ilustrativos del modo demo. Las reglas de
         semáforos, riesgo y proyección están documentadas en Metodología.
       </p>

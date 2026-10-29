@@ -53,7 +53,7 @@ export default function RutaPage() {
                 horizon: i.horizon, progress: i.progress, color: hColor(i.horizon),
               }))} />
           </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-line px-5 py-3 text-[11.5px] text-muted">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-line px-5 py-3 text-[12px] text-muted">
             <span className="flex items-center gap-1.5"><i className="h-3 w-3 rounded" style={{ background: "var(--cyan)" }} /> Corto plazo (0–12 m)</span>
             <span className="flex items-center gap-1.5"><i className="h-3 w-3 rounded" style={{ background: "var(--gold-fill)" }} /> Mediano plazo (12–36 m)</span>
           </div>
@@ -65,7 +65,7 @@ export default function RutaPage() {
             <PriorityMatrix onSelect={setSel} selected={sel}
               items={evaluated.map((r) => ({ id: r.id, name: r.name, D: r.c.avg.D, L: r.c.avg.L, score: r.c.score, horizon: r.horizon, color: hColor(r.horizon) }))} />
           </div>
-          <div className="border-t border-line px-5 py-3 text-[11px] leading-relaxed text-muted">
+          <div className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-muted">
             D ≥ 3 compite como prioridad crítica; con L en 1 o 2 se resuelve primero la capacidad. {rows.length - evaluated.length > 0 && <>{rows.length - evaluated.length} sin evaluar: no aparecen en la matriz.</>}
             {" "}Se evalúa en <Link href="/panel/iniciativas/priorizacion" className="font-semibold text-cyan-deep">Iniciativas → Portafolio priorizado</Link>.
           </div>
@@ -80,18 +80,18 @@ export default function RutaPage() {
           <table className="w-full min-w-[760px] text-[12px]">
             <thead>
               <tr className="border-b border-line-strong">
-                <th className="label px-3 pb-2 text-left !text-[8.5px]">#</th>
-                <th className="label px-3 pb-2 text-left !text-[8.5px]">Iniciativa</th>
-                {CRITERIA.map((c) => <th key={c.key} className="label px-2 pb-2 text-center !text-[8.5px]" title={`${c.name} · ${c.weight} %`}>{c.key} · {c.weight} %</th>)}
-                <th className="label px-3 pb-2 text-right !text-[8.5px]">Puntaje</th>
-                <th className="label px-3 pb-2 text-left !text-[8.5px]">Tipo</th>
-                <th className="label px-3 pb-2 text-left !text-[8.5px]">Sugerido</th>
-                <th className="label px-3 pb-2 text-left !text-[8.5px]">Decisión</th>
+                <th className="label px-3 pb-2 text-left !text-[11px]">#</th>
+                <th className="label px-3 pb-2 text-left !text-[11px]">Iniciativa</th>
+                {CRITERIA.map((c) => <th key={c.key} className="label px-2 pb-2 text-center !text-[11px]" title={`${c.name} · ${c.weight} %`}>{c.key} · {c.weight} %</th>)}
+                <th className="label px-3 pb-2 text-right !text-[11px]">Puntaje</th>
+                <th className="label px-3 pb-2 text-left !text-[11px]">Tipo</th>
+                <th className="label px-3 pb-2 text-left !text-[11px]">Sugerido</th>
+                <th className="label px-3 pb-2 text-left !text-[11px]">Decisión</th>
               </tr>
             </thead>
             <tbody>
               {horizons.map((hz) => hz.id).flatMap((h) => [
-                <tr key={`h-${h}`}><td colSpan={10} className="px-3 pb-1 pt-3 text-[9.5px] font-bold uppercase tracking-wider text-faint">{horizonTitle(horizons.find((x) => x.id === h)!)}</td></tr>,
+                <tr key={`h-${h}`}><td colSpan={10} className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-faint">{horizonTitle(horizons.find((x) => x.id === h)!)}</td></tr>,
                 ...rows.filter((r) => r.horizon === h).map((r) => {
                   const d = prio?.decisions[r.id];
                   return (
@@ -99,7 +99,7 @@ export default function RutaPage() {
                       <td className="num px-3 py-2 font-extrabold text-faint">{r.c.n ? r.position : "—"}</td>
                       <td className="px-3 py-2">
                         <button onClick={() => setSel(r.id)} className="text-left font-semibold text-ink hover:text-cyan-deep">{r.name}</button>
-                        <div className="num text-[10px] text-faint">{r.id.toUpperCase()} · {r.c.n} evaluador{r.c.n === 1 ? "" : "es"}</div>
+                        <div className="num text-[12px] text-faint">{r.id.toUpperCase()} · {r.c.n} evaluador{r.c.n === 1 ? "" : "es"}</div>
                       </td>
                       {CRITERIA.map((c) => (
                         <td key={c.key} className="num px-2 py-2 text-center" title={r.c.n ? `${c.name}: ${r.c.avg[c.key]} · ${LEVEL_NAMES[r.c.rounded[c.key]]}` : undefined}>
@@ -107,9 +107,9 @@ export default function RutaPage() {
                         </td>
                       ))}
                       <td className="num px-3 py-2 text-right text-[14px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
-                      <td className="px-3 py-2 text-[11px] text-ink-soft">{r.c.type ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—"}</td>
+                      <td className="px-3 py-2 text-[12px] text-ink-soft">{r.c.type ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—"}</td>
                       <td className="px-3 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={v.catalog.company} /></td>
-                      <td className="px-3 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
+                      <td className="px-3 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
                 }),
@@ -117,7 +117,7 @@ export default function RutaPage() {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
+        <div className="border-t border-line px-5 py-2.5 text-[12px] text-faint">
           La matriz ayuda a comparar; el presupuesto y la capacidad determinan cuántas se aprueban. Las calificaciones y la decisión se registran en la ficha de cada iniciativa, según el rol.
         </div>
       </Card>
@@ -197,7 +197,7 @@ export default function RutaPage() {
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: g.color }} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-semibold text-ink">{i.name}</div>
-                    <div className="font-mono text-[10.5px] text-faint">
+                    <div className="font-mono text-[12px] text-faint">
                       {i.start} → {i.end} · {fmtCOP(i.budgetPlanned)}
                     </div>
                   </div>

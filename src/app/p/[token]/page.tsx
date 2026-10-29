@@ -51,7 +51,7 @@ export default async function PublicView(
       </header>
 
       <div className="mb-4 rounded-xl px-4 py-2.5 text-[12px]"
-        style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>
+        style={{ background: "var(--gold-wash)", color: "var(--gold-text)" }}>
         Datos ilustrativos de demostración. Medición vigente: {s.maturity.assessment.label} ({s.maturity.assessment.period}).
       </div>
 
@@ -60,7 +60,7 @@ export default async function PublicView(
         <div>
           <div className="label mb-2">Madurez de la empresa</div>
           <ScoreGauge value={s.maturity.institution.value} />
-          <div className="num mt-2 text-center text-[11.5px] text-muted">
+          <div className="num mt-2 text-center text-[12px] text-muted">
             Serie: {s.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ")}
           </div>
         </div>
@@ -91,7 +91,7 @@ export default async function PublicView(
       {/* alertas críticas */}
       {criticals.length > 0 && (
         <section className="panel mb-5 px-6 py-5">
-          <div className="label mb-3 flex items-center gap-1.5" style={{ color: "var(--bad)" }}>
+          <div className="label mb-3 flex items-center gap-1.5" style={{ color: "var(--bad-text)" }}>
             <ShieldAlert size={12} /> Asuntos que requieren decisión directiva
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -100,7 +100,7 @@ export default async function PublicView(
                 style={{ background: "color-mix(in srgb, var(--bad) 6%, white)" }}>
                 <div className="text-[13px] font-bold text-ink">{a.title}</div>
                 <div className="mt-0.5 text-[12px] leading-snug text-muted">{a.detail}</div>
-                {a.owner && <div className="num mt-1 text-[10px] text-faint">{a.owner}</div>}
+                {a.owner && <div className="num mt-1 text-[12px] text-faint">{a.owner}</div>}
               </div>
             ))}
           </div>
@@ -115,20 +115,20 @@ export default async function PublicView(
             <div key={code} className="flex items-center gap-2.5 rounded-lg bg-surface-2/60 px-3 py-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SEM_COLOR[health.semaphore] }} />
               <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">{name}</span>
-              <span className="num shrink-0 text-[11.5px] font-bold text-ink-soft">
+              <span className="num shrink-0 text-[12px] font-bold text-ink-soft">
                 {fmtNum(health.latest, 1)}
               </span>
               {!health.projection.willReachTarget && (
-                <AlertTriangle size={11} className="shrink-0" style={{ color: "var(--warn)" }} />
+                <AlertTriangle size={11} className="shrink-0" style={{ color: "var(--warn-text)" }} />
               )}
             </div>
           ))}
         </div>
-        <div className="mt-2.5 flex items-center gap-4 text-[10.5px] text-faint">
+        <div className="mt-2.5 flex items-center gap-4 text-[12px] text-faint">
           <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full" style={{ background: "var(--ok)" }} /> en meta</span>
           <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full" style={{ background: "var(--warn)" }} /> en avance</span>
           <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full" style={{ background: "var(--bad)" }} /> rezagado</span>
-          <span className="flex items-center gap-1"><AlertTriangle size={10} style={{ color: "var(--warn)" }} /> el ritmo no alcanza la meta</span>
+          <span className="flex items-center gap-1"><AlertTriangle size={10} style={{ color: "var(--warn-text)" }} /> el ritmo no alcanza la meta</span>
         </div>
       </section>
 
@@ -150,7 +150,7 @@ export default async function PublicView(
                       <div className="h-[6px] w-24 overflow-hidden rounded-full bg-surface-2">
                         <div className="h-full rounded-full bg-cyan" style={{ width: `${i.progress}%` }} />
                       </div>
-                      <span className="num text-[10.5px] text-muted">{i.progress} %</span>
+                      <span className="num text-[12px] text-muted">{i.progress} %</span>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
@@ -163,7 +163,7 @@ export default async function PublicView(
         </div>
       </section>
 
-      <footer className="pb-4 pt-2 text-center text-[10px] font-medium uppercase tracking-[0.14em] text-faint">
+      <footer className="pb-4 pt-2 text-center text-[12px] font-medium uppercase tracking-[0.14em] text-faint">
         Generado por la PGTD · Algoritmo T S.A.S. · Enlace de solo lectura — no permite editar ni descargar datos personales
       </footer>
     </div>

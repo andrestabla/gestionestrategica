@@ -36,14 +36,14 @@ const RISK_CLS: Record<string, string> = {
 };
 
 const ACTION_META: Record<ActionStatus, { icon: typeof Circle; color: string; label: string }> = {
-  HECHA: { icon: CircleCheck, color: "var(--ok)", label: "Hecha" },
+  HECHA: { icon: CircleCheck, color: "var(--ok-text)", label: "Hecha" },
   EN_CURSO: { icon: CircleDashed, color: "var(--cyan)", label: "En curso" },
   PENDIENTE: { icon: Circle, color: "var(--faint)", label: "Pendiente" },
 };
 
 const LOG_META = {
-  HITO: { icon: Flag, color: "var(--ok)" },
-  ALERTA: { icon: AlertTriangle, color: "var(--bad)" },
+  HITO: { icon: Flag, color: "var(--ok-text)" },
+  ALERTA: { icon: AlertTriangle, color: "var(--bad-text)" },
   NOTA: { icon: StickyNote, color: "var(--muted)" },
 } as const;
 
@@ -83,7 +83,7 @@ export default function IniciativasPage() {
     <>
       <PageHeader kicker="M6 · Seguimiento" title="Iniciativas, acciones y factores de éxito"
         desc="Cada iniciativa declara su meta de resultado, sus acciones con meta propia, su responsable, su presupuesto en tres estados y su bitácora. Cuando un factor acumula dos revisiones en rojo, la conversación se puede tener a tiempo."
-        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost !py-1.5 text-[11.5px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
+        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost !py-1.5 text-[12px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
 
       <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
         <StatCard label="Presupuesto del portafolio" value={totals.planned / 1e6} decimals={0}
@@ -125,13 +125,13 @@ export default function IniciativasPage() {
                     </span>
                     <PrioChip c={prio?.ranking.find((r) => r.id === i.id)?.c} decision={prio?.decisions[i.id]?.decision} />
                   </div>
-                  <div className="num mt-1 text-[10.5px] text-faint">
+                  <div className="num mt-1 text-[12px] text-faint">
                     {owner.dependencia} · {i.start} → {i.end} · acciones {done}/{i.actions.length}
-                    {ts.total > 0 && <> · tareas {ts.done}/{ts.total}{ts.overdue > 0 && <span style={{ color: "var(--bad)" }}> · {ts.overdue} vencida{ts.overdue > 1 ? "s" : ""}</span>}</>}
+                    {ts.total > 0 && <> · tareas {ts.done}/{ts.total}{ts.overdue > 0 && <span style={{ color: "var(--bad-text)" }}> · {ts.overdue} vencida{ts.overdue > 1 ? "s" : ""}</span>}</>}
                   </div>
                 </div>
                 <div className="hidden w-44 shrink-0 sm:block">
-                  <div className="num mb-1 flex justify-between text-[9px] text-faint">
+                  <div className="num mb-1 flex justify-between text-[11px] text-faint">
                     <span>{fmtCOP(i.budgetPlanned)}</span><span>{i.progress} %</span>
                   </div>
                   <BudgetBar planned={i.budgetPlanned} committed={i.budgetCommitted} executed={i.budgetExecuted} />
@@ -146,7 +146,7 @@ export default function IniciativasPage() {
         })}
       </div>
 
-      <p className="mt-5 text-center text-[11px] text-faint">
+      <p className="mt-5 text-center text-[12px] text-faint">
         ¿Buscas la vista de planeación? El <Link href="/panel/ruta" className="font-semibold text-cyan-deep">roadmap por horizontes</Link>{" "}
         muestra estas mismas iniciativas en Gantt y matriz de priorización.
       </p>
@@ -242,10 +242,10 @@ function IniciativaFicha({ id, onClose, onNav }: {
     <>
       {/* barra de contexto: volver + anterior/siguiente */}
       <div className="rise mb-5 flex flex-wrap items-center gap-2">
-        <button onClick={onClose} className="btn-ghost" title="Volver al listado (Esc)">
+        <button onClick={onClose} className="btn-ghost" title="Volver al listado (Esc)" aria-label="Volver al listado (Esc)">
           <ArrowLeft size={13} /> Iniciativas
         </button>
-        <span className="num text-[11px] text-faint">{idx + 1} de {inis.length}</span>
+        <span className="num text-[12px] text-faint">{idx + 1} de {inis.length}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <button onClick={() => prev && onNav(prev.id)} disabled={!prev}
             title={prev ? `${prev.id} · ${prev.name}` : undefined}
@@ -264,7 +264,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
           style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} />
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
           <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
           <button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
         </div>
@@ -275,7 +275,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
         <div className="spine h-[3px]" />
         <div className="flex flex-wrap items-start gap-x-6 gap-y-4 px-6 py-5">
           <div className="min-w-0 flex-1 basis-80">
-            <div className="num text-[10.5px] font-bold text-cyan-deep">
+            <div className="num text-[12px] font-bold text-cyan-deep">
               {i.id.toUpperCase()} <span className="font-medium text-faint">· {i.subsistema} · {i.start} → {i.end}</span>
             </div>
             <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-ink">
@@ -290,14 +290,14 @@ function IniciativaFicha({ id, onClose, onNav }: {
               {ts.total > 0 && (
                 <Link href={`/panel/proyectos/${i.id}`} className="chip chip-cyan">
                   tareas {ts.done}/{ts.total}
-                  {ts.overdue > 0 && <b style={{ color: "var(--bad)" }}> · {ts.overdue} vencida{ts.overdue > 1 ? "s" : ""}</b>}
+                  {ts.overdue > 0 && <b style={{ color: "var(--bad-text)" }}> · {ts.overdue} vencida{ts.overdue > 1 ? "s" : ""}</b>}
                   {" "}→
                 </Link>
               )}
             </div>
           </div>
           <div className="w-full max-w-xs shrink-0 sm:w-56">
-            <div className="num mb-1 flex items-center justify-between text-[10px] text-faint">
+            <div className="num mb-1 flex items-center justify-between text-[12px] text-faint">
               <span>{fmtCOP(i.budgetPlanned)}</span>
               {canEdit ? (
                 <AvanceEditor value={i.progress} saving={saving}
@@ -309,7 +309,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
             <BudgetBar planned={i.budgetPlanned} committed={i.budgetCommitted} executed={i.budgetExecuted} />
             <div className="mt-2 flex items-center gap-1.5">
               {i.factors.map((f) => <StateDot key={f.name} state={f.state} size={8} />)}
-              <span className="ml-1 text-[9.5px] uppercase tracking-wide text-faint">factores</span>
+              <span className="ml-1 text-[11px] uppercase tracking-wide text-faint">factores</span>
             </div>
           </div>
         </div>
@@ -320,23 +320,23 @@ function IniciativaFicha({ id, onClose, onNav }: {
         <div className="flex items-start gap-2.5">
           <User size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
           <div>
-            <div className="label !text-[8.5px]">Responsable</div>
+            <div className="label !text-[11px]">Responsable</div>
             <div className="text-[12px] font-bold leading-snug text-ink">{owner.cargo}</div>
-            <div className="text-[10.5px] text-faint">{owner.dependencia}</div>
+            <div className="text-[12px] text-faint">{owner.dependencia}</div>
           </div>
         </div>
         <div className="flex items-start gap-2.5">
           <Target size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
           <div>
-            <div className="label !text-[8.5px]">Objetivo CMI · {i.cmi}</div>
-            <div className="text-[11.5px] font-semibold leading-snug text-ink">{cmiObj?.name}</div>
+            <div className="label !text-[11px]">Objetivo CMI · {i.cmi}</div>
+            <div className="text-[12px] font-semibold leading-snug text-ink">{cmiObj?.name}</div>
           </div>
         </div>
         <div className="flex items-start gap-2.5">
           <Flag size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
           <div>
-            <div className="label !text-[8.5px]">Meta de resultado</div>
-            <div className="text-[11.5px] font-semibold leading-snug text-ink">{i.metaResultado}</div>
+            <div className="label !text-[11px]">Meta de resultado</div>
+            <div className="text-[12px] font-semibold leading-snug text-ink">{i.metaResultado}</div>
           </div>
         </div>
       </div>
@@ -365,11 +365,11 @@ function IniciativaFicha({ id, onClose, onNav }: {
                     <meta.icon size={16} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                     <div className="min-w-0 flex-1">
                       <div className="text-[12.5px] font-semibold leading-snug text-ink">{a.name}</div>
-                      <div className="mt-0.5 text-[11px] text-muted">Meta: {a.meta}</div>
+                      <div className="mt-0.5 text-[12px] text-muted">Meta: {a.meta}</div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="num text-[9.5px] font-bold" style={{ color: meta.color }}>{meta.label}</div>
-                      <div className="num text-[9px] text-faint">{a.quarter}</div>
+                      <div className="num text-[11px] font-bold" style={{ color: meta.color }}>{meta.label}</div>
+                      <div className="num text-[11px] text-faint">{a.quarter}</div>
                     </div>
                   </div>
                 );
@@ -385,7 +385,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
                 { l: "Disponible", v: i.budgetPlanned - i.budgetExecuted - i.budgetCommitted, c: "var(--line-strong)" },
               ].map((x) => (
                 <div key={x.l}>
-                  <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-wide text-faint">
+                  <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-faint">
                     <i className="h-2 w-2 rounded-sm" style={{ background: x.c }} />{x.l}
                   </div>
                   <div className="num mt-0.5 text-[12px] font-bold text-ink">{fmtCOP(x.v)}</div>
@@ -403,8 +403,8 @@ function IniciativaFicha({ id, onClose, onNav }: {
                   {risk.drivers.map((d) => (
                     <div key={d.text} className="flex items-center gap-2.5 rounded-lg bg-surface-2/60 px-3 py-2">
                       <span className="chip shrink-0">{d.category}</span>
-                      <span className="flex-1 text-[11.5px] leading-snug text-ink-soft">{d.text}</span>
-                      <span className="num text-[10px] font-bold text-muted">+{d.weight}</span>
+                      <span className="flex-1 text-[12px] leading-snug text-ink-soft">{d.text}</span>
+                      <span className="num text-[12px] font-bold text-muted">+{d.weight}</span>
                     </div>
                   ))}
                 </div>
@@ -423,7 +423,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
                       ))}
                     </span>
                   </div>
-                  {f.note && <div className="mt-1 pl-[22px] text-[11px] leading-snug text-muted">{f.note}</div>}
+                  {f.note && <div className="mt-1 pl-[22px] text-[12px] leading-snug text-muted">{f.note}</div>}
                   {canEdit && (
                     <FactorReview name={f.name} current={f.state} saving={saving}
                       onSave={(state, note) => mutate({ factor: { name: f.name, state, note } })} />
@@ -438,7 +438,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
                 onSave={(type, text) => mutate({ log: { type, text } })} />
             )}
             {i.log.length === 0 ? (
-              <p className="text-[11.5px] italic text-faint">Sin registros: la iniciativa no ha iniciado.</p>
+              <p className="text-[12px] italic text-faint">Sin registros: la iniciativa no ha iniciado.</p>
             ) : (
               <div className="relative space-y-3 pl-5">
                 <span className="absolute bottom-1 left-[7px] top-1 w-px bg-line-strong" />
@@ -450,7 +450,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
                         style={{ boxShadow: `0 0 0 1.5px ${meta.color}` }}>
                         <meta.icon size={8} style={{ color: meta.color }} />
                       </span>
-                      <div className="num text-[9.5px] font-bold text-faint">{l.date}</div>
+                      <div className="num text-[11px] font-bold text-faint">{l.date}</div>
                       <div className="text-[12px] leading-snug text-ink-soft">{l.text}</div>
                     </div>
                   );
@@ -461,7 +461,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
             <div className="mt-5 flex items-start gap-2.5 rounded-xl bg-cyan-wash px-3.5 py-3">
               <CalendarClock size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
               <div className="min-w-0 flex-1">
-                <div className="label !text-[8.5px] !text-cyan-deep">Próximo hito · {i.nextMilestone.date}</div>
+                <div className="label !text-[11px] !text-cyan-deep">Próximo hito · {i.nextMilestone.date}</div>
                 <div className="text-[12px] font-semibold leading-snug text-ink">{i.nextMilestone.text}</div>
               </div>
               {canEdit && (
@@ -488,7 +488,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
   return (
     <>
       <div className="rise mb-5 flex flex-wrap items-center gap-2">
-        <button onClick={onBack} className="btn-ghost" title="Volver al listado (Esc)"><ArrowLeft size={13} /> Iniciativas</button>
+        <button onClick={onBack} className="btn-ghost" title="Volver al listado (Esc)" aria-label="Volver al listado (Esc)"><ArrowLeft size={13} /> Iniciativas</button>
       </div>
       <PageHeader kicker="M6 · Priorización" title="Portafolio priorizado con la matriz de priorización"
         desc="Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. El puntaje ordena las alternativas dentro de cada horizonte y sugiere el horizonte: elegible, con capacidad y 65 o más puntos, el primero; elegible con capacidad por resolver o entre 50 y 64, el siguiente; el resto, el último. Para competir como prioridad crítica D debe ser 3 o 4. La decisión de tiempo la registra la gerencia."
@@ -506,12 +506,12 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
           <div className="flex items-center gap-2 border-b border-line px-5 py-3">
             <ListChecks size={14} className="text-cyan-deep" />
             <span className="text-[13px] font-extrabold text-ink">{horizonTitle(hz)}</span>
-            <span className="text-[11px] text-faint">· {rows.filter((r) => r.horizon === h).length} iniciativas, ordenadas por puntaje consolidado</span>
+            <span className="text-[12px] text-faint">· {rows.filter((r) => r.horizon === h).length} iniciativas, ordenadas por puntaje consolidado</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[12px]">
               <thead>
-                <tr className="text-left text-[9.5px] uppercase tracking-wider text-faint">
+                <tr className="text-left text-[11px] uppercase tracking-wider text-faint">
                   <th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th>
                   {CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center" title={`${c.name} · ${c.weight} %`}>{c.key}</th>)}
                   <th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Tipo</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">Horizonte</th><th className="px-2 py-2">Decisión</th>
@@ -526,7 +526,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
                       <td className="num px-4 py-2.5 font-extrabold text-cyan-deep">{r.c.n > 0 ? r.position : "—"}</td>
                       <td className="px-2 py-2.5">
                         <div className="font-bold text-ink">{r.name}</div>
-                        <div className="num text-[10px] text-faint">{r.id.toUpperCase()} · {cap?.name} · {r.c.n} evaluador{r.c.n === 1 ? "" : "es"}</div>
+                        <div className="num text-[12px] text-faint">{r.id.toUpperCase()} · {cap?.name} · {r.c.n} evaluador{r.c.n === 1 ? "" : "es"}</div>
                       </td>
                       {CRITERIA.map((c) => (
                         <td key={c.key} className="num px-2 py-2.5 text-center" title={r.c.n ? `${c.name}: ${r.c.avg[c.key]} · ${LEVEL_NAMES[r.c.rounded[c.key]]}` : undefined}>
@@ -534,17 +534,17 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
                         </td>
                       ))}
                       <td className="num px-2 py-2.5 text-right text-[14px] font-extrabold" style={{ color: r.c.n ? (r.c.score >= 80 ? "var(--ok)" : r.c.score >= 65 ? "var(--cyan-deep)" : r.c.score >= 50 ? "var(--warn)" : "var(--bad)") : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
-                      <td className="px-2 py-2.5 text-[11px] text-ink-soft">{r.c.type ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—"}</td>
+                      <td className="px-2 py-2.5 text-[12px] text-ink-soft">{r.c.type ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—"}</td>
                       <td className="px-2 py-2.5">
                         <span className="flex flex-wrap gap-1">
-                          {r.c.n > 0 && !r.c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]" title="D < 3: no compite como prioridad crítica">D {r.c.rounded.D}</span>}
-                          {r.c.n > 0 && r.c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]" title="L ≤ 2: resolver la capacidad primero">L {r.c.rounded.L}</span>}
-                          {r.c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]" title={`±${r.c.spread} puntos entre evaluadores`}>consenso</span>}
-                          {r.c.n > 0 && r.c.eligible && !r.c.capacityFirst && !r.c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
+                          {r.c.n > 0 && !r.c.eligible && <span className="chip chip-warn !py-0 text-[11px]" title="D < 3: no compite como prioridad crítica">D {r.c.rounded.D}</span>}
+                          {r.c.n > 0 && r.c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]" title="L ≤ 2: resolver la capacidad primero">L {r.c.rounded.L}</span>}
+                          {r.c.lowConsensus && <span className="chip chip-bad !py-0 text-[11px]" title={`±${r.c.spread} puntos entre evaluadores`}>consenso</span>}
+                          {r.c.n > 0 && r.c.eligible && !r.c.capacityFirst && !r.c.lowConsensus && <span className="chip chip-ok !py-0 text-[11px]">elegible</span>}
                         </span>
                       </td>
                       <td className="px-2 py-2.5"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={pv.catalog.company} /></td>
-                      <td className="px-2 py-2.5">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
+                      <td className="px-2 py-2.5">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
                 })}
@@ -553,7 +553,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
           </div>
         </Card>
       ); })}
-      <p className="text-center text-[11px] text-faint">La matriz ayuda a comparar. La priorización ocurre cuando se decide dónde comprometer recursos, qué debe esperar y a qué se renuncia.</p>
+      <p className="text-center text-[12px] text-faint">La matriz ayuda a comparar. La priorización ocurre cuando se decide dónde comprometer recursos, qué debe esperar y a qué se renuncia.</p>
     </>
   );
 }
@@ -571,7 +571,7 @@ function AvanceEditor({ value, saving, onSave }: {
       <span className="text-faint">avance</span>
       <input type="number" min={0} max={100} value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="input w-14 !px-1.5 !py-0.5 text-center !text-[11px] font-bold" />
+        className="input w-14 !px-1.5 !py-0.5 text-center !text-[12px] font-bold" />
       <span className="text-faint">%</span>
       {dirty && (
         <button onClick={() => onSave(Number(draft))} disabled={saving}
@@ -595,7 +595,7 @@ function FactorReview({ name, current, saving, onSave }: {
   if (!open) {
     return (
       <button onClick={() => { setOpen(true); setState(current); setNote(""); }}
-        className="mt-1.5 flex items-center gap-1 pl-[22px] text-[10px] font-bold text-cyan-deep hover:underline">
+        className="mt-1.5 flex items-center gap-1 pl-[22px] text-[12px] font-bold text-cyan-deep hover:underline">
         <Pencil size={9} /> Registrar revisión
       </button>
     );
@@ -605,7 +605,7 @@ function FactorReview({ name, current, saving, onSave }: {
       <div className="flex items-center gap-1.5">
         {(["VERDE", "AMBAR", "ROJO"] as const).map((s) => (
           <button key={s} onClick={() => setState(s)}
-            className={`flex-1 rounded-lg py-1 text-[10px] font-bold transition-all ${
+            className={`flex-1 rounded-lg py-1 text-[12px] font-bold transition-all ${
               state === s ? "text-white shadow-sm" : "bg-surface-2 text-muted"}`}
             style={state === s ? { background: FACTOR_COLORS[s] } : undefined}>
             {s.toLowerCase()}
@@ -614,14 +614,14 @@ function FactorReview({ name, current, saving, onSave }: {
       </div>
       <input type="text" value={note} onChange={(e) => setNote(e.target.value)}
         placeholder="Nota de la revisión (opcional)"
-        className="input !py-1 text-[10.5px]" />
+        className="input !py-1 text-[12px]" />
       <div className="flex gap-1.5">
         <button onClick={async () => { if (await onSave(state, note || undefined)) setOpen(false); }}
           disabled={saving}
-          className="btn-primary flex-1 !py-1 text-[10.5px] disabled:opacity-40">
+          className="btn-primary flex-1 !py-1 text-[12px] disabled:opacity-40">
           {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Registrar
         </button>
-        <button onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[10.5px]">Cancelar</button>
+        <button onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[12px]">Cancelar</button>
       </div>
     </div>
   );
@@ -636,7 +636,7 @@ function LogForm({ saving, onSave }: {
   return (
     <div className="mb-3 flex gap-1.5">
       <select value={type} onChange={(e) => setType(e.target.value as typeof type)}
-        className="input w-24 !py-1.5 text-[11px]">
+        className="input w-24 !py-1.5 text-[12px]">
         <option value="NOTA">Nota</option>
         <option value="HITO">Hito</option>
         <option value="ALERTA">Alerta</option>
@@ -646,10 +646,10 @@ function LogForm({ saving, onSave }: {
         onKeyDown={async (e) => {
           if (e.key === "Enter" && text.trim() && await onSave(type, text)) setText("");
         }}
-        className="input min-w-0 flex-1 !py-1.5 text-[11px]" />
+        className="input min-w-0 flex-1 !py-1.5 text-[12px]" />
       <button onClick={async () => { if (text.trim() && await onSave(type, text)) setText(""); }}
         disabled={saving || !text.trim()}
-        className="btn-ghost !py-1.5 text-[11px] disabled:opacity-40">
+        className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40">
         {saving ? <Loader2 size={11} className="animate-spin" /> : <PlusCircle size={11} />}
       </button>
     </div>
@@ -676,17 +676,17 @@ function HitoEditor({ current, saving, onSave }: {
     <div className="w-full space-y-1.5 pt-1">
       <div className="flex gap-1.5">
         <input type="text" value={date} onChange={(e) => setDate(e.target.value)}
-          placeholder="2027-04" className="input w-24 !py-1 text-[10.5px]" />
+          placeholder="2027-04" className="input w-24 !py-1 text-[12px]" />
         <input type="text" value={text} onChange={(e) => setText(e.target.value)}
-          className="input min-w-0 flex-1 !py-1 text-[10.5px]" />
+          className="input min-w-0 flex-1 !py-1 text-[12px]" />
       </div>
       <div className="flex gap-1.5">
         <button onClick={async () => { if (await onSave(date, text)) setOpen(false); }}
           disabled={saving}
-          className="btn-primary !py-1 text-[10.5px] disabled:opacity-40">
+          className="btn-primary !py-1 text-[12px] disabled:opacity-40">
           {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Guardar
         </button>
-        <button onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[10.5px]">Cancelar</button>
+        <button onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[12px]">Cancelar</button>
       </div>
     </div>
   );

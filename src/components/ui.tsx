@@ -112,7 +112,7 @@ export function Modal({ title, sub, onClose, children, footer, wide = false }: {
             <div className="p-title">{title}</div>
             {sub && <div className="p-sub">{sub}</div>}
           </div>
-          <button type="button" onClick={onClose} title="Cerrar (Esc)" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>
+          <button type="button" onClick={onClose} title="Cerrar (Esc)" aria-label="Cerrar (Esc)" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>
         </div>
         <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
         {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-4 py-3 sm:px-6 sm:py-3.5">{footer}</div>}
@@ -133,21 +133,21 @@ export function StatCard({ label, value, decimals = 0, prefix = "", unit, delta,
     <div className="panel relative overflow-hidden px-4 pb-3 pt-3.5 sm:px-5 sm:pb-4 sm:pt-4">
       <div className="absolute inset-x-0 top-0 h-[3px] opacity-90"
         style={{ background: accent ?? "var(--grad-brand)" }} />
-      <div className="text-[11.5px] font-medium leading-snug text-muted">{label}</div>
+      <div className="text-[12px] font-medium leading-snug text-muted">{label}</div>
       <div className="mt-2 flex items-baseline gap-1.5">
         <span className="num text-[26px] font-extrabold text-ink sm:text-[30px]">
           {prefix}<CountUp value={value} decimals={decimals} />
         </span>
         {unit && <span className="text-[12px] font-medium text-faint">{unit}</span>}
         {delta !== undefined && (
-          <span className={`num ml-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold ${
+          <span className={`num ml-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-bold ${
             good ? "chip-ok" : "chip-bad"} chip`}>
             <DeltaIcon size={12} strokeWidth={2.6} />
             {Math.abs(delta).toLocaleString("es-CO", { maximumFractionDigits: 1 })}
           </span>
         )}
       </div>
-      {foot && <div className="mt-2 text-[11px] text-faint">{foot}</div>}
+      {foot && <div className="mt-2 text-[12px] text-faint">{foot}</div>}
     </div>
   );
 }
@@ -167,9 +167,9 @@ export function LevelBadge({ level }: { level: number }) {
   const idx = Math.max(1, Math.min(5, Math.round(level)));
   const meta = LEVEL_META[idx]!;
   return (
-    <span className="inline-flex items-center gap-2 rounded-full py-1 pl-1.5 pr-3 text-[11.5px] font-bold text-white shadow-sm"
+    <span className="inline-flex items-center gap-2 rounded-full py-1 pl-1.5 pr-3 text-[12px] font-bold text-white shadow-sm"
       style={{ background: meta.color }}>
-      <span className="num grid h-[18px] w-[18px] place-items-center rounded-full bg-white/25 text-[10.5px]">
+      <span className="num grid h-[18px] w-[18px] place-items-center rounded-full bg-white/25 text-[12px]">
         {idx}
       </span>
       {meta.name}
@@ -226,7 +226,7 @@ export function ModuleCard({ href, code, title, desc, tags }: {
         <h3 className="text-[15px] font-bold tracking-tight text-ink transition-colors group-hover:text-navy">
           {title}
         </h3>
-        <span className="num shrink-0 rounded-lg bg-surface-2 px-2 py-0.5 text-[10.5px] font-bold text-faint transition-colors group-hover:bg-cyan-wash group-hover:text-cyan-deep">
+        <span className="num shrink-0 rounded-lg bg-surface-2 px-2 py-0.5 text-[12px] font-bold text-faint transition-colors group-hover:bg-cyan-wash group-hover:text-cyan-deep">
           {code}
         </span>
       </div>

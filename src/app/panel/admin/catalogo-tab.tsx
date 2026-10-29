@@ -112,7 +112,7 @@ export function CatalogoTab() {
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
 
       <div className="rise mb-4">
-        <div className="label !text-[8.5px]">Empresa activa</div>
+        <div className="label !text-[11px]">Empresa activa</div>
         <h2 className="text-[18px] font-extrabold leading-tight text-ink">Catálogo de {c.company.name}</h2>
         <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-muted">
           Lo que la plataforma gestiona por empresa: cargos y personas, el cuadro de mando (objetivos y KPI),
@@ -127,7 +127,7 @@ export function CatalogoTab() {
               section === s.id ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
             <s.icon size={13} className={section === s.id ? "text-cyan-deep" : ""} />
             {s.label}
-            <span className={`num rounded-md px-1.5 text-[9.5px] ${section === s.id ? "bg-cyan-wash text-cyan-deep" : "bg-surface text-faint"}`}>{counts[s.id]}</span>
+            <span className={`num rounded-md px-1.5 text-[11px] ${section === s.id ? "bg-cyan-wash text-cyan-deep" : "bg-surface text-faint"}`}>{counts[s.id]}</span>
           </button>
         ))}
       </div>
@@ -137,7 +137,7 @@ export function CatalogoTab() {
           <ListOrdered size={15} className="mt-0.5 shrink-0 text-cyan-deep" />
           <div>
             <b>Esta empresa aún no tiene responsables.</b> Empieza por los cargos; luego personas, objetivos, KPI e iniciativas.
-            <div className="mt-1 text-[11px] text-muted">
+            <div className="mt-1 text-[12px] text-muted">
               Orden recomendado: 1 Responsables (cargos) → 2 Personas → 3 Objetivos → 4 KPI → 5 Iniciativas → 6 Finanzas y territorio.
               Cada paso usa referencias del anterior (un KPI tiene un responsable y un objetivo; una iniciativa, un objetivo, una dimensión y un KPI).
             </div>
@@ -152,7 +152,7 @@ export function CatalogoTab() {
       {section === "iniciativas" && <IniciativasSection v={v} saving={saving} mutate={mutate} />}
       {section === "finanzas" && <FinanzasSection v={v} saving={saving} mutate={mutate} />}
 
-      <p className="mt-5 text-[10.5px] leading-relaxed text-faint">
+      <p className="mt-5 text-[12px] leading-relaxed text-faint">
         Reglas del servidor: no se elimina un responsable con KPI o iniciativas a cargo, una persona con tareas,
         un objetivo con KPI o iniciativas, un KPI referenciado por un objetivo o una iniciativa, ni una iniciativa con tareas.
         Los identificadores (R01, P01, OE-01, i1) los asigna el servidor; el código del KPI lo escribes tú y debe ser único.
@@ -188,11 +188,11 @@ function ResponsablesSection({ v, saving, mutate }: SectionProps) {
               const u = usage(r.id);
               return (
                 <tr key={r.id} className={`border-b border-line last:border-0 ${editing?.id === r.id ? "bg-cyan-wash/40" : ""}`}>
-                  <td className="num px-4 py-2.5 text-[11px] text-faint">{r.id}</td>
+                  <td className="num px-4 py-2.5 text-[12px] text-faint">{r.id}</td>
                   <td className="px-4 py-2.5 font-semibold text-ink">{r.cargo}</td>
                   <td className="px-4 py-2.5 text-muted">{r.dependencia}</td>
                   <td className="px-4 py-2.5"><span className="chip">{ROL_PLATAFORMA[r.rolPlataforma]}</span></td>
-                  <td className="num whitespace-nowrap px-4 py-2.5 text-[11px] text-muted">{u.kpis} KPI · {u.inis} inic. · {u.people} pers.</td>
+                  <td className="num whitespace-nowrap px-4 py-2.5 text-[12px] text-muted">{u.kpis} KPI · {u.inis} inic. · {u.people} pers.</td>
                   <RowActions saving={saving} onEdit={() => setOpen(r)}
                     onDelete={() => { if (window.confirm(`¿Eliminar el cargo «${r.cargo}» (${r.id})?`)) mutate("responsible", "delete", { id: r.id }); }} />
                 </tr>
@@ -255,12 +255,12 @@ function PersonasSection({ v, saving, mutate }: SectionProps) {
           <Table heads={["Id", "Nombre", "Cargo · dependencia", "Correo", "Cargo del directorio", "Tareas", ""]} minW={720}>
             {list.map((p) => (
               <tr key={p.id} className={`border-b border-line last:border-0 ${editing?.id === p.id ? "bg-cyan-wash/40" : ""}`}>
-                <td className="num px-4 py-2.5 text-[11px] text-faint">{p.id}</td>
+                <td className="num px-4 py-2.5 text-[12px] text-faint">{p.id}</td>
                 <td className="px-4 py-2.5 font-semibold text-ink">{p.name}</td>
-                <td className="px-4 py-2.5 text-muted">{p.cargo || "—"}<div className="text-[10.5px] text-faint">{p.dependencia || "—"}</div></td>
-                <td className="num px-4 py-2.5 text-[11px] text-muted">{p.email || "—"}</td>
+                <td className="px-4 py-2.5 text-muted">{p.cargo || "—"}<div className="text-[12px] text-faint">{p.dependencia || "—"}</div></td>
+                <td className="num px-4 py-2.5 text-[12px] text-muted">{p.email || "—"}</td>
                 <td className="px-4 py-2.5 text-muted">{respName(p.responsibleId)}</td>
-                <td className="num px-4 py-2.5 text-[11px] text-muted">{tasksOf(p.id)}</td>
+                <td className="num px-4 py-2.5 text-[12px] text-muted">{tasksOf(p.id)}</td>
                 <RowActions saving={saving} onEdit={() => setOpen(p)}
                   onDelete={() => { if (window.confirm(`¿Eliminar a «${p.name}» (${p.id})?`)) mutate("person", "delete", { id: p.id }); }} />
               </tr>
@@ -332,16 +332,16 @@ function ObjetivosSection({ v, saving, mutate }: SectionProps) {
           <Table heads={["Id", "Objetivo", "Perspectiva", "Capacidad", "KPI", "Inic.", ""]} minW={700}>
             {list.map((o) => (
               <tr key={o.id} className={`border-b border-line last:border-0 ${editing?.id === o.id ? "bg-cyan-wash/40" : ""}`}>
-                <td className="num px-4 py-2.5 text-[11px] text-faint">{o.id}</td>
+                <td className="num px-4 py-2.5 text-[12px] text-faint">{o.id}</td>
                 <td className="px-4 py-2.5 font-semibold text-ink">{o.name}</td>
                 <td className="px-4 py-2.5"><span className="chip">{persp(o.perspective)}</span></td>
                 <td className="px-4 py-2.5 text-muted">{o.line ? (LINES.find((l) => l.n === o.line)?.name ?? o.line) : "—"}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex flex-wrap gap-1">
-                    {o.kpis.length === 0 ? <span className="text-faint">—</span> : o.kpis.map((k) => <span key={k} className="num chip !py-0 !text-[9px]">{k}</span>)}
+                    {o.kpis.length === 0 ? <span className="text-faint">—</span> : o.kpis.map((k) => <span key={k} className="num chip !py-0 !text-[11px]">{k}</span>)}
                   </div>
                 </td>
-                <td className="num px-4 py-2.5 text-[11px] text-muted">{inisOf(o.id)}</td>
+                <td className="num px-4 py-2.5 text-[12px] text-muted">{inisOf(o.id)}</td>
                 <RowActions saving={saving} onEdit={() => setOpen(o)}
                   onDelete={() => { if (window.confirm(`¿Eliminar el objetivo «${o.name}» (${o.id})?`)) mutate("objective", "delete", { id: o.id }); }} />
               </tr>
@@ -392,11 +392,11 @@ function ObjetivoForm({ v, saving, initial, onSubmit, onCancel }: {
       </div>
       <Field label={`Resultados clave (KPI) · ${f.kpis.length}`}>
         {kpis.length === 0 ? (
-          <p className="text-[11px] text-faint">Aún no hay KPI en el catálogo. Crea el objetivo y enlaza sus KPI al crearlos en «KPI».</p>
+          <p className="text-[12px] text-faint">Aún no hay KPI en el catálogo. Crea el objetivo y enlaza sus KPI al crearlos en «KPI».</p>
         ) : (
           <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg bg-surface-2/60 p-2">
             {kpis.map((k) => (
-              <label key={k.code} className="flex cursor-pointer items-center gap-2 text-[11.5px] text-ink-soft">
+              <label key={k.code} className="flex cursor-pointer items-center gap-2 text-[12px] text-ink-soft">
                 <input type="checkbox" checked={f.kpis.includes(k.code)} onChange={() => toggle(k.code)} />
                 <span className="num font-bold text-cyan-deep">{k.code}</span>
                 <span className="truncate">{k.name}</span>
@@ -433,13 +433,13 @@ function KpiSection({ v, saving, mutate }: SectionProps) {
           <Table heads={["Código", "KPI", "Objetivo", "Responsable", "Unidad · frecuencia", "Base → meta", "Serie", ""]} minW={820}>
             {list.map((k) => (
               <tr key={k.code} className={`border-b border-line last:border-0 ${editing?.code === k.code ? "bg-cyan-wash/40" : ""}`}>
-                <td className="num px-4 py-2.5 text-[11px] font-bold text-cyan-deep">{k.code}</td>
-                <td className="px-4 py-2.5 font-semibold text-ink">{k.name}<div className="text-[10.5px] font-normal text-faint">{LINES.find((l) => l.n === k.line)?.name ?? ""}</div></td>
-                <td className="px-4 py-2.5 text-muted"><span className="num text-[10.5px] text-faint">{k.cmi}</span> {objName(k.cmi)}</td>
+                <td className="num px-4 py-2.5 text-[12px] font-bold text-cyan-deep">{k.code}</td>
+                <td className="px-4 py-2.5 font-semibold text-ink">{k.name}<div className="text-[12px] font-normal text-faint">{LINES.find((l) => l.n === k.line)?.name ?? ""}</div></td>
+                <td className="px-4 py-2.5 text-muted"><span className="num text-[12px] text-faint">{k.cmi}</span> {objName(k.cmi)}</td>
                 <td className="px-4 py-2.5 text-muted">{owner(k.ownerId)}</td>
                 <td className="px-4 py-2.5 text-muted">{k.unit} · {k.frequency}</td>
                 <td className="num whitespace-nowrap px-4 py-2.5 text-muted">{k.baseline} → <b className="text-ink">{k.target}</b> <span className="text-faint">{k.goodDirection === "up" ? "↑" : "↓"}</span></td>
-                <td className="num px-4 py-2.5 text-[11px] text-muted">{k.series.length} pts</td>
+                <td className="num px-4 py-2.5 text-[12px] text-muted">{k.series.length} pts</td>
                 <RowActions saving={saving} onEdit={() => setOpen(k)}
                   onDelete={() => { if (window.confirm(`¿Eliminar el KPI «${k.name}» (${k.code})?`)) mutate("kpi", "delete", { code: k.code }); }} />
               </tr>
@@ -507,7 +507,7 @@ function KpiForm({ v, saving, initial, onSubmit, onCancel }: {
         </Field>
         <Field label="Nombre"><input value={f.name} onChange={set("name")} placeholder="Cumplimiento de compromisos semanales" className={INPUT} /></Field>
       </div>
-      {codeDup && <p className="text-[10.5px]" style={{ color: "var(--bad)" }}>Ya existe un KPI con ese código.</p>}
+      {codeDup && <p className="text-[12px]" style={{ color: "var(--bad-text)" }}>Ya existe un KPI con ese código.</p>}
       <div className="grid grid-cols-2 gap-2">
         <Field label="Objetivo">
           <select value={f.cmi} onChange={set("cmi")} className={INPUT}>
@@ -555,14 +555,14 @@ function KpiForm({ v, saving, initial, onSubmit, onCancel }: {
           {f.series.map((s, i) => (
             <div key={i} className="grid grid-cols-[88px_80px_1fr_26px] items-center gap-1.5">
               <input value={s.period} onChange={(e) => setSerie(i, { period: e.target.value.toUpperCase() })} placeholder="2026-T4"
-                className={`input num !py-1.5 !text-[11px] ${s.period && !PERIOD_RE.test(s.period.trim().toUpperCase()) ? "!border-[var(--bad)]" : ""}`} />
-              <input type="number" step="any" value={s.value} onChange={(e) => setSerie(i, { value: e.target.value })} placeholder="valor" className="input num !py-1.5 !text-[11px]" />
-              <input value={s.note} onChange={(e) => setSerie(i, { note: e.target.value })} placeholder="nota (opcional)" className="input !py-1.5 !text-[11px]" />
+                className={`input num !py-1.5 !text-[12px] ${s.period && !PERIOD_RE.test(s.period.trim().toUpperCase()) ? "!border-[var(--bad)]" : ""}`} />
+              <input type="number" step="any" value={s.value} onChange={(e) => setSerie(i, { value: e.target.value })} placeholder="valor" className="input num !py-1.5 !text-[12px]" />
+              <input value={s.note} onChange={(e) => setSerie(i, { note: e.target.value })} placeholder="nota (opcional)" className="input !py-1.5 !text-[12px]" />
               <RemoveBtn onClick={() => setF({ ...f, series: f.series.filter((_, j) => j !== i) })} />
             </div>
           ))}
           <AddBtn label="añadir periodo" onClick={() => setF({ ...f, series: [...f.series, { period: "", value: "", note: "" }] })} />
-          <p className="text-[10px] text-faint">Periodos con formato AAAA-Tn (trimestre), AAAA-Sn (semestre) o AAAA (año). Puede ir vacía al crear.</p>
+          <p className="text-[12px] text-faint">Periodos con formato AAAA-Tn (trimestre), AAAA-Sn (semestre) o AAAA (año). Puede ir vacía al crear.</p>
         </div>
       </Field>
     </FormCard>
@@ -603,14 +603,14 @@ function IniciativasSection({ v, saving, mutate }: SectionProps) {
           <Table heads={["Id", "Iniciativa", "Objetivo · KPI", "Dimensión", "Responsable", "Estado", "Avance", "Tareas", ""]} minW={880}>
             {list.map((i) => (
               <tr key={i.id} className={`border-b border-line last:border-0 ${editing?.id === i.id ? "bg-cyan-wash/40" : ""}`}>
-                <td className="num px-4 py-2.5 text-[11px] text-faint">{i.id}</td>
-                <td className="px-4 py-2.5 font-semibold text-ink">{i.name}<div className="text-[10.5px] font-normal text-faint">{i.subsistema} · {horizonLabel(v.catalog.company, i.horizon)} · {i.start} → {i.end}</div></td>
-                <td className="num px-4 py-2.5 text-[11px] text-muted">{i.cmi}{i.kpi ? ` · ${i.kpi}` : ""}</td>
-                <td className="px-4 py-2.5 text-muted"><span className="num text-[10.5px] text-faint">{i.capability}</span> {dimName(i.capability)}</td>
+                <td className="num px-4 py-2.5 text-[12px] text-faint">{i.id}</td>
+                <td className="px-4 py-2.5 font-semibold text-ink">{i.name}<div className="text-[12px] font-normal text-faint">{i.subsistema} · {horizonLabel(v.catalog.company, i.horizon)} · {i.start} → {i.end}</div></td>
+                <td className="num px-4 py-2.5 text-[12px] text-muted">{i.cmi}{i.kpi ? ` · ${i.kpi}` : ""}</td>
+                <td className="px-4 py-2.5 text-muted"><span className="num text-[12px] text-faint">{i.capability}</span> {dimName(i.capability)}</td>
                 <td className="px-4 py-2.5 text-muted">{owner(i.ownerId)}</td>
                 <td className="px-4 py-2.5"><span className={`chip ${i.status === "EN_RIESGO" ? "chip-bad" : i.status === "COMPLETADA" ? "chip-ok" : i.status === "EN_CURSO" ? "chip-cyan" : ""}`}>{INI_STATUS[i.status]}</span></td>
                 <td className="num px-4 py-2.5 text-muted">{i.progress} %</td>
-                <td className="num px-4 py-2.5 text-[11px] text-muted">{tasksOf(i.id)}</td>
+                <td className="num px-4 py-2.5 text-[12px] text-muted">{tasksOf(i.id)}</td>
                 <RowActions saving={saving} onEdit={() => setOpen(i)}
                   onDelete={() => { if (window.confirm(`¿Eliminar la iniciativa «${i.name}» (${i.id})?`)) mutate("initiative", "delete", { id: i.id }); }} />
               </tr>
@@ -762,7 +762,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
           <div className="rounded-xl bg-surface-2/60 px-3.5 py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="text-[12px] font-bold text-ink">Validación con {validationCriteriaCount(typeRule)} criterios · {mine ? "tu calificación" : "calificación"}</div>
-              <div className="num text-[11px] text-muted">
+              <div className="num text-[12px] text-muted">
                 {preview !== null
                   ? <>Puntaje <b className="text-[13px] text-ink">{preview}</b> · {typeOf(f.type, typeRule, f.scores) === "ESTRATEGICO" ? "estratégica" : "táctica"}</>
                   : "D · E · M · L de 1 a 4, y el tipo"}
@@ -793,13 +793,13 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
                     </Field>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[10px] leading-snug text-faint">
+                <p className="mt-1.5 text-[12px] leading-snug text-faint">
                   {validationLabel(typeRule)}. Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4. Se registra como tu evaluación; el consolidado del comité ordena el portafolio y sugiere el horizonte.
                   {evalStarted && !evalComplete && <b className="text-warn"> Completa los {validationCriteriaCount(typeRule)} criterios, o déjalos vacíos.</b>}
                 </p>
               </>
             ) : (
-              <p className="mt-1.5 text-[11px] leading-snug text-muted">Tu rol no evalúa con la matriz: la califican el advisor, la gerencia, la junta y los responsables desde la ficha de la iniciativa.</p>
+              <p className="mt-1.5 text-[12px] leading-snug text-muted">Tu rol no evalúa con la matriz: la califican el advisor, la gerencia, la junta y los responsables desde la ficha de la iniciativa.</p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -824,18 +824,18 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
             <Field label="Comprometido"><input type="number" step="any" value={f.budgetCommitted} onChange={set("budgetCommitted")} className={`${INPUT} num`} /></Field>
             <Field label="Ejecutado"><input type="number" step="any" value={f.budgetExecuted} onChange={set("budgetExecuted")} className={`${INPUT} num`} /></Field>
           </div>
-          <p className="num -mt-1 text-[10px] text-faint">Presupuesto en {v.catalog.company.currency ?? "COP"}: {fmtCop(num(f.budgetPlanned))} planeado · {fmtCop(num(f.budgetCommitted))} comprometido · {fmtCop(num(f.budgetExecuted))} ejecutado.</p>
+          <p className="num -mt-1 text-[12px] text-faint">Presupuesto en {v.catalog.company.currency ?? "COP"}: {fmtCop(num(f.budgetPlanned))} planeado · {fmtCop(num(f.budgetCommitted))} comprometido · {fmtCop(num(f.budgetExecuted))} ejecutado.</p>
 
           <Field label={`Acciones · ${f.actions.length}`}>
             <div className="space-y-1.5">
               {f.actions.map((a, i) => (
                 <div key={i} className="grid grid-cols-[1fr_1fr_96px_76px_26px] items-center gap-1.5">
-                  <input value={a.name} onChange={(e) => setAction(i, { name: e.target.value })} placeholder="acción" className="input !py-1.5 !text-[11px]" />
-                  <input value={a.meta} onChange={(e) => setAction(i, { meta: e.target.value })} placeholder="meta" className="input !py-1.5 !text-[11px]" />
-                  <select value={a.status} onChange={(e) => setAction(i, { status: e.target.value as ActionStatus })} className="input !py-1.5 pr-6 !text-[11px]">
+                  <input value={a.name} onChange={(e) => setAction(i, { name: e.target.value })} placeholder="acción" className="input !py-1.5 !text-[12px]" />
+                  <input value={a.meta} onChange={(e) => setAction(i, { meta: e.target.value })} placeholder="meta" className="input !py-1.5 !text-[12px]" />
+                  <select value={a.status} onChange={(e) => setAction(i, { status: e.target.value as ActionStatus })} className="input !py-1.5 pr-6 !text-[12px]">
                     {(Object.keys(ACTION_STATUS) as ActionStatus[]).map((s) => <option key={s} value={s}>{ACTION_STATUS[s]}</option>)}
                   </select>
-                  <input value={a.quarter} onChange={(e) => setAction(i, { quarter: e.target.value.toUpperCase() })} placeholder="2026-T4" className="input num !py-1.5 !text-[11px]" />
+                  <input value={a.quarter} onChange={(e) => setAction(i, { quarter: e.target.value.toUpperCase() })} placeholder="2026-T4" className="input num !py-1.5 !text-[12px]" />
                   <RemoveBtn onClick={() => setF({ ...f, actions: f.actions.filter((_, j) => j !== i) })} />
                 </div>
               ))}
@@ -847,11 +847,11 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
             <div className="space-y-1.5">
               {f.factors.map((x, i) => (
                 <div key={i} className="grid grid-cols-[1fr_84px_1fr_26px] items-center gap-1.5">
-                  <input value={x.name} onChange={(e) => setFactor(i, { name: e.target.value })} placeholder="factor" className="input !py-1.5 !text-[11px]" />
-                  <select value={x.state} onChange={(e) => setFactor(i, { state: e.target.value as FactorState })} className="input !py-1.5 pr-6 !text-[11px]">
+                  <input value={x.name} onChange={(e) => setFactor(i, { name: e.target.value })} placeholder="factor" className="input !py-1.5 !text-[12px]" />
+                  <select value={x.state} onChange={(e) => setFactor(i, { state: e.target.value as FactorState })} className="input !py-1.5 pr-6 !text-[12px]">
                     {FACTOR_STATES.map((s) => <option key={s} value={s}>{s === "AMBAR" ? "Ámbar" : s === "VERDE" ? "Verde" : "Rojo"}</option>)}
                   </select>
-                  <input value={x.note} onChange={(e) => setFactor(i, { note: e.target.value })} placeholder="nota (opcional)" className="input !py-1.5 !text-[11px]" />
+                  <input value={x.note} onChange={(e) => setFactor(i, { note: e.target.value })} placeholder="nota (opcional)" className="input !py-1.5 !text-[12px]" />
                   <RemoveBtn onClick={() => setF({ ...f, factors: f.factors.filter((_, j) => j !== i) })} />
                 </div>
               ))}
@@ -859,7 +859,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
             </div>
           </Field>
           {initial && (
-            <p className="text-[10px] text-faint">Bitácora: {initial.log.length} {initial.log.length === 1 ? "entrada" : "entradas"} (se gestiona desde el módulo de iniciativas; aquí se conserva).</p>
+            <p className="text-[12px] text-faint">Bitácora: {initial.log.length} {initial.log.length === 1 ? "entrada" : "entradas"} (se gestiona desde el módulo de iniciativas; aquí se conserva).</p>
           )}
         </div>
       </div>
@@ -897,7 +897,7 @@ function FinanzasSection({ v, saving, mutate }: SectionProps) {
           ) : (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
               {FIN_FIELDS.map((x) => (
-                <div key={x.key}><dt className="label !text-[8.5px]">{x.label}</dt><dd className="num text-[13.5px] font-bold text-ink">{fmtCop(fin[x.key])}</dd></div>
+                <div key={x.key}><dt className="label !text-[11px]">{x.label}</dt><dd className="num text-[13.5px] font-bold text-ink">{fmtCop(fin[x.key])}</dd></div>
               ))}
             </dl>
           )}
@@ -982,30 +982,30 @@ function TerritorioForm({ initial, saving, onSubmit, onCancel }: { initial: Terr
       {rows.length === 0 && <EmptyNote>Aún no hay territorio. Añade los {unit}s con sede, los de cobertura y las oportunidades.</EmptyNote>}
       {rows.length > 0 && (
         <div className="grid grid-cols-[1fr_72px_112px_1.4fr_26px] gap-1.5 px-0.5">
-          {[unit[0].toUpperCase() + unit.slice(1), "Peso", "Presencia", "Lectura", ""].map((h, i) => <span key={i} className="label !text-[8.5px]">{h}</span>)}
+          {[unit[0].toUpperCase() + unit.slice(1), "Peso", "Presencia", "Lectura", ""].map((h, i) => <span key={i} className="label !text-[11px]">{h}</span>)}
         </div>
       )}
       {rows.map((r, i) => (
         <div key={i} className="grid grid-cols-[1fr_72px_112px_1.4fr_26px] items-center gap-1.5">
-          <select value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} className={`input !py-1.5 !text-[11px] ${rows.filter((x) => x.name === r.name).length > 1 ? "!border-[var(--bad)]" : ""}`}>
+          <select value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} className={`input !py-1.5 !text-[12px] ${rows.filter((x) => x.name === r.name).length > 1 ? "!border-[var(--bad)]" : ""}`}>
             {!NAMES.includes(r.name) && <option value={r.name}>{r.name}</option>}
             {NAMES.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
-          <select value={r.weight} onChange={(e) => setRow(i, { weight: num(e.target.value) as Territory["weight"] })} className="input num !py-1.5 pr-6 !text-[11px]">
+          <select value={r.weight} onChange={(e) => setRow(i, { weight: num(e.target.value) as Territory["weight"] })} className="input num !py-1.5 pr-6 !text-[12px]">
             {[1, 2, 3].map((w) => <option key={w} value={w}>{w}</option>)}
           </select>
-          <select value={r.presence} onChange={(e) => setRow(i, { presence: e.target.value as Territory["presence"] })} className="input !py-1.5 pr-6 !text-[11px]">
+          <select value={r.presence} onChange={(e) => setRow(i, { presence: e.target.value as Territory["presence"] })} className="input !py-1.5 pr-6 !text-[12px]">
             {(Object.keys(PRESENCE) as Territory["presence"][]).map((p) => <option key={p} value={p}>{PRESENCE[p]}</option>)}
           </select>
-          <input value={r.reading} onChange={(e) => setRow(i, { reading: e.target.value })} placeholder="qué pasa allí" className="input !py-1.5 !text-[11px]" />
+          <input value={r.reading} onChange={(e) => setRow(i, { reading: e.target.value })} placeholder="qué pasa allí" className="input !py-1.5 !text-[12px]" />
           <RemoveBtn onClick={() => setRows(rows.filter((_, j) => j !== i))} />
         </div>
       ))}
-      {dup && <p className="text-[10.5px]" style={{ color: "var(--bad)" }}>Hay {unit}s repetidos: cada uno va una sola vez.</p>}
+      {dup && <p className="text-[12px]" style={{ color: "var(--bad-text)" }}>Hay {unit}s repetidos: cada uno va una sola vez.</p>}
       <div className="flex items-center gap-2 pt-1">
         <AddBtn label={`añadir ${unit}`} onClick={add} />
       </div>
-      <p className="text-[10px] text-faint">Peso comercial 1 a 3 (3 = concentra ventas). Se guarda la lista completa: quitar una fila la elimina al guardar.</p>
+      <p className="text-[12px] text-faint">Peso comercial 1 a 3 (3 = concentra ventas). Se guarda la lista completa: quitar una fila la elimina al guardar.</p>
     </FormCard>
   );
 }
@@ -1032,7 +1032,7 @@ function FormCard({ title, sub, saving, isEdit, canSave, onSave, onCancel, child
 
 function NewBtn({ label, onClick, edit = false }: { label: string; onClick: () => void; edit?: boolean }) {
   return (
-    <button type="button" onClick={onClick} className="btn-primary !py-1.5 text-[11.5px]">
+    <button type="button" onClick={onClick} className="btn-primary !py-1.5 text-[12px]">
       {edit ? <Pencil size={12} /> : <Plus size={12} />} {label}
     </button>
   );
@@ -1041,7 +1041,7 @@ function NewBtn({ label, onClick, edit = false }: { label: string; onClick: () =
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block min-w-0">
-      <span className="label !text-[8.5px]">{label}</span>
+      <span className="label !text-[11px]">{label}</span>
       <div className="mt-1">{children}</div>
     </label>
   );
@@ -1053,7 +1053,7 @@ function Table({ heads, children, minW = 560 }: { heads: string[]; children: Rea
       <table className="w-full text-[12.5px]" style={{ minWidth: minW }}>
         <thead>
           <tr className="border-b border-line-strong bg-surface-2/60">
-            {heads.map((h, i) => <th key={i} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>)}
+            {heads.map((h, i) => <th key={i} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[11px]">{h}</th>)}
           </tr>
         </thead>
         <tbody>{children}</tbody>
@@ -1065,15 +1065,15 @@ function Table({ heads, children, minW = 560 }: { heads: string[]; children: Rea
 function RowActions({ saving, onEdit, onDelete }: { saving: boolean; onEdit: () => void; onDelete: () => void }) {
   return (
     <td className="whitespace-nowrap px-4 py-2.5 text-right">
-      <button disabled={saving} onClick={onEdit} title="Editar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
-      <button disabled={saving} onClick={onDelete} title="Eliminar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
+      <button disabled={saving} onClick={onEdit} title="Editar" aria-label="Editar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
+      <button disabled={saving} onClick={onDelete} title="Eliminar" aria-label="Eliminar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
     </td>
   );
 }
 
 function AddBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="flex items-center gap-1 text-[11px] font-bold text-cyan-deep hover:underline">
+    <button type="button" onClick={onClick} className="flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline">
       <Plus size={12} /> {label}
     </button>
   );
@@ -1081,7 +1081,7 @@ function AddBtn({ label, onClick }: { label: string; onClick: () => void }) {
 
 function RemoveBtn({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} title="Quitar" className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-bad">
+    <button type="button" onClick={onClick} title="Quitar" aria-label="Quitar" className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-bad">
       <Minus size={12} />
     </button>
   );
@@ -1091,7 +1091,7 @@ function ErrorBanner({ error, onClose }: { error: string; onClose: () => void })
   return (
     <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
       style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
-      <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} />
+      <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
       <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
       <button onClick={onClose} className="text-faint hover:text-ink"><X size={14} /></button>
     </div>

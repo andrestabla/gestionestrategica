@@ -108,11 +108,11 @@ export default function ConvencionPage() {
       <PageHeader kicker={V.kicker} title={V.title(cat.company.name)}
         desc={V.desc}
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
-          {canAccess && !acomp && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
+          {canAccess && !acomp && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[12px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
 
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3" style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} /><p className="flex-1 text-[12.5px] text-ink-soft">{error}</p><button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} /><p className="flex-1 text-[12.5px] text-ink-soft">{error}</p><button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
         </div>
       )}
 
@@ -130,7 +130,7 @@ export default function ConvencionPage() {
             <t.icon size={13} className={tab === t.id ? "text-cyan-deep" : ""} /> {t.label}
           </button>
         ))}
-        <span className="ml-auto hidden text-[10.5px] text-faint sm:block">{agendaOf(TABS.find((t) => t.id === tab)!)}</span>
+        <span className="ml-auto hidden text-[12px] text-faint sm:block">{agendaOf(TABS.find((t) => t.id === tab)!)}</span>
       </div>
       )}
 
@@ -164,7 +164,7 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">Las {V.leversLow} ordenan la estrategia: cada objetivo, resultado clave e iniciativa cuelga de una. Máximo ocho; el orden es la jerarquía acordada por la dirección.</p>
-        {canEdit && <button onClick={() => setOpen(true)} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
+        {canEdit && <button onClick={() => setOpen(true)} className="btn-primary ml-auto !py-1.5 text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
       </div>
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus {V.leversLow}. {canEdit ? "Defínelas aquí: nombre, sponsor, indicador y descripción." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
@@ -172,15 +172,15 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
         <div className="rise grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...levers].sort((a, b) => a.order - b.order).map((l) => { const o = owner(l.ownerId); return (
             <Card key={l.id} className="flex flex-col p-5">
-              <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+              <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
               <div className="mt-0.5 text-[16px] font-extrabold leading-tight text-ink">{l.name}</div>
               {l.desc && <p className="mt-2 text-[12.5px] leading-snug text-ink-soft">{l.desc}</p>}
-              {l.indicator && <p className="mt-2 text-[11.5px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {l.indicator}</p>}
-              <div className="mt-3 text-[11.5px] text-muted"><b className="text-ink">{V.group}.</b> {o ? (o.cargo || o.dependencia) : <span className="italic text-faint">por definir</span>}</div>
+              {l.indicator && <p className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {l.indicator}</p>}
+              <div className="mt-3 text-[12px] text-muted"><b className="text-ink">{V.group}.</b> {o ? (o.cargo || o.dependencia) : <span className="italic text-faint">por definir</span>}</div>
               <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
-                <span className="chip !py-0 text-[10px]">{objs(l).length} objetivo{objs(l).length === 1 ? "" : "s"}</span>
-                <span className="chip !py-0 text-[10px]">{krs(l).length} KR</span>
-                <span className="chip !py-0 text-[10px]">{inis(l).length} iniciativa{inis(l).length === 1 ? "" : "s"}</span>
+                <span className="chip !py-0 text-[12px]">{objs(l).length} objetivo{objs(l).length === 1 ? "" : "s"}</span>
+                <span className="chip !py-0 text-[12px]">{krs(l).length} KR</span>
+                <span className="chip !py-0 text-[12px]">{inis(l).length} iniciativa{inis(l).length === 1 ? "" : "s"}</span>
               </div>
             </Card>
           ); })}
@@ -208,8 +208,8 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           ? <p className="text-[12.5px] text-muted">Objetivos directivos por {V.leverLow} y horizonte: qué se logra en {horizons[0]?.label ?? "el primer horizonte"} y qué queda habilitado hacia {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}.</p>
           : <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>}
         {canEdit && <span className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-          {!acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Pencil size={12} /> {V.levers}</button>}
-          <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
+          {!acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center !py-1.5 text-[12px] sm:flex-none"><Pencil size={12} /> {V.levers}</button>}
+          <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center !py-1.5 text-[12px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
         </span>}
       </div>
       {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}><b>Dirección 3x3 es informativa:</b> agrupa los objetivos estratégicos de CRESIO por palanca. El objetivo rector de cada palanca es el objetivo del único OKR de su tribu; el día 2 no se modifica (solo el relator registra ajustes ratificados).</p>}
@@ -220,18 +220,18 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         <div className="rise space-y-4 sm:hidden">
           {levers.map((l) => (
             <div key={l.id} className="rounded-2xl bg-surface-2/60 p-3">
-              <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+              <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
               <div className="text-[15px] font-extrabold leading-tight text-ink">{l.name}</div>
-              {l.indicator && <div className="mt-1 text-[11px] leading-snug text-muted">{l.indicator}</div>}
+              {l.indicator && <div className="mt-1 text-[12px] leading-snug text-muted">{l.indicator}</div>}
               {hz.map((h) => {
                 const objs = m.cell(l.id, h.id);
                 return (
                   <div key={h.id} className="mt-3">
-                    <div className="mb-1.5 text-[11.5px] font-extrabold text-ink">{h.label} <span className="num font-semibold text-faint">· {h.months} meses</span></div>
+                    <div className="mb-1.5 text-[12px] font-extrabold text-ink">{h.label} <span className="num font-semibold text-faint">· {h.months} meses</span></div>
                     <div className="space-y-2">
                       {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} />)}
                       {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2.5 text-[12px] font-semibold text-faint">+ objetivo</button>}
-                      {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[11px] italic text-faint">por definir</div>}
+                      {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[12px] italic text-faint">por definir</div>}
                     </div>
                   </div>
                 );
@@ -251,10 +251,10 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
               {levers.map((l) => (
                 <tr key={l.id} className="align-top">
                   <td className="rounded-xl bg-surface-2/60 px-3 py-3">
-                    <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+                    <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
                     <div className="text-[13.5px] font-extrabold leading-tight text-ink">{l.name}</div>
-                    {l.indicator && <div className="mt-1 text-[10.5px] leading-snug text-muted">{l.indicator}</div>}
-                    {l.ownerId && <div className="mt-1 text-[10px] text-faint">{owner(l.ownerId)}</div>}
+                    {l.indicator && <div className="mt-1 text-[12px] leading-snug text-muted">{l.indicator}</div>}
+                    {l.ownerId && <div className="mt-1 text-[12px] text-faint">{owner(l.ownerId)}</div>}
                   </td>
                   {hz.map((h) => {
                     const objs = m.cell(l.id, h.id);
@@ -262,8 +262,8 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
                       <td key={h.id} className="min-w-[200px]">
                         <div className="space-y-2">
                           {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} />)}
-                          {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2 text-[11px] font-semibold text-faint hover:border-cyan-deep hover:text-cyan-deep">+ objetivo</button>}
-                          {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[10.5px] italic text-faint">por definir</div>}
+                          {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2 text-[12px] font-semibold text-faint hover:border-cyan-deep hover:text-cyan-deep">+ objetivo</button>}
+                          {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[12px] italic text-faint">por definir</div>}
                         </div>
                       </td>
                     );
@@ -278,7 +278,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         <Card className="rise rise-2 mt-5">
           <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la ruta" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
           <div className="flex flex-wrap gap-2 px-5 pb-5">
-            {m.orphan.map((o) => <button key={o.id} onClick={canEdit ? () => setOpen(o) : undefined} className="chip !py-1 text-[11px]">{o.id} · {o.name.slice(0, 60)}{o.name.length > 60 ? "…" : ""}</button>)}
+            {m.orphan.map((o) => <button key={o.id} onClick={canEdit ? () => setOpen(o) : undefined} className="chip !py-1 text-[12px]">{o.id} · {o.name.slice(0, 60)}{o.name.length > 60 ? "…" : ""}</button>)}
           </div>
         </Card>
       )}
@@ -296,16 +296,16 @@ function ObjectiveCard({ o, cat, onEdit }: { o: CmiObjective; cat: Cat; onEdit?:
     <div className="panel group px-3.5 py-3">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
+          <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
           <div className="text-[12.5px] font-bold leading-snug text-ink">{o.name}</div>
-          {o.desc && <p className="mt-1 text-[11px] leading-snug text-muted">{o.desc}</p>}
-          {o.indicator && <p className="mt-1 text-[10.5px] text-ink-soft"><span className="font-semibold">Indicador:</span> {o.indicator}</p>}
+          {o.desc && <p className="mt-1 text-[12px] leading-snug text-muted">{o.desc}</p>}
+          {o.indicator && <p className="mt-1 text-[12px] text-ink-soft"><span className="font-semibold">Indicador:</span> {o.indicator}</p>}
         </div>
-        {onEdit && <button onClick={onEdit} className="shrink-0 rounded-lg p-2 text-faint transition-opacity hover:bg-surface-2 hover:text-ink sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100" title="Editar"><Pencil size={13} /></button>}
+        {onEdit && <button onClick={onEdit} className="shrink-0 rounded-lg p-2 text-faint transition-opacity hover:bg-surface-2 hover:text-ink sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100" title="Editar" aria-label="Editar"><Pencil size={13} /></button>}
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
-        <span className={`chip !py-0 text-[9.5px] ${krs.length ? "chip-cyan" : ""}`}>{krs.length} KR</span>
-        {krs.slice(0, 3).map((k) => <span key={k.code} className="num chip !py-0 text-[9px]" title={k.name}>{k.code}</span>)}
+        <span className={`chip !py-0 text-[11px] ${krs.length ? "chip-cyan" : ""}`}>{krs.length} KR</span>
+        {krs.slice(0, 3).map((k) => <span key={k.code} className="num chip !py-0 text-[11px]" title={k.name}>{k.code}</span>)}
       </div>
     </div>
   );
@@ -358,42 +358,42 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
             ? <Field label={Vb(cat).group}><input value={cat.responsibles.find((r) => r.id === levers.find((l) => l.id === f.lever)?.ownerId)?.dependencia ?? "—"} disabled className={INPUT} /></Field>
             : <Field label="Horizonte"><select value={f.horizon} onChange={set("horizon")} className={INPUT}><option value="">— sin horizonte —</option>{horizons.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></Field>}
         </div>
-        {okr && parents.length > 0 && <p className="text-[11px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
+        {okr && parents.length > 0 && <p className="text-[12px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
         <Field label={okr ? (initial?.parent ? "Objetivo del OKR · objetivo rector de la palanca (se adopta tal cual)" : "Objetivo 2027 de la tribu") : "Objetivo"}><AutoTextarea value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
         <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
         <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder="¿Cómo mediremos ese avance? (complementa el indicador de la palanca)" className={INPUT} /></Field>
         {okr && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : "Elige la palanca y escribe el objetivo"}>
+              <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : "Elige la palanca y escribe el objetivo"}>
                 {sug.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {sug.okr ? "Otra propuesta" : "Sugerir OKR"}
               </button>
               {sug.okr && sug.fuentes.length > 0 && <FuentesButton onClick={() => setVerFuentes(true)} />}
-              <span className="text-[11px] text-faint">{puedeSugerir ? `Resultados clave sugeridos para este objetivo${tribe ? ` y ${tribe.dependencia}` : ""}; eliges cuáles se crean.` : `Con la ${Vb(cat).leverLow} y el objetivo escritos, el modelo propone sus resultados clave.`}</span>
+              <span className="text-[12px] text-faint">{puedeSugerir ? `Resultados clave sugeridos para este objetivo${tribe ? ` y ${tribe.dependencia}` : ""}; eliges cuáles se crean.` : `Con la ${Vb(cat).leverLow} y el objetivo escritos, el modelo propone sus resultados clave.`}</span>
             </div>
             {sug.error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{sug.error}</p>}
             {sug.okr && (
               <div className="mt-2.5 space-y-1.5">
                 {redaccionDistinta && (
                   <div className="rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
-                    <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Redacción sugerida del objetivo</div>
+                    <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">Redacción sugerida del objetivo</div>
                     <div className="text-ink">{sug.okr.objective.name}</div>
-                    <button type="button" onClick={() => setF({ ...f, name: sug.okr!.objective.name, desc: f.desc || (sug.okr!.objective.desc ?? ""), indicator: f.indicator || (sug.okr!.objective.indicator ?? "") })} className="mt-1 text-[11px] font-semibold text-cyan-deep hover:underline">Usar esta redacción</button>
+                    <button type="button" onClick={() => setF({ ...f, name: sug.okr!.objective.name, desc: f.desc || (sug.okr!.objective.desc ?? ""), indicator: f.indicator || (sug.okr!.objective.indicator ?? "") })} className="mt-1 text-[12px] font-semibold text-cyan-deep hover:underline">Usar esta redacción</button>
                   </div>
                 )}
-                <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Resultados clave propuestos (marca los que se crean)</div>
+                <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">Resultados clave propuestos (marca los que se crean)</div>
                 {sug.okr.krs.map((k, n) => (
                   <label key={n} className="flex cursor-pointer items-start gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
                     <input type="checkbox" checked={!!sug.chosen[n]} onChange={(e) => setSug({ ...sug, chosen: sug.chosen.map((c, m) => (m === n ? e.target.checked : c)) })} className="mt-0.5" />
                     <span className="min-w-0">
                       <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span><Refs n={k.sources} />
-                      {(k.formula || k.definition) && <span className="block text-[11px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
-                      {k.why && <span className="block text-[11px] italic text-faint">{k.why}</span>}
+                      {(k.formula || k.definition) && <span className="block text-[12px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
+                      {k.why && <span className="block text-[12px] italic text-faint">{k.why}</span>}
                     </span>
                   </label>
                 ))}
                 {verFuentes && <FuentesModal fuentes={sug.fuentes} usadas={usadasDe(sug.okr)} onClose={() => setVerFuentes(false)} />}
-                <p className="text-[11px] leading-snug text-faint">Se crean con línea base 0 y la meta sugerida (si la hay), dueño {tribe?.dependencia ?? "la tribu"} y plazo a fin de {horizons[0]?.label ?? "horizonte"}; la tribu fija base y meta reales en la mesa.</p>
+                <p className="text-[12px] leading-snug text-faint">Se crean con línea base 0 y la meta sugerida (si la hay), dueño {tribe?.dependencia ?? "la tribu"} y plazo a fin de {horizons[0]?.label ?? "horizonte"}; la tribu fija base y meta reales en la mesa.</p>
               </div>
             )}
           </div>
@@ -419,15 +419,15 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[28px_80px_1fr_1fr_1fr_60px] items-start gap-1.5">
-            <div className="flex flex-col pt-1"><button onClick={() => move(i, -1)} className="text-[10px] text-faint hover:text-ink">▲</button><button onClick={() => move(i, 1)} className="text-[10px] text-faint hover:text-ink">▼</button></div>
-            <input value={r.id} onChange={(e) => upd(i, "id", e.target.value.toUpperCase())} placeholder="MS" className="input num !py-1.5 !text-[11px]" />
-            <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)} placeholder={`Nombre de la ${Vb(cat).leverLow}`} className="input !py-1.5 !text-[11px]" />
-            <input value={r.indicator} onChange={(e) => upd(i, "indicator", e.target.value)} placeholder="Indicador principal" className="input !py-1.5 !text-[11px]" />
-            <select value={r.ownerId} onChange={(e) => upd(i, "ownerId", e.target.value)} className="input !py-1.5 !text-[11px]"><option value="">{Vb(cat).group} / responsable</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}</option>)}</select>
-            <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="pt-1.5 text-[11px] text-faint hover:text-bad">Quitar</button>
+            <div className="flex flex-col pt-1"><button onClick={() => move(i, -1)} className="text-[12px] text-faint hover:text-ink">▲</button><button onClick={() => move(i, 1)} className="text-[12px] text-faint hover:text-ink">▼</button></div>
+            <input value={r.id} onChange={(e) => upd(i, "id", e.target.value.toUpperCase())} placeholder="MS" className="input num !py-1.5 !text-[12px]" />
+            <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)} placeholder={`Nombre de la ${Vb(cat).leverLow}`} className="input !py-1.5 !text-[12px]" />
+            <input value={r.indicator} onChange={(e) => upd(i, "indicator", e.target.value)} placeholder="Indicador principal" className="input !py-1.5 !text-[12px]" />
+            <select value={r.ownerId} onChange={(e) => upd(i, "ownerId", e.target.value)} className="input !py-1.5 !text-[12px]"><option value="">{Vb(cat).group} / responsable</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}</option>)}</select>
+            <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="pt-1.5 text-[12px] text-faint hover:text-bad">Quitar</button>
           </div>
         ))}
-        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "", indicator: "", desc: "" }])} className="text-[11px] font-bold text-cyan-deep hover:underline">+ añadir palanca</button>}
+        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "", indicator: "", desc: "" }])} className="text-[12px] font-bold text-cyan-deep hover:underline">+ añadir palanca</button>}
       </div>
     </Modal>
   );
@@ -473,11 +473,11 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <span className="num text-[12px] font-bold text-ink">{objectives.length} de {allObjectives.length} objetivos</span>
-        <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
-        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
-        {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
-        {!canEdit && <span className="ml-auto text-[10.5px] text-faint">{acomp ? "Solo lectura: registra el advisor." : "Solo lectura: el líder de cada tribu registra con el QR de edición."}</span>}
+        <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[12px]"><X size={12} /> Quitar filtros</button>}
+        {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto !py-1.5 text-[12px]"><Plus size={12} /> Objetivo</button>}
+        {!canEdit && <span className="ml-auto text-[12px] text-faint">{acomp ? "Solo lectura: registra el advisor." : "Solo lectura: el líder de cada tribu registra con el QR de edición."}</span>}
       </div>
       {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>{acomp ? <>Aún no hay objetivos en {horizonLabel(cat.company, horizon)}. Primero el objetivo directivo (en «{V.tabs.direccion}»), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</> : <>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</>}</EmptyNote></Card>}
       {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
@@ -485,8 +485,8 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
         <Card key={g.key} className="rise mb-5 overflow-hidden">
           <CardHeader title={g.label} sub={acomp ? (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}` : "sin objetivos todavía en esta prioridad") : (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)")}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
-              {canEdit && !scope && !acomp && <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
-              {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
+              {canEdit && !scope && !acomp && <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[12px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
+              {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[12px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
             {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>{acomp ? "Aún no hay resultados clave para este objetivo: de 2 a 4 (máximo 5), con «+ Resultado clave»." : <>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</>}</EmptyNote></div>}
@@ -497,12 +497,12 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
                 <div key={o.id} className="px-5 py-4">
                   <div className="flex flex-wrap items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{o.id}{o.parent ? <span className="ml-1.5 normal-case tracking-normal text-faint">· concreta {o.parent}</span> : null}</div>
+                      <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{o.id}{o.parent ? <span className="ml-1.5 normal-case tracking-normal text-faint">· concreta {o.parent}</span> : null}</div>
                       <div className="text-[14px] font-extrabold leading-snug text-ink">{o.name}</div>
-                      {o.indicator && <div className="mt-0.5 text-[11px] text-muted">Indicador impulsor: {o.indicator}</div>}
+                      {o.indicator && <div className="mt-0.5 text-[12px] text-muted">Indicador impulsor: {o.indicator}</div>}
                     </div>
                     {canEditObj(o) && o.okr && <button onClick={() => setObj(o)} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar el objetivo"><Pencil size={13} /></button>}
-                    {canEditObj(o) && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:!py-1.5 sm:text-[11px]"><Plus size={12} /> Resultado clave</button>}
+                    {canEditObj(o) && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:!py-1.5 sm:text-[12px]"><Plus size={12} /> Resultado clave</button>}
                   </div>
                   {krs.length > 0 && (
                     <div className="mt-3 space-y-2 sm:hidden">
@@ -511,16 +511,16 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
                         const body = (
                           <>
                             <div className="flex items-start gap-2">
-                              <span className="num shrink-0 text-[11px] font-extrabold text-cyan-deep">{k.code}</span>
+                              <span className="num shrink-0 text-[12px] font-extrabold text-cyan-deep">{k.code}</span>
                               <span className="min-w-0 flex-1 text-[13px] font-semibold leading-snug text-ink">{k.name}</span>
                               {canEditObj(o) && <Pencil size={13} className="mt-0.5 shrink-0 text-faint" />}
                             </div>
-                            <div className="num mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-muted">
+                            <div className="num mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted">
                               <span>Base <b className="text-ink">{k.baseline || "—"}</b> → Meta <b className="text-ink">{k.target || "—"}</b> {k.unit}</span>
                               <span>{k.ownerId ? owner(k.ownerId) : <span className="text-warn">sin dueño</span>}</span>
                               <span>{k.due ?? <span className="text-warn">sin plazo</span>}</span>
                               <span>{initiativesOfKr(cat, k.code).length} inic.</span>
-                              {bad && <span className="chip chip-warn !py-0 text-[9.5px]" title={bad.text}>incompleto</span>}{noIni && <span className="chip chip-bad !py-0 text-[9.5px]" title={noIni.text}>sin iniciativa</span>}
+                              {bad && <span className="chip chip-warn !py-0 text-[11px]" title={bad.text}>incompleto</span>}{noIni && <span className="chip chip-bad !py-0 text-[11px]" title={noIni.text}>sin iniciativa</span>}
                             </div>
                           </>
                         );
@@ -533,14 +533,14 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
                   {krs.length > 0 && (
                     <div className="mt-3 hidden overflow-x-auto sm:block">
                       <table className="w-full min-w-[640px] text-[12px]">
-                        <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="py-1 pr-2">KR</th><th className="py-1 pr-2">Resultado clave</th><th className="num py-1 pr-2 text-right">Base</th><th className="num py-1 pr-2 text-right">Meta</th><th className="py-1 pr-2">Unidad</th><th className="py-1 pr-2">Dueño</th><th className="py-1 pr-2">Plazo</th><th className="num py-1 pr-2 text-right">Inic.</th><th /></tr></thead>
+                        <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="py-1 pr-2">KR</th><th className="py-1 pr-2">Resultado clave</th><th className="num py-1 pr-2 text-right">Base</th><th className="num py-1 pr-2 text-right">Meta</th><th className="py-1 pr-2">Unidad</th><th className="py-1 pr-2">Dueño</th><th className="py-1 pr-2">Plazo</th><th className="num py-1 pr-2 text-right">Inic.</th><th /></tr></thead>
                         <tbody>
                           {krs.map((k) => {
                             const bad = issues.find((i) => i.kind === "kr-incompleto" && i.ref === k.code); const noIni = issues.find((i) => i.kind === "kr-sin-iniciativa" && i.ref === k.code);
                             return (
                               <tr key={k.code} className="border-t border-line">
                                 <td className="num py-1.5 pr-2 font-bold text-cyan-deep">{k.code}</td>
-                                <td className="py-1.5 pr-2 font-semibold text-ink">{k.name}{bad && <span className="ml-1 chip chip-warn !py-0 text-[9px]" title={bad.text}>incompleto</span>}{noIni && <span className="ml-1 chip chip-bad !py-0 text-[9px]" title={noIni.text}>sin iniciativa</span>}</td>
+                                <td className="py-1.5 pr-2 font-semibold text-ink">{k.name}{bad && <span className="ml-1 chip chip-warn !py-0 text-[11px]" title={bad.text}>incompleto</span>}{noIni && <span className="ml-1 chip chip-bad !py-0 text-[11px]" title={noIni.text}>sin iniciativa</span>}</td>
                                 <td className="num py-1.5 pr-2 text-right text-muted">{k.baseline || "—"}</td>
                                 <td className="num py-1.5 pr-2 text-right font-bold text-ink">{k.target || "—"}</td>
                                 <td className="py-1.5 pr-2 text-muted">{k.unit}</td>
@@ -557,10 +557,10 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
                   )}
                   <AsistenteKr cat={cat} o={o} krs={krs} tribeId={levers.find((l) => l.id === o.lever)?.ownerId ?? ""} horizon={horizon} canEdit={canEditObj(o)} mutate={mutate} onEditKr={(k) => setKr({ obj: o, kpi: k })} />
                   {healthKpisOf(cat, o).length > 0 && (
-                    <p className="mt-2 text-[10.5px] leading-snug text-faint"><span className="font-semibold text-muted">Métricas</span> (sin plazo, no cuentan como resultado clave): {healthKpisOf(cat, o).map((k) => `${k.code} ${k.name}`).join(" · ")}</p>
+                    <p className="mt-2 text-[12px] leading-snug text-faint"><span className="font-semibold text-muted">Métricas</span> (sin plazo, no cuentan como resultado clave): {healthKpisOf(cat, o).map((k) => `${k.code} ${k.name}`).join(" · ")}</p>
                   )}
                   {mine.filter((i) => i.kind !== "kr-incompleto" && i.kind !== "kr-sin-iniciativa").length > 0 && (
-                    <ul className="mt-2 space-y-0.5">{mine.filter((i) => i.kind !== "kr-incompleto" && i.kind !== "kr-sin-iniciativa").map((i, n) => <li key={n} className={`text-[11px] ${i.level === "alto" ? "text-bad" : "text-warn"}`}>• {i.text}</li>)}</ul>
+                    <ul className="mt-2 space-y-0.5">{mine.filter((i) => i.kind !== "kr-incompleto" && i.kind !== "kr-sin-iniciativa").map((i, n) => <li key={n} className={`text-[12px] ${i.level === "alto" ? "text-bad" : "text-warn"}`}>• {i.text}</li>)}</ul>
                   )}
                 </div>
               );
@@ -568,7 +568,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
           </div>
         </Card>
       ))}
-      <p className="text-[11px] text-faint">Regla de calidad: primero el objetivo, después sus resultados clave, de 2 a 4 por objetivo (máximo 5); cada resultado clave con línea base, meta, dueño y plazo, y al menos una iniciativa que lo mueva. Un KPI con plazo es resultado clave; sin plazo, métrica del objetivo. Los valores de los KR se reportan en <Link href={`${base}/panel/kpi`} className="text-cyan-deep hover:underline">Indicadores</Link>.</p>
+      <p className="text-[12px] text-faint">Regla de calidad: primero el objetivo, después sus resultados clave, de 2 a 4 por objetivo (máximo 5); cada resultado clave con línea base, meta, dueño y plazo, y al menos una iniciativa que lo mueva. Un KPI con plazo es resultado clave; sin plazo, métrica del objetivo. Los valores de los KR se reportan en <Link href={`${base}/panel/kpi`} className="text-cyan-deep hover:underline">Indicadores</Link>.</p>
       {ejemplo && <OkrEjemploModal levers={levers} lever={ejemplo} onClose={() => setEjemplo(null)} onUsar={canEdit ? () => { const e = ejemploPara(ejemplo); setEjemplo(null); setObj({ lever: ejemplo, name: e.objective.name, desc: e.objective.desc, indicator: e.objective.indicator }); } : undefined} />}
       {obj && <ObjectiveForm cat={cat} levers={levers} horizons={[{ id: horizon, label: horizonLabel(cat.company, horizon) }]} initial={editingObj} preset={editingObj ? undefined : { ...(obj as { lever?: string; name?: string; desc?: string; indicator?: string }), horizon }} okr directive={directive} saving={saving} onCancel={() => setObj(null)}
         onSubmit={async (d) => {
@@ -646,7 +646,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
               <option value="">Elegir de la biblioteca del objetivo… ({templates.length})</option>
               {templates.map((t) => { const used = cat.kpis.some((k) => k.code === t.code); return <option key={t.code} value={t.code}>{t.code} · {t.name}{used ? " (ya creado)" : ""}</option>; })}
             </select>
-            <span className="mt-1 block text-[10.5px] leading-snug text-faint">La plantilla trae nombre, unidad, sentido, frecuencia y definición; {Vb(cat).modo === "acompanamiento" ? "el sponsor" : "la tribu"} fija línea base, meta, dueño y plazo. Se puede editar todo antes de crear.</span>
+            <span className="mt-1 block text-[12px] leading-snug text-faint">La plantilla trae nombre, unidad, sentido, frecuencia y definición; {Vb(cat).modo === "acompanamiento" ? "el sponsor" : "la tribu"} fija línea base, meta, dueño y plazo. Se puede editar todo antes de crear.</span>
           </Field>
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
@@ -665,7 +665,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
           <Field label="Frecuencia" help={KR_AYUDA.frequency}><select value={f.frequency} onChange={set("frequency")} className={INPUT}>{["Mensual", "Trimestral", "Semestral", "Anual"].map((x) => <option key={x} value={x}>{x}</option>)}</select></Field>
         </div>
         <Field label="Definición, fórmula y fuente" help={KR_AYUDA.definition}><AutoTextarea value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula (fórmula) y de dónde sale el dato" className={INPUT} /></Field>
-        {faltan.length > 0 && <p className="text-[11px] leading-snug text-warn">Para registrar el resultado clave completa: {faltan.join(", ")}. Toca «?» en cada campo si tienes dudas.</p>}
+        {faltan.length > 0 && <p className="text-[12px] leading-snug text-warn">Para registrar el resultado clave completa: {faltan.join(", ")}. Toca «?» en cada campo si tienes dudas.</p>}
       </div>
     </Modal>
   );
@@ -695,9 +695,9 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
-        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[11.5px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
-        <span className="text-[11px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
+        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
+        <span className="text-[12px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <StatCard label="Resultados clave completos" value={krs.length} unit={incompletos.length ? `+ ${incompletos.length} incompletos` : undefined} foot={`en ${horizonLabel(cat.company, horizon)}`} />
@@ -713,16 +713,16 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
               if (fTribe && inis.length === 0) return null;
               return (
                 <div key={k.code} className="px-5 py-3">
-                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[11px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className={`num text-[10px] font-bold ${initiativesOfKr(cat, k.code).length > KR_INI_MAX ? "text-bad" : "text-faint"}`}>{initiativesOfKr(cat, k.code).length} de {KR_INI_MAX}</span><span className="text-[10px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
-                  {inis.length === 0 ? <p className="mt-1 text-[11px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
-                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[11.5px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[10px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
+                  <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[12px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className={`num text-[12px] font-bold ${initiativesOfKr(cat, k.code).length > KR_INI_MAX ? "text-bad" : "text-faint"}`}>{initiativesOfKr(cat, k.code).length} de {KR_INI_MAX}</span><span className="text-[12px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
+                  {inis.length === 0 ? <p className="mt-1 text-[12px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
+                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[12px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[12px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
                   )}
                 </div>
               );
             })}
             {krs.length === 0 && <div className="px-5 py-4"><EmptyNote>Sin resultados clave completos en {horizonLabel(cat.company, horizon)}: defínelos o complétalos en «{V.tabs.okr}».</EmptyNote></div>}
             {incompletos.filter((x) => !fTribe || levers.find((l) => l.id === x.o.lever)?.ownerId === fTribe).length > 0 && (
-              <div className="px-5 py-3 text-[11.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, white)" }}>
+              <div className="px-5 py-3 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, white)" }}>
                 <b>No reciben iniciativas todavía</b> (complétalos en «{V.tabs.okr}»):
                 <ul className="mt-1 space-y-0.5">{incompletos.filter((x) => !fTribe || levers.find((l) => l.id === x.o.lever)?.ownerId === fTribe).map(({ k }) => <li key={k.code}><span className="num font-bold text-ink">{k.code}</span> · {k.name} <span className="text-faint">· sin {krFaltantes(k).join(", ")}</span></li>)}</ul>
               </div>
@@ -734,8 +734,8 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
           <div className="divide-y divide-line">
             {unlinked.map((i) => (
               <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
-                <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
-                {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 !py-1.5 text-[11px] sm:!py-1 sm:text-[10.5px]"><Link2 size={11} /> Vincular</button>}
+                <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
+                {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 !py-1.5 text-[12px] sm:!py-1 sm:text-[12px]"><Link2 size={11} /> Vincular</button>}
                 {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
               </div>
             ))}
@@ -783,7 +783,7 @@ function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; 
             </optgroup>
           ); })}
         </select>
-        <span className="mt-1 block text-[10.5px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto y completo; el objetivo se toma del KR elegido. Cada KR recibe máximo {KR_INI_MAX} iniciativas; los incompletos no aparecen hasta completarse en «OKR».</span>
+        <span className="mt-1 block text-[12px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto y completo; el objetivo se toma del KR elegido. Cada KR recibe máximo {KR_INI_MAX} iniciativas; los incompletos no aparecen hasta completarse en «OKR».</span>
       </Field>
     </div>
   );
@@ -813,7 +813,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <Field label={isAcompanamiento(cat.company) ? "Sponsor" : "Tribu dueña"}><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} />
-        <p className="text-[11px] text-faint">Queda asociada al resultado clave elegido y a {horizonLabel(cat.company, horizon)}; así se califica en Priorización en vivo como las demás.</p>
+        <p className="text-[12px] text-faint">Queda asociada al resultado clave elegido y a {horizonLabel(cat.company, horizon)}; así se califica en Priorización en vivo como las demás.</p>
       </div>
     </Modal>
   );
@@ -827,7 +827,7 @@ function LinkForm({ cat, horizon, ini, scope = null, saving, onCancel, onSubmit 
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} onClick={() => ok && onSubmit(link.cmi, link.kpi)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
       <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={ini.id} />
-      <p className="mt-2 text-[11px] text-faint">Al vincular, la iniciativa queda asociada al resultado clave elegido (y al objetivo al que pertenece) y habilitada para calificar.</p>
+      <p className="mt-2 text-[12px] text-faint">Al vincular, la iniciativa queda asociada al resultado clave elegido (y al objetivo al que pertenece) y habilitada para calificar.</p>
     </Modal>
   );
 }
@@ -887,15 +887,15 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         </div>
       )}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[11px]" role="group" aria-label="Agrupar el ranking">
+        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[12px]" role="group" aria-label="Agrupar el ranking">
           {(["tribu", "resultado"] as const).map((m) => (
             <button key={m} type="button" onClick={() => { setMode(m); setSel(""); }} className={`rounded-md px-2.5 py-1 font-bold transition-colors ${mode === m ? "text-white" : "text-muted hover:text-ink"}`} style={mode === m ? { background: "var(--navy)" } : undefined}>{m === "tribu" ? (acomp ? `Por ${V.leverLow}` : "Por tribu") : "Por resultado"}</button>
           ))}
         </div>
-        <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? (acomp ? V.leversAll : V.groupsAll) : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
-        <label className="flex items-center gap-1.5 text-[11.5px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[11.5px]" /></label>
-        <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><RefreshCw size={12} /> Actualizar</button>
-        <span className="text-[10.5px] text-faint">se refresca cada 15 s</span>
+        <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? (acomp ? V.leversAll : V.groupsAll) : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
+        <label className="flex items-center gap-1.5 text-[12px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[12px]" /></label>
+        <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[12px]"><RefreshCw size={12} /> Actualizar</button>
+        <span className="text-[12px] text-faint">se refresca cada 15 s</span>
       </div>
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
@@ -909,7 +909,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
           <CardHeader title="Ranking en vivo" sub={convencion ? "puntaje consolidado · elegibilidad y capacidad · decisión · todo a 2027" : "puntaje consolidado · elegibilidad y capacidad · horizonte sugerido · decisión"} />
           <div className="divide-y divide-line sm:hidden">
             {groups.map((g) => (<div key={g.key || "sin"}>
-              <div className="bg-surface-2/70 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</div>
+              <div className="bg-surface-2/70 px-4 py-1.5 text-[12px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</div>
               {g.items.map(({ i, r }, n) => {
               const d = prio?.decisions[i.id]; const c = r?.c;
               return (
@@ -917,15 +917,15 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                   <span className="num w-6 shrink-0 pt-0.5 text-[13px] font-extrabold text-faint">{c && c.n ? n + 1 : "—"}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-bold leading-snug text-ink">{i.name}</span>
-                    <span className="num block text-[10.5px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
+                    <span className="num block text-[12px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">
-                      {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR · no se califica</span>}
-                      <span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
-                      {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
-                      {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
-                      {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
-                      {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
-                      {c && c.transfer && <span className="chip chip-warn !py-0 text-[9.5px]">táctica</span>}
+                      {!i.kpi && <span className="chip chip-warn !py-0 text-[11px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR · no se califica</span>}
+                      <span className={`chip !py-0 text-[11px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
+                      {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[11px]">D {c.rounded.D}</span>}
+                      {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]">L {c.rounded.L}</span>}
+                      {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[11px]">consenso</span>}
+                      {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[11px]">elegible</span>}
+                      {c && c.transfer && <span className="chip chip-warn !py-0 text-[11px]">táctica</span>}
                       {d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : null}
                     </span>
                   </span>
@@ -938,29 +938,29 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
           </div>
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[720px] text-[12px]">
-              <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">{convencion ? "Palanca" : "Horizonte"}</th><th className="px-2 py-2">Decisión</th></tr></thead>
+              <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">{convencion ? "Palanca" : "Horizonte"}</th><th className="px-2 py-2">Decisión</th></tr></thead>
               <tbody>
                 {groups.map((g) => [
-                  <tr key={`g-${g.key}`}><td colSpan={CRITERIA.length + 7} className="bg-surface-2/70 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</td></tr>,
+                  <tr key={`g-${g.key}`}><td colSpan={CRITERIA.length + 7} className="bg-surface-2/70 px-4 py-1.5 text-[12px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</td></tr>,
                   ...g.items.map(({ i, r }, n) => {
                   const d = prio?.decisions[i.id];
                   const c = r?.c;
                   return (
                     <tr key={i.id} className="border-t border-line">
                       <td className="num px-4 py-2 font-extrabold text-faint">{c && c.n ? n + 1 : "—"}</td>
-                      <td className="px-2 py-2"><Link href={`${base}/panel/iniciativas/${i.id}`} className="font-bold text-ink hover:text-cyan-deep">{i.name}</Link><div className="num text-[10px] text-faint">{i.id} · {owner(i.ownerId)}{i.kpi ? ` · KR ${i.kpi}` : ""}</div></td>
-                      <td className="num px-2 py-2 text-center"><span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected}</span></td>
+                      <td className="px-2 py-2"><Link href={`${base}/panel/iniciativas/${i.id}`} className="font-bold text-ink hover:text-cyan-deep">{i.name}</Link><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)}{i.kpi ? ` · KR ${i.kpi}` : ""}</div></td>
+                      <td className="num px-2 py-2 text-center"><span className={`chip !py-0 text-[11px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected}</span></td>
                       {CRITERIA.map((cr) => <td key={cr.key} className="num px-2 py-2 text-center">{c && c.n ? <span className={`font-bold ${c.rounded[cr.key] >= 3 ? "text-ink" : "text-muted"}`}>{c.avg[cr.key]}</span> : <span className="text-faint">—</span>}</td>)}
                       <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
                       <td className="px-2 py-2"><span className="flex flex-wrap gap-1">
-                        {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR</span>}
-                        {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
-                        {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
-                        {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
-                        {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[9.5px]">elegible</span>}
+                        {!i.kpi && <span className="chip chip-warn !py-0 text-[11px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR</span>}
+                        {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[11px]">D {c.rounded.D}</span>}
+                        {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]">L {c.rounded.L}</span>}
+                        {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[11px]">consenso</span>}
+                        {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[11px]">elegible</span>}
                       </span></td>
-                      <td className="px-2 py-2"><span className="num text-[10.5px] text-muted">{convencion ? (levers.find((l) => l.id === cat.objectives.find((o) => o.id === i.cmi)?.lever)?.name ?? "—") : horizonLabel(cat.company, i.horizon)}</span> {r && !convencion && <HorizonHint compact current={i.horizon} suggested={r.suggested} company={cat.company} />}</td>
-                      <td className="px-2 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
+                      <td className="px-2 py-2"><span className="num text-[12px] text-muted">{convencion ? (levers.find((l) => l.id === cat.objectives.find((o) => o.id === i.cmi)?.lever)?.name ?? "—") : horizonLabel(cat.company, i.horizon)}</span> {r && !convencion && <HorizonHint compact current={i.horizon} suggested={r.suggested} company={cat.company} />}</td>
+                      <td className="px-2 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
                 })])}
@@ -974,12 +974,12 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
             {cov.evaluators.length === 0 && <p className="text-[12px] italic text-faint">Aún nadie ha calificado.</p>}
             {cov.evaluators.map((e) => (
               <div key={e.by} className="flex items-center gap-2 text-[12px]">
-                <Users size={12} className="shrink-0 text-faint" /><span className="truncate font-semibold text-ink">{e.name}</span><span className="chip !py-0 text-[9px]">{e.role.toLowerCase()}</span>
+                <Users size={12} className="shrink-0 text-faint" /><span className="truncate font-semibold text-ink">{e.name}</span><span className="chip !py-0 text-[11px]">{e.role.toLowerCase()}</span>
                 <div className="ml-auto h-[7px] w-24 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${Math.min(100, (e.count / Math.max(1, list.length)) * 100)}%`, background: "var(--grad-brand)" }} /></div>
                 <span className="num w-10 text-right font-bold text-ink">{e.count}</span>
               </div>
             ))}
-            <p className="pt-2 text-[10.5px] leading-snug text-faint">Cada evaluador valida desde la ficha de la iniciativa (Iniciativas → «Validación con {validationCriteriaCount(typeRuleOf(cat.company))} criterios»). El comité revisa elegibilidad y consistencia aquí.</p>
+            <p className="pt-2 text-[12px] leading-snug text-faint">Cada evaluador valida desde la ficha de la iniciativa (Iniciativas → «Validación con {validationCriteriaCount(typeRuleOf(cat.company))} criterios»). El comité revisa elegibilidad y consistencia aquí.</p>
           </div>
         </Card>
       </div>
@@ -1036,21 +1036,21 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">{acomp ? `El portafolio se lee por ${V.leverLow} y ${V.groupLow}. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa.` : convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
-        <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[11.5px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
+        <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
       </div>
       <Card className="rise mb-5 overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
           <Filter size={13} className="shrink-0 text-cyan-deep" />
           <span className="num text-[12px] font-bold text-ink">{rows.length} de {all.length} iniciativas{filtered ? "" : " · 100 %"}</span>
-          <select value={fOe} onChange={(e) => setFOe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[300px]" title="Objetivo estratégico"><option value="">Todos los objetivos (OE)</option>{oes.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select>
-          <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={`${V.group} o área responsable`}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-          <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
-          <select value={fStatus} onChange={(e) => setFStatus(e.target.value as PortStatus)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title="Estado"><option value="">Todos los estados</option>{PORT_STATUS.filter((x) => x.key).map((x) => <option key={x.key} value={x.key}>{x.label} ({count(x.key)})</option>)}</select>
-          {filtered && <button type="button" onClick={() => { setFOe(""); setFTribe(""); setFLever(""); setFStatus(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
+          <select value={fOe} onChange={(e) => setFOe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[300px]" title="Objetivo estratégico"><option value="">Todos los objetivos (OE)</option>{oes.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select>
+          <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={`${V.group} o área responsable`}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+          <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value as PortStatus)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto" title="Estado"><option value="">Todos los estados</option>{PORT_STATUS.filter((x) => x.key).map((x) => <option key={x.key} value={x.key}>{x.label} ({count(x.key)})</option>)}</select>
+          {filtered && <button type="button" onClick={() => { setFOe(""); setFTribe(""); setFLever(""); setFStatus(""); }} className="btn-ghost !py-1.5 text-[12px]"><X size={12} /> Quitar filtros</button>}
         </div>
         <div className="flex flex-wrap gap-1.5 border-t border-line px-4 py-2">
           {(["PENDIENTE", "RENUNCIAR", "SIN_DUENO", "SIN_KR", "TACTICA", "SIN_EVAL"] as PortStatus[]).map((st) => (
-            <button key={st} type="button" onClick={() => setFStatus(fStatus === st ? "" : st)} className={`chip !py-0.5 text-[10.5px] ${fStatus === st ? "chip-cyan" : ""}`} title="Filtrar por este estado">{PORT_STATUS.find((x) => x.key === st)!.label} · {count(st)}</button>
+            <button key={st} type="button" onClick={() => setFStatus(fStatus === st ? "" : st)} className={`chip !py-0.5 text-[12px] ${fStatus === st ? "chip-cyan" : ""}`} title="Filtrar por este estado">{PORT_STATUS.find((x) => x.key === st)!.label} · {count(st)}</button>
           ))}
         </div>
       </Card>
@@ -1060,18 +1060,18 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           {groups.map((h) => (
             <div key={h} className="rounded-xl bg-surface-2/60 px-3 py-2">
               <div className="flex items-baseline justify-between text-[12.5px]"><b className="text-ink">{gLabel(h)}</b><span className="num text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)} iniciativas</span></div>
-              <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
+              <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-muted">{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
             </div>
           ))}
         </div>
         <div className="hidden overflow-x-auto px-2 pb-3 sm:block">
           <table className="w-full min-w-[560px] text-[12px]">
-            <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? V.lever : "Horizonte"}</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
+            <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? V.lever : "Horizonte"}</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
             <tbody>
               {groups.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{gLabel(h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
             </tbody>
           </table>
-          <p className="px-3 pt-2 text-[11px] text-muted">
+          <p className="px-3 pt-2 text-[12px] text-muted">
             Validación con {validationLabel(typeRuleOf(cat.company))}. {tactical.length ? <>Tácticas según el consolidado (se transfieren al área responsable y no compiten en el portafolio): <b className="text-ink">{tactical.length}</b> · {tactical.map((t) => t.id).join(", ")}.</> : typeRuleOf(cat.company).excludeTactical ? "Ninguna iniciativa evaluada quedó como táctica." : ""}
           </p>
         </div>
@@ -1088,31 +1088,31 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                   <div className="flex items-start gap-3">
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-bold leading-snug text-ink">{r.name}</span>
-                      <span className="num block text-[10.5px] text-faint">{r.id} · {r.lever ?? "—"} · {r.owner ?? "—"}</span>
+                      <span className="num block text-[12px] text-faint">{r.id} · {r.lever ?? "—"} · {r.owner ?? "—"}</span>
                     </span>
                     <span className="num shrink-0 text-[18px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {convencion ? <span className="chip !py-0 text-[9.5px]">Inicio {quarterLabel(r.start)}</span> : <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />}
-                    {r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}
+                    {convencion ? <span className="chip !py-0 text-[11px]">Inicio {quarterLabel(r.start)}</span> : <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />}
+                    {r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}
                   </div>
-                  {r.rationale && <p className="mt-1 text-[11px] leading-snug text-ink-soft">{r.rationale}</p>}
+                  {r.rationale && <p className="mt-1 text-[12px] leading-snug text-ink-soft">{r.rationale}</p>}
                 </Link>
               ))}
               {hr.length === 0 && <p className="px-4 py-3 text-[12px] italic text-faint">{convencion ? `Sin iniciativas en esta ${V.leverLow}.` : "Sin iniciativas en este horizonte."}</p>}
             </div>
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] text-[12px]">
-                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">{V.lever}</th><th className="num px-2 py-2 text-right">Puntaje</th>{convencion ? <th className="px-2 py-2">Inicio</th> : <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
+                <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">{V.lever}</th><th className="num px-2 py-2 text-right">Puntaje</th>{convencion ? <th className="px-2 py-2">Inicio</th> : <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
                 <tbody>
                   {hr.map((r) => (
                     <tr key={r.id} className="border-t border-line">
-                      <td className="px-4 py-2"><Link href={`${base}/panel/iniciativas/${r.id}`} className="font-bold text-ink hover:text-cyan-deep">{r.name}</Link><div className="num text-[10px] text-faint">{r.id} · {r.owner ?? "—"}</div></td>
-                      <td className="px-2 py-2 text-[11px] text-muted">{r.lever ?? "—"}</td>
+                      <td className="px-4 py-2"><Link href={`${base}/panel/iniciativas/${r.id}`} className="font-bold text-ink hover:text-cyan-deep">{r.name}</Link><div className="num text-[12px] text-faint">{r.id} · {r.owner ?? "—"}</div></td>
+                      <td className="px-2 py-2 text-[12px] text-muted">{r.lever ?? "—"}</td>
                       <td className="num px-2 py-2 text-right font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
-                      {convencion ? <td className="num px-2 py-2 text-[11px] text-muted">{quarterLabel(r.start)}</td> : <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>}
-                      <td className="px-2 py-2">{r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[10.5px] italic text-faint">pendiente</span>}</td>
-                      <td className="px-2 py-2 text-[11px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
+                      {convencion ? <td className="num px-2 py-2 text-[12px] text-muted">{quarterLabel(r.start)}</td> : <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>}
+                      <td className="px-2 py-2">{r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
+                      <td className="px-2 py-2 text-[12px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
                     </tr>
                   ))}
                   {hr.length === 0 && <tr><td colSpan={6} className="px-4 py-3 text-[12px] italic text-faint">{convencion ? `Sin iniciativas en esta ${V.leverLow}.` : "Sin iniciativas en este horizonte."}</td></tr>}
@@ -1131,7 +1131,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
 }
 
 function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="label flex items-center !text-[8.5px]">{label}{help && <FieldHelp text={help} />}</span><div className="mt-1">{children}</div></label>;
+  return <label className="block min-w-0"><span className="label flex items-center !text-[11px]">{label}{help && <FieldHelp text={help} />}</span><div className="mt-1">{children}</div></label>;
 }
 
 /** Botón «?» junto al rótulo: abre una nota breve de cómo se construye el campo (método de la plataforma). */
@@ -1141,7 +1141,7 @@ function FieldHelp({ text }: { text: string }) {
   return (
     <span className="relative ml-1 inline-flex">
       <button type="button" onClick={(e) => { e.preventDefault(); setDerecha(e.currentTarget.getBoundingClientRect().left + 270 > window.innerWidth); setOpen((v) => !v); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label="Cómo se construye este campo" title="Cómo se construye este campo" className={`inline-flex h-4 w-4 items-center justify-center rounded-full ${open ? "bg-cyan-deep text-white" : "text-faint hover:bg-surface-2 hover:text-ink"}`}><HelpCircle size={11} /></button>
-      {open && <span className={`absolute top-5 z-30 block w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-surface px-3 py-2 text-[11px] font-normal normal-case tracking-normal leading-snug text-ink shadow-lg sm:w-72 ${derecha ? "right-0" : "left-0"}`}>{text}</span>}
+      {open && <span className={`absolute top-5 z-30 block w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-surface px-3 py-2 text-[12px] font-normal normal-case tracking-normal leading-snug text-ink shadow-lg sm:w-72 ${derecha ? "right-0" : "left-0"}`}>{text}</span>}
     </span>
   );
 }
@@ -1197,35 +1197,35 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <div className="relative w-[200px]">
                   <img src={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} alt={`QR de acceso a ${row.label}`} className={`w-[200px] rounded-xl border border-line bg-white p-2 ${row.enabled ? "" : "opacity-25 grayscale"}`} />
-                  {!row.enabled && <span className="absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-lg bg-ink px-2 py-1.5 text-center text-[11px] font-extrabold text-white">QR desactivado</span>}
+                  {!row.enabled && <span className="absolute inset-x-2 top-1/2 -translate-y-1/2 rounded-lg bg-ink px-2 py-1.5 text-center text-[12px] font-extrabold text-white">QR desactivado</span>}
                 </div>
                 <div className="min-w-0 space-y-2.5 text-[12.5px]">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[14px] font-extrabold text-ink">{row.label}</span>
-                    <span className={`chip !py-0 text-[9.5px] ${row.enabled ? "chip-ok" : "chip-bad"}`}>{row.enabled ? "activo: se puede entrar" : "desactivado: nadie entra"}</span>
-                    <span className="chip chip-gold !py-0 text-[9.5px]">miembro: ve y califica lo de su tribu · líder: además registra OKR y vincula iniciativas</span>
+                    <span className={`chip !py-0 text-[11px] ${row.enabled ? "chip-ok" : "chip-bad"}`}>{row.enabled ? "activo: se puede entrar" : "desactivado: nadie entra"}</span>
+                    <span className="chip chip-gold !py-0 text-[11px]">miembro: ve y califica lo de su tribu · líder: además registra OKR y vincula iniciativas</span>
                   </div>
-                  <p className="text-[11.5px] leading-snug text-muted">{def.what}</p>
-                  <div className="num break-all rounded-lg bg-surface-2 px-3 py-2 text-[11px] text-ink">{row.url}</div>
+                  <p className="text-[12px] leading-snug text-muted">{def.what}</p>
+                  <div className="num break-all rounded-lg bg-surface-2 px-3 py-2 text-[12px] text-ink">{row.url}</div>
                   <div className="rounded-lg border border-line px-3 py-2">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-faint">Desde un computador, sin escanear</div>
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-faint">Desde un computador, sin escanear</div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2">
                       <a href={shortUrl(row.url)} target="_blank" rel="noreferrer" className="num break-all text-[12.5px] font-bold text-cyan-deep hover:underline">{shortUrl(row.url)}</a>
-                      <button type="button" onClick={async () => { await navigator.clipboard.writeText(shortUrl(row.url)); setCopied("corta"); setTimeout(() => setCopied(null), 1500); }} className="btn-ghost !py-1 text-[11px]">{copied === "corta" ? <CheckCircle2 size={11} /> : <Copy size={11} />} Copiar</button>
+                      <button type="button" onClick={async () => { await navigator.clipboard.writeText(shortUrl(row.url)); setCopied("corta"); setTimeout(() => setCopied(null), 1500); }} className="btn-ghost !py-1 text-[12px]">{copied === "corta" ? <CheckCircle2 size={11} /> : <Copy size={11} />} Copiar</button>
                     </div>
-                    <p className="mt-1 text-[10.5px] leading-snug text-faint">Lleva siempre al enlace vigente del QR, aunque se regenere. Se puede escribir a mano o proyectar junto al QR.</p>
+                    <p className="mt-1 text-[12px] leading-snug text-faint">Lleva siempre al enlace vigente del QR, aunque se regenere. Se puede escribir a mano o proyectar junto al QR.</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary !py-1.5 text-[11.5px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
-                    <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost !py-1.5 text-[11.5px]"><Download size={12} /> SVG</a>
-                    <button type="button" onClick={() => { if (confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post(row.section, { regenerate: true }); }} disabled={busy} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40"><RefreshCw size={12} /> Regenerar</button>
-                    <button type="button" onClick={() => { if (row.enabled ? confirm("Al desactivar, nadie podrá entrar escaneando el QR ni por la URL corta hasta que lo actives de nuevo. Quien ya está dentro conserva su sesión. ¿Desactivar?") : true) void post(row.section, { enabled: !row.enabled }); }} disabled={busy} className={`!py-1.5 text-[11.5px] disabled:opacity-40 ${row.enabled ? "btn-ghost" : "btn-primary"}`} title={row.enabled ? "Cerrar la entrada por QR y por la URL corta" : "Volver a permitir la entrada"}>{row.enabled ? "Desactivar QR" : "Activar QR"}</button>
+                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary !py-1.5 text-[12px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
+                    <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost !py-1.5 text-[12px]"><Download size={12} /> SVG</a>
+                    <button type="button" onClick={() => { if (confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post(row.section, { regenerate: true }); }} disabled={busy} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Regenerar</button>
+                    <button type="button" onClick={() => { if (row.enabled ? confirm("Al desactivar, nadie podrá entrar escaneando el QR ni por la URL corta hasta que lo actives de nuevo. Quien ya está dentro conserva su sesión. ¿Desactivar?") : true) void post(row.section, { enabled: !row.enabled }); }} disabled={busy} className={`!py-1.5 text-[12px] disabled:opacity-40 ${row.enabled ? "btn-ghost" : "btn-primary"}`} title={row.enabled ? "Cerrar la entrada por QR y por la URL corta" : "Volver a permitir la entrada"}>{row.enabled ? "Desactivar QR" : "Activar QR"}</button>
                   </div>
                 </div>
               </div>
             );
           })}
-          <p className="text-[11px] text-muted">{meta.agenda}. Imprime el QR en cada mesa y proyéctalo al abrir cada bloque. Quien ya tiene cuenta conserva su rol; quien entra como líder recibe el permiso de edición solo durante esa sesión. «Desactivar QR» cierra la entrada (QR y URL corta) sin cambiar el enlace: sirve antes de empezar y al cerrar cada día; «Regenerar» invalida el enlace para siempre.</p>
+          <p className="text-[12px] text-muted">{meta.agenda}. Imprime el QR en cada mesa y proyéctalo al abrir cada bloque. Quien ya tiene cuenta conserva su rol; quien entra como líder recibe el permiso de edición solo durante esa sesión. «Desactivar QR» cierra la entrada (QR y URL corta) sin cambiar el enlace: sirve antes de empezar y al cerrar cada día; «Regenerar» invalida el enlace para siempre.</p>
         </div>
       )}
     </Modal>
@@ -1258,17 +1258,17 @@ function GuiaTab({ me }: { me: { role: string; responsibleId?: string; qr?: true
   return (
     <div className="space-y-5">
       <Card className="rise p-5 sm:p-6">
-        <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Viernes 23 · de los objetivos a OKR y prioridades ejecutables</div>
+        <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">Viernes 23 · de los objetivos a OKR y prioridades ejecutables</div>
         <h2 className="mt-1 text-[18px] font-extrabold leading-tight text-ink sm:text-[22px]">Siete etapas: la palanca como objetivo del único OKR de cada tribu</h2>
         <p className="mt-2 text-[13px] leading-relaxed text-muted">Cada tribu trabaja en papel (el formato F3) y <b className="text-ink">solo el líder registra en la plataforma</b>; todos los miembros ven y validan desde su celular. Dirección 3x3 es fuente de consulta: los objetivos estratégicos no se modifican. Un OKR por tribu, con el objetivo rector de la palanca y de 2 a 4 resultados clave (máximo 5). Todas las iniciativas se desarrollan en 2027: no hay horizontes, hay trimestre de inicio.</p>
-        <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+        <div className="mt-3 flex flex-wrap gap-1.5 text-[12px]">
           {["Un solo OKR por tribu", "2 a 4 KR, máximo 5", "Cada KR con al menos una iniciativa", "Estratégica solo con 3 o 4 en D, E y M", "Trimestre de inicio T1 a T4 o después", "El líder registra, la tribu valida"].map((x) => <span key={x} className="chip chip-cyan !py-0.5">{x}</span>)}
         </div>
       </Card>
       <div className="grid gap-3 sm:grid-cols-2">
         {ROLES.map((r) => (
           <Card key={r.id} className={`rise p-4 sm:p-5 ${r.id === rol ? "ring-2 ring-cyan-deep/40" : ""}`}>
-            <div className="flex items-center gap-2"><Users size={14} className="text-cyan-deep" /><span className="text-[13.5px] font-extrabold text-ink">{r.titulo}</span>{r.id === rol && <span className="chip chip-cyan !py-0 text-[9.5px]">tu rol</span>}</div>
+            <div className="flex items-center gap-2"><Users size={14} className="text-cyan-deep" /><span className="text-[13.5px] font-extrabold text-ink">{r.titulo}</span>{r.id === rol && <span className="chip chip-cyan !py-0 text-[11px]">tu rol</span>}</div>
             <ul className="mt-2 space-y-1 text-[12px] leading-snug text-ink-soft">{r.hace.map((h, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{h}</span></li>)}</ul>
           </Card>
         ))}
@@ -1279,13 +1279,13 @@ function GuiaTab({ me }: { me: { role: string; responsibleId?: string; qr?: true
             <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface-2/60 px-4 py-2.5 sm:px-5">
               <span className="num flex h-7 w-7 items-center justify-center rounded-full bg-cyan-deep text-[12px] font-extrabold text-white">{e.n}</span>
               <span className="text-[14px] font-extrabold text-ink">{e.titulo}</span>
-              <span className="num ml-auto text-[11px] text-faint">{e.hora}</span>
+              <span className="num ml-auto text-[12px] text-faint">{e.hora}</span>
             </div>
             <div className="grid gap-3 px-4 py-3 sm:grid-cols-2 sm:px-5">
-              <div><div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">En la mesa (F3)</div><ul className="mt-1 space-y-1 text-[12px] leading-snug text-ink-soft">{e.mesa.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}</ul></div>
-              <div><div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">En la plataforma</div><ul className="mt-1 space-y-1 text-[12px] leading-snug text-ink-soft">{e.plataforma.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}</ul></div>
+              <div><div className="num text-[11px] font-bold uppercase tracking-wider text-faint">En la mesa (F3)</div><ul className="mt-1 space-y-1 text-[12px] leading-snug text-ink-soft">{e.mesa.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}</ul></div>
+              <div><div className="num text-[11px] font-bold uppercase tracking-wider text-faint">En la plataforma</div><ul className="mt-1 space-y-1 text-[12px] leading-snug text-ink-soft">{e.plataforma.map((x, i) => <li key={i} className="flex gap-1.5"><span className="text-faint">•</span><span>{x}</span></li>)}</ul></div>
             </div>
-            <div className="border-t border-line px-4 py-2 text-[11.5px] text-muted sm:px-5"><b className="text-ink">Entregable:</b> {e.entrega}</div>
+            <div className="border-t border-line px-4 py-2 text-[12px] text-muted sm:px-5"><b className="text-ink">Entregable:</b> {e.entrega}</div>
           </Card>
         ))}
       </div>
@@ -1414,10 +1414,10 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
         <Scale size={16} className="shrink-0 text-cyan-deep" />
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-extrabold text-ink">Califica las iniciativas de {tribu}</div>
-          <div className="text-[11.5px] text-muted">La calificación está abierta: una iniciativa a la vez, cuatro criterios de 1 a 4, una sola vez por persona.</div>
+          <div className="text-[12px] text-muted">La calificación está abierta: una iniciativa a la vez, cuatro criterios de 1 a 4, una sola vez por persona.</div>
         </div>
         <div className="num text-[12px] font-bold text-ink">{ok} de {n}</div>
-        <button type="button" onClick={() => setPlegado((v) => !v)} className="btn-ghost !py-1 text-[11px]">{plegado ? "Mostrar" : "Ocultar"}</button>
+        <button type="button" onClick={() => setPlegado((v) => !v)} className="btn-ghost !py-1 text-[12px]">{plegado ? "Mostrar" : "Ocultar"}</button>
       </div>
       <div className="h-1.5 bg-surface-2"><div className="h-1.5 transition-all" style={{ width: `${n ? Math.round((100 * ok) / n) : 0}%`, background: "var(--grad-brand)" }} /></div>
       {!plegado && (
@@ -1433,14 +1433,14 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
           {cur && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="num rounded-full bg-cyan-deep px-2.5 py-0.5 text-[11px] font-extrabold text-white">Paso {ok + 1} de {n}</span>
-                {pendientes.length > 1 && <button type="button" onClick={() => setSalto((s) => s + 1)} className="btn-ghost !py-1 text-[11px]" title="Dejar esta para después y pasar a la siguiente">Saltar por ahora</button>}
+                <span className="num rounded-full bg-cyan-deep px-2.5 py-0.5 text-[12px] font-extrabold text-white">Paso {ok + 1} de {n}</span>
+                {pendientes.length > 1 && <button type="button" onClick={() => setSalto((s) => s + 1)} className="btn-ghost !py-1 text-[12px]" title="Dejar esta para después y pasar a la siguiente">Saltar por ahora</button>}
               </div>
               <div className="rounded-xl bg-surface-2/60 px-4 py-3">
-                <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{cur.id} · {obj?.id ?? ""}</div>
+                <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{cur.id} · {obj?.id ?? ""}</div>
                 <div className="text-[15px] font-extrabold leading-snug text-ink">{cur.name}</div>
                 {cur.objetivo && <p className="mt-1 text-[12px] leading-snug text-ink-soft">{cur.objetivo}</p>}
-                {kr && <p className="mt-1.5 text-[11.5px] text-muted">Mueve el resultado clave <b className="text-ink">{kr.code} · {kr.name}</b>{obj ? ` del objetivo «${obj.name}»` : ""}.</p>}
+                {kr && <p className="mt-1.5 text-[12px] text-muted">Mueve el resultado clave <b className="text-ink">{kr.code} · {kr.name}</b>{obj ? ` del objetivo «${obj.name}»` : ""}.</p>}
               </div>
               {error && <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
               <EvaluationForm key={cur.id} saving={saving} rule={rule} confirmOnce onSave={(ev) => guardar(ev as never)} />
@@ -1502,17 +1502,17 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
           {leaderOnly ? <span className="text-[12.5px] font-bold text-ink">{groupName(tribe)}</span>
-            : <select value={tribe} onChange={(e) => { setTribe(e.target.value); setOrder(null); }} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[320px]">{tribes.map((t) => <option key={t.id} value={t.id}>{groupName(t.id)}</option>)}</select>}
-          <span className={`chip !py-0.5 text-[10px] ${tone}`}>{PRIO_STATUS_LABEL[ses.status]}</span>
+            : <select value={tribe} onChange={(e) => { setTribe(e.target.value); setOrder(null); }} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[320px]">{tribes.map((t) => <option key={t.id} value={t.id}>{groupName(t.id)}</option>)}</select>}
+          <span className={`chip !py-0.5 text-[12px] ${tone}`}>{PRIO_STATUS_LABEL[ses.status]}</span>
           <span className="ml-auto flex flex-wrap gap-2">
-            {ses.status === "cerrada" && <button type="button" disabled={busy || own.length === 0} onClick={() => void act("abrir")} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40"><Scale size={12} /> Abrir calificación</button>}
-            {ses.status === "abierta" && <button type="button" disabled={busy} onClick={() => void act("cerrar")} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40"><Lock size={12} /> Cerrar calificación y revisar</button>}
-            {(ses.status === "revision" || ses.status === "abierta") && <button type="button" disabled={busy} onClick={() => void act("guardar")} className={`${ses.status === "revision" ? "btn-primary" : "btn-ghost"} !py-1.5 text-[11.5px] disabled:opacity-40`}><Save size={12} /> Guardar priorización</button>}
-            {(ses.status === "guardada" || ses.status === "revision") && <button type="button" disabled={busy} onClick={() => void act("reabrir")} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40"><RefreshCw size={12} /> Reabrir</button>}
+            {ses.status === "cerrada" && <button type="button" disabled={busy || own.length === 0} onClick={() => void act("abrir")} className="btn-primary !py-1.5 text-[12px] disabled:opacity-40"><Scale size={12} /> Abrir calificación</button>}
+            {ses.status === "abierta" && <button type="button" disabled={busy} onClick={() => void act("cerrar")} className="btn-primary !py-1.5 text-[12px] disabled:opacity-40"><Lock size={12} /> Cerrar calificación y revisar</button>}
+            {(ses.status === "revision" || ses.status === "abierta") && <button type="button" disabled={busy} onClick={() => void act("guardar")} className={`${ses.status === "revision" ? "btn-primary" : "btn-ghost"} !py-1.5 text-[12px] disabled:opacity-40`}><Save size={12} /> Guardar priorización</button>}
+            {(ses.status === "guardada" || ses.status === "revision") && <button type="button" disabled={busy} onClick={() => void act("reabrir")} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Reabrir</button>}
           </span>
         </div>
         {err && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{err}</p>}
-        <p className="mt-2 text-[11px] text-faint">
+        <p className="mt-2 text-[12px] text-faint">
           {ses.status === "cerrada" ? `Mientras no abras la calificación, ${V.members} no pueden calificar.`
             : ses.status === "abierta" ? `Abierta${ses.openedAt ? " a las " + hora(ses.openedAt) : ""}: cada miembro califica una sola vez; el ranking se actualiza en vivo.`
             : ses.status === "revision" ? `Calificación cerrada. Revisa el orden: mueve las iniciativas si ${acomp ? "el comité" : "la tribu"} decide algo distinto al puntaje, y guarda.`
@@ -1524,8 +1524,8 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
               <li key={id} className="flex items-center gap-2 rounded-lg bg-surface-2/60 px-3 py-1.5 text-[12px]">
                 <span className="num w-5 shrink-0 font-extrabold text-faint">{n + 1}</span>
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink">{name(id)}</span>
-                <span className="num shrink-0 text-[11px] text-muted">{scoreOf(id) ?? "—"}</span>
-                <select value={INICIO.some(([v]) => v === startOf(id)) ? startOf(id) : ""} onChange={(e) => void setStart(id, e.target.value)} disabled={busy} className="input shrink-0 !py-0.5 pr-6 !text-[10.5px]" title="Trimestre de inicio propuesto por la tribu"><option value="">Inicio…</option>{INICIO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+                <span className="num shrink-0 text-[12px] text-muted">{scoreOf(id) ?? "—"}</span>
+                <select value={INICIO.some(([v]) => v === startOf(id)) ? startOf(id) : ""} onChange={(e) => void setStart(id, e.target.value)} disabled={busy} className="input shrink-0 !py-0.5 pr-6 !text-[12px]" title="Trimestre de inicio propuesto por la tribu"><option value="">Inicio…</option>{INICIO.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
                 {ses.status === "revision" && <span className="flex shrink-0 gap-0.5">
                   <button type="button" onClick={() => move(id, -1)} disabled={busy || n === 0} className="rounded-md p-1 text-faint hover:text-ink disabled:opacity-30" title="Subir"><ArrowUp size={12} /></button>
                   <button type="button" onClick={() => move(id, 1)} disabled={busy || n === ids.length - 1} className="rounded-md p-1 text-faint hover:text-ink disabled:opacity-30" title="Bajar"><ArrowDown size={12} /></button>
@@ -1534,7 +1534,7 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
             ))}
           </ol>
         )}
-        {ses.status === "revision" && order && <p className="mt-1.5 text-[10.5px] text-warn">Orden ajustado a mano: guarda la priorización para fijarlo.</p>}
+        {ses.status === "revision" && order && <p className="mt-1.5 text-[12px] text-warn">Orden ajustado a mano: guarda la priorización para fijarlo.</p>}
       </div>
     </Card>
   );
@@ -1546,18 +1546,18 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
 function OkrCard({ okr }: { okr: OkrSugerido }) {
   return (
     <div className="rounded-xl border border-line bg-surface px-4 py-3">
-      <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Objetivo</div>
+      <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">Objetivo</div>
       <div className="text-[13.5px] font-extrabold leading-snug text-ink">{okr.objective.name}</div>
       {okr.objective.desc && <p className="mt-1 text-[12px] text-muted">{okr.objective.desc}</p>}
-      {okr.objective.indicator && <p className="mt-0.5 text-[11px] text-muted">Indicador impulsor: {okr.objective.indicator}</p>}
-      {okr.why && <p className="mt-1 text-[11px] italic text-faint">{okr.why}</p>}
-      <div className="num mt-3 text-[10px] font-bold uppercase tracking-wider text-faint">Resultados clave</div>
+      {okr.objective.indicator && <p className="mt-0.5 text-[12px] text-muted">Indicador impulsor: {okr.objective.indicator}</p>}
+      {okr.why && <p className="mt-1 text-[12px] italic text-faint">{okr.why}</p>}
+      <div className="num mt-3 text-[12px] font-bold uppercase tracking-wider text-faint">Resultados clave</div>
       <ol className="mt-1 space-y-1.5">
         {okr.krs.map((k, n) => (
           <li key={n} className="rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
             <div className="font-semibold text-ink">{n + 1}. {k.name} <span className="num font-normal text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span></div>
-            {(k.formula || k.definition) && <div className="mt-0.5 text-[11px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</div>}
-            {k.why && <div className="num mt-0.5 text-[11px] text-faint">{k.why}{k.target !== undefined && k.target !== null && !/→/.test(k.why) ? ` · meta sugerida ${k.target}` : ""}</div>}
+            {(k.formula || k.definition) && <div className="mt-0.5 text-[12px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</div>}
+            {k.why && <div className="num mt-0.5 text-[12px] text-faint">{k.why}{k.target !== undefined && k.target !== null && !/→/.test(k.why) ? ` · meta sugerida ${k.target}` : ""}</div>}
           </li>
         ))}
       </ol>
@@ -1571,7 +1571,7 @@ function OkrEjemploModal({ levers, lever, onClose, onUsar }: { levers: Lever[]; 
     <Modal title={`Ejemplo de OKR completo · ${l?.name ?? lever}`} sub="un objetivo con tres resultados clave; cifras ilustrativas, no son metas de la empresa" onClose={onClose}
       footer={<><button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cerrar</button>{onUsar && <button type="button" onClick={onUsar} className="btn-primary !py-2 text-[12.5px]"><Plus size={13} /> Usar como punto de partida</button>}</>}>
       <OkrCard okr={ejemploPara(lever)} />
-      <p className="mt-3 text-[11px] leading-snug text-faint">Anatomía: el objetivo dice qué cambia y para quién; cada resultado clave trae métrica, unidad, sentido, frecuencia y fórmula, y en el laboratorio se le fijan línea base real, meta, dueño y plazo (2027-T4). Al menos dos resultados clave de resultado de negocio; como máximo uno de hito.</p>
+      <p className="mt-3 text-[12px] leading-snug text-faint">Anatomía: el objetivo dice qué cambia y para quién; cada resultado clave trae métrica, unidad, sentido, frecuencia y fórmula, y en el laboratorio se le fijan línea base real, meta, dueño y plazo (2027-T4). Al menos dos resultados clave de resultado de negocio; como máximo uno de hito.</p>
     </Modal>
   );
 }
@@ -1588,11 +1588,11 @@ function usadasDe(p: { sources?: number[]; krs: { sources?: number[] }[] } | nul
 
 function Refs({ n }: { n?: number[] }) {
   if (!n?.length) return null;
-  return <sup className="num ml-1 text-[9.5px] font-bold text-cyan-deep" title="Hechos de la base de conocimiento en los que se apoya (ver «Fuentes»)">{n.map((x) => `[${x}]`).join("")}</sup>;
+  return <sup className="num ml-1 text-[11px] font-bold text-cyan-deep" title="Hechos de la base de conocimiento en los que se apoya (ver «Fuentes»)">{n.map((x) => `[${x}]`).join("")}</sup>;
 }
 
 function FuentesButton({ onClick }: { onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="btn-ghost !py-1.5 text-[11.5px]" title="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia"><BookOpen size={12} /> Fuentes</button>;
+  return <button type="button" onClick={onClick} className="btn-ghost !py-1.5 text-[12px]" title="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia" aria-label="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia"><BookOpen size={12} /> Fuentes</button>;
 }
 
 function FuentesModal({ fuentes, usadas, onClose }: { fuentes: Evidencia[]; usadas: number[]; onClose: () => void }) {
@@ -1600,11 +1600,11 @@ function FuentesModal({ fuentes, usadas, onClose }: { fuentes: Evidencia[]; usad
   const Item = ({ e, citada }: { e: Evidencia; citada: boolean }) => (
     <li className={`rounded-xl px-3.5 py-2.5 text-[12px] ${citada ? "border border-cyan-deep/30 bg-cyan-wash/40" : "bg-surface-2/60"}`}>
       <div className="flex items-start gap-2">
-        <span className={`num shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold ${citada ? "bg-cyan-deep text-white" : "bg-surface text-faint"}`}>[{e.n}]</span>
+        <span className={`num shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-extrabold ${citada ? "bg-cyan-deep text-white" : "bg-surface text-faint"}`}>[{e.n}]</span>
         <div className="min-w-0 flex-1">
           <p className="leading-snug text-ink">{e.hecho}</p>
-          {e.nota && <p className="mt-0.5 text-[11px] italic leading-snug text-faint">{e.nota}</p>}
-          <p className="mt-1 text-[11px] leading-snug text-muted"><span className="font-semibold text-ink-soft">{e.fuente.editor}</span> · {e.fuente.fecha} · {TIPO_FUENTE[e.fuente.tipo]} · <a href={e.fuente.url} target="_blank" rel="noreferrer" className="text-cyan-deep hover:underline">{e.fuente.titulo}</a></p>
+          {e.nota && <p className="mt-0.5 text-[12px] italic leading-snug text-faint">{e.nota}</p>}
+          <p className="mt-1 text-[12px] leading-snug text-muted"><span className="font-semibold text-ink-soft">{e.fuente.editor}</span> · {e.fuente.fecha} · {TIPO_FUENTE[e.fuente.tipo]} · <a href={e.fuente.url} target="_blank" rel="noreferrer" className="text-cyan-deep hover:underline">{e.fuente.titulo}</a></p>
         </div>
       </div>
     </li>
@@ -1613,14 +1613,14 @@ function FuentesModal({ fuentes, usadas, onClose }: { fuentes: Evidencia[]; usad
     <Modal title="Fuentes de la sugerencia" sub={`base de conocimiento del sector y del país · ${fuentes.length} hechos con fuente verificable, ${citadas.length} citado${citadas.length === 1 ? "" : "s"} por el asistente`} onClose={onClose}
       footer={<button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cerrar</button>}>
       {citadas.length > 0 && <>
-        <div className="num mb-1.5 text-[10px] font-bold uppercase tracking-wider text-faint">Hechos citados en esta propuesta</div>
+        <div className="num mb-1.5 text-[12px] font-bold uppercase tracking-wider text-faint">Hechos citados en esta propuesta</div>
         <ul className="space-y-1.5">{citadas.map((e) => <Item key={e.n} e={e} citada />)}</ul>
       </>}
       {resto.length > 0 && <>
-        <div className={`num mb-1.5 text-[10px] font-bold uppercase tracking-wider text-faint ${citadas.length ? "mt-3" : ""}`}>{citadas.length ? "Otros hechos que recibió el asistente para esta palanca" : "Hechos que recibió el asistente para esta palanca"}</div>
+        <div className={`num mb-1.5 text-[12px] font-bold uppercase tracking-wider text-faint ${citadas.length ? "mt-3" : ""}`}>{citadas.length ? "Otros hechos que recibió el asistente para esta palanca" : "Hechos que recibió el asistente para esta palanca"}</div>
         <ul className="space-y-1.5">{resto.map((e) => <Item key={e.n} e={e} citada={false} />)}</ul>
       </>}
-      <p className="mt-3 text-[10.5px] leading-snug text-faint">El asistente solo puede citar hechos de esta base; las cifras de benchmarks de proveedores y de otros países son órdenes de magnitud, no metas de la empresa. Fuentes revisadas el 18 de octubre de 2026.</p>
+      <p className="mt-3 text-[12px] leading-snug text-faint">El asistente solo puede citar hechos de esta base; las cifras de benchmarks de proveedores y de otros países son órdenes de magnitud, no metas de la empresa. Fuentes revisadas el 18 de octubre de 2026.</p>
     </Modal>
   );
 }
@@ -1639,15 +1639,15 @@ function KrChecklist({ krs, chosen, onToggle, onCrear, creando, nota }: { krs: K
           {onCrear && <input type="checkbox" checked={!!chosen[n]} onChange={(e) => onToggle(n, e.target.checked)} className="mt-0.5" />}
           <span className="min-w-0">
             <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span><Refs n={k.sources} />
-            {(k.formula || k.definition) && <span className="block text-[11px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
-            {k.why && <span className="block text-[11px] italic text-faint">{k.why}</span>}
+            {(k.formula || k.definition) && <span className="block text-[12px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
+            {k.why && <span className="block text-[12px] italic text-faint">{k.why}</span>}
           </span>
         </label>
       ))}
       {onCrear && (
         <div className="flex flex-wrap items-center gap-2 pt-0.5">
           <button type="button" disabled={creando || elegidos.length === 0} onClick={() => onCrear(elegidos)} className="btn-primary !py-1.5 text-[12px] disabled:opacity-40">{creando ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Crear {elegidos.length} KR</button>
-          <span className="text-[11px] leading-snug text-faint">{nota}</span>
+          <span className="text-[12px] leading-snug text-faint">{nota}</span>
         </div>
       )}
     </div>
@@ -1692,23 +1692,23 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
   return (
     <div className="mt-3 rounded-xl border border-dashed border-line px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-faint"><Sparkles size={12} /> Asistente</span>
-        {canEdit && <button type="button" onClick={() => void pedir("sugerir")} disabled={loading || lleno} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={lleno ? "Este objetivo ya tiene el máximo de 5 resultados clave" : "El modelo propone resultados clave complementarios a los registrados; eliges cuáles se crean"}>{loading && modo === "sugerir" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Sugerir KR</button>}
-        <button type="button" onClick={() => void pedir("validar")} disabled={loading || krs.length === 0} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={krs.length ? "El modelo revisa cada resultado clave y el conjunto: resultado y no actividad, medible, base y meta, cobertura del objetivo" : "Primero registra los resultados clave"}>{loading && modo === "validar" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Validar KR</button>
+        <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-faint"><Sparkles size={12} /> Asistente</span>
+        {canEdit && <button type="button" onClick={() => void pedir("sugerir")} disabled={loading || lleno} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40" title={lleno ? "Este objetivo ya tiene el máximo de 5 resultados clave" : "El modelo propone resultados clave complementarios a los registrados; eliges cuáles se crean"}>{loading && modo === "sugerir" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Sugerir KR</button>}
+        <button type="button" onClick={() => void pedir("validar")} disabled={loading || krs.length === 0} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40" title={krs.length ? "El modelo revisa cada resultado clave y el conjunto: resultado y no actividad, medible, base y meta, cobertura del objetivo" : "Primero registra los resultados clave"}>{loading && modo === "validar" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Validar KR</button>
         {fuentes.length > 0 && (sug || val) && <FuentesButton onClick={() => setVerFuentes(true)} />}
-        <span className="text-[11px] leading-snug text-faint">{canEdit ? "Propone KR que falten y revisa los registrados con las reglas del método y la base de conocimiento del sector; nada se guarda sin confirmarlo." : "Revisa los resultados clave de tu tribu con las reglas del método y la base de conocimiento del sector; el líder registra los cambios."}</span>
+        <span className="text-[12px] leading-snug text-faint">{canEdit ? "Propone KR que falten y revisa los registrados con las reglas del método y la base de conocimiento del sector; nada se guarda sin confirmarlo." : "Revisa los resultados clave de tu tribu con las reglas del método y la base de conocimiento del sector; el líder registra los cambios."}</span>
       </div>
       {verFuentes && <FuentesModal fuentes={fuentes} usadas={sug ? usadasDe({ krs: sug.krs }) : val ? usadasDe({ krs: [...val.v.faltantes, ...val.v.krs] }) : []} onClose={() => setVerFuentes(false)} />}
       {error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
       {modo === "sugerir" && sug && (
         <div className="mt-2.5 space-y-1.5">
-          <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Resultados clave propuestos{krs.length ? " (complementan los registrados)" : ""} · marca los que se crean</div>
+          <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">Resultados clave propuestos{krs.length ? " (complementan los registrados)" : ""} · marca los que se crean</div>
           <KrChecklist krs={sug.krs} chosen={sug.chosen} onToggle={(n, v) => setSug({ ...sug, chosen: sug.chosen.map((c, m) => (m === n ? v : c)) })} onCrear={(l) => void crear(l)} creando={creando} nota={nota} />
         </div>
       )}
       {modo === "validar" && val && (
         <div className="mt-2.5 space-y-2">
-          <div className="flex flex-wrap items-center gap-2"><span className={`chip ${VEREDICTO[val.v.veredicto][1]} text-[10.5px]`}>{VEREDICTO[val.v.veredicto][0]}</span></div>
+          <div className="flex flex-wrap items-center gap-2"><span className={`chip ${VEREDICTO[val.v.veredicto][1]} text-[12px]`}>{VEREDICTO[val.v.veredicto][0]}</span></div>
           <p className="text-[12px] leading-snug text-ink">{val.v.resumen}</p>
           <div className="space-y-1.5">
             {val.v.krs.map((e) => { const k = krs.find((x) => x.code === e.code); if (!k) return null; const [label, cls] = ESTADO_KR[e.estado]; return (
@@ -1716,15 +1716,15 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
                 <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
                   <span className="num shrink-0 font-extrabold text-cyan-deep">{e.code}</span>
                   <span className="min-w-0 flex-1 font-semibold text-ink">{k.name}</span>
-                  <span className={`chip ${cls} !py-0 text-[9.5px]`}>{label}</span>
+                  <span className={`chip ${cls} !py-0 text-[11px]`}>{label}</span>
                 </div>
-                <p className="mt-1 text-[11.5px] leading-snug text-muted">{e.comentario}<Refs n={e.sources} /></p>
+                <p className="mt-1 text-[12px] leading-snug text-muted">{e.comentario}<Refs n={e.sources} /></p>
                 {e.propuesta && (
                   <div className="mt-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5">
-                    <div className="num text-[9.5px] font-bold uppercase tracking-wider text-faint">{e.estado === "reemplazar" ? "Resultado clave que lo sustituye" : "Redacción sugerida"}</div>
+                    <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{e.estado === "reemplazar" ? "Resultado clave que lo sustituye" : "Redacción sugerida"}</div>
                     <div className="text-[12px] font-semibold text-ink">{e.propuesta.name}{e.propuesta.unit ? <span className="num font-normal text-muted"> · {e.propuesta.unit}{e.propuesta.goodDirection ? ` · mejor si ${e.propuesta.goodDirection === "down" ? "baja" : "sube"}` : ""}</span> : null}</div>
-                    {(e.propuesta.formula || e.propuesta.definition) && <div className="text-[11px] text-muted">{e.propuesta.definition ? e.propuesta.definition + " " : ""}{e.propuesta.formula ? `Fórmula: ${e.propuesta.formula}` : ""}</div>}
-                    {canEdit && <button type="button" onClick={() => aplicar(k, e.propuesta!)} className="mt-1 text-[11px] font-semibold text-cyan-deep hover:underline">Aplicar en {e.code} y revisar antes de guardar</button>}
+                    {(e.propuesta.formula || e.propuesta.definition) && <div className="text-[12px] text-muted">{e.propuesta.definition ? e.propuesta.definition + " " : ""}{e.propuesta.formula ? `Fórmula: ${e.propuesta.formula}` : ""}</div>}
+                    {canEdit && <button type="button" onClick={() => aplicar(k, e.propuesta!)} className="mt-1 text-[12px] font-semibold text-cyan-deep hover:underline">Aplicar en {e.code} y revisar antes de guardar</button>}
                   </div>
                 )}
               </div>
@@ -1732,11 +1732,11 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
           </div>
           {val.v.faltantes.length > 0 && (
             <div className="space-y-1.5">
-              <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">Resultados clave que faltan para cubrir el objetivo{canEdit ? " · marca los que se crean" : ""}</div>
+              <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">Resultados clave que faltan para cubrir el objetivo{canEdit ? " · marca los que se crean" : ""}</div>
               <KrChecklist krs={val.v.faltantes} chosen={val.chosen} onToggle={(n, v) => setVal({ ...val, chosen: val.chosen.map((c, m) => (m === n ? v : c)) })} onCrear={canEdit && !lleno ? (l) => void crear(l) : undefined} creando={creando} nota={nota} />
             </div>
           )}
-          <p className="text-[10.5px] leading-snug text-faint">Revisión del asistente, no una decisión: {isAcompanamiento(cat.company) ? "el comité discute y el advisor registra" : "la tribu discute y el líder registra"}. Vuelve a validar después de los cambios.</p>
+          <p className="text-[12px] leading-snug text-faint">Revisión del asistente, no una decisión: {isAcompanamiento(cat.company) ? "el comité discute y el advisor registra" : "la tribu discute y el líder registra"}. Vuelve a validar después de los cambios.</p>
         </div>
       )}
     </div>

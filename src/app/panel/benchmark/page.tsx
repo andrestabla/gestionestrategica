@@ -26,9 +26,9 @@ function MissingStat({ label, foot, accent }: { label: string; foot: string; acc
   return (
     <div className="panel relative overflow-hidden px-5 pb-4 pt-4">
       <div className="absolute inset-x-0 top-0 h-[3px] opacity-90" style={{ background: accent ?? "var(--grad-brand)" }} />
-      <div className="text-[11.5px] font-medium leading-snug text-muted">{label}</div>
+      <div className="text-[12px] font-medium leading-snug text-muted">{label}</div>
       <div className="mt-2 flex items-center gap-1.5 text-[13px] font-bold text-ink-soft"><FileWarning size={14} className="text-faint" /> {NO_FINANCIALS}</div>
-      <div className="mt-1.5 text-[11px] text-faint">{foot}</div>
+      <div className="mt-1.5 text-[12px] text-faint">{foot}</div>
     </div>
   );
 }
@@ -94,12 +94,12 @@ export default function BenchmarkPage() {
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[12.5px] transition-colors ${dept === t.name ? "bg-surface-2" : "hover:bg-surface-2/60"}`}>
                     <i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PRESENCE[t.presence][1] }} />
                     <span className="font-bold text-ink">{t.name}</span>
-                    <span className="num ml-auto text-[10.5px] text-faint">{d ? `${d.n} soc. · ${fmtNum(d.share, 1)} %` : "sin sociedades"}</span>
+                    <span className="num ml-auto text-[12px] text-faint">{d ? `${d.n} soc. · ${fmtNum(d.share, 1)} %` : "sin sociedades"}</span>
                     <span className="chip">{PRESENCE[t.presence][0]}</span>
                   </button>
                 );
               })}
-              <div className="pt-2 text-[10.5px] text-faint">{territories.length ? `Otros ${unitNamePl} con sector: ` : `${unitNamePl[0].toUpperCase()}${unitNamePl.slice(1)} con más sociedades del sector: `}{sector.departments.filter((d) => !territories.some((t) => t.name === d.name)).slice(0, 6).map((d) => `${d.name} (${d.n})`).join(", ")}.</div>
+              <div className="pt-2 text-[12px] text-faint">{territories.length ? `Otros ${unitNamePl} con sector: ` : `${unitNamePl[0].toUpperCase()}${unitNamePl.slice(1)} con más sociedades del sector: `}{sector.departments.filter((d) => !territories.some((t) => t.name === d.name)).slice(0, 6).map((d) => `${d.name} (${d.n})`).join(", ")}.</div>
             </div>
           </div>
           {(sel || selSector) && (
@@ -131,7 +131,7 @@ export default function BenchmarkPage() {
           <CardHeader title={bars.metric} sub={home.length ? `pares comparables con domicilio en ${unitNamePl} con sede · línea: mediana del sector` : "pares comparables del país (sin sedes registradas) · línea: mediana del sector"} />
           <div className="px-5 pb-5">
             <PeerBars peers={bars.peers} nationalAvg={bars.nationalAvg} refLabel="mediana del sector" />
-            {!financials && <p className="mt-3 text-[11.5px] text-faint"><FileWarning size={12} className="mr-1 inline" />{NO_FINANCIALS}: las barras muestran solo a los pares.</p>}
+            {!financials && <p className="mt-3 text-[12px] text-faint"><FileWarning size={12} className="mr-1 inline" />{NO_FINANCIALS}: las barras muestran solo a los pares.</p>}
           </div>
         </Card>
         <Card className="rise rise-4">
@@ -139,11 +139,11 @@ export default function BenchmarkPage() {
           {financials ? (
             <div className="overflow-x-auto px-2 pb-3">
               <table className="w-full text-[12.5px]">
-                <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Razón</th><th className="num px-2 py-2 text-right">{company.shortName}</th><th className="num px-2 py-2 text-right">Mediana</th><th className="num px-2 py-2 text-right">Mejor cuartil</th><th className="num px-2 py-2 text-right">Percentil</th></tr></thead>
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Razón</th><th className="num px-2 py-2 text-right">{company.shortName}</th><th className="num px-2 py-2 text-right">Mediana</th><th className="num px-2 py-2 text-right">Mejor cuartil</th><th className="num px-2 py-2 text-right">Percentil</th></tr></thead>
                 <tbody>
                   {cmp.map((c) => (
                     <tr key={c.key} className="border-t border-line" title={c.help}>
-                      <td className="px-3 py-2 text-ink">{c.name}{c.lowerIsBetter && <span className="text-[10px] text-faint"> · menos es mejor</span>}</td>
+                      <td className="px-3 py-2 text-ink">{c.name}{c.lowerIsBetter && <span className="text-[12px] text-faint"> · menos es mejor</span>}</td>
                       <td className="num px-2 py-2 text-right font-extrabold" style={{ color: c.better ? "var(--ok)" : "var(--bad)" }}>{fmtNum(c.value, 1)} {c.unit}</td>
                       <td className="num px-2 py-2 text-right text-muted">{c.median !== null ? fmtNum(c.median, 1) : "—"}</td>
                       <td className="num px-2 py-2 text-right text-muted">{c.best !== null ? fmtNum(c.best, 1) : "—"}</td>
@@ -162,14 +162,14 @@ export default function BenchmarkPage() {
                 <FileWarning size={14} className="mr-1.5 inline text-faint" /><b className="text-ink">{NO_FINANCIALS}.</b> Registre el cierre (ingresos, utilidades, activos y pasivos) en Administración → empresa para comparar sus razones con el sector. Mientras tanto, la referencia del sector:
               </div>
               <table className="mt-3 w-full text-[12.5px]">
-                <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Razón</th><th className="num px-2 py-2 text-right">Mediana</th><th className="num px-2 py-2 text-right">Mejor cuartil</th></tr></thead>
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Razón</th><th className="num px-2 py-2 text-right">Mediana</th><th className="num px-2 py-2 text-right">Mejor cuartil</th></tr></thead>
                 <tbody>
                   {RATIOS.map((r) => {
                     const q = sector.dist[r.key];
                     const best = r.lowerIsBetter ? q.p25 : q.p75;
                     return (
                       <tr key={r.key} className="border-t border-line" title={r.help}>
-                        <td className="px-3 py-2 text-ink">{r.name}{r.lowerIsBetter && <span className="text-[10px] text-faint"> · menos es mejor</span>}</td>
+                        <td className="px-3 py-2 text-ink">{r.name}{r.lowerIsBetter && <span className="text-[12px] text-faint"> · menos es mejor</span>}</td>
                         <td className="num px-2 py-2 text-right text-muted">{q.p50 !== null ? `${fmtNum(q.p50, 1)} ${r.unit}` : "—"}</td>
                         <td className="num px-2 py-2 text-right text-muted">{best !== null ? `${fmtNum(best, 1)} ${r.unit}` : "—"}</td>
                       </tr>
@@ -179,7 +179,7 @@ export default function BenchmarkPage() {
               </table>
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-5 py-3 text-[11.5px] text-faint">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-5 py-3 text-[12px] text-faint">
             {sizeBand && <span className="flex items-center gap-1"><Building2 size={12} /> Franja de ingresos «{sizeBand.band}»: {sizeBand.n} sociedades.</span>}
             <span className="flex items-center gap-1"><Target size={12} /> Verde: igual o mejor que la mediana.</span>
             <span className="flex items-center gap-1"><Database size={12} /> {sector.source.name} · consulta {sector.source.fetchedAt}.</span>

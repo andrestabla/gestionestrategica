@@ -4,5 +4,5 @@ import { withTenant } from "../_helpers";
 import { buildAlerts } from "@/lib/logic";
 
 export const GET = withTenant(async (_req: Request, _ctx: unknown, _user) => {
-  return NextResponse.json({ alerts: buildAlerts(tenantView()) });
+  return NextResponse.json({ alerts: tenantView().current.id === "A0" ? [] : buildAlerts(tenantView()) });
 });

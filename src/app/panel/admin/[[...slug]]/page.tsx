@@ -55,23 +55,23 @@ function ActividadTab() {
         <StatCard label="Personas activas" value={activeUsers} foot="con alguna acción en los últimos 10 min" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Acciones · 10 min" value={ultimos10} foot="registradas en la base" />
         <StatCard label="Acciones cargadas" value={events.length} foot="las 300 más recientes" />
-        <Card className="rise p-4"><div className="label !text-[8.5px]">Actualizado</div><div className="num mt-1 text-[20px] font-extrabold text-ink">{at ? hora(at) : "—"}</div><div className="text-[10.5px] text-faint">{vivo ? "cada 10 segundos" : "en pausa"}</div></Card>
+        <Card className="rise p-4"><div className="label !text-[11px]">Actualizado</div><div className="num mt-1 text-[20px] font-extrabold text-ink">{at ? hora(at) : "—"}</div><div className="text-[12px] text-faint">{vivo ? "cada 10 segundos" : "en pausa"}</div></Card>
       </div>
       <Card className="rise overflow-hidden">
         <CardHeader title="Actividad en vivo" sub="entradas por QR, OKR y KR registrados, iniciativas, calificaciones, decisiones y cambios de cuentas"
           right={<span className="flex flex-wrap items-center gap-1.5">
-            <input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar persona, correo o acción…" className="input w-full !py-1.5 !text-[11.5px] sm:w-[220px]" />
-            <select value={rol} onChange={(e) => setRol(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[11.5px]"><option value="">Todos los roles</option>{Object.entries(ROLE_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost !py-1.5 text-[11.5px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
+            <input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar persona, correo o acción…" className="input w-full !py-1.5 !text-[12px] sm:w-[220px]" />
+            <select value={rol} onChange={(e) => setRol(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[12px]"><option value="">Todos los roles</option>{Object.entries(ROLE_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost !py-1.5 text-[12px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
           </span>} />
         {error && <p className="px-5 py-3 text-[12px] text-bad">{error}</p>}
         {lista.length === 0 && !error && <p className="px-5 py-6 text-[12.5px] text-muted">Sin actividad todavía{q || rol ? " con ese filtro" : ""}.</p>}
         <ul className="divide-y divide-line">
           {lista.map((e) => (
             <li key={e.id} className="grid grid-cols-[64px_1fr] gap-x-3 gap-y-0.5 px-4 py-2 text-[12px] sm:grid-cols-[72px_200px_1fr] sm:px-5">
-              <span className="num text-[11px] text-faint">{hora(e.at)}</span>
-              <span className="min-w-0 truncate"><span className="font-semibold text-ink">{e.actor}</span> <span className="chip !py-0 text-[9px]">{ROLE_SHORT[e.role] ?? e.role}</span><span className="num block truncate text-[10px] text-faint sm:hidden">{e.email}</span></span>
-              <span className="col-start-2 min-w-0 text-ink-soft sm:col-start-3"><span className="num mr-1 text-[10.5px] text-faint">{e.entityId}</span>{e.change}</span>
+              <span className="num text-[12px] text-faint">{hora(e.at)}</span>
+              <span className="min-w-0 truncate"><span className="font-semibold text-ink">{e.actor}</span> <span className="chip !py-0 text-[11px]">{ROLE_SHORT[e.role] ?? e.role}</span><span className="num block truncate text-[12px] text-faint sm:hidden">{e.email}</span></span>
+              <span className="col-start-2 min-w-0 text-ink-soft sm:col-start-3"><span className="num mr-1 text-[12px] text-faint">{e.entityId}</span>{e.change}</span>
             </li>
           ))}
         </ul>
@@ -162,7 +162,7 @@ function ScopeSelects({ line, responsibleId, responsibles, disabled, compact, on
   line?: number; responsibleId?: string; responsibles: ResponsibleLite[]; disabled?: boolean; compact?: boolean;
   onChange: (patch: { line?: number | null; responsibleId?: string | null }) => void;
 }) {
-  const cls = compact ? "input w-auto max-w-[230px] !py-1 pr-7 !text-[11.5px]" : "input !py-2 text-[12px]";
+  const cls = compact ? "input w-auto max-w-[230px] !py-1 pr-7 !text-[12px]" : "input !py-2 text-[12px]";
   return (
     <div className={compact ? "flex flex-wrap gap-1.5" : "space-y-2"}>
       <select value={line ?? ""} disabled={disabled} title="Capacidad (rige las prácticas del diagnóstico y lo que no tiene responsable)"
@@ -218,13 +218,13 @@ function EmpresasTab() {
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
-            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary !py-1.5 text-[11.5px]"><Building2 size={12} /> Nueva empresa</button>} />
+            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary !py-1.5 text-[12px]"><Building2 size={12} /> Nueva empresa</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-line-strong bg-surface-2/60">
                   {["Empresa", "Sector · ciudad", "Origen", "Estado", ""].map((h) => (
-                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>
+                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[11px]">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -232,10 +232,10 @@ function EmpresasTab() {
                 {companies.map((c) => (
                   <tr key={c.slug} className={`border-b border-line last:border-0 ${c.active ? "" : "opacity-50"} ${me.company?.slug === c.slug ? "bg-cyan-wash/40" : ""}`}>
                     <td className="px-4 py-2.5">
-                      <div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[9.5px]">activa</span>}</div>
-                      <div className="num text-[10px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div>
+                      <div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[11px]">activa</span>}</div>
+                      <div className="num text-[12px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div>
                     </td>
-                    <td className="px-4 py-2.5 text-muted">{c.sector || "—"}<div className="text-[10.5px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}{c.country === "EC" ? " · Ecuador · USD" : ""}</div></td>
+                    <td className="px-4 py-2.5 text-muted">{c.sector || "—"}<div className="text-[12px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}{c.country === "EC" ? " · Ecuador · USD" : ""}</div></td>
                     <td className="px-4 py-2.5"><span className="chip">{c.template === "demo" ? "Plantilla demo" : "Vacía"}</span></td>
                     <td className="px-4 py-2.5"><span className={`chip ${c.active ? "chip-ok" : "chip-bad"}`}>{c.active ? "Activa" : "Desactivada"}</span></td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-right">
@@ -245,7 +245,7 @@ function EmpresasTab() {
                       <button disabled={saving} onClick={() => setOpen(c)} title="Editar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
                       <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                       {c.slug !== "andina" && (
-                        <button disabled={saving} title="Eliminar con todos sus datos"
+                        <button disabled={saving} title="Eliminar con todos sus datos" aria-label="Eliminar con todos sus datos"
                           onClick={() => { if (window.confirm(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
                           className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
                       )}
@@ -262,7 +262,7 @@ function EmpresasTab() {
             onSubmit={async (input) => { const ok = await call(editing ? "PATCH" : "POST", editing ? { slug: editing.slug, ...input } : input); if (ok) setOpen(null); return ok; }} />
         )}
       </div>
-      <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
+      <p className="mt-5 flex items-start gap-2 text-[12px] leading-relaxed text-faint">
         <ShieldCheck size={12} className="mt-0.5 shrink-0" />
         Los roles (advisor, líder, responsable, junta) valen solo dentro de su empresa. Como admin de la plataforma operas la empresa activa que elijas en el menú lateral; la demo (Andina) no se elimina, solo se desactiva.
       </p>
@@ -326,7 +326,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   return (
     <>
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
-      {notice && <div className="mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, white)" }}><MailCheck size={14} className="shrink-0" style={{ color: "var(--ok)" }} />{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto text-[11px] text-faint hover:text-ink">Cerrar</button></div>}
+      {notice && <div className="mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, white)" }}><MailCheck size={14} className="shrink-0" style={{ color: "var(--ok-text)" }} />{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto text-[12px] text-faint hover:text-ink">Cerrar</button></div>}
       {created && (
         <div className="mb-4 rounded-xl border border-line bg-surface px-4 py-3 text-[12px] text-ink" style={{ boxShadow: "var(--e1)" }}>
           <div className="font-bold">Cuenta creada: {created.name} · <span className="num font-normal text-muted">{created.email}</span></div>
@@ -334,24 +334,24 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span className="text-muted">Contraseña generada (se muestra una sola vez):</span>
               <code className="num rounded-md bg-surface-2 px-2 py-0.5 text-[12.5px] font-bold tracking-wide">{created.password}</code>
-              <button type="button" onClick={() => { void navigator.clipboard?.writeText(created.password!); }} className="btn-ghost !py-1 text-[11px]"><Copy size={12} /> Copiar</button>
+              <button type="button" onClick={() => { void navigator.clipboard?.writeText(created.password!); }} className="btn-ghost !py-1 text-[12px]"><Copy size={12} /> Copiar</button>
             </div>
           )}
-          <div className="mt-1 text-[11px] text-faint">{created.mailed ? "Correo de bienvenida enviado con el enlace de entrada, el correo y la contraseña." : created.mailError ? `No se envió el correo: ${created.mailError}` : "Sin correo de bienvenida: comparte el acceso por otro medio."}</div>
-          <button type="button" onClick={() => setCreated(null)} className="mt-1.5 text-[11px] text-faint hover:text-ink">Cerrar</button>
+          <div className="mt-1 text-[12px] text-faint">{created.mailed ? "Correo de bienvenida enviado con el enlace de entrada, el correo y la contraseña." : created.mailError ? `No se envió el correo: ${created.mailError}` : "Sin correo de bienvenida: comparte el acceso por otro medio."}</div>
+          <button type="button" onClick={() => setCreated(null)} className="mt-1.5 text-[12px] text-faint hover:text-ink">Cerrar</button>
         </div>
       )}
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
             sub="roles válidos solo en esta empresa · desactivar conserva la cuenta; eliminar la borra (no la propia)"
-            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary !py-1.5 text-[11.5px]"><UserPlus size={12} /> Nueva cuenta</button>} />
+            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary !py-1.5 text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-line-strong bg-surface-2/60">
                   {["Usuario", "Rol", "Ámbito", "Estado", canCompanies ? "Empresa" : ""].map((h) => (
-                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[8.5px]">{h}</th>
+                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[11px]">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -360,12 +360,12 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                   <tr key={u.email} className={`border-b border-line last:border-0 ${u.active ? "" : "opacity-45"}`}>
                     <td className="min-w-[180px] px-4 py-2.5">
                       <div className="font-semibold text-ink">{u.name}</div>
-                      <div className="num break-all text-[10px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div>
+                      <div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div>
                     </td>
                     <td className="px-4 py-2.5">
                       <select value={u.role} disabled={saving}
                         onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })}
-                        className="input w-auto !py-1 pr-7 !text-[11.5px]">
+                        className="input w-auto !py-1 pr-7 !text-[12px]">
                         {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => (
                           <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                         ))}
@@ -388,7 +388,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                       {canCompanies && companies.length > 1 && (
                         <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa"
                           onChange={(e) => { if (e.target.value && e.target.value !== me.company?.slug && window.confirm(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
-                          className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[11px]">
+                          className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[12px]">
                           {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
                         </select>
                       )}
@@ -423,7 +423,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         )}
       </div>
 
-      <p className="mt-5 flex items-start gap-2 text-[10.5px] leading-relaxed text-faint">
+      <p className="mt-5 flex items-start gap-2 text-[12px] leading-relaxed text-faint">
         <ShieldCheck size={12} className="mt-0.5 shrink-0" />
         Reglas del servidor: no puedes desactivar ni eliminar tu propia cuenta y debe quedar al menos un
         administrador activo. Contraseñas: al crear la cuenta se fija manual o automática y puede enviarse por correo;
@@ -483,14 +483,14 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
           <>
             <ScopeSelects line={line} responsibleId={responsibleId} responsibles={responsibles}
               onChange={(p) => { if (p.line !== undefined) setLine(p.line ?? undefined); if (p.responsibleId !== undefined) setResponsibleId(p.responsibleId ?? undefined); }} />
-            <p className="text-[10.5px] leading-snug text-faint">
+            <p className="text-[12px] leading-snug text-faint">
               Con responsable (tribu, área), edita y evalúa solo lo que tiene ese dueño; la capacidad rige las prácticas del diagnóstico. Hace falta al menos uno.
             </p>
           </>
         )}
         <div className="rounded-xl bg-surface-2/60 px-3 py-2.5">
-          <div className="label !text-[9px]">Contraseña</div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11.5px]">
+          <div className="label !text-[11px]">Contraseña</div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[12px]">
             {([["auto", "Automática (generada)"], ["manual", "Manual"], ["none", "Sin contraseña (entra por QR o la fija con «¿Olvidaste tu contraseña?»)"]] as const).map(([k, l]) => (
               <label key={k} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-2 py-1" style={pwdMode === k ? { background: "var(--navy)", color: "white", borderColor: "var(--navy)" } : undefined}>
                 <input type="radio" name="pwd" checked={pwdMode === k} onChange={() => setPwdMode(k)} className="hidden" />{l}
@@ -499,12 +499,12 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
           </div>
           {pwdMode === "manual" && <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 10 caracteres" autoComplete="new-password" className="input mt-2 !py-2 text-[12px]" />}
           {pwdMode !== "none" && (
-            <label className="mt-2 flex items-start gap-2 text-[11.5px] text-ink-soft">
+            <label className="mt-2 flex items-start gap-2 text-[12px] text-ink-soft">
               <input type="checkbox" checked={sendWelcome} onChange={(e) => setSendWelcome(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[var(--navy)]" />
               <span>Enviar correo de bienvenida con el acceso (enlace de entrada, correo y contraseña). Requiere AWS SES configurado.</span>
             </label>
           )}
-          {pwdMode === "auto" && <p className="mt-1.5 text-[10.5px] leading-snug text-faint">La contraseña generada se muestra una sola vez al crear la cuenta.</p>}
+          {pwdMode === "auto" && <p className="mt-1.5 text-[12px] leading-snug text-faint">La contraseña generada se muestra una sola vez al crear la cuenta.</p>}
         </div>
       </div>
     </Modal>
@@ -544,9 +544,9 @@ function PermisosTab() {
           <table className="w-full min-w-[680px] text-[12px]">
             <thead>
               <tr className="border-b border-line-strong">
-                <th className="label px-2 py-2 text-left !text-[8.5px]">Acción</th>
+                <th className="label px-2 py-2 text-left !text-[11px]">Acción</th>
                 {ROLES.map((r) => (
-                  <th key={r} className="label px-2 py-2 text-center !text-[8.5px]">{r.toLowerCase()}</th>
+                  <th key={r} className="label px-2 py-2 text-center !text-[11px]">{r.toLowerCase()}</th>
                 ))}
               </tr>
             </thead>
@@ -554,17 +554,17 @@ function PermisosTab() {
               {(Object.keys(PERMISSION_MATRIX) as Action[]).map((a) => (
                 <tr key={a} className="border-b border-line last:border-0">
                   <td className="px-2 py-2">
-                    <div className="num text-[10px] font-bold text-cyan-deep">{a}</div>
-                    <div className="text-[11px] leading-snug text-muted">{ACTION_DESC[a]}</div>
+                    <div className="num text-[12px] font-bold text-cyan-deep">{a}</div>
+                    <div className="text-[12px] leading-snug text-muted">{ACTION_DESC[a]}</div>
                   </td>
                   {ROLES.map((r) => {
                     const grant = PERMISSION_MATRIX[a][r];
                     return (
                       <td key={r} className="px-2 py-2 text-center">
                         {grant === true ? (
-                          <Check size={15} className="inline" style={{ color: "var(--ok)" }} />
+                          <Check size={15} className="inline" style={{ color: "var(--ok-text)" }} />
                         ) : grant === "line" ? (
-                          <span className="chip chip-cyan !py-0 !text-[8.5px]">su ámbito</span>
+                          <span className="chip chip-cyan !py-0 !text-[11px]">su ámbito</span>
                         ) : (
                           <Minus size={14} className="inline text-faint" />
                         )}
@@ -586,13 +586,13 @@ function PermisosTab() {
               <div className="text-[12px] font-bold text-ink">{m}</div>
               <div className="mt-0.5 flex flex-wrap gap-1">
                 {MODULE_ACTIONS[m].map((a) => (
-                  <span key={a} className="num chip !py-0 !text-[8px]">{a}</span>
+                  <span key={a} className="num chip !py-0 !text-[11px]">{a}</span>
                 ))}
               </div>
             </div>
           ))}
         </div>
-        <div className="border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
+        <div className="border-t border-line px-5 py-2.5 text-[12px] text-faint">
           La matriz es código versionado (única fuente de verdad, cubierta por tests). La edición de
           permisos por empresa llega con la fase multi-empresa; hoy los ajustes se hacen por rol.
         </div>
@@ -632,7 +632,7 @@ function IntegracionesTab() {
             onSaved={refetch} onError={setError} />
         ))}
       </div>
-      <p className="mt-5 text-[10.5px] leading-relaxed text-faint">
+      <p className="mt-5 text-[12px] leading-relaxed text-faint">
         Los secretos se validan por formato, se guardan solo en el servidor y vuelven enmascarados
         (últimos 4 caracteres). En local viven en memoria (se limpian con el reset del demo); en
         despliegue pasan a variables de entorno del proveedor.
@@ -677,8 +677,8 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
       <div className="flex items-start justify-between gap-2 px-5 pb-1 pt-4">
         <div>
           <div className="text-[14px] font-extrabold text-ink">{it.name}</div>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted">{it.purpose}</p>
-          {it.source === "entorno" && <p className="mt-1 text-[10.5px] font-semibold text-ok">Configurada por variables de entorno del despliegue; los valores guardados aquí la sustituyen.</p>}
+          <p className="mt-0.5 text-[12px] leading-snug text-muted">{it.purpose}</p>
+          {it.source === "entorno" && <p className="mt-1 text-[12px] font-semibold text-ok">Configurada por variables de entorno del despliegue; los valores guardados aquí la sustituyen.</p>}
         </div>
         <span className={`chip shrink-0 ${it.enabled ? "chip-ok" : it.configured ? "chip-cyan" : ""}`}>
           {it.enabled ? "Activa" : it.configured ? "Configurada" : "Sin configurar"}
@@ -687,34 +687,34 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
       <div className="space-y-2 px-5 py-3">
         {it.fields.map((f) => (
           <label key={f.key} className="block">
-            <span className="label !text-[8.5px]">{f.label}</span>
+            <span className="label !text-[11px]">{f.label}</span>
             <input
               type={f.secret ? "password" : "text"}
               value={draft[f.key] ?? f.value}
               onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
               placeholder={f.placeholder}
               autoComplete="off"
-              className="input mt-1 !py-1.5 font-mono !text-[11.5px]" />
+              className="input mt-1 !py-1.5 font-mono !text-[12px]" />
           </label>
         ))}
         <div className="flex gap-2 pt-1">
           <button onClick={() => post({ fields: draft })} disabled={saving || !dirty}
-            className="btn-primary flex-1 !py-1.5 text-[11.5px] disabled:opacity-40">
+            className="btn-primary flex-1 !py-1.5 text-[12px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
           </button>
           {(it.key === "ses" || it.key === "r2") && it.configured && (
-            <button onClick={testSend} disabled={saving} className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
+            <button onClick={testSend} disabled={saving} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"} aria-label={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
           )}
           <button onClick={() => post({ enabled: !it.enabled })}
             disabled={saving || (!it.enabled && !it.configured) || it.source === "entorno"}
             title={it.source === "entorno" ? "Rige la configuración del entorno; para cambiarla, guarda valores propios" : !it.configured && !it.enabled ? "Completa la configuración primero" : undefined}
-            className="btn-ghost !py-1.5 text-[11.5px] disabled:opacity-40">
+            className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40">
             {it.enabled ? "Desactivar" : "Activar"}
           </button>
         </div>
-        {testMsg && <p className="text-[11px] font-semibold text-ok">{testMsg}</p>}
+        {testMsg && <p className="text-[12px] font-semibold text-ok">{testMsg}</p>}
         {it.updatedBy && (
-          <p className="num text-[9px] text-faint">
+          <p className="num text-[11px] text-faint">
             Última edición: {it.updatedBy} · {it.at ? new Date(it.at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
           </p>
         )}
@@ -729,7 +729,7 @@ function ErrorBanner({ error, onClose }: { error: string; onClose: () => void })
   return (
     <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
       style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
-      <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} />
+      <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
       <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
       <button onClick={onClose} className="text-faint hover:text-ink"><X size={14} /></button>
     </div>

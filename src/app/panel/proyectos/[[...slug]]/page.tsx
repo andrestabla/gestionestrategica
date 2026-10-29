@@ -224,7 +224,7 @@ export default function ProyectosPage() {
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
           style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} />
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
           <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
           <button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
         </div>
@@ -259,11 +259,11 @@ export default function ProyectosPage() {
       {data.slippage.tasksShifted > 0 && (
         <div className="rise rise-2 mb-5 flex items-center gap-2.5 rounded-xl px-4 py-2.5"
           style={{ background: "color-mix(in srgb, var(--warn) 9%, white)" }}>
-          <CalendarRange size={14} style={{ color: "var(--warn)" }} />
+          <CalendarRange size={14} style={{ color: "var(--warn-text)" }} />
           <p className="text-[12px] text-ink-soft">
             <b>Deslizamiento del cronograma:</b> {data.slippage.tasksShifted} tarea{data.slippage.tasksShifted > 1 ? "s" : ""} reprogramada{data.slippage.tasksShifted > 1 ? "s" : ""} frente a la línea base ·{" "}
-            <b className="num" style={{ color: "var(--bad)" }}>+{data.slippage.daysLost} días perdidos</b>
-            {data.slippage.daysGained > 0 && <> · <span className="num" style={{ color: "var(--ok)" }}>−{data.slippage.daysGained} recuperados</span></>}
+            <b className="num" style={{ color: "var(--bad-text)" }}>+{data.slippage.daysLost} días perdidos</b>
+            {data.slippage.daysGained > 0 && <> · <span className="num" style={{ color: "var(--ok-text)" }}>−{data.slippage.daysGained} recuperados</span></>}
           </p>
         </div>
       )}
@@ -273,17 +273,17 @@ export default function ProyectosPage() {
         <div className="rise rise-2 mb-5 flex flex-wrap gap-2">
           {data.alerts.slice(0, 4).map((a) => (
             <button key={a.id} onClick={() => setOpenTask(a.taskId)}
-              className="flex max-w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[11.5px] transition-transform hover:-translate-y-0.5"
+              className="flex max-w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[12px] transition-transform hover:-translate-y-0.5"
               style={{ background: a.severity === 1 ? "color-mix(in srgb, var(--bad) 9%, white)" : "color-mix(in srgb, var(--warn) 10%, white)" }}>
               {a.kind === "TAREA_BLOQUEADA"
-                ? <Lock size={12} className="shrink-0" style={{ color: "var(--bad)" }} />
+                ? <Lock size={12} className="shrink-0" style={{ color: "var(--bad-text)" }} />
                 : <AlertTriangle size={12} className="shrink-0" style={{ color: a.severity === 1 ? "var(--bad)" : "var(--warn)" }} />}
               <span className="min-w-0 max-w-[300px] truncate font-semibold text-ink">{a.title}</span>
-              <span className="num text-[10px] text-muted">{a.ownerName.split(" ")[0]}</span>
+              <span className="num text-[12px] text-muted">{a.ownerName.split(" ")[0]}</span>
             </button>
           ))}
           {data.alerts.length > 4 && (
-            <span className="self-center text-[11px] text-faint">+{data.alerts.length - 4} más en el panel</span>
+            <span className="self-center text-[12px] text-faint">+{data.alerts.length - 4} más en el panel</span>
           )}
         </div>
       )}
@@ -303,7 +303,7 @@ export default function ProyectosPage() {
         <span className="mx-1 h-4 w-px bg-line-strong" />
         {data.people.filter((p) => tasks.some((t) => t.assigneeId === p.id)).map((p) => (
           <button key={p.id} onClick={() => setPersonFilter(personFilter === p.id ? null : p.id)}
-            className={`num grid h-7 w-7 cursor-pointer place-items-center rounded-full text-[9.5px] font-extrabold transition-all ${
+            className={`num grid h-7 w-7 cursor-pointer place-items-center rounded-full text-[11px] font-extrabold transition-all ${
               personFilter === p.id
                 ? "text-white shadow-md ring-2 ring-cyan ring-offset-1"
                 : "bg-surface-2 text-ink-soft hover:bg-surface-3"}`}
@@ -326,11 +326,11 @@ export default function ProyectosPage() {
                 return (
                   <div key={col} className="rounded-2xl bg-surface-2/70 p-2">
                     <div className="mb-2 flex items-baseline justify-between px-2 pt-1">
-                      <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-ink-soft">
+                      <span className="flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-wide text-ink-soft">
                         <i className="h-2 w-2 rounded-full" style={{ background: meta.color }} />
                         {meta.label}
                       </span>
-                      <span className="num text-[10px] font-bold text-faint">{colTasks.length}</span>
+                      <span className="num text-[12px] font-bold text-faint">{colTasks.length}</span>
                     </div>
                     <div className="space-y-2">
                       {colTasks.map((t) => (
@@ -338,7 +338,7 @@ export default function ProyectosPage() {
                           onOpen={() => setOpenTask(t.id)} />
                       ))}
                       {colTasks.length === 0 && (
-                        <div className="rounded-xl px-3 py-4 text-center text-[10.5px] italic text-faint">Sin tareas</div>
+                        <div className="rounded-xl px-3 py-4 text-center text-[12px] italic text-faint">Sin tareas</div>
                       )}
                     </div>
                   </div>
@@ -355,7 +355,7 @@ export default function ProyectosPage() {
                   <div className="mb-2 grid" style={{ gridTemplateColumns: `240px repeat(${MONTHS.length}, 1fr)` }}>
                     <div />
                     {MONTHS.map((m, i) => (
-                      <div key={i} className="num border-l border-line text-center text-[9px] font-bold text-faint">
+                      <div key={i} className="num border-l border-line text-center text-[11px] font-bold text-faint">
                         {m.label}
                       </div>
                     ))}
@@ -365,7 +365,7 @@ export default function ProyectosPage() {
                       .sort((a, b) => a.start.localeCompare(b.start));
                     return (
                       <div key={ini.id} className="border-t border-line py-1.5">
-                        <div className="mb-1 text-[11.5px] font-bold text-ink">{ini.name}</div>
+                        <div className="mb-1 text-[12px] font-bold text-ink">{ini.name}</div>
                         {mine.map((t) => {
                           const s = Math.max(0, monthIndex(t.start));
                           const e = Math.min(MONTHS.length - 1, Math.max(s, monthIndex(t.due)));
@@ -375,7 +375,7 @@ export default function ProyectosPage() {
                             <div key={t.id} className="grid items-center"
                               style={{ gridTemplateColumns: `240px repeat(${MONTHS.length}, 1fr)` }}>
                               <button onClick={() => setOpenTask(t.id)}
-                                className="truncate pr-3 text-left text-[10.5px] text-muted transition-colors hover:text-ink">
+                                className="truncate pr-3 text-left text-[12px] text-muted transition-colors hover:text-ink">
                                 {t.title}
                               </button>
                               {MONTHS.map((_, mi) => (
@@ -400,7 +400,7 @@ export default function ProyectosPage() {
                   })}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-2.5 text-[10.5px] text-muted">
+              <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-2.5 text-[12px] text-muted">
                 {COLUMNS.map((c) => (
                   <span key={c} className="flex items-center gap-1.5">
                     <i className="h-2 w-4 rounded-full" style={{ background: TASK_STATUS_META[c].color }} />
@@ -424,7 +424,7 @@ export default function ProyectosPage() {
                   <thead>
                     <tr className="border-b border-line-strong">
                       {["Persona", "Cargo", "Abiertas", "Vencidas", "Vencen pronto", "Hechas", "Carga"].map((h) => (
-                        <th key={h} className="label px-3 pb-2 text-left !text-[8.5px]">{h}</th>
+                        <th key={h} className="label px-3 pb-2 text-left !text-[11px]">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -436,7 +436,7 @@ export default function ProyectosPage() {
                           <td className="px-3 py-2.5">
                             <button onClick={() => { setPersonFilter(w.personId); setView("tablero"); }}
                               className="flex items-center gap-2.5 text-left">
-                              <span className="num grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-extrabold text-white"
+                              <span className="num grid h-8 w-8 shrink-0 place-items-center rounded-full text-[12px] font-extrabold text-white"
                                 style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>
                                 {initials(w.name)}
                               </span>
@@ -462,7 +462,7 @@ export default function ProyectosPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
+              <div className="border-t border-line px-5 py-2.5 text-[12px] text-faint">
                 Personas ficticias de demostración; en operación el directorio se sincroniza con talento humano.
               </div>
             </Card>
@@ -528,10 +528,10 @@ function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; on
   return (
     <button onClick={onOpen} className="panel panel-lift block w-full p-3 text-left">
       <div className="text-[12px] font-bold leading-snug text-ink">{t.title}</div>
-      <div className="mt-1.5 truncate text-[9.5px] text-faint">{ini?.name ?? t.iniId.toUpperCase()}</div>
+      <div className="mt-1.5 truncate text-[11px] text-faint">{ini?.name ?? t.iniId.toUpperCase()}</div>
       <div className="mt-2 flex items-center justify-between">
         <span className="flex items-center -space-x-1.5">
-          <span className="num grid h-6 w-6 place-items-center rounded-full text-[8.5px] font-extrabold text-white ring-2 ring-surface"
+          <span className="num grid h-6 w-6 place-items-center rounded-full text-[11px] font-extrabold text-white ring-2 ring-surface"
             style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}
             title={p ? `${p.name} (responsable)` : undefined}>
             {p ? initials(p.name) : "?"}
@@ -539,14 +539,14 @@ function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; on
           {(t.coAssigneeIds ?? []).slice(0, 2).map((cid) => {
             const cp = person(v, cid);
             return (
-              <span key={cid} className="num grid h-6 w-6 place-items-center rounded-full bg-surface-3 text-[8.5px] font-extrabold text-ink-soft ring-2 ring-surface"
+              <span key={cid} className="num grid h-6 w-6 place-items-center rounded-full bg-surface-3 text-[11px] font-extrabold text-ink-soft ring-2 ring-surface"
                 title={`${cp.name} (corresponsable)`}>
                 {initials(cp.name)}
               </span>
             );
           })}
           {(t.coAssigneeIds?.length ?? 0) > 2 && (
-            <span className="num grid h-6 w-6 place-items-center rounded-full bg-surface-2 text-[8px] font-bold text-faint ring-2 ring-surface">
+            <span className="num grid h-6 w-6 place-items-center rounded-full bg-surface-2 text-[11px] font-bold text-faint ring-2 ring-surface">
               +{t.coAssigneeIds!.length - 2}
             </span>
           )}
@@ -554,7 +554,7 @@ function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; on
         <span className="flex items-center gap-1.5">
           {(t.evidenceIds?.length ?? 0) > 0 && <FileText size={11} className="text-cyan-deep" />}
           {t.dependsOn?.length ? <Link2 size={11} className="text-faint" /> : null}
-          <span className="num text-[10px] font-bold"
+          <span className="num text-[12px] font-bold"
             style={{ color: late ? "var(--bad)" : soon ? "var(--warn)" : "var(--faint)" }}>
             {fmtDate(t.due)}
           </span>
@@ -626,14 +626,14 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           <h3 className="text-[14px] font-extrabold leading-snug text-ink">{task.title}</h3>
 
           {/* descripción: qué se hace y qué produce */}
-          <p className="rounded-lg bg-surface-2/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-soft">
+          <p className="rounded-lg bg-surface-2/60 px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
             {task.desc}
           </p>
 
           {/* responsable principal */}
           {editable ? (
             <div>
-              <div className="label mb-1 !text-[8.5px]">Responsable principal</div>
+              <div className="label mb-1 !text-[11px]">Responsable principal</div>
               <select value={draft.assigneeId}
                 onChange={(e) => setDraft({
                   ...draft,
@@ -649,13 +649,13 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           ) : (
             assignee && (
               <div className="flex items-center gap-2.5">
-                <span className="num grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-extrabold text-white"
+                <span className="num grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-extrabold text-white"
                   style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>
                   {initials(assignee.name)}
                 </span>
                 <div>
                   <div className="text-[13px] font-bold text-ink">{assignee.name}</div>
-                  <div className="text-[10.5px] text-faint">{assignee.cargo} · {assignee.email}</div>
+                  <div className="text-[12px] text-faint">{assignee.cargo} · {assignee.email}</div>
                 </div>
               </div>
             )
@@ -663,7 +663,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
 
           {/* corresponsables */}
           <div>
-            <div className="label mb-1.5 !text-[8.5px]">
+            <div className="label mb-1.5 !text-[11px]">
               Corresponsables {editable ? "" : `(${coAssignees.length})`}
             </div>
             {editable ? (
@@ -683,7 +683,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                     );
                   })}
                   {draft.coAssigneeIds.length === 0 && (
-                    <span className="text-[10.5px] italic text-faint">Sin corresponsables</span>
+                    <span className="text-[12px] italic text-faint">Sin corresponsables</span>
                   )}
                 </div>
                 <select value=""
@@ -692,7 +692,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                       setDraft({ ...draft, coAssigneeIds: [...draft.coAssigneeIds, e.target.value] });
                     }
                   }}
-                  className="input mt-1.5 !py-1.5 text-[11.5px] text-muted">
+                  className="input mt-1.5 !py-1.5 text-[12px] text-muted">
                   <option value="">+ Añadir corresponsable…</option>
                   {people
                     .filter((p) => p.id !== draft.assigneeId && !draft.coAssigneeIds.includes(p.id))
@@ -710,14 +710,14 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                 ))}
               </div>
             ) : (
-              <span className="text-[10.5px] italic text-faint">Sin corresponsables</span>
+              <span className="text-[12px] italic text-faint">Sin corresponsables</span>
             )}
           </div>
 
           {/* fechas */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="label mb-1 !text-[8.5px]">Inicio</div>
+              <div className="label mb-1 !text-[11px]">Inicio</div>
               {editable ? (
                 <input type="date" value={draft.start}
                   onChange={(e) => setDraft({ ...draft, start: e.target.value })}
@@ -727,7 +727,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
               )}
             </div>
             <div>
-              <div className="label mb-1 !text-[8.5px]">Compromiso</div>
+              <div className="label mb-1 !text-[11px]">Compromiso</div>
               {editable ? (
                 <input type="date" value={draft.due}
                   onChange={(e) => setDraft({ ...draft, due: e.target.value })}
@@ -746,7 +746,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
 
           {/* línea base y deslizamiento */}
           {baseline && deviation !== 0 && (
-            <p className="num rounded-lg px-3 py-2 text-[11px]"
+            <p className="num rounded-lg px-3 py-2 text-[12px]"
               style={{
                 background: deviation > 0 ? "color-mix(in srgb, var(--warn) 10%, white)" : "color-mix(in srgb, var(--ok) 8%, white)",
                 color: deviation > 0 ? "var(--warn)" : "var(--ok)",
@@ -760,12 +760,12 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
 
           {/* estado */}
           <div>
-            <div className="label mb-1 !text-[8.5px]">Estado</div>
+            <div className="label mb-1 !text-[11px]">Estado</div>
             {editable ? (
               <div className="flex flex-wrap gap-1.5">
                 {COLUMNS.map((st) => (
                   <button key={st} onClick={() => setDraft({ ...draft, status: st })}
-                    className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold transition-all ${
+                    className={`rounded-full px-2.5 py-1 text-[12px] font-bold transition-all ${
                       draft.status === st ? "text-white shadow-sm" : "bg-surface-2 text-muted hover:text-ink"}`}
                     style={draft.status === st ? { background: TASK_STATUS_META[st].color } : undefined}>
                     {TASK_STATUS_META[st].label}
@@ -773,7 +773,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                 ))}
               </div>
             ) : (
-              <span className="rounded-full px-2.5 py-1 text-[10.5px] font-bold text-white"
+              <span className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
                 style={{ background: TASK_STATUS_META[task.status].color }}>
                 {TASK_STATUS_META[task.status].label}
               </span>
@@ -789,7 +789,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           )}
 
           {task.note && (
-            <p className="rounded-lg bg-gold-wash px-3 py-2.5 text-[11.5px] leading-relaxed" style={{ color: "#6b5312" }}>
+            <p className="rounded-lg bg-gold-wash px-3 py-2.5 text-[12px] leading-relaxed" style={{ color: "#6b5312" }}>
               {task.note}
             </p>
           )}
@@ -797,15 +797,15 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           {/* dependencias */}
           {task.dependsOn && task.dependsOn.length > 0 && (
             <div>
-              <div className="label mb-1.5 flex items-center gap-1 !text-[8.5px]"><Link2 size={10} /> Depende de</div>
+              <div className="label mb-1.5 flex items-center gap-1 !text-[11px]"><Link2 size={10} /> Depende de</div>
               {task.dependsOn.map((d) => {
                 const dep = allTasks.find((x) => x.id === d)!;
                 return (
                   <button key={d} onClick={() => onOpenTask(d)}
                     className="mb-1 flex w-full items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3">
                     <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: TASK_STATUS_META[dep.status].color }} />
-                    <span className="flex-1 truncate text-[11.5px] font-medium text-ink">{dep.title}</span>
-                    <span className="num text-[9.5px] text-faint">{fmtDate(dep.due)}</span>
+                    <span className="flex-1 truncate text-[12px] font-medium text-ink">{dep.title}</span>
+                    <span className="num text-[11px] text-faint">{fmtDate(dep.due)}</span>
                   </button>
                 );
               })}
@@ -814,7 +814,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
 
           {/* evidencia + verificación */}
           <div>
-            <div className="label mb-1.5 flex items-center gap-1 !text-[8.5px]"><FileText size={10} /> Evidencia del entregable</div>
+            <div className="label mb-1.5 flex items-center gap-1 !text-[11px]"><FileText size={10} /> Evidencia del entregable</div>
             {(task.evidenceIds?.length ?? 0) > 0 ? (
               task.evidenceIds!.map((eid) => {
                 const ev = evidences.find((e) => e.id === eid)
@@ -823,8 +823,8 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                 return (
                   <div key={eid} className="mb-1 flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
                     <div className="min-w-0 flex-1">
-                      <div className="text-[11.5px] font-semibold text-ink">{ev.title}</div>
-                      <div className="num mt-0.5 text-[9.5px] text-faint">{ev.kind} · {ev.date}</div>
+                      <div className="text-[12px] font-semibold text-ink">{ev.title}</div>
+                      <div className="num mt-0.5 text-[11px] text-faint">{ev.kind} · {ev.date}</div>
                     </div>
                     {st === "VERIFICADA" ? (
                       <span className="chip chip-ok"><ShieldCheck size={10} /> Verificada</span>
@@ -844,10 +844,10 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             {uploads.map((u) => (
               <div key={u.id} className="mb-1 flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
                 <div className="min-w-0 flex-1">
-                  <a href={`/api/files/${u.id}`} className="text-[11.5px] font-semibold text-cyan-deep hover:underline">
+                  <a href={`/api/files/${u.id}`} className="text-[12px] font-semibold text-cyan-deep hover:underline">
                     {u.title}
                   </a>
-                  <div className="num mt-0.5 text-[9.5px] text-faint">
+                  <div className="num mt-0.5 text-[11px] text-faint">
                     {u.fileName} · {(u.size / 1024).toFixed(0)} KB · subida por {u.uploadedBy} · {u.date}
                   </div>
                 </div>
@@ -863,8 +863,8 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
               </div>
             ))}
             {(task.evidenceIds?.length ?? 0) === 0 && uploads.length === 0 && task.status !== "HECHA" && (
-              <p className="rounded-lg px-3 py-2 text-[11.5px]"
-                style={{ background: "color-mix(in srgb, var(--warn) 10%, white)", color: "var(--warn)" }}>
+              <p className="rounded-lg px-3 py-2 text-[12px]"
+                style={{ background: "color-mix(in srgb, var(--warn) 10%, white)", color: "var(--warn-text)" }}>
                 Toda actividad exige al menos una evidencia: el servidor rechazará «Hecha» sin soporte adjunto.
               </p>
             )}
@@ -873,14 +873,14 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
               <div className="mt-2 space-y-2 rounded-lg bg-surface-2/70 p-2.5">
                 <input type="text" placeholder="Título de la evidencia (p. ej. Acta del comité)"
                   value={evTitle} onChange={(e) => setEvTitle(e.target.value)}
-                  className="input !py-1.5 text-[11.5px]" />
+                  className="input !py-1.5 text-[12px]" />
                 <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-surface px-3 py-2 shadow-sm transition-colors hover:bg-cyan-wash">
                   <Paperclip size={13} className="shrink-0 text-cyan-deep" />
-                  <span className={`min-w-0 flex-1 truncate text-[11.5px] ${evFile ? "font-semibold text-ink" : "text-muted"}`}>
+                  <span className={`min-w-0 flex-1 truncate text-[12px] ${evFile ? "font-semibold text-ink" : "text-muted"}`}>
                     {evFile ? evFile.name : "Seleccionar archivo…"}
                   </span>
                   {evFile && (
-                    <span className="num shrink-0 text-[9.5px] text-faint">{(evFile.size / 1024).toFixed(0)} KB</span>
+                    <span className="num shrink-0 text-[11px] text-faint">{(evFile.size / 1024).toFixed(0)} KB</span>
                   )}
                   <input type="file" className="hidden"
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.zip,.csv"
@@ -894,11 +894,11 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                     }
                   }}
                   disabled={saving || !evFile || !evTitle.trim()}
-                  className="btn-primary w-full !py-1.5 text-[11.5px] disabled:opacity-40">
+                  className="btn-primary w-full !py-1.5 text-[12px] disabled:opacity-40">
                   {saving ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
                   Adjuntar evidencia
                 </button>
-                <p className="text-[9.5px] text-faint">
+                <p className="text-[11px] text-faint">
                   Máx. 15 MB · pdf, office, imagen, zip, csv · nace pendiente de verificación del consultor.
                 </p>
               </div>
@@ -907,21 +907,21 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
 
           {/* comentarios */}
           <div>
-            <div className="label mb-1.5 !text-[8.5px]">Comentarios ({comments.length})</div>
+            <div className="label mb-1.5 !text-[11px]">Comentarios ({comments.length})</div>
             <div className="max-h-44 space-y-1.5 overflow-y-auto">
               {comments.map((c) => (
                 <div key={c.id} className="rounded-lg bg-surface-2/70 px-3 py-2">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[11px] font-bold text-ink">{c.author}</span>
-                    <span className="num text-[9px] text-faint">
+                    <span className="text-[12px] font-bold text-ink">{c.author}</span>
+                    <span className="num text-[11px] text-faint">
                       {new Date(c.at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[11.5px] leading-snug text-ink-soft">{c.text}</p>
+                  <p className="mt-0.5 text-[12px] leading-snug text-ink-soft">{c.text}</p>
                 </div>
               ))}
               {comments.length === 0 && (
-                <p className="text-[11px] italic text-faint">Sin comentarios aún — cualquier rol puede deliberar aquí.</p>
+                <p className="text-[12px] italic text-faint">Sin comentarios aún — cualquier rol puede deliberar aquí.</p>
               )}
             </div>
             <div className="mt-1.5 flex gap-1.5">
@@ -932,13 +932,13 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                     await onComment(commentText); setCommentText("");
                   }
                 }}
-                className="input flex-1 !py-1.5 text-[11.5px]" />
+                className="input flex-1 !py-1.5 text-[12px]" />
               <button
                 onClick={async () => {
                   if (commentText.trim()) { await onComment(commentText); setCommentText(""); }
                 }}
                 disabled={saving || !commentText.trim()}
-                className="btn-ghost !py-1.5 text-[11px] disabled:opacity-40">
+                className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40">
                 Enviar
               </button>
             </div>
@@ -947,12 +947,12 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           {/* auditoría */}
           {audit.length > 0 && (
             <div>
-              <div className="label mb-1.5 flex items-center gap-1 !text-[8.5px]"><History size={10} /> Últimos cambios</div>
+              <div className="label mb-1.5 flex items-center gap-1 !text-[11px]"><History size={10} /> Últimos cambios</div>
               <div className="space-y-1">
                 {audit.slice(0, 4).map((a) => (
                   <div key={a.id} className="rounded-lg bg-surface-2/70 px-3 py-1.5">
-                    <div className="text-[11px] leading-snug text-ink-soft">{a.change}</div>
-                    <div className="num mt-0.5 text-[9px] text-faint">
+                    <div className="text-[12px] leading-snug text-ink-soft">{a.change}</div>
+                    <div className="num mt-0.5 text-[11px] text-faint">
                       {a.actor} · {new Date(a.at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
@@ -970,7 +970,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                 }
               }}
               disabled={saving}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[11.5px] font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">
               <Archive size={12} /> Archivar tarea
             </button>
           )}
@@ -1010,7 +1010,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
       <div className="grid gap-3 px-5 pb-5 lg:grid-cols-2">
         <div className="space-y-2.5">
           <div>
-            <div className="label mb-1 !text-[8.5px]">Iniciativa</div>
+            <div className="label mb-1 !text-[11px]">Iniciativa</div>
             <select value={iniId} onChange={(e) => { setIniId(e.target.value); setDependsOn(""); }}
               className="input !py-2 text-[12px]">
               {v.initiatives.map((i) => (
@@ -1019,13 +1019,13 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
             </select>
           </div>
           <div>
-            <div className="label mb-1 !text-[8.5px]">Título</div>
+            <div className="label mb-1 !text-[11px]">Título</div>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
               placeholder="Qué actividad se ejecuta (mín. 8 caracteres)"
               className="input !py-2 text-[12px]" />
           </div>
           <div>
-            <div className="label mb-1 !text-[8.5px]">Descripción — qué se hace y qué produce</div>
+            <div className="label mb-1 !text-[11px]">Descripción — qué se hace y qué produce</div>
             <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3}
               placeholder="Alcance verificable de la actividad (mín. 20 caracteres)"
               className="input w-full resize-y text-[12px]" />
@@ -1033,7 +1033,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
         </div>
         <div className="space-y-2.5">
           <div>
-            <div className="label mb-1 !text-[8.5px]">Responsable principal</div>
+            <div className="label mb-1 !text-[11px]">Responsable principal</div>
             <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}
               className="input !py-2 text-[12px]">
               {people.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.cargo}</option>)}
@@ -1041,18 +1041,18 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <div className="label mb-1 !text-[8.5px]">Inicio</div>
+              <div className="label mb-1 !text-[11px]">Inicio</div>
               <input type="date" value={start} onChange={(e) => setStart(e.target.value)}
                 className="input !py-1.5 text-[12px]" />
             </div>
             <div>
-              <div className="label mb-1 !text-[8.5px]">Compromiso</div>
+              <div className="label mb-1 !text-[11px]">Compromiso</div>
               <input type="date" value={due} onChange={(e) => setDue(e.target.value)}
                 className="input !py-1.5 text-[12px]" />
             </div>
           </div>
           <div>
-            <div className="label mb-1 !text-[8.5px]">Depende de (opcional)</div>
+            <div className="label mb-1 !text-[11px]">Depende de (opcional)</div>
             <select value={dependsOn} onChange={(e) => setDependsOn(e.target.value)}
               className="input !py-2 text-[12px]">
               <option value="">Sin prerrequisito</option>
@@ -1061,7 +1061,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
               ))}
             </select>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 pt-1 text-[11.5px] text-ink-soft">
+          <label className="flex cursor-pointer items-center gap-2 pt-1 text-[12px] text-ink-soft">
             <input type="checkbox" checked={requiresEvidence}
               onChange={(e) => setRequiresEvidence(e.target.checked)} />
             Entregable formal (marca de evidencia en el tablero)
@@ -1115,25 +1115,25 @@ function CascadeBlock({ task, allTasks, editable, onRefetch }: {
 
   return (
     <div className="rounded-lg bg-surface-2/70 p-2.5">
-      <div className="label mb-1.5 flex items-center gap-1 !text-[8.5px]">
+      <div className="label mb-1.5 flex items-center gap-1 !text-[11px]">
         <CalendarRange size={10} /> Reprogramar en cadena · {dependents.length} dependiente{dependents.length > 1 ? "s" : ""}
       </div>
       <div className="flex gap-1.5">
         <input type="date" value={due} onChange={(e) => { setDue(e.target.value); setPreview(null); }}
-          className="input !py-1 text-[11px]" />
+          className="input !py-1 text-[12px]" />
         <button onClick={() => call(false)} disabled={busy || due === task.due}
-          className="btn-ghost shrink-0 !py-1 text-[10.5px] disabled:opacity-40">
+          className="btn-ghost shrink-0 !py-1 text-[12px] disabled:opacity-40">
           {busy ? <Loader2 size={11} className="animate-spin" /> : "Vista previa"}
         </button>
       </div>
-      {err && <p className="mt-1.5 text-[10.5px]" style={{ color: "var(--bad)" }}>{err}</p>}
+      {err && <p className="mt-1.5 text-[12px]" style={{ color: "var(--bad-text)" }}>{err}</p>}
       {preview && (
         <div className="mt-2 space-y-1">
-          <p className="text-[10.5px] font-semibold text-ink">
+          <p className="text-[12px] font-semibold text-ink">
             {preview.delta > 0 ? "+" : ""}{preview.delta} días · se corren {preview.shifts.length} tarea{preview.shifts.length !== 1 ? "s" : ""}:
           </p>
           {preview.shifts.map((s) => (
-            <div key={s.id} className="num flex items-baseline gap-2 rounded bg-surface px-2 py-1 text-[10px]">
+            <div key={s.id} className="num flex items-baseline gap-2 rounded bg-surface px-2 py-1 text-[12px]">
               <span className="font-bold text-cyan-deep">{s.id}</span>
               <span className="min-w-0 flex-1 truncate text-ink-soft">{s.title}</span>
               <span className="text-faint">{fmtDate(s.due)} → <b className="text-ink">{fmtDate(s.newDue)}</b></span>
@@ -1143,13 +1143,13 @@ function CascadeBlock({ task, allTasks, editable, onRefetch }: {
             </div>
           ))}
           <button onClick={() => call(true)} disabled={busy}
-            className="btn-primary w-full !py-1.5 text-[11px] disabled:opacity-40">
+            className="btn-primary w-full !py-1.5 text-[12px] disabled:opacity-40">
             {busy ? <Loader2 size={11} className="animate-spin" /> : <CalendarRange size={11} />}
             Aplicar corrimiento
           </button>
         </div>
       )}
-      <p className="mt-1.5 text-[9px] text-faint">
+      <p className="mt-1.5 text-[11px] text-faint">
         Corre las dependientes no cerradas el mismo número de días. El deslizamiento se sigue midiendo contra la línea base.
       </p>
     </div>

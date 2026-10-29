@@ -35,29 +35,29 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
         <div className="label">{company.name} · convención</div>
         <h1 className="mt-1 text-[22px] font-extrabold leading-tight text-ink">{section.label}</h1>
         <p className="mt-1 text-[12.5px] text-muted">{section.what}</p>
-        <label className="mt-5 block"><span className="label !text-[9px]">Nombre completo</span>
+        <label className="mt-5 block"><span className="label !text-[11px]">Nombre completo</span>
           <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoCapitalize="words" required minLength={5} className="input mt-1 !py-2.5 text-[14px]" placeholder="Nombre y apellido" /></label>
-        <label className="mt-3 block"><span className="label !text-[9px]">Correo</span>
+        <label className="mt-3 block"><span className="label !text-[11px]">Correo</span>
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" autoCapitalize="none" inputMode="email" required className="input mt-1 !py-2.5 text-[14px]" placeholder="tu@correo.com" /></label>
-        <div className="mt-3"><span className="label !text-[9px]">Tu rol en la convención</span>
+        <div className="mt-3"><span className="label !text-[11px]">Tu rol en la convención</span>
           <div className="mt-1 grid gap-1.5">
             {ENTRY_ROLES.map((r) => (
               <label key={r.id} className="flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5" style={entryRole === r.id ? { borderColor: "var(--navy)", background: "color-mix(in srgb, var(--navy) 6%, white)" } : { borderColor: "var(--line)" }}>
                 <input type="radio" name="rol" checked={entryRole === r.id} onChange={() => setEntryRole(r.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--navy)]" />
-                <span><span className="block text-[13px] font-bold text-ink">{r.label}</span><span className="block text-[11px] leading-snug text-muted">{r.what}</span></span>
+                <span><span className="block text-[13px] font-bold text-ink">{r.label}</span><span className="block text-[12px] leading-snug text-muted">{r.what}</span></span>
               </label>
             ))}
           </div>
         </div>
-        {askTribe && <label className="mt-3 block"><span className="label !text-[9px]">Tu tribu</span>
+        {askTribe && <label className="mt-3 block"><span className="label !text-[11px]">Tu tribu</span>
           <select value={tribe} onChange={(e) => setTribe(e.target.value)} required className="input mt-1 !py-2.5 text-[14px]"><option value="">Elige tu tribu…</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
-          <span className="mt-1 block text-[11px] leading-snug text-faint">Si ya tienes cuenta, se conserva tu tribu.</span></label>}
-        <p className="mt-2 text-[11px] leading-snug text-faint">El correo te identifica: si ya entraste antes, se usa tu misma cuenta.</p>
+          <span className="mt-1 block text-[12px] leading-snug text-faint">Si ya tienes cuenta, se conserva tu tribu.</span></label>}
+        <p className="mt-2 text-[12px] leading-snug text-faint">El correo te identifica: si ya entraste antes, se usa tu misma cuenta.</p>
         <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-surface-2/70 px-3 py-2.5">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--navy)]" />
-          <span className="text-[11.5px] leading-snug text-ink-soft">{consentSummary(company.name)}</span>
+          <span className="text-[12px] leading-snug text-ink-soft">{consentSummary(company.name)}</span>
         </label>
-        <details className="mt-1.5 px-1 text-[11px] text-faint">
+        <details className="mt-1.5 px-1 text-[12px] text-faint">
           <summary className="cursor-pointer font-bold text-cyan-deep">Leer la autorización completa</summary>
           <div className="mt-1.5 space-y-1.5 leading-snug">{consentText(company.name).map((p, i) => <p key={i}>{p}</p>)}</div>
         </details>

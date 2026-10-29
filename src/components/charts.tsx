@@ -262,7 +262,7 @@ export function MaturityHeatmap({ onCell, selected, scores = NO_SCORES }: {
                 return (
                   <button key={d.key} onClick={() => onCell?.(l.n, d.key)} title={`${d.key} · ${d.name}: sin dato en este corte`}
                     className="num w-full rounded-xl border border-dashed border-line-strong bg-surface px-1 py-2 text-left text-faint">
-                    <span className="block px-1.5 text-[8.5px] font-bold uppercase tracking-wider">{d.key}</span>
+                    <span className="block px-1.5 text-[11px] font-bold uppercase tracking-wider">{d.key}</span>
                     <span className="block px-1.5 text-[15px] font-extrabold leading-tight">—</span>
                   </button>
                 );
@@ -276,9 +276,9 @@ export function MaturityHeatmap({ onCell, selected, scores = NO_SCORES }: {
                     boxShadow: isSel ? undefined : `inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 3px color-mix(in srgb, ${LEVEL_BG[lvl]} 35%, transparent)`,
                   }}
                   title={`${d.key} · ${d.name}: madurez ${fmtLevel(s.value)} → meta ${s.target}`}>
-                  <span className="block px-1.5 text-[8.5px] font-bold uppercase tracking-wider opacity-80">{d.key}</span>
+                  <span className="block px-1.5 text-[11px] font-bold uppercase tracking-wider opacity-80">{d.key}</span>
                   <span className="block px-1.5 text-[15px] font-extrabold leading-tight">{fmtLevel(s.value)}</span>
-                  <span className="absolute bottom-[4px] right-[7px] text-[8px] font-semibold opacity-70">→{s.target}</span>
+                  <span className="absolute bottom-[4px] right-[7px] text-[11px] font-semibold opacity-70">→{s.target}</span>
                 </button>
               );
             })}
@@ -346,7 +346,7 @@ export function PeerBars({ peers, nationalAvg, refLabel = "media nacional" }:
           </span>
         </div>
       ))}
-      <div className="flex items-center gap-2 pt-1 text-[11px] font-medium" style={{ color: "var(--gold)" }}>
+      <div className="flex items-center gap-2 pt-1 text-[12px] font-medium" style={{ color: "var(--gold-text)" }}>
         <span className="inline-block h-0 w-5 border-t-[1.5px] border-dashed" style={{ borderColor: "var(--gold)" }} />
         {refLabel} {nationalAvg.toLocaleString("es-CO", { maximumFractionDigits: 1 })} %
       </div>

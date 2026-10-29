@@ -119,16 +119,16 @@ export default function KpiPage() {
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="num text-[22px] font-extrabold text-ink">{fmtNum(last.value, 2)}</span>
-                  <span className="text-[10.5px] text-faint">{k.unit}</span>
-                  <span className="num ml-auto text-[11px] font-bold"
+                  <span className="text-[12px] text-faint">{k.unit}</span>
+                  <span className="num ml-auto text-[12px] font-bold"
                     style={{ color: improving ? "var(--ok)" : "var(--bad)" }}>
                     {delta >= 0 ? "▲" : "▼"} {fmtNum(Math.abs(delta), 2)}
                   </span>
                 </div>
                 <div className="mt-1"><Sparkline values={series.map((s) => s.value)} good={improving} /></div>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="label !text-[8.5px]">meta {fmtNum(k.target, 1)} · {k.frequency.toLowerCase()}</span>
-                  <span className="num text-[9.5px] font-bold"
+                  <span className="label !text-[11px]">meta {fmtNum(k.target, 1)} · {k.frequency.toLowerCase()}</span>
+                  <span className="num text-[11px] font-bold"
                     style={{ color: toTarget >= 85 ? "var(--ok)" : toTarget >= 55 ? "var(--warn)" : "var(--bad)" }}>
                     {Math.min(999, Math.round(toTarget))} % de la meta
                   </span>
@@ -150,7 +150,7 @@ export default function KpiPage() {
               <div className="px-5 py-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="num text-[10px] font-bold text-cyan-deep">{kpi.code}</div>
+                    <div className="num text-[12px] font-bold text-cyan-deep">{kpi.code}</div>
                     <h3 className="text-[15px] font-extrabold leading-snug text-ink">{kpi.name}</h3>
                   </div>
                   <button onClick={() => setOpen(null)}
@@ -163,39 +163,39 @@ export default function KpiPage() {
 
                 <div className="mt-3 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5">
                   <Sigma size={13} className="mt-0.5 shrink-0 text-muted" />
-                  <code className="num text-[11px] leading-relaxed text-ink-soft">{kpi.formula}</code>
+                  <code className="num text-[12px] leading-relaxed text-ink-soft">{kpi.formula}</code>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                   <div className="flex items-start gap-2">
                     <User size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
                     <div>
-                      <div className="label !text-[8.5px]">Dueño del dato</div>
-                      <div className="text-[11.5px] font-semibold leading-snug text-ink">
+                      <div className="label !text-[11px]">Dueño del dato</div>
+                      <div className="text-[12px] font-semibold leading-snug text-ink">
                         {responsible(v, kpi.ownerId).cargo}
                       </div>
-                      <div className="text-[10px] text-faint">{responsible(v, kpi.ownerId).dependencia}</div>
+                      <div className="text-[12px] text-faint">{responsible(v, kpi.ownerId).dependencia}</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <Database size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
                     <div>
-                      <div className="label !text-[8.5px]">Fuente</div>
-                      <div className="text-[11.5px] font-semibold leading-snug text-ink">{kpi.source}</div>
+                      <div className="label !text-[11px]">Fuente</div>
+                      <div className="text-[12px] font-semibold leading-snug text-ink">{kpi.source}</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <CalendarClock size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
                     <div>
-                      <div className="label !text-[8.5px]">Periodicidad</div>
-                      <div className="text-[11.5px] font-semibold text-ink">{kpi.frequency}</div>
+                      <div className="label !text-[11px]">Periodicidad</div>
+                      <div className="text-[12px] font-semibold text-ink">{kpi.frequency}</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <Target size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
                     <div>
-                      <div className="label !text-[8.5px]">Línea base → meta</div>
-                      <div className="num text-[11.5px] font-semibold text-ink">
+                      <div className="label !text-[11px]">Línea base → meta</div>
+                      <div className="num text-[12px] font-semibold text-ink">
                         {fmtNum(kpi.baseline, 1)} → {fmtNum(kpi.target, 1)} {kpi.unit}
                       </div>
                     </div>
@@ -209,7 +209,7 @@ export default function KpiPage() {
                         ? "color-mix(in srgb, var(--ok) 8%, white)"
                         : "color-mix(in srgb, var(--warn) 10%, white)",
                     }}>
-                    <div className="label !text-[8.5px]"
+                    <div className="label !text-[11px]"
                       style={{ color: health.projection.willReachTarget ? "var(--ok)" : "var(--warn)" }}>
                       Proyección a dic-2028 (tendencia lineal de la serie)
                     </div>
@@ -220,7 +220,7 @@ export default function KpiPage() {
                       {health.projection.willReachTarget ? "la alcanza." : "no la alcanza: la iniciativa asociada debe acelerar."}
                     </div>
                     {health.isStale && (
-                      <div className="mt-1 text-[11px] font-semibold" style={{ color: "var(--bad)" }}>
+                      <div className="mt-1 text-[12px] font-semibold" style={{ color: "var(--bad-text)" }}>
                         Dato rezagado: {health.staleBy} meses sobre la periodicidad declarada.
                       </div>
                     )}
@@ -230,7 +230,7 @@ export default function KpiPage() {
                 {kpiObj && (
                   <Link href="/panel/capacidades"
                     className="mt-4 block rounded-lg bg-navy px-3.5 py-2.5 transition-transform hover:translate-x-0.5">
-                    <div className="num text-[9px] font-bold text-white/60">{kpiObj.id} · OBJETIVO CMI</div>
+                    <div className="num text-[11px] font-bold text-white/60">{kpiObj.id} · OBJETIVO CMI</div>
                     <div className="text-[12px] font-semibold leading-snug text-white">{kpiObj.name}</div>
                   </Link>
                 )}
@@ -241,16 +241,16 @@ export default function KpiPage() {
                     <tbody>
                       {kpiSeries.map((s) => (
                         <tr key={s.period} className="border-b border-line last:border-0">
-                          <td className="num py-1.5 pr-2 text-[11px] font-semibold text-muted">
+                          <td className="num py-1.5 pr-2 text-[12px] font-semibold text-muted">
                             {s.period}
                             {eff[kpi.code]?.reported.includes(s.period) && (
-                              <span className="chip chip-cyan ml-1.5 !py-0 !text-[8px]">reportado</span>
+                              <span className="chip chip-cyan ml-1.5 !py-0 !text-[11px]">reportado</span>
                             )}
                           </td>
                           <td className="num py-1.5 pr-2 text-right text-[12px] font-bold text-ink">
                             {fmtNum(s.value, 2)}
                           </td>
-                          <td className="py-1.5 text-[10.5px] italic leading-snug text-faint">{s.note ?? ""}</td>
+                          <td className="py-1.5 text-[12px] italic leading-snug text-faint">{s.note ?? ""}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -268,7 +268,7 @@ export default function KpiPage() {
                       <Link key={i.id} href={`/panel/iniciativas/${i.id}`}
                         className="block rounded-lg bg-gold-wash px-3 py-2 transition-transform hover:translate-x-0.5">
                         <div className="text-[12px] font-semibold text-ink">{i.name}</div>
-                        <div className="num mt-0.5 text-[10px]" style={{ color: "var(--gold)" }}>
+                        <div className="num mt-0.5 text-[12px]" style={{ color: "var(--gold-text)" }}>
                           avance {i.progress} % · {i.start} → {i.end}
                         </div>
                       </Link>
@@ -382,11 +382,11 @@ function KpiImport({ onDone, onClose }: {
         {rows && (
           <>
             <div className="max-h-56 overflow-y-auto rounded-lg bg-surface-2/60">
-              <table className="w-full text-[11.5px]">
+              <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-line-strong">
                     {["Código", "Periodo", "Valor", "Estado"].map((h) => (
-                      <th key={h} className="label px-3 py-1.5 text-left !text-[8px]">{h}</th>
+                      <th key={h} className="label px-3 py-1.5 text-left !text-[11px]">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -400,15 +400,15 @@ function KpiImport({ onDone, onClose }: {
                       </td>
                       <td className="px-3 py-1">
                         {r.problem ? (
-                          <span className="text-[10.5px]" style={{ color: "var(--bad)" }}>{r.problem}</span>
+                          <span className="text-[12px]" style={{ color: "var(--bad-text)" }}>{r.problem}</span>
                         ) : r.result === "ok" ? (
-                          <span className="flex items-center gap-1 text-[10.5px]" style={{ color: "var(--ok)" }}>
+                          <span className="flex items-center gap-1 text-[12px]" style={{ color: "var(--ok-text)" }}>
                             <CheckCircle2 size={10} /> importado
                           </span>
                         ) : r.result ? (
-                          <span className="text-[10.5px]" style={{ color: "var(--bad)" }}>{r.result}</span>
+                          <span className="text-[12px]" style={{ color: "var(--bad-text)" }}>{r.result}</span>
                         ) : (
-                          <span className="text-[10.5px] text-muted">válida</span>
+                          <span className="text-[12px] text-muted">válida</span>
                         )}
                       </td>
                     </tr>
@@ -422,7 +422,7 @@ function KpiImport({ onDone, onClose }: {
                 {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                 Importar {valid.length} válida{valid.length !== 1 ? "s" : ""}
               </button>
-              <span className="text-[11px] text-faint">
+              <span className="text-[12px] text-faint">
                 {rows.length - valid.length > 0 && `${rows.length - valid.length} con problemas (no se importan) · `}
                 el servidor revalida permisos y reglas fila a fila
               </span>
@@ -450,7 +450,7 @@ function ReportForm({ kpi, onReported }: {
 
   if (!canReport) {
     return (
-      <p className="mt-4 text-[10.5px] italic text-faint">
+      <p className="mt-4 text-[12px] italic text-faint">
         El valor del periodo lo reporta el dueño del dato (responsable de la capacidad {LINES[kpi.line - 1].name}, líder o advisor).
       </p>
     );
@@ -477,30 +477,30 @@ function ReportForm({ kpi, onReported }: {
 
   return (
     <div className="mt-4 space-y-2 rounded-lg bg-surface-2/70 p-3">
-      <div className="label !text-[8.5px]">Registrar valor del periodo</div>
+      <div className="label !text-[11px]">Registrar valor del periodo</div>
       <div className="flex gap-2">
         <input type="text" value={period} onChange={(e) => setPeriod(e.target.value)}
           placeholder={PERIOD_HINT[kpi.frequency]}
-          className="input w-24 !py-1.5 text-[11.5px]" />
+          className="input w-24 !py-1.5 text-[12px]" />
         <input type="number" value={value} onChange={(e) => setValue(e.target.value)}
           placeholder={`valor (${kpi.unit})`}
-          className="input min-w-0 flex-1 !py-1.5 text-[11.5px]" />
+          className="input min-w-0 flex-1 !py-1.5 text-[12px]" />
       </div>
       <input type="text" value={note} onChange={(e) => setNote(e.target.value)}
         placeholder="Nota del periodo (opcional)"
-        className="input !py-1.5 text-[11.5px]" />
+        className="input !py-1.5 text-[12px]" />
       {error && (
-        <p className="flex items-start gap-1.5 text-[11px]" style={{ color: "var(--bad)" }}>
+        <p className="flex items-start gap-1.5 text-[12px]" style={{ color: "var(--bad-text)" }}>
           <AlertTriangle size={12} className="mt-0.5 shrink-0" /> {error}
         </p>
       )}
-      {okMsg && <p className="num text-[11px]" style={{ color: "var(--ok)" }}>✓ {okMsg}</p>}
+      {okMsg && <p className="num text-[12px]" style={{ color: "var(--ok-text)" }}>✓ {okMsg}</p>}
       <button onClick={submit} disabled={saving || !period.trim() || value === ""}
-        className="btn-primary w-full !py-1.5 text-[11.5px] disabled:opacity-40">
+        className="btn-primary w-full !py-1.5 text-[12px] disabled:opacity-40">
         {saving ? <Loader2 size={12} className="animate-spin" /> : <PlusCircle size={12} />}
         Reportar
       </button>
-      <p className="text-[9px] text-faint">
+      <p className="text-[11px] text-faint">
         Se suma a la serie y recalcula semáforo, rezago y proyección. Queda en la auditoría.
       </p>
     </div>

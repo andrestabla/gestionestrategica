@@ -123,7 +123,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           </>
         )}
         {b?.showPlatformName && !b?.logoDark && !b?.logoLight && b.platformName !== "Gestión estratégica" && (
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/60">
+          <span className="font-mono text-[12px] uppercase tracking-[0.18em] text-white/60">
             · {b.platformName}
           </span>
         )}
@@ -144,7 +144,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           </p>
         )}
       </div>
-      <div className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-white/60">
+      <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/60">
         {b?.showHeroSupport && b.heroSupport ? b.heroSupport : (b?.tagline ?? "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.")}
       </div>
     </div>
@@ -181,7 +181,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
 
       {company && (
         <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-[12px] font-semibold text-ink">
-          <span className="grid h-6 w-6 place-items-center rounded-lg text-[10px] font-extrabold text-white" style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>{company.shortName.slice(0, 2).toUpperCase()}</span>
+          <span className="grid h-6 w-6 place-items-center rounded-lg text-[12px] font-extrabold text-white" style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>{company.shortName.slice(0, 2).toUpperCase()}</span>
           Acceso de {company.name}
         </div>
       )}
@@ -199,7 +199,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
 
         {error && (
           <p className="rounded-lg px-3.5 py-2.5 text-[12.5px]"
-            style={{ background: "color-mix(in srgb, var(--bad) 8%, white)", color: "var(--bad)" }}>
+            style={{ background: "color-mix(in srgb, var(--bad) 8%, white)", color: "var(--bad-text)" }}>
             {error}
           </p>
         )}
@@ -229,11 +229,11 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       </form>
 
       {(b?.showLoginSupport && b.loginSupport) ? (
-        <p className="mt-4 text-[11.5px] text-faint">{b.loginSupport}</p>
+        <p className="mt-4 text-[12px] text-faint">{b.loginSupport}</p>
       ) : null}
 
       {!tenant && (
-        <p className="mt-6 text-[11.5px] leading-snug text-faint">Acceso del administrador de la plataforma. Las cuentas de cada empresa entran por el enlace de su empresa (/empresa/login) o por el QR de su sección.</p>
+        <p className="mt-6 text-[12px] leading-snug text-faint">Acceso del administrador de la plataforma. Las cuentas de cada empresa entran por el enlace de su empresa (/empresa/login) o por el QR de su sección.</p>
       )}
       <div className="mt-4 text-[12px]">
         {!recover ? (
@@ -244,7 +244,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
             {recoverMsg ? <p className="mt-2 text-[12px] font-semibold text-ok">{recoverMsg}</p> : (
               <button type="button" onClick={recoverNow} disabled={busy || !email.includes("@")} className="btn-primary mt-2 !py-2 text-[12px] disabled:opacity-40">{busy ? "Enviando…" : "Enviar enlace"}</button>
             )}
-            <button type="button" onClick={() => setRecover(false)} className="ml-3 text-[11.5px] text-faint hover:underline">Cancelar</button>
+            <button type="button" onClick={() => setRecover(false)} className="ml-3 text-[12px] text-faint hover:underline">Cancelar</button>
           </div>
         )}
       </div>

@@ -112,7 +112,7 @@ export default function DiagnosticoPage() {
           );
         })}
         {hasCurso && tab !== "captura" && tab !== "test" && tab !== "autoevaluacion" && (
-          <div className="ml-auto flex items-center gap-1 pr-1 text-[11px]">
+          <div className="ml-auto flex items-center gap-1 pr-1 text-[12px]">
             <span className="hidden text-faint sm:inline">Leer:</span>
             <button onClick={() => setSrc("vigente")} className={`chip ${cut.src === "vigente" ? "chip-cyan" : ""}`}>Corte publicado</button>
             <button onClick={() => setSrc("curso")} className={`chip ${cut.src === "curso" ? "chip-cyan" : ""}`}>{od?.published ? "A3 publicado" : "Corte en curso"}</button>
@@ -121,7 +121,7 @@ export default function DiagnosticoPage() {
       </div>
       </div>
       {cut.src === "curso" && (
-        <div className="no-print mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>
+        <div className="no-print mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold-text)" }}>
           <b>{cut.label}.</b> {cut.C.f1n} autoevaluaciones, {cut.C.f2n} respuestas de equipos y evidencia {cut.C.hasF3 ? "registrada" : "pendiente"}; las dimensiones sin dato quedan en blanco. {od?.published ? "Es la medición vigente." : "No es la medición vigente hasta que el advisor publique el corte."}
         </div>
       )}
@@ -144,7 +144,9 @@ function Resumen() {
   const v = useCatalog();
   const { scores: pubScores, data } = useMaturity();
   const { C, src, label, scores: cutScores } = useCut();
-  const scores = cutScores ?? pubScores;
+  // sin medición publicada ni corte en curso: gráficos vacíos («—»), no «1,0 Incipiente»
+  const sinDato = src !== "curso" && (data?.current.id ?? v.current.id) === "A0";
+  const scores = cutScores ?? (sinDato ? ({ 1: {}, 2: {}, 3: {}, 4: {} } as ScoresMap) : pubScores);
   const router = useRouter();
   const verified = src === "curso" ? C.dims.reduce((a, d) => a + d.verified, 0) : v.catalog.evidences.filter((e) => e.status === "VERIFICADA").length;
   const flagged = C.dims.filter((d) => d.flags.length);
@@ -152,7 +154,7 @@ function Resumen() {
   return (
     <>
       <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Madurez de la empresa" value={avg(C.caps.map((c) => c.m)) ?? 0} decimals={1} foot="promedio de las cuatro capacidades" />
+        <StatCard label="Madurez de la empresa" value={avg(C.caps.map((c) => c.m)) ?? 0} decimals={1} foot={sinDato ? "sin medición todavía" : "promedio de las cuatro capacidades"} />
         <StatCard label="Capacidades en brecha" value={belowCaps.length} foot={belowCaps.length ? belowCaps.map((c) => c.name).join(", ") : "ninguna bajo 3,0"} good={belowCaps.length === 0} />
         <StatCard label="Dimensiones bajo el umbral" value={C.priorities.length} unit="de 17" foot="prioridad = (3,0 − madurez) × arrastre" />
         <StatCard label="Evidencias verificadas" value={verified} unit="de 68" foot="una por práctica, revisadas tal como están" />
@@ -168,7 +170,7 @@ function Resumen() {
           <div className="px-5 pb-5 pt-2">
             <MaturityHeatmap scores={scores} onCell={(_, dim) => router.push(`/panel/diagnostico/dimension/${dim}`)} />
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-5 py-2.5 text-[10.5px] text-faint">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-5 py-2.5 text-[12px] text-faint">
             {LEVELS.map((l) => <span key={l.n} className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded" style={{ background: l.color }} /> {l.n} {l.name}</span>)}
           </div>
         </Card>
@@ -179,7 +181,7 @@ function Resumen() {
           <CardHeader title="Las tres fuentes por capacidad" sub="F1 autoevaluación directiva · F2 percepción de equipos · F3 evidencia documental" />
           <div className="overflow-x-auto px-2 pb-3">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint">
+              <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint">
                 <th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">F1</th><th className="num px-2 py-2 text-center">F2</th><th className="num px-2 py-2 text-center">F3</th><th className="num px-2 py-2 text-center">Madurez</th><th className="px-3 py-2">Nivel</th>
               </tr></thead>
               <tbody>
@@ -196,7 +198,7 @@ function Resumen() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-line px-5 py-2.5 text-[11px] text-faint">
+          <div className="border-t border-line px-5 py-2.5 text-[12px] text-faint">
             {C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente: se repondera 55/45)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}.
           </div>
         </Card>
@@ -210,7 +212,7 @@ function Resumen() {
                   <span className="text-[12.5px] font-bold text-ink">{d.code} · {d.name}</span>
                   {d.flags.map((f) => <span key={f.key} className={`chip ${f.severe ? "chip-bad" : "chip-warn"}`}>{f.key}</span>)}
                 </div>
-                <div className="num mt-1 text-[11px] text-muted">F1 {f1(d.f1)} · F2 {f1(d.f2raw)} · F3 {f1(d.f3)} → madurez {f1(d.m)} ({d.base})</div>
+                <div className="num mt-1 text-[12px] text-muted">F1 {f1(d.f1)} · F2 {f1(d.f2raw)} · F3 {f1(d.f3)} → madurez {f1(d.m)} ({d.base})</div>
               </Link>
             ))}
           </div>
@@ -223,9 +225,9 @@ function Resumen() {
           {v.assessments.length === 0 && <div className="text-[12.5px] italic text-faint sm:col-span-3">Aún no hay mediciones: la primera se construye en «Captura A3».</div>}
           {v.assessments.map((a) => (
             <div key={a.id} className={`rounded-xl px-4 py-3 ${a.status === "PUBLICADA" ? "bg-surface-2" : "border border-dashed border-line-strong"}`}>
-              <div className="flex items-center justify-between"><span className="num text-[10px] font-bold text-faint">{a.id} · {a.period}</span><span className={`chip ${a.status === "PUBLICADA" ? "chip-ok" : "chip-warn"}`}>{a.status === "PUBLICADA" ? "Publicada" : "En captura"}</span></div>
+              <div className="flex items-center justify-between"><span className="num text-[12px] font-bold text-faint">{a.id} · {a.period}</span><span className={`chip ${a.status === "PUBLICADA" ? "chip-ok" : "chip-warn"}`}>{a.status === "PUBLICADA" ? "Publicada" : "En captura"}</span></div>
               <div className="mt-1 text-[13px] font-bold text-ink">{a.label}</div>
-              <div className="mt-1 text-[11.5px] leading-snug text-muted">{a.note}</div>
+              <div className="mt-1 text-[12px] leading-snug text-muted">{a.note}</div>
             </div>
           ))}
         </div>
@@ -263,12 +265,12 @@ function Capacidad({ n }: { n: number }) {
               return (
                 <Link key={d.code} href={`/panel/diagnostico/dimension/${d.code}`} className="grid gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2/70 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2"><span className="num text-[10.5px] font-bold text-cyan-deep">{d.code}</span><span className="text-[13.5px] font-bold text-ink">{d.name}</span>{r.flags.map((f) => <span key={f.key} className={`chip ${f.severe ? "chip-bad" : "chip-warn"}`}>{f.key}</span>)}</div>
+                    <div className="flex flex-wrap items-center gap-2"><span className="num text-[12px] font-bold text-cyan-deep">{d.code}</span><span className="text-[13.5px] font-bold text-ink">{d.name}</span>{r.flags.map((f) => <span key={f.key} className={`chip ${f.severe ? "chip-bad" : "chip-warn"}`}>{f.key}</span>)}</div>
                     <p className="mt-1 text-[12px] leading-snug text-muted">{d.defn}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="num text-right text-[11px] text-muted">F1 {f1(r.f1)} · F2 {f1(r.f2raw)} · F3 {f1(r.f3)}</div>
-                    <div className="text-right"><div className="num text-[20px] font-extrabold text-ink">{s.value < 0 ? "—" : fmtNum(s.value, 1)}</div><div className="num text-[10px] text-faint">meta {s.target}</div></div>
+                    <div className="num text-right text-[12px] text-muted">F1 {f1(r.f1)} · F2 {f1(r.f2raw)} · F3 {f1(r.f3)}</div>
+                    <div className="text-right"><div className="num text-[20px] font-extrabold text-ink">{s.value < 0 ? "—" : fmtNum(s.value, 1)}</div><div className="num text-[12px] text-faint">meta {s.target}</div></div>
                     {s.value >= 0 && <LevelBadge level={Math.max(1, Math.min(5, Math.round(s.value)))} />}
                   </div>
                 </Link>
@@ -319,7 +321,7 @@ function Dimension({ code }: { code: string }) {
         <div className="mb-5 space-y-2">
           {r.flags.map((f) => (
             <div key={f.key} className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-[12.5px]" style={{ background: f.severe ? "#fbeaea" : "var(--gold-wash)" }}>
-              {f.severe ? <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} /> : <Info size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold)" }} />}
+              {f.severe ? <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} /> : <Info size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold-text)" }} />}
               <span><b className="text-ink">{f.key}.</b> {FLAG_TEXT[f.key]}</span>
             </div>
           ))}
@@ -333,9 +335,9 @@ function Dimension({ code }: { code: string }) {
           ))}
         </div>
         <div className="flex flex-wrap gap-1.5 border-t border-line px-5 py-3">
-          <span className="text-[11px] font-bold text-faint">Metodologías:</span>
+          <span className="text-[12px] font-bold text-faint">Metodologías:</span>
           {d.mets.map((m) => <span key={m} className="chip" title={methodologyOf(m).principio}>{m} · {methodologyOf(m).name}</span>)}
-          <span className="ml-2 text-[11px] font-bold text-faint">Frameworks:</span>
+          <span className="ml-2 text-[12px] font-bold text-faint">Frameworks:</span>
           {d.fws.map((f) => <Link key={f} href={`/panel/metodologia#${f}`} className="chip chip-cyan">{f} · {frameworkOf(f).name}</Link>)}
         </div>
       </Card>
@@ -351,14 +353,14 @@ function Dimension({ code }: { code: string }) {
             <Card key={p.code} className="rise rise-2">
               <div className="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_320px]">
                 <div>
-                  <div className="flex flex-wrap items-center gap-2"><span className="num text-[10.5px] font-extrabold text-cyan-deep">{p.code}</span><span className="num text-[11px] text-muted">autoevaluación {f1(f1avg)}</span><Link href={`/panel/metodologia#${fw.id}`} className="chip">{fw.id} · {fw.name}</Link></div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="num text-[12px] font-extrabold text-cyan-deep">{p.code}</span><span className="num text-[12px] text-muted">autoevaluación {f1(f1avg)}</span><Link href={`/panel/metodologia#${fw.id}`} className="chip">{fw.id} · {fw.name}</Link></div>
                   <p className="mt-1.5 text-[13.5px] font-semibold leading-snug text-ink">{p.f1}</p>
-                  {guide?.q && <p className="mt-1 text-[11.5px] italic text-muted">{guide.q}</p>}
+                  {guide?.q && <p className="mt-1 text-[12px] italic text-muted">{guide.q}</p>}
                   <div className="mt-3 rounded-xl bg-surface-2 px-4 py-3">
-                    <div className="mb-1 flex items-center gap-2"><span className="label">Evidencia</span>{mark && <span className={`chip ${MARK[mark][1]}`}>{MARK[mark][0]}</span>}{ev ? <span className="num text-[10px] text-faint">{ev.id} · {ev.kind} · {responsible(v, ev.sourceId).dependencia}</span> : <span className="text-[10px] italic text-faint">sin evidencia registrada</span>}</div>
+                    <div className="mb-1 flex items-center gap-2"><span className="label">Evidencia</span>{mark && <span className={`chip ${MARK[mark][1]}`}>{MARK[mark][0]}</span>}{ev ? <span className="num text-[12px] text-faint">{ev.id} · {ev.kind} · {responsible(v, ev.sourceId).dependencia}</span> : <span className="text-[12px] italic text-faint">sin evidencia registrada</span>}</div>
                     <p className="text-[12px] leading-snug text-ink-soft">{p.ev}</p>
-                    <p className="mt-1 text-[11.5px] leading-snug text-muted">{p.verif}</p>
-                    {ev?.note && <p className="mt-1 text-[11px] italic text-muted">{ev.note}</p>}
+                    <p className="mt-1 text-[12px] leading-snug text-muted">{p.verif}</p>
+                    {ev?.note && <p className="mt-1 text-[12px] italic text-muted">{ev.note}</p>}
                   </div>
                 </div>
                 <div className="rounded-xl border border-line px-4 py-3">
@@ -403,7 +405,7 @@ function TestTab() {
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
         <div className="min-w-0 flex-1">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Puerta de entrada</div>
+          <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Puerta de entrada</div>
           <div className="text-[15px] font-extrabold">{mine ? "Ya respondiste el test" : "Responde el test de capacidad empresarial"}</div>
           <div className="text-[12px] text-white/75">{mine ? `Guardado el ${new Date(mine.at).toLocaleDateString("es-CO")}. Puedes corregirlo; la última respuesta reemplaza a la anterior.` : "24 preguntas, seis por capacidad, más el desafío dominante. Unos 20 minutos; cada número trae la guía de lo que habría que poder mostrar."}</div>
         </div>
@@ -414,13 +416,13 @@ function TestTab() {
           <CardHeader title="Participantes" sub={`${demo.length} de la demo${stored.length ? ` · ${stored.length} desde la plataforma` : ""} · cobertura mínima 5 de 6 para reportar una capacidad`} />
           <div className="overflow-x-auto px-2 pb-3">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{TEST.bloques.map((b) => <th key={b.cap} className="num px-2 py-2 text-center">{b.cap}</th>)}<th className="px-3 py-2">Etapa según respuestas</th><th className="px-3 py-2">Pregunta 25</th></tr></thead>
+              <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{TEST.bloques.map((b) => <th key={b.cap} className="num px-2 py-2 text-center">{b.cap}</th>)}<th className="px-3 py-2">Etapa según respuestas</th><th className="px-3 py-2">Pregunta 25</th></tr></thead>
               <tbody>
                 {tests.length === 0 && <tr className="border-t border-line"><td colSpan={2 + TEST.bloques.length} className="px-3 py-4 text-[12.5px] italic text-faint">Nadie ha respondido el test todavía.</td></tr>}
                 {tests.map((t, i) => (
                   <tr key={i} className="border-t border-line">
-                    <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[10.5px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""} · <Link href={`/panel/diagnostico/test/informe/${i < demo.length ? `demo:${i}` : encodeURIComponent(stored[i - demo.length].email)}`} className="font-bold text-cyan-deep hover:underline">informe</Link></div></td>
-                    {reads[i].caps.map((c) => <td key={c.n} className={`num px-2 py-2 text-center ${c.avg != null && c.avg < THRESHOLD ? "font-bold" : ""}`} style={c.avg != null && c.avg < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(c.avg, 2)}<div className="text-[9.5px] font-normal text-faint">{c.cov}/6</div></td>)}
+                    <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[12px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""} · <Link href={`/panel/diagnostico/test/informe/${i < demo.length ? `demo:${i}` : encodeURIComponent(stored[i - demo.length].email)}`} className="font-bold text-cyan-deep hover:underline">informe</Link></div></td>
+                    {reads[i].caps.map((c) => <td key={c.n} className={`num px-2 py-2 text-center ${c.avg != null && c.avg < THRESHOLD ? "font-bold" : ""}`} style={c.avg != null && c.avg < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(c.avg, 2)}<div className="text-[11px] font-normal text-faint">{c.cov}/6</div></td>)}
                     <td className="px-3 py-2 font-semibold text-ink">{reads[i].stage}{reads[i].provisional ? " (provisional)" : ""}</td>
                     <td className="px-3 py-2 text-muted">{reads[i].hypothesis ?? "—"}</td>
                   </tr>
@@ -435,7 +437,7 @@ function TestTab() {
           <CardHeader title="Lectura del perfil" sub="rangos propios del test" />
           <div className="space-y-2 px-5 pb-4">
             {TEST.bloques.map((b, i) => { const a = avg(reads.map((r) => r.caps[i].avg)); return (
-              <div key={b.cap} className="text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{b.cap}</b><span className="num text-muted">{f1(a, 2)}</span></div><div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((a ?? 0) / 5) * 100}%`, background: a != null && a < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div><div className="mt-0.5 text-[11px] leading-snug text-muted">{rangeText(a)}</div></div>
+              <div key={b.cap} className="text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{b.cap}</b><span className="num text-muted">{f1(a, 2)}</span></div><div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((a ?? 0) / 5) * 100}%`, background: a != null && a < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div><div className="mt-0.5 text-[12px] leading-snug text-muted">{rangeText(a)}</div></div>
             ); })}
           </div>
         </Card>
@@ -445,7 +447,7 @@ function TestTab() {
           <CardHeader title="Conversaciones de contraste" sub="diferencias de dos o más puntos entre participantes: no se promedian, se conversan" />
           <div className="divide-y divide-line">
             {contrast.length === 0 && <div className="px-5 py-4 text-[12.5px] italic text-faint">Sin diferencias de dos o más puntos.</div>}
-            {contrast.map((c) => <div key={c.q.n} className="px-5 py-2.5 text-[12.5px]"><b className="num text-cyan-deep">{c.q.n}.</b> <span className="text-ink-soft">{c.q.q}</span><div className="num mt-0.5 text-[11px] text-muted">respuestas {c.vs.join(" · ")} · diferencia {c.d}</div></div>)}
+            {contrast.map((c) => <div key={c.q.n} className="px-5 py-2.5 text-[12.5px]"><b className="num text-cyan-deep">{c.q.n}.</b> <span className="text-ink-soft">{c.q.q}</span><div className="num mt-0.5 text-[12px] text-muted">respuestas {c.vs.join(" · ")} · diferencia {c.d}</div></div>)}
           </div>
         </Card>
         <Card className="rise rise-4">
@@ -463,8 +465,8 @@ function TestTab() {
         {STAGES.map((s) => { const on = lead?.stage === s.name; return (
           <div key={s.name} className={`rounded-xl px-4 py-3 ${on ? "text-white" : "bg-surface-2"}`} style={on ? { background: "var(--navy)" } : undefined}>
             <div className={`text-[13px] font-extrabold ${on ? "" : "text-ink"}`}>{s.name}</div>
-            <div className={`mt-0.5 text-[11px] leading-snug ${on ? "text-white/80" : "text-muted"}`}>{s.pregunta}</div>
-            <div className={`mt-1.5 text-[10px] font-bold uppercase tracking-wider ${on ? "text-cyan-fill" : "text-faint"}`}>Lidera {s.lider}</div>
+            <div className={`mt-0.5 text-[12px] leading-snug ${on ? "text-white/80" : "text-muted"}`}>{s.pregunta}</div>
+            <div className={`mt-1.5 text-[12px] font-bold uppercase tracking-wider ${on ? "text-cyan-fill" : "text-faint"}`}>Lidera {s.lider}</div>
           </div>
         ); })}
       </div>
@@ -503,24 +505,24 @@ function ResponderTest() {
           <div className="grid gap-5 px-5 pb-5 lg:grid-cols-[1fr_1fr]">
             <div>
               <div className="label mb-2">Etapa predominante</div>
-              <div className="grid grid-cols-5 gap-1">{STAGES.map((s) => <div key={s.name} className={`rounded-lg px-2 py-2 text-center text-[11px] font-bold ${s.name === T.stage ? "text-white" : s.name === T.hypothesis ? "bg-cyan-wash text-cyan-deep" : "bg-surface-2 text-muted"}`} style={s.name === T.stage ? { background: "var(--navy)" } : undefined}>{s.name}</div>)}</div>
+              <div className="grid grid-cols-5 gap-1">{STAGES.map((s) => <div key={s.name} className={`rounded-lg px-2 py-2 text-center text-[12px] font-bold ${s.name === T.stage ? "text-white" : s.name === T.hypothesis ? "bg-cyan-wash text-cyan-deep" : "bg-surface-2 text-muted"}`} style={s.name === T.stage ? { background: "var(--navy)" } : undefined}>{s.name}</div>)}</div>
               <p className="mt-3 text-[13px] text-ink"><b>{stage.name}{T.provisional ? " (provisional)" : ""}.</b> {stage.pregunta} {stage.cond}</p>
               {T.hypothesis && T.hypothesis !== T.stage && <p className="mt-2 rounded-lg bg-gold-wash px-3 py-2 text-[12px] text-ink-soft">En la pregunta 25 señalaste un desafío propio de <b>{T.hypothesis}</b>; tus respuestas apuntan a <b>{T.stage}</b>. Las dos quedan como hipótesis hasta comprobarlas con evidencia.</p>}
               {saved.objetivo && <p className="mt-2 text-[12.5px] text-muted"><b className="text-ink">Objetivo a doce meses.</b> {saved.objetivo}</p>}
             </div>
             <div className="space-y-2">
               {T.caps.map((c, i) => (
-                <div key={c.n} className="text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{c.name}</b><span className="num text-muted">{f1(c.avg, 2)} · cobertura {c.cov}/6</span></div><div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.avg ?? 0) / 5) * 100}%`, background: c.avg != null && c.avg < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div><div className="mt-0.5 text-[11px] leading-snug text-muted">{c.reportable ? rangeText(c.avg) : "Cobertura insuficiente: se necesitan al menos cinco respuestas de seis."}</div></div>
+                <div key={c.n} className="text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{c.name}</b><span className="num text-muted">{f1(c.avg, 2)} · cobertura {c.cov}/6</span></div><div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.avg ?? 0) / 5) * 100}%`, background: c.avg != null && c.avg < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div><div className="mt-0.5 text-[12px] leading-snug text-muted">{c.reportable ? rangeText(c.avg) : "Cobertura insuficiente: se necesitan al menos cinco respuestas de seis."}</div></div>
               ))}
             </div>
           </div>
           <div className="border-t border-line px-5 py-4">
             <div className="label mb-2">Qué está limitando el crecimiento</div>
             {T.patterns.length ? T.patterns.slice(0, 3).map((p, i) => (
-              <div key={p.hip} className="mb-2 rounded-xl bg-surface-2 px-4 py-3"><div className="text-[10px] font-bold uppercase tracking-wider text-cyan-deep">{i === 0 ? "Prioridad principal" : "Prioridad de soporte"} · preguntas {p.qs.join(", ")}</div><div className="text-[13px] font-bold text-ink">{p.accion}</div><div className="text-[12px] text-muted">{p.hip}</div></div>
+              <div key={p.hip} className="mb-2 rounded-xl bg-surface-2 px-4 py-3"><div className="text-[12px] font-bold uppercase tracking-wider text-cyan-deep">{i === 0 ? "Prioridad principal" : "Prioridad de soporte"} · preguntas {p.qs.join(", ")}</div><div className="text-[13px] font-bold text-ink">{p.accion}</div><div className="text-[12px] text-muted">{p.hip}</div></div>
             )) : <p className="text-[12.5px] text-muted">No aparece un patrón dominante{T.lows.length ? `; las preguntas más débiles son ${T.lows.slice(0, 3).map((q) => q.n).join(", ")}` : ""}.</p>}
             {T.pending.length > 0 && <p className="text-[12px] text-muted">Pendientes de verificación: preguntas {T.pending.join(", ")}. No cuentan como nota baja.</p>}
-            <p className="mt-2 text-[11.5px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</p>
+            <p className="mt-2 text-[12px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</p>
           </div>
         </Card>
       </>
@@ -535,24 +537,24 @@ function ResponderTest() {
       <Card className="rise rise-1 mb-5">
         <CardHeader title="Antes de comenzar" sub="Responde pensando en cómo funciona realmente la empresa en los últimos seis meses. Elige la respuesta que puedas sostener con ejemplos concretos; si no sabes, marca «Sin información»." />
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => setCargo(e.target.value)} /></label>
-          <label className="text-[11px] font-bold uppercase tracking-wider text-faint">Principal objetivo de crecimiento a doce meses<input className="input mt-1 font-normal normal-case tracking-normal" value={objetivo} onChange={(e) => setObjetivo(e.target.value)} /></label>
+          <label className="text-[12px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => setCargo(e.target.value)} /></label>
+          <label className="text-[12px] font-bold uppercase tracking-wider text-faint">Principal objetivo de crecimiento a doce meses<input className="input mt-1 font-normal normal-case tracking-normal" value={objetivo} onChange={(e) => setObjetivo(e.target.value)} /></label>
         </div>
       </Card>
       {TEST.bloques.map((b, bi) => (
         <div key={b.cap} className="mb-5">
-          <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: LINES[bi].color }}><div className="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80">Bloque {bi + 1} de 4</div><div className="text-[16px] font-extrabold">{b.cap}</div><div className="text-[12px] opacity-90">{b.pregunta}</div></div>
+          <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: LINES[bi].color }}><div className="text-[12px] font-bold uppercase tracking-[0.18em] opacity-80">Bloque {bi + 1} de 4</div><div className="text-[16px] font-extrabold">{b.cap}</div><div className="text-[12px] opacity-90">{b.pregunta}</div></div>
           {b.qs.map((q) => {
             const g = GUIDES.test[String(q.n)]; const v = r[q.n];
             return (
               <Card key={q.n} className="mb-2">
                 <div className="px-5 py-4">
-                  <div className="flex gap-3"><span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "var(--navy)" }}>{q.n}</span><div><p className="text-[13.5px] font-semibold leading-snug text-ink">{q.q}</p><p className="mt-0.5 text-[11.5px] text-muted"><b className="text-[10px] uppercase tracking-wider text-cyan-deep">Lo demuestra</b> {q.demo}</p></div></div>
+                  <div className="flex gap-3"><span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "var(--navy)" }}>{q.n}</span><div><p className="text-[13.5px] font-semibold leading-snug text-ink">{q.q}</p><p className="mt-0.5 text-[12px] text-muted"><b className="text-[12px] uppercase tracking-wider text-cyan-deep">Lo demuestra</b> {q.demo}</p></div></div>
                   <div className="mt-3 grid grid-cols-5 gap-1.5">
                     {LEVELS.map((l) => (
                       <button key={l.n} type="button" onClick={() => set(q.n, l.n)} title={g?.n?.[String(l.n)]}
                         className={`rounded-lg border px-1 py-2 text-center transition-all ${v === l.n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === l.n ? { background: "var(--navy)" } : undefined}>
-                        <div className="num text-[16px] font-extrabold">{l.n}</div><div className={`text-[9.5px] font-semibold ${v === l.n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
+                        <div className="num text-[16px] font-extrabold">{l.n}</div><div className={`text-[11px] font-semibold ${v === l.n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
                       </button>
                     ))}
                   </div>
@@ -577,7 +579,7 @@ function ResponderTest() {
           ))}
         </div>
       </Card>
-      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad)" }}>{msg}</div>}
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad-text)" }}>{msg}</div>}
       <div className="flex items-center justify-between gap-3">
         <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
         <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
@@ -621,8 +623,8 @@ function EscalaF1() {
     <div className="grid gap-2 sm:grid-cols-5">
       {MAPA.escalaF1.map((e, i) => (
         <div key={e.n} className="rounded-xl bg-surface-2 px-3 py-2.5">
-          <div className="flex items-center gap-2"><span className="num flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: LEVELS[i].color }}>{e.n}</span><b className="text-[12.5px] text-ink">{e.name}</b></div>
-          <p className="mt-1 text-[11px] leading-snug text-muted">{e.desc}</p>
+          <div className="flex items-center gap-2"><span className="num flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: LEVELS[i].color }}>{e.n}</span><b className="text-[12.5px] text-ink">{e.name}</b></div>
+          <p className="mt-1 text-[12px] leading-snug text-muted">{e.desc}</p>
         </div>
       ))}
     </div>
@@ -649,7 +651,7 @@ function AutoevaluacionTab() {
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
         <div className="min-w-0 flex-1">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Fuente 1 · Autoevaluación directiva</div>
+          <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Fuente 1 · Autoevaluación directiva</div>
           <div className="text-[15px] font-extrabold">{estado === "completa" ? "Ya respondiste la autoevaluación" : estado === "parcial" ? `Llevas ${myN} de ${total} afirmaciones` : "Responde la autoevaluación directiva"}</div>
           <div className="text-[12px] text-white/75">
             {data?.closed ? "El corte ya se publicó: la autoevaluación está cerrada y tu lectura queda como quedó."
@@ -687,13 +689,13 @@ function AutoevaluacionTab() {
               <CardHeader title="Quién ha respondido" sub="cada lectura individual la ve solo el advisor; el comité recibe el consolidado" />
               <div className="overflow-x-auto px-2 pb-3">
                 <table className="w-full text-[12.5px]">
-                  <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{CAPS.map((c) => <th key={c.n} className="num px-2 py-2 text-center">{c.code}</th>)}<th className="num px-3 py-2 text-center">Avance</th><th className="px-3 py-2">Guardada</th></tr></thead>
+                  <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{CAPS.map((c) => <th key={c.n} className="num px-2 py-2 text-center">{c.code}</th>)}<th className="num px-3 py-2 text-center">Avance</th><th className="px-3 py-2">Guardada</th></tr></thead>
                   <tbody>
                     {lista.length === 0 && <tr className="border-t border-line"><td colSpan={4 + CAPS.length} className="px-3 py-4 text-[12.5px] italic text-faint">Nadie ha respondido todavía.</td></tr>}
                     {lecturas.map(({ f, L }) => (
                       <tr key={f.email} className="border-t border-line">
-                        <td className="px-3 py-2"><Link href={`/panel/diagnostico/autoevaluacion/resultado/${encodeURIComponent(f.email)}`} className="font-bold text-cyan-deep hover:underline">{f.name}</Link><div className="text-[10.5px] text-faint">{f.cargo ?? f.role}</div></td>
-                        {L.caps.map((c) => <td key={c.cap.n} className={`num px-2 py-2 text-center ${c.m != null && c.m < THRESHOLD ? "font-bold" : ""}`} style={c.m != null && c.m < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(c.m, 2)}</td>)}
+                        <td className="px-3 py-2"><Link href={`/panel/diagnostico/autoevaluacion/resultado/${encodeURIComponent(f.email)}`} className="font-bold text-cyan-deep hover:underline">{f.name}</Link><div className="text-[12px] text-faint">{f.cargo ?? f.role}</div></td>
+                        {L.caps.map((c) => <td key={c.cap.n} className={`num px-2 py-2 text-center ${c.m != null && c.m < THRESHOLD ? "font-bold" : ""}`} style={c.m != null && c.m < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(c.m, 2)}</td>)}
                         <td className="num px-3 py-2 text-center">{L.answered}/{total}</td>
                         <td className="px-3 py-2 text-muted">{new Date(f.at).toLocaleDateString("es-CO")}</td>
                       </tr>
@@ -712,13 +714,13 @@ function AutoevaluacionTab() {
             <CardHeader title="Las diecisiete dimensiones según el comité" sub="promedio, dispersión entre miembros y nivel; la dispersión alta se conversa, no se promedia" />
             <div className="overflow-x-auto px-2 pb-3">
               <table className="w-full text-[12.5px]">
-                <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Promedio</th><th className="num px-2 py-2 text-center">Dispersión</th><th className="num px-2 py-2 text-center">Respuestas</th><th className="px-3 py-2">Nivel</th></tr></thead>
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Promedio</th><th className="num px-2 py-2 text-center">Dispersión</th><th className="num px-2 py-2 text-center">Respuestas</th><th className="px-3 py-2">Nivel</th></tr></thead>
                 <tbody>
                   {consolidado.map((x) => (
                     <tr key={x.d.code} className="border-t border-line">
                       <td className="px-3 py-2"><b className="text-ink">{x.d.code}</b> · {x.d.name}</td>
                       <td className="px-3 py-2 text-muted">{x.d.cap}</td>
-                      <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(x.m, 2)}</td>
+                      <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(x.m, 2)}</td>
                       <td className="num px-2 py-2 text-center">{x.s != null ? <span className={`chip !py-0 ${x.s >= 1 ? "chip-warn" : ""}`}>{f1(x.s, 2)}</span> : "—"}</td>
                       <td className="num px-2 py-2 text-center text-muted">{x.n}</td>
                       <td className="px-3 py-2">{x.m != null ? <span className={`chip !py-0 ${LEVEL_CLS[levelOf(x.m)]}`}>{levelName(x.m)}</span> : "—"}</td>
@@ -785,10 +787,10 @@ function ResponderF1() {
       <div className="mb-4 grid gap-1.5 sm:grid-cols-4">
         {CAPS.map((c, i) => { const n = stepN(c), t = stepTot(c); const on = i === step; return (
           <button key={c.n} type="button" onClick={() => setStep(i)} className={`rounded-xl px-3 py-2 text-left transition-all ${on ? "text-white shadow-sm" : "bg-surface-2 hover:bg-surface"}`} style={on ? { background: c.color } : undefined}>
-            <div className={`text-[10px] font-bold uppercase tracking-wider ${on ? "text-white/70" : "text-faint"}`}>Paso {i + 1} de 4</div>
+            <div className={`text-[12px] font-bold uppercase tracking-wider ${on ? "text-white/70" : "text-faint"}`}>Paso {i + 1} de 4</div>
             <div className={`text-[13px] font-extrabold ${on ? "" : "text-ink"}`}>{c.name}</div>
             <div className="relative mt-1.5 h-[5px] overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full" style={{ width: `${(n / t) * 100}%`, background: on ? "rgba(255,255,255,.85)" : c.color }} /></div>
-            <div className={`num mt-1 text-[10px] ${on ? "text-white/80" : "text-muted"}`}>{n} de {t}</div>
+            <div className={`num mt-1 text-[12px] ${on ? "text-white/80" : "text-muted"}`}>{n} de {t}</div>
           </button>
         ); })}
       </div>
@@ -796,12 +798,12 @@ function ResponderF1() {
         <Card className="rise rise-1 mb-5">
           <CardHeader title="Antes de comenzar" sub="responde según lo que la empresa hace de forma recurrente y podría demostrar; si dudas entre dos números, elige el menor" />
           <div className="grid gap-4 px-5 pb-5 lg:grid-cols-[260px_1fr]">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => { setCargo(e.target.value); setDirty(true); }} /></label>
+            <label className="text-[12px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => { setCargo(e.target.value); setDirty(true); }} /></label>
             <EscalaF1 />
           </div>
         </Card>
       )}
-      <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: cap.color }}><div className="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80">{cap.code} · {cap.verb}</div><div className="text-[16px] font-extrabold">{cap.name}</div><div className="text-[12px] opacity-85">{cap.q}</div></div>
+      <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: cap.color }}><div className="text-[12px] font-bold uppercase tracking-[0.18em] opacity-80">{cap.code} · {cap.verb}</div><div className="text-[16px] font-extrabold">{cap.name}</div><div className="text-[12px] opacity-85">{cap.q}</div></div>
       {dims.map((d) => (
         <div key={d.code} className="mb-5">
           <div className="mb-2 mt-4 px-1"><div className="text-[14px] font-extrabold text-ink">{d.code} · {d.name}</div><p className="text-[12px] leading-snug text-muted">{d.defn}</p></div>
@@ -810,12 +812,12 @@ function ResponderF1() {
             return (
               <Card key={p.code} className="mb-2">
                 <div className="px-5 py-4">
-                  <div className="flex gap-3"><span className="num shrink-0 rounded-lg bg-surface-2 px-2 py-1 text-[11px] font-extrabold text-ink-soft">{p.code}</span><p className="text-[13.5px] font-semibold leading-snug text-ink">{p.f1}</p></div>
+                  <div className="flex gap-3"><span className="num shrink-0 rounded-lg bg-surface-2 px-2 py-1 text-[12px] font-extrabold text-ink-soft">{p.code}</span><p className="text-[13.5px] font-semibold leading-snug text-ink">{p.f1}</p></div>
                   <div className="mt-3 grid grid-cols-5 gap-1.5">
                     {MAPA.escalaF1.map((l, i) => { const n = i + 1; return (
                       <button key={l.n} type="button" onClick={() => set(p.code, n)} title={g?.n?.[String(n)]}
                         className={`rounded-lg border px-1 py-2 text-center transition-all ${v === n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === n ? { background: "var(--navy)" } : undefined}>
-                        <div className="num text-[16px] font-extrabold">{n}</div><div className={`text-[9.5px] font-semibold ${v === n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
+                        <div className="num text-[16px] font-extrabold">{n}</div><div className={`text-[11px] font-semibold ${v === n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
                       </button>
                     ); })}
                   </div>
@@ -826,7 +828,7 @@ function ResponderF1() {
           })}
         </div>
       ))}
-      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad)" }}>{msg}</div>}
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad-text)" }}>{msg}</div>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => { setStep((s) => Math.max(0, s - 1)); window.scrollTo({ top: 0 }); }} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>
         <span className="text-[12px] text-muted">El avance se guarda solo; puedes cerrar y seguir después.</span>
@@ -860,7 +862,7 @@ function ResultadoF1({ email }: { email: string | null }) {
       <Card className="rise rise-1 mb-5">
         <CardHeader title="Tu lectura · Fuente 1 de 3" sub={`${f.name}${f.cargo ? ` · ${f.cargo}` : ""} · ${f1Fecha(f.at)}`} />
         <div className="px-5 pb-2 text-[13px] leading-relaxed text-ink-soft">Cómo se ve la organización desde tu silla. Es tu respuesta individual: el informe del comité promedia a todos sus miembros y los contrasta con lo que viven los equipos y con la evidencia documental.</div>
-        {L.answered < total && <div className="mx-5 mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}><b>Lectura parcial.</b> Llevas {L.answered} de {total} afirmaciones. Las dimensiones sin responder aparecen vacías y los promedios se calculan solo con lo contestado.</div>}
+        {L.answered < total && <div className="mx-5 mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold-text)" }}><b>Lectura parcial.</b> Llevas {L.answered} de {total} afirmaciones. Las dimensiones sin responder aparecen vacías y los promedios se calculan solo con lo contestado.</div>}
         <div className="grid gap-5 px-5 pb-5 lg:grid-cols-[260px_1fr]">
           <div><div className="label mb-2">Perfil de las cuatro capacidades</div><MiniRadar color="var(--navy)" size={230} axes={L.caps.map((c) => ({ label: c.cap.code, value: Math.max(0, c.m ?? 0), target: THRESHOLD }))} /></div>
           <div className="space-y-3">
@@ -868,10 +870,10 @@ function ResultadoF1({ email }: { email: string | null }) {
               <div key={c.cap.n} className="text-[12px]">
                 <div className="flex items-baseline justify-between"><b className="text-ink">{c.cap.name}</b><span className="num text-muted">{f1(c.m, 2)} · {c.n} de {c.tot} respondidas</span></div>
                 <div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.m ?? 0) / 5) * 100}%`, background: c.m != null && c.m < THRESHOLD ? "var(--bad)" : c.cap.color }} /><i className="absolute top-0 h-full w-px bg-ink/40" style={{ left: `${(THRESHOLD / 5) * 100}%` }} /></div>
-                <div className="mt-0.5 text-[11.5px] text-muted">{c.m != null ? <><b className="text-ink">{levelName(c.m)}.</b> {LEVELS[levelOf(c.m) - 1].desc}</> : "Sin responder"}</div>
+                <div className="mt-0.5 text-[12px] text-muted">{c.m != null ? <><b className="text-ink">{levelName(c.m)}.</b> {LEVELS[levelOf(c.m) - 1].desc}</> : "Sin responder"}</div>
               </div>
             ))}
-            <p className="text-[11px] italic text-faint">La marca del umbral señala 3,0: por debajo, la práctica no está instalada. Un promedio alto no borra una dimensión débil.</p>
+            <p className="text-[12px] italic text-faint">La marca del umbral señala 3,0: por debajo, la práctica no está instalada. Un promedio alto no borra una dimensión débil.</p>
           </div>
         </div>
       </Card>
@@ -880,13 +882,13 @@ function ResultadoF1({ email }: { email: string | null }) {
           <CardHeader title="Las diecisiete dimensiones" sub="promedio de las cuatro afirmaciones de cada una" />
           <div className="overflow-x-auto px-2 pb-3">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Tu puntaje</th><th className="px-3 py-2">Nivel</th></tr></thead>
+              <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Tu puntaje</th><th className="px-3 py-2">Nivel</th></tr></thead>
               <tbody>
                 {L.dims.map((x) => (
                   <tr key={x.d.code} className="border-t border-line">
-                    <td className="px-3 py-2"><b className="text-ink">{x.d.code}</b> · {x.d.name}{x.n < x.d.prac.length && <span className="num ml-1 text-[10px] text-faint">{x.n}/{x.d.prac.length}</span>}</td>
+                    <td className="px-3 py-2"><b className="text-ink">{x.d.code}</b> · {x.d.name}{x.n < x.d.prac.length && <span className="num ml-1 text-[12px] text-faint">{x.n}/{x.d.prac.length}</span>}</td>
                     <td className="px-3 py-2 text-muted">{x.d.cap}</td>
-                    <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(x.m, 2)}</td>
+                    <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(x.m, 2)}</td>
                     <td className="px-3 py-2">{x.m != null ? <span className={`chip !py-0 ${LEVEL_CLS[levelOf(x.m)]}`}>{levelName(x.m)}</span> : "—"}</td>
                   </tr>
                 ))}
@@ -901,11 +903,11 @@ function ResultadoF1({ email }: { email: string | null }) {
             {L.prios.slice(0, 6).map((x, i) => (
               <div key={x.d.code} className="px-5 py-3">
                 <div className="flex items-baseline justify-between gap-3"><div className="text-[13px] font-bold text-ink">{i + 1}. {x.d.name}</div><span className="num text-[12px] text-muted">{f1(x.m, 2)}</span></div>
-                <div className="text-[11.5px] text-muted">{x.d.code} · {x.d.cap}{x.d.fws.length ? ` · se instala con ${x.d.fws.map((id) => MAPA.fw[id]?.name ?? id).join(", ")}` : ""}</div>
+                <div className="text-[12px] text-muted">{x.d.code} · {x.d.cap}{x.d.fws.length ? ` · se instala con ${x.d.fws.map((id) => MAPA.fw[id]?.name ?? id).join(", ")}` : ""}</div>
               </div>
             ))}
           </div>
-          <div className="border-t border-line px-5 py-3 text-[11.5px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con la percepción de los equipos y la evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</div>
+          <div className="border-t border-line px-5 py-3 text-[12px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con la percepción de los equipos y la evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</div>
         </Card>
       </div>
     </>
@@ -954,7 +956,7 @@ function InformeTest({ id }: { id: string }) {
     <>
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link>
-        <div className="flex items-center gap-2">{msg && <span className="text-[11.5px] text-muted">{msg}</span>}<button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button></div>
+        <div className="flex items-center gap-2">{msg && <span className="text-[12px] text-muted">{msg}</span>}<button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button></div>
       </div>
       <div className="panel px-7 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
@@ -970,7 +972,7 @@ function InformeTest({ id }: { id: string }) {
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           <div>
             <div className="label mb-1">Etapa predominante</div>
-            <div className="grid grid-cols-5 gap-1">{STAGES.map((s) => <div key={s.name} className={`rounded-md px-1 py-1.5 text-center text-[10px] font-bold ${s.name === T.stage ? "text-white" : s.name === T.hypothesis ? "bg-cyan-wash text-cyan-deep" : "bg-surface-2 text-muted"}`} style={s.name === T.stage ? { background: "var(--navy)" } : undefined}>{s.name}</div>)}</div>
+            <div className="grid grid-cols-5 gap-1">{STAGES.map((s) => <div key={s.name} className={`rounded-md px-1 py-1.5 text-center text-[12px] font-bold ${s.name === T.stage ? "text-white" : s.name === T.hypothesis ? "bg-cyan-wash text-cyan-deep" : "bg-surface-2 text-muted"}`} style={s.name === T.stage ? { background: "var(--navy)" } : undefined}>{s.name}</div>)}</div>
             <p className="mt-2 text-[12.5px] text-ink"><b>{stage.name}{T.provisional ? " (provisional)" : ""}.</b> {stage.cond}{T.hypothesis && T.hypothesis !== T.stage ? ` En la pregunta 25 señaló un desafío propio de ${T.hypothesis}: ambas quedan como hipótesis.` : ""}</p>
             <div className="label mb-1 mt-3">Objetivo de crecimiento a doce meses</div>
             <p className="text-[12.5px] text-ink-soft">{String(resp.meta.objetivo ?? "") || <span className="italic text-faint">No registrado.</span>}</p>
@@ -980,7 +982,7 @@ function InformeTest({ id }: { id: string }) {
             {T.caps.map((c, i) => (
               <div key={c.n} className="mb-1.5 text-[12px]"><div className="flex items-baseline justify-between"><b className="text-ink">{c.name}</b><span className="num text-muted">{f1(c.avg, 2)} · {c.cov}/6</span></div><div className="relative h-[6px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.avg ?? 0) / 5) * 100}%`, background: c.avg != null && c.avg < THRESHOLD ? "var(--bad)" : LINES[i].color }} /><div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold" style={{ left: "60%" }} /></div></div>
             ))}
-            <p className="mt-1 text-[10.5px] text-faint">Umbral 3,0. Un promedio superior no elimina las debilidades de preguntas individuales.</p>
+            <p className="mt-1 text-[12px] text-faint">Umbral 3,0. Un promedio superior no elimina las debilidades de preguntas individuales.</p>
           </div>
         </div>
 
@@ -1005,7 +1007,7 @@ function InformeTest({ id }: { id: string }) {
           <PrintField label="Qué no necesita ahora" id={id} field="noNecesita" canEdit={canEdit} onSave={save} placeholder="Iniciativas que conviene posponer para proteger el foco" value={n.noNecesita ?? ""} />
         </div>
 
-        <div className="mt-5 border-t border-line pt-3 text-[11.5px] text-muted">
+        <div className="mt-5 border-t border-line pt-3 text-[12px] text-muted">
           <b className="text-ink">Pendientes de verificación:</b> {T.pending.length ? `preguntas ${T.pending.join(", ")}` : "ninguna"}. Una práctica declarada y no demostrada queda como máximo en nivel 2; la etapa y la prioridad se confirman con evidencia.
           {n.by && <span className="block text-faint">Notas del consultor: {n.by}, {new Date(n.at).toLocaleDateString("es-CO")}.</span>}
         </div>
@@ -1025,7 +1027,7 @@ function InformeDiagnostico() {
   const flagged = C.dims.filter((d) => d.flags.length);
   const strongest = [...C.caps].filter((c) => c.m != null).sort((a, b) => (b.m ?? 0) - (a.m ?? 0))[0];
   const gap = C.caps.filter((c) => (c.m ?? 5) < THRESHOLD);
-  const head = (n: number, t: string, sub: string) => <div className="mb-3 flex items-baseline gap-3 border-b border-line pb-2"><span className="num text-[22px] font-extrabold text-cyan-deep">{n}</span><div><div className="text-[15px] font-extrabold text-ink">{t}</div><div className="text-[11.5px] text-muted">{sub}</div></div></div>;
+  const head = (n: number, t: string, sub: string) => <div className="mb-3 flex items-baseline gap-3 border-b border-line pb-2"><span className="num text-[22px] font-extrabold text-cyan-deep">{n}</span><div><div className="text-[15px] font-extrabold text-ink">{t}</div><div className="text-[12px] text-muted">{sub}</div></div></div>;
   return (
     <>
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1043,21 +1045,21 @@ function InformeDiagnostico() {
           <MaturityRadar size={300} scores={scores} />
           <div>
             <p className="text-[13.5px] leading-relaxed text-ink">{gap.length ? <>{gap.length === 1 ? "Una capacidad" : `${gap.length} capacidades`} por debajo del umbral: <b>{gap.map((c) => c.name).join(", ")}</b>. {gap.length >= 2 ? "Dos o más capacidades en brecha indican una falla de arquitectura, no un problema de esfuerzo." : "Las demás están suficientemente instaladas."}</> : "Ninguna capacidad está por debajo del umbral."}{strongest ? ` La capacidad más avanzada es ${strongest.name} (${f1(strongest.m)}).` : ""}</p>
-            <table className="mt-3 w-full text-[12px]"><thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="py-1">Capacidad</th><th className="num py-1 text-center">F1</th><th className="num py-1 text-center">F2</th><th className="num py-1 text-center">F3</th><th className="num py-1 text-center">Madurez</th></tr></thead><tbody>{C.caps.map((c) => <tr key={c.n} className="border-t border-line"><td className="py-1 font-bold text-ink">{c.name}</td><td className="num py-1 text-center">{f1(c.f1)}</td><td className="num py-1 text-center">{f1(c.f2)}</td><td className="num py-1 text-center">{f1(c.f3)}</td><td className="num py-1 text-center font-extrabold" style={{ color: (c.m ?? 5) < THRESHOLD ? "var(--bad)" : "var(--ink)" }}>{f1(c.m)}</td></tr>)}</tbody></table>
+            <table className="mt-3 w-full text-[12px]"><thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="py-1">Capacidad</th><th className="num py-1 text-center">F1</th><th className="num py-1 text-center">F2</th><th className="num py-1 text-center">F3</th><th className="num py-1 text-center">Madurez</th></tr></thead><tbody>{C.caps.map((c) => <tr key={c.n} className="border-t border-line"><td className="py-1 font-bold text-ink">{c.name}</td><td className="num py-1 text-center">{f1(c.f1)}</td><td className="num py-1 text-center">{f1(c.f2)}</td><td className="num py-1 text-center">{f1(c.f3)}</td><td className="num py-1 text-center font-extrabold" style={{ color: (c.m ?? 5) < THRESHOLD ? "var(--bad)" : "var(--ink)" }}>{f1(c.m)}</td></tr>)}</tbody></table>
           </div>
         </div>
       </div>
       <div className="panel print-break mb-5 px-7 py-6">
         {head(2, "Mapa de calor por dimensión", "las 17 dimensiones con sus tres fuentes, la madurez triangulada, el nivel y las marcas")}
         <MaturityHeatmap scores={scores} />
-        <table className="mt-4 w-full text-[11.5px]"><thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="py-1">Dimensión</th><th className="num py-1 text-center">F1</th><th className="num py-1 text-center">F2</th><th className="num py-1 text-center">F3</th><th className="num py-1 text-center">Madurez</th><th className="py-1">Nivel</th><th className="py-1">Marcas</th></tr></thead><tbody>{C.dims.map((d) => <tr key={d.code} className="border-t border-line"><td className="py-1"><b className="num text-cyan-deep">{d.code}</b> {d.name}</td><td className="num py-1 text-center">{f1(d.f1)}</td><td className="num py-1 text-center">{f1(d.f2raw)}</td><td className="num py-1 text-center">{f1(d.f3)}</td><td className="num py-1 text-center font-extrabold">{f1(d.m)}</td><td className="py-1">{d.m != null ? levelName(d.m) : "—"}</td><td className="py-1 text-muted">{d.flags.map((f) => f.key).join(" · ")}</td></tr>)}</tbody></table>
+        <table className="mt-4 w-full text-[12px]"><thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="py-1">Dimensión</th><th className="num py-1 text-center">F1</th><th className="num py-1 text-center">F2</th><th className="num py-1 text-center">F3</th><th className="num py-1 text-center">Madurez</th><th className="py-1">Nivel</th><th className="py-1">Marcas</th></tr></thead><tbody>{C.dims.map((d) => <tr key={d.code} className="border-t border-line"><td className="py-1"><b className="num text-cyan-deep">{d.code}</b> {d.name}</td><td className="num py-1 text-center">{f1(d.f1)}</td><td className="num py-1 text-center">{f1(d.f2raw)}</td><td className="num py-1 text-center">{f1(d.f3)}</td><td className="num py-1 text-center font-extrabold">{f1(d.m)}</td><td className="py-1">{d.m != null ? levelName(d.m) : "—"}</td><td className="py-1 text-muted">{d.flags.map((f) => f.key).join(" · ")}</td></tr>)}</tbody></table>
       </div>
       <div className="panel print-break mb-5 px-7 py-6">
         {head(3, "Brechas priorizadas", "máximo cinco, ordenadas por profundidad y efecto de arrastre, con la metodología y el framework que las instalan")}
         {C.priorities.length === 0 && <p className="text-[12.5px] text-muted">Ninguna dimensión está por debajo de 3,0.</p>}
         {C.priorities.slice(0, 5).map((d, i) => { const dim = dimOf(d.code); return (
           <div key={d.code} className="mb-3 border-l-[3px] pl-3" style={{ borderColor: i === 0 ? "var(--bad)" : "var(--gold)" }}>
-            <div className="text-[10.5px] font-bold uppercase tracking-wider text-faint">{i === 0 ? "Cuello de botella" : `Brecha ${i + 1}`} · madurez {f1(d.m)} · arrastre {fmtNum(DRAG_WEIGHT(d.code), 1)} · prioridad {fmtNum(d.priority, 2)}</div>
+            <div className="text-[12px] font-bold uppercase tracking-wider text-faint">{i === 0 ? "Cuello de botella" : `Brecha ${i + 1}`} · madurez {f1(d.m)} · arrastre {fmtNum(DRAG_WEIGHT(d.code), 1)} · prioridad {fmtNum(d.priority, 2)}</div>
             <div className="text-[13.5px] font-extrabold text-ink">{d.code} · {d.name}</div>
             <p className="text-[12px] text-ink-soft"><b>Hallazgo.</b> {dim.defn} F1 {f1(d.f1)} · F2 {f1(d.f2raw)} · F3 {f1(d.f3)}{d.flags.length ? ` · ${d.flags.map((f) => f.key).join(", ")}` : ""}.</p>
             <p className="text-[12px] text-ink-soft"><b>Efecto cruzado.</b> {DRAG_WEIGHT(d.code) > 1 ? `Arrastra otras dimensiones (peso ${fmtNum(DRAG_WEIGHT(d.code), 1)}): no se resuelve de forma aislada.` : "Efecto acotado a su propia dimensión."}</p>
@@ -1068,13 +1070,13 @@ function InformeDiagnostico() {
       <div className="panel print-break mb-5 px-7 py-6">
         {head(4, "Comparativo de fuentes", "dirección, equipos y evidencia lado a lado: así nos vemos frente a así operamos")}
         {flagged.length === 0 ? <p className="text-[12.5px] text-muted">No hay divergencias marcadas entre las fuentes.</p> : <ul className="space-y-1.5 text-[12px]">{flagged.map((d) => <li key={d.code}><b className="text-ink">{d.code} · {d.name}.</b> {d.flags.map((f) => FLAG_TEXT[f.key] ?? f.key).join(" ")} <span className="num text-muted">(F1 {f1(d.f1)} · F2 {f1(d.f2raw)} · F3 {f1(d.f3)})</span></li>)}</ul>}
-        {C.f2n > 0 && <table className="mt-4 w-full text-[11.5px]"><thead><tr className="text-left text-[10px] uppercase tracking-wider text-faint"><th className="py-1">Ítems de contraste general (equipos)</th><th className="num py-1 text-right">Promedio</th></tr></thead><tbody>{C.general.map((q) => <tr key={q.code} className="border-t border-line"><td className="py-1 text-ink-soft">{q.text}</td><td className="num py-1 text-right font-bold">{f1(q.avg)}</td></tr>)}</tbody></table>}
+        {C.f2n > 0 && <table className="mt-4 w-full text-[12px]"><thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="py-1">Ítems de contraste general (equipos)</th><th className="num py-1 text-right">Promedio</th></tr></thead><tbody>{C.general.map((q) => <tr key={q.code} className="border-t border-line"><td className="py-1 text-ink-soft">{q.text}</td><td className="num py-1 text-right font-bold">{f1(q.avg)}</td></tr>)}</tbody></table>}
         {C.openAnswers.length > 0 && <div className="mt-3"><div className="label mb-1">Respuestas abiertas (anónimas)</div><ul className="text-[12px] text-ink-soft">{C.openAnswers.map((t, i) => <li key={i}>«{t}»</li>)}</ul></div>}
       </div>
       <div className="panel mb-5 px-7 py-6">
         {head(5, "Recomendación de nivel", "nivel de acompañamiento, composición propuesta y lo que no se necesita hoy")}
-        <div className="rounded-xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Nivel recomendado</div><div className="text-[22px] font-extrabold">{R.level}</div><p className="mt-1 text-[12.5px] text-white/85">{R.text}</p>{R.notNeeded && <p className="mt-2 text-[12px] text-white/75">{R.notNeeded}</p>}</div>
-        <p className="mt-3 text-[11px] text-muted">Los puntajes son madurez evaluada con reglas de evidencia, no una medición psicométrica; no son comparables entre empresas mientras no existan baremos. La recomendación la confirma el advisor con las entrevistas y el contexto de la empresa.</p>
+        <div className="rounded-xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}><div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Nivel recomendado</div><div className="text-[22px] font-extrabold">{R.level}</div><p className="mt-1 text-[12.5px] text-white/85">{R.text}</p>{R.notNeeded && <p className="mt-2 text-[12px] text-white/75">{R.notNeeded}</p>}</div>
+        <p className="mt-3 text-[12px] text-muted">Los puntajes son madurez evaluada con reglas de evidencia, no una medición psicométrica; no son comparables entre empresas mientras no existan baremos. La recomendación la confirma el advisor con las entrevistas y el contexto de la empresa.</p>
       </div>
     </>
   );
@@ -1091,7 +1093,7 @@ function Brechas() {
       <Card key={d.code} className={`rise rise-${Math.min(i + 1, 4)}`}>
         <div className="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_300px]">
           <div>
-            <div className="flex flex-wrap items-center gap-2"><span className="num text-[11px] font-extrabold" style={{ color: i === 0 ? "var(--bad)" : "var(--gold)" }}>{i === 0 ? "CUELLO DE BOTELLA" : `BRECHA ${i + 1}`}</span><span className="num text-[11px] text-muted">madurez {f1(d.m)} · arrastre {fmtNum(DRAG_WEIGHT(d.code), 1)} · prioridad {fmtNum(d.priority, 2)}</span></div>
+            <div className="flex flex-wrap items-center gap-2"><span className="num text-[12px] font-extrabold" style={{ color: i === 0 ? "var(--bad)" : "var(--gold)" }}>{i === 0 ? "CUELLO DE BOTELLA" : `BRECHA ${i + 1}`}</span><span className="num text-[12px] text-muted">madurez {f1(d.m)} · arrastre {fmtNum(DRAG_WEIGHT(d.code), 1)} · prioridad {fmtNum(d.priority, 2)}</span></div>
             <Link href={`/panel/diagnostico/dimension/${d.code}`} className="mt-1 block text-[15px] font-extrabold text-ink hover:text-cyan-deep">{d.code} · {d.name}</Link>
             <p className="mt-1 text-[12.5px] leading-snug text-muted">{dim.defn}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">{d.flags.map((f) => <span key={f.key} className={`chip ${f.severe ? "chip-bad" : "chip-warn"}`}>{f.key}</span>)}</div>
@@ -1109,7 +1111,7 @@ function Brechas() {
   return (
     <>
       <div className="rise mb-5 rounded-2xl px-6 py-5 text-white" style={{ background: "var(--grad-deep)" }}>
-        <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Nivel de acompañamiento recomendado</div>
+        <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Nivel de acompañamiento recomendado</div>
         <div className="mt-1 text-[26px] font-extrabold tracking-tight">{R.level}</div>
         <p className="mt-1 max-w-[70ch] text-[13px] leading-relaxed text-white/80">{R.text}</p>
         {R.notNeeded && <p className="mt-2 text-[12.5px] text-white/70">{R.notNeeded}</p>}
@@ -1141,7 +1143,7 @@ function F2Card() {
             <>
               <div className="label mb-1">Enlace de la empresa</div>
               <div className="flex flex-wrap items-center gap-2">
-                <code className="num min-w-0 flex-1 truncate rounded-lg bg-surface-2 px-3 py-2 text-[11.5px] text-ink-soft">{d.url}</code>
+                <code className="num min-w-0 flex-1 truncate rounded-lg bg-surface-2 px-3 py-2 text-[12px] text-ink-soft">{d.url}</code>
                 <button onClick={copy} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Link2 size={13} /> {copied ? "Copiado" : "Copiar enlace"}</button>
                 <a href={d.url} target="_blank" rel="noreferrer" className="chip">Abrir</a>
               </div>
@@ -1152,9 +1154,9 @@ function F2Card() {
         </div>
         <div className="rounded-xl bg-surface-2 px-4 py-3">
           <div className="flex items-center gap-2"><Users size={14} className="text-cyan-deep" /><span className="num text-[26px] font-extrabold text-ink">{d?.total ?? 0}</span><span className="text-[12px] text-muted">respuestas recibidas</span></div>
-          <div className="mt-1 text-[11.5px] text-muted">{ok ? "Muestra suficiente para reportar." : `Faltan ${8 - (d?.total ?? 0)} para la muestra mínima; con menos de cinco la Fuente 2 no se reporta y la madurez se calcula 55/45.`}</div>
-          {d && Object.keys(d.byArea).length > 0 && <div className="mt-2 space-y-0.5 text-[11.5px]">{Object.entries(d.byArea).map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-ink-soft">{k}</span><span className="num text-muted">{v}{v < 5 ? " · no se reporta por separado" : ""}</span></div>)}</div>}
-          {d?.latest && <div className="mt-2 text-[10.5px] text-faint">Última: {new Date(d.latest).toLocaleString("es-CO")}</div>}
+          <div className="mt-1 text-[12px] text-muted">{ok ? "Muestra suficiente para reportar." : `Faltan ${8 - (d?.total ?? 0)} para la muestra mínima; con menos de cinco la Fuente 2 no se reporta y la madurez se calcula 55/45.`}</div>
+          {d && Object.keys(d.byArea).length > 0 && <div className="mt-2 space-y-0.5 text-[12px]">{Object.entries(d.byArea).map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-ink-soft">{k}</span><span className="num text-muted">{v}{v < 5 ? " · no se reporta por separado" : ""}</span></div>)}</div>}
+          {d?.latest && <div className="mt-2 text-[12px] text-faint">Última: {new Date(d.latest).toLocaleString("es-CO")}</div>}
         </div>
       </div>
     </Card>
@@ -1209,31 +1211,31 @@ function Captura() {
           <button onClick={publish} disabled={busy !== null} className="btn-primary inline-flex items-center gap-1.5 text-[12px]">{busy === "publish" ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Publicar corte A3</button>
         )}
       </div>
-      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>{msg}</div>}
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "var(--gold-wash)", color: "var(--gold-text)" }}>{msg}</div>}
       {hasInstrument(cv.catalog.company, "f2") && <F2Card />}
       {!canCapture && <div className="mb-4 rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] text-muted">Tu rol consulta la captura; la registran los responsables de cada capacidad y el advisor.</div>}
       <div className="space-y-5">
         {dimsOf(cap).map((d) => (
           <Card key={d.code}>
             <CardHeader title={`${d.code} · ${d.name}`} sub={d.defn} />
-            {niv(d) && <div className="grid gap-1.5 px-5 pb-3 sm:grid-cols-5">{[1, 2, 3, 4, 5].map((n) => <div key={n} className="rounded-lg bg-surface-2 px-2.5 py-2 text-[10.5px] leading-snug text-muted"><b className="text-ink">Nivel {n}.</b> {niv(d)[String(n)]}</div>)}</div>}
+            {niv(d) && <div className="grid gap-1.5 px-5 pb-3 sm:grid-cols-5">{[1, 2, 3, 4, 5].map((n) => <div key={n} className="rounded-lg bg-surface-2 px-2.5 py-2 text-[12px] leading-snug text-muted"><b className="text-ink">Nivel {n}.</b> {niv(d)[String(n)]}</div>)}</div>}
             <div className="overflow-x-auto">
               <table className="w-full text-[12.5px]">
-                <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-5 py-2">Práctica</th><th className="px-2 py-2">Autoevaluación</th><th className="px-2 py-2">Evidencia</th><th className="px-2 py-2">Nivel</th><th className="px-2 py-2">Registro</th></tr></thead>
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-5 py-2">Práctica</th><th className="px-2 py-2">Autoevaluación</th><th className="px-2 py-2">Evidencia</th><th className="px-2 py-2">Nivel</th><th className="px-2 py-2">Registro</th></tr></thead>
                 <tbody>
                   {practices.filter((p) => p.dim === d.code).map((p) => {
                     const c = vars[p.code];
                     return (
                       <Fragment key={p.code}>
                       <tr className="border-t border-line align-top">
-                        <td className="px-5 py-2.5"><span className="num text-[10.5px] font-bold text-cyan-deep">{p.code}</span><div className="text-[12px] leading-snug text-ink-soft">{p.f1}</div></td>
+                        <td className="px-5 py-2.5"><span className="num text-[12px] font-bold text-cyan-deep">{p.code}</span><div className="text-[12px] leading-snug text-ink-soft">{p.f1}</div></td>
                         <td className="px-2 py-2.5"><select className="input" disabled={!canCapture || busy === p.code || data?.published} value={c?.perception ?? ""} onChange={(e) => send(p.code, { perception: Number(e.target.value) })}><option value="">—</option>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} · {LEVELS[n - 1].name}</option>)}</select></td>
                         <td className="px-2 py-2.5"><select className="input" disabled={!canPublish || busy === p.code || data?.published} value={c?.evidence ?? ""} onChange={(e) => send(p.code, { evidence: e.target.value })}><option value="">—</option><option value="V">Verificada</option><option value="P">Parcial</option><option value="N">No existe</option></select></td>
                         <td className="px-2 py-2.5"><select className="input" disabled={!canPublish || busy === p.code || data?.published} value={c?.level ?? ""} onChange={(e) => send(p.code, { level: Number(e.target.value) })}><option value="">—</option>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select></td>
-                        <td className="px-2 py-2.5 text-[11px] text-faint">{c ? <span className="inline-flex items-center gap-1"><CheckCircle2 size={11} style={{ color: "var(--ok)" }} /> {c.by} · {new Date(c.at).toLocaleDateString("es-CO")}</span> : "sin captura"}</td>
+                        <td className="px-2 py-2.5 text-[12px] text-faint">{c ? <span className="inline-flex items-center gap-1"><CheckCircle2 size={11} style={{ color: "var(--ok-text)" }} /> {c.by} · {new Date(c.at).toLocaleDateString("es-CO")}</span> : "sin captura"}</td>
                       </tr>
                       {c && (c.perception || c.evidence) && (
-                        <tr className="bg-cyan-wash/50"><td colSpan={5} className="px-5 py-2 text-[11.5px] leading-snug text-ink-soft">
+                        <tr className="bg-cyan-wash/50"><td colSpan={5} className="px-5 py-2 text-[12px] leading-snug text-ink-soft">
                           {c.perception && GUIDES.f1[p.code]?.n?.[String(c.perception)] && <span><b className="text-ink">{c.perception} · {LEVELS[c.perception - 1].name}.</b> {GUIDES.f1[p.code].n![String(c.perception)]} </span>}
                           {c.evidence && GUIDES.ev[p.code]?.[c.evidence] && <span className="block text-muted"><b>Evidencia {c.evidence === "V" ? "verificada" : c.evidence === "P" ? "parcial" : "no existe"}.</b> {GUIDES.ev[p.code][c.evidence]}</span>}
                         </td></tr>

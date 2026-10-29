@@ -163,7 +163,7 @@ export function CommandPalette() {
             }}
             placeholder="Buscar variables, KPI, iniciativas, tareas, programas, personas…"
             className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-faint" />
-          <kbd className="num rounded bg-surface-2 px-1.5 py-0.5 text-[9px] font-bold text-faint">ESC</kbd>
+          <kbd className="num rounded bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold text-faint">ESC</kbd>
         </div>
         <div className="max-h-[54vh] overflow-y-auto py-1.5">
           {results.length === 0 && (
@@ -175,13 +175,13 @@ export function CommandPalette() {
             const showGroup = i === 0 || results[i - 1].group !== e.group;
             return (
               <div key={e.group + e.id}>
-                {showGroup && <div className="label px-4 pb-1 pt-2 !text-[8px]">{e.group}</div>}
+                {showGroup && <div className="label px-4 pb-1 pt-2 !text-[11px]">{e.group}</div>}
                 <button onClick={() => go(e)} onMouseEnter={() => setSel(i)}
                   className={`flex w-full items-center gap-3 px-4 py-2 text-left ${
                     sel === i ? "bg-cyan-wash" : ""}`}>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold text-ink">{e.title}</span>
-                    <span className="block truncate text-[10.5px] text-faint">{e.sub}</span>
+                    <span className="block truncate text-[12px] text-faint">{e.sub}</span>
                   </span>
                   {sel === i && <CornerDownLeft size={13} className="shrink-0 text-cyan-deep" />}
                 </button>
@@ -189,7 +189,7 @@ export function CommandPalette() {
             );
           })}
         </div>
-        <div className="border-t border-line px-4 py-2 text-[9.5px] text-faint">
+        <div className="border-t border-line px-4 py-2 text-[11px] text-faint">
           ↑↓ navegar · Enter abrir · las variables, iniciativas, tareas y programas abren su ficha
         </div>
       </div>
@@ -202,10 +202,10 @@ export function SearchButton() {
   return (
     <button
       onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-      className="hidden items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 text-[11.5px] text-muted transition-colors hover:text-ink sm:flex"
+      className="hidden items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-ink sm:flex"
       title="Buscar (⌘K)">
       <Search size={13} /> Buscar…
-      <kbd className="num rounded bg-surface px-1.5 py-0.5 text-[9px] font-bold text-faint shadow-sm">⌘K</kbd>
+      <kbd className="num rounded bg-surface px-1.5 py-0.5 text-[11px] font-bold text-faint shadow-sm">⌘K</kbd>
     </button>
   );
 }

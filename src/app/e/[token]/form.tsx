@@ -34,14 +34,14 @@ export function SurveyForm({ token, company }: { token: string; company: string 
         <div className="mx-auto flex max-w-[860px] items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/ge-logo-blanco.png" alt="Gestión estratégica" className="h-7 object-contain" />
-          <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Diagnóstico de capacidades · Percepción de equipos</div><div className="truncate text-[15px] font-extrabold">{company}</div></div>
+          <div className="min-w-0"><div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Diagnóstico de capacidades · Percepción de equipos</div><div className="truncate text-[15px] font-extrabold">{company}</div></div>
           <span className="chip ml-auto hidden sm:inline-flex" style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}><ShieldCheck size={11} /> Anónima</span>
         </div>
       </header>
       <main className="mx-auto max-w-[860px] px-5 py-8">
         {done !== null ? (
           <div className="panel px-7 py-8 text-center">
-            <CheckCircle2 size={34} className="mx-auto" style={{ color: "var(--ok)" }} />
+            <CheckCircle2 size={34} className="mx-auto" style={{ color: "var(--ok-text)" }} />
             <h1 className="mt-3 text-[22px] font-extrabold text-ink">Gracias por responder</h1>
             <p className="mx-auto mt-2 max-w-[52ch] text-[13.5px] text-muted">Tu respuesta se sumó a las demás de {company}. Solo se reportan resultados agregados, con un mínimo de cinco respuestas por grupo; nadie verá tu respuesta individual.</p>
             <p className="mt-4 text-[12px] text-faint">Puedes cerrar esta ventana.</p>
@@ -53,9 +53,9 @@ export function SurveyForm({ token, company }: { token: string; company: string 
               <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">Responde según tu experiencia real en {company} durante los últimos seis meses. No hay respuestas correctas: buscamos entender cómo funciona la organización, no evaluar personas.</p>
               <p className="mt-2 text-[13px] leading-relaxed text-muted"><b className="text-ink">Tu respuesta es anónima.</b> No se pide tu nombre ni tu correo, no se guarda desde dónde respondes y solo se reportan agregados con un mínimo de cinco respuestas por grupo. Son 40 afirmaciones; toma entre 15 y 20 minutos.</p>
               <div className="mt-4 grid gap-1.5 sm:grid-cols-5">
-                {SCALE.map((e) => <div key={e.n} className="rounded-lg bg-surface-2 px-3 py-2 text-[11.5px]"><b className="text-ink">{e.n} · {e.name}</b><div className="text-muted">{e.desc}</div></div>)}
+                {SCALE.map((e) => <div key={e.n} className="rounded-lg bg-surface-2 px-3 py-2 text-[12px]"><b className="text-ink">{e.n} · {e.name}</b><div className="text-muted">{e.desc}</div></div>)}
               </div>
-              <label className="mt-4 block text-[11px] font-bold uppercase tracking-wider text-faint">Área (opcional)<input className="input mt-1 font-normal normal-case tracking-normal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Comercial, operaciones, administración…" /></label>
+              <label className="mt-4 block text-[12px] font-bold uppercase tracking-wider text-faint">Área (opcional)<input className="input mt-1 font-normal normal-case tracking-normal" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Comercial, operaciones, administración…" /></label>
             </div>
             {groups.map((gname) => (
               <div key={gname} className="mb-5">
@@ -69,7 +69,7 @@ export function SurveyForm({ token, company }: { token: string; company: string 
                         {SCALE.map((e, i) => { const n = i + 1; return (
                           <button key={n} type="button" onClick={() => setR((p) => ({ ...p, [q.code]: n }))} title={g?.n?.[String(n)]}
                             className={`rounded-lg border px-1 py-2 text-center transition-all ${v === n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === n ? { background: "var(--navy)" } : undefined}>
-                            <div className="num text-[16px] font-extrabold">{n}</div><div className={`text-[9.5px] font-semibold ${v === n ? "text-cyan-fill" : "text-muted"}`}>{e.name}</div>
+                            <div className="num text-[16px] font-extrabold">{n}</div><div className={`text-[11px] font-semibold ${v === n ? "text-cyan-fill" : "text-muted"}`}>{e.name}</div>
                           </button>
                         ); })}
                       </div>
@@ -81,10 +81,10 @@ export function SurveyForm({ token, company }: { token: string; company: string 
             ))}
             <div className="panel mb-5 px-5 py-4">
               <p className="text-[13.5px] font-semibold text-ink">Si pudieras cambiar una sola cosa de cómo funciona esta empresa, ¿cuál sería?</p>
-              <p className="text-[11.5px] text-muted">Opcional y anónima. Se cita sin nombre en la devolución.</p>
+              <p className="text-[12px] text-muted">Opcional y anónima. Se cita sin nombre en la devolución.</p>
               <textarea className="input mt-2 min-h-[80px]" value={abierta} onChange={(e) => setAbierta(e.target.value)} maxLength={600} />
             </div>
-            {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad)" }}>{msg}</div>}
+            {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad-text)" }}>{msg}</div>}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="num text-[12px] text-muted">{answered} de 40 respondidas · se necesitan al menos 30</span>
               <button onClick={submit} disabled={busy || answered < 30} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar mi respuesta</button>
@@ -92,7 +92,7 @@ export function SurveyForm({ token, company }: { token: string; company: string 
           </>
         )}
       </main>
-      <footer className="px-6 pb-8 text-center text-[10px] font-medium uppercase tracking-[0.14em] text-faint/70">Gestión estratégica · Diagnóstico de capacidades · Fuente 2</footer>
+      <footer className="px-6 pb-8 text-center text-[12px] font-medium uppercase tracking-[0.14em] text-faint/70">Gestión estratégica · Diagnóstico de capacidades · Fuente 2</footer>
     </div>
   );
 }

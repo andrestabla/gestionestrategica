@@ -48,8 +48,8 @@ export default function CapacidadesPage() {
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-5 pb-2 pt-3.5">
                   <span className="h-2.5 w-2.5 shrink-0 translate-y-[-1px] rounded-full" style={{ background: p.color }} />
                   <span className="text-[13.5px] font-extrabold uppercase tracking-[0.08em] text-ink">{p.name}</span>
-                  <span className="text-[11px] text-faint">{p.sub}</span>
-                  <span className="ml-auto hidden text-[11px] text-faint sm:block">{objectives.length} objetivos</span>
+                  <span className="text-[12px] text-faint">{p.sub}</span>
+                  <span className="ml-auto hidden text-[12px] text-faint sm:block">{objectives.length} objetivos</span>
                 </div>
                 <div className="grid gap-2 px-4 pb-4 sm:grid-cols-3">
                   {objectives.map((o) => {
@@ -63,13 +63,13 @@ export default function CapacidadesPage() {
                             : "bg-surface-2 hover:bg-surface-3"
                         }`}
                         style={active ? { background: p.color } : undefined}>
-                        <div className={`num text-[9.5px] font-bold ${active ? "text-white/70" : "text-faint"}`}>
+                        <div className={`num text-[11px] font-bold ${active ? "text-white/70" : "text-faint"}`}>
                           {o.id}
                         </div>
                         <div className={`mt-0.5 text-[12px] font-semibold leading-snug ${active ? "text-white" : "text-ink"}`}>
                           {o.name}
                         </div>
-                        <div className={`num mt-1.5 text-[9.5px] ${active ? "text-white/70" : "text-faint"}`}>
+                        <div className={`num mt-1.5 text-[11px] ${active ? "text-white/70" : "text-faint"}`}>
                           {o.kpis.length} KPI{inis > 0 ? ` · ${inis} iniciativa${inis > 1 ? "s" : ""}` : ""}
                         </div>
                       </button>
@@ -110,17 +110,17 @@ export default function CapacidadesPage() {
                     </div>
                     <div className="space-y-1.5">
                       {objKpis.length === 0 && (
-                        <p className="text-[11.5px] italic text-faint">Sin indicadores asociados.</p>
+                        <p className="text-[12px] italic text-faint">Sin indicadores asociados.</p>
                       )}
                       {objKpis.map((k) => {
                         const last = k.series[k.series.length - 1];
                         return (
                           <Link key={k.code} href="/panel/kpi"
                             className="flex items-center gap-2.5 rounded-lg bg-surface-2 px-3 py-2 transition-colors hover:bg-cyan-wash">
-                            <span className="num text-[9.5px] font-bold text-cyan-deep">{k.code}</span>
+                            <span className="num text-[11px] font-bold text-cyan-deep">{k.code}</span>
                             <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">{k.name}</span>
-                            <span className="num text-[11px] font-bold text-ink">
-                              {last ? fmtNum(last.value, 1) : "—"} <span className="text-[9px] font-medium text-faint">{k.unit}</span>
+                            <span className="num text-[12px] font-bold text-ink">
+                              {last ? fmtNum(last.value, 1) : "—"} <span className="text-[11px] font-medium text-faint">{k.unit}</span>
                             </span>
                           </Link>
                         );
@@ -138,9 +138,9 @@ export default function CapacidadesPage() {
                           <div key={c.id} className="rounded-lg bg-surface-2 px-3 py-2">
                             <div className="flex items-baseline justify-between gap-2">
                               <span className="text-[12px] font-semibold text-ink">{c.name}</span>
-                              <span className="num text-[10px] text-muted">{c.current} → {c.target}</span>
+                              <span className="num text-[12px] text-muted">{c.current} → {c.target}</span>
                             </div>
-                            <div className="mt-1 text-[10.5px] text-faint">{c.owner}</div>
+                            <div className="mt-1 text-[12px] text-faint">{c.owner}</div>
                           </div>
                         ))}
                       </div>
@@ -152,7 +152,7 @@ export default function CapacidadesPage() {
                       <ListChecks size={11} /> Iniciativas
                     </div>
                     {objInis.length === 0 ? (
-                      <p className="text-[11.5px] italic text-faint">
+                      <p className="text-[12px] italic text-faint">
                         Sin iniciativas asociadas todavía: el objetivo se mueve con la
                         operación regular.
                       </p>
@@ -162,7 +162,7 @@ export default function CapacidadesPage() {
                           <Link key={i.id} href={`/panel/iniciativas/${i.id}`}
                             className="block rounded-lg bg-gold-wash px-3 py-2 transition-transform hover:translate-x-0.5">
                             <div className="text-[12px] font-semibold text-ink">{i.name}</div>
-                            <div className="num mt-0.5 text-[10px]" style={{ color: "var(--gold)" }}>
+                            <div className="num mt-0.5 text-[12px]" style={{ color: "var(--gold-text)" }}>
                               {i.subsistema} · avance {i.progress} % · {responsible(v, i.ownerId).dependencia}
                             </div>
                           </Link>
@@ -196,9 +196,9 @@ export default function CapacidadesPage() {
                     <div className="absolute top-0 h-full border-l-[1.5px] border-dashed border-gold"
                       style={{ left: `${(c.target / 5) * 100}%` }} />
                   </div>
-                  <span className="num text-[11px] font-bold text-muted">{c.current} → {c.target}</span>
+                  <span className="num text-[12px] font-bold text-muted">{c.current} → {c.target}</span>
                 </div>
-                <div className="mt-2 flex items-baseline justify-between text-[10.5px] text-faint">
+                <div className="mt-2 flex items-baseline justify-between text-[12px] text-faint">
                   <span>{c.owner}</span>
                   <span className="num">{inis.length} iniciativa{inis.length !== 1 ? "s" : ""}</span>
                 </div>

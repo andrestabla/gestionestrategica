@@ -53,7 +53,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
         <AlgoritmoMark size={26} />
         <div className="min-w-0 leading-tight">
           <div className="truncate text-[13.5px] font-extrabold tracking-tight text-ink">Gestión estratégica</div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-faint">Administración de la plataforma</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">Administración de la plataforma</div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-[12px] text-muted sm:inline">{userName}</span>
@@ -103,20 +103,20 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[15px] font-extrabold tracking-tight text-ink">{c.name}</div>
-                      <div className="truncate text-[11.5px] text-muted">{c.sector || "Sector por definir"}</div>
+                      <div className="truncate text-[12px] text-muted">{c.sector || "Sector por definir"}</div>
                     </div>
                     {busy === c.slug ? <Loader2 size={16} className="animate-spin text-cyan-deep" /> : c.active && <ArrowRight size={16} className="text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-cyan-deep" />}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {isCurrent && <span className="chip chip-cyan !py-0 text-[9.5px]">activa ahora</span>}
-                    {!c.active && <span className="chip chip-bad !py-0 text-[9.5px]">desactivada</span>}
-                    {c.template === "demo" && <span className="chip chip-gold !py-0 text-[9.5px]">plantilla demo</span>}
-                    <span className="chip !py-0 text-[9.5px]"><MapPin size={9} /> {[c.city, c.department].filter(Boolean).join(", ") || (c.country === "EC" ? "Ecuador" : "Colombia")} · {c.currency}</span>
+                    {isCurrent && <span className="chip chip-cyan !py-0 text-[11px]">activa ahora</span>}
+                    {!c.active && <span className="chip chip-bad !py-0 text-[11px]">desactivada</span>}
+                    {c.template === "demo" && <span className="chip chip-gold !py-0 text-[11px]">plantilla demo</span>}
+                    <span className="chip !py-0 text-[11px]"><MapPin size={9} /> {[c.city, c.department].filter(Boolean).join(", ") || (c.country === "EC" ? "Ecuador" : "Colombia")} · {c.currency}</span>
                   </div>
-                  <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-[11px] text-muted">
-                    <div><dt className="flex items-center gap-1 text-[9.5px] uppercase tracking-wider text-faint"><Rocket size={9} /> Iniciativas</dt><dd className="num text-[14px] font-extrabold text-ink">{c.initiatives}</dd></div>
-                    <div><dt className="flex items-center gap-1 text-[9.5px] uppercase tracking-wider text-faint"><Gauge size={9} /> KPI</dt><dd className="num text-[14px] font-extrabold text-ink">{c.kpis}</dd></div>
-                    <div><dt className="flex items-center gap-1 text-[9.5px] uppercase tracking-wider text-faint"><Users2 size={9} /> Cuentas</dt><dd className="num text-[14px] font-extrabold text-ink">{c.users}</dd></div>
+                  <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-[12px] text-muted">
+                    <div><dt className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-faint"><Rocket size={9} /> Iniciativas</dt><dd className="num text-[14px] font-extrabold text-ink">{c.initiatives}</dd></div>
+                    <div><dt className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-faint"><Gauge size={9} /> KPI</dt><dd className="num text-[14px] font-extrabold text-ink">{c.kpis}</dd></div>
+                    <div><dt className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-faint"><Users2 size={9} /> Cuentas</dt><dd className="num text-[14px] font-extrabold text-ink">{c.users}</dd></div>
                   </dl>
                 </button>
               );
@@ -125,7 +125,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
           </div>
         )}
 
-        <p className="mt-8 flex items-start gap-2 text-[11px] leading-relaxed text-faint">
+        <p className="mt-8 flex items-start gap-2 text-[12px] leading-relaxed text-faint">
           <Settings2 size={12} className="mt-0.5 shrink-0" />
           Las empresas desactivadas no se pueden elegir: reactívalas o elimínalas desde Administración → Empresas, dentro de cualquier empresa activa.
         </p>

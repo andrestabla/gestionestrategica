@@ -11,7 +11,7 @@ import { vocabOf } from "@/lib/vocabulario";
 import { DIMS, PRACTICES } from "@/data/mapa";
 import { PERSPECTIVES } from "@/data/cmi";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
-import { MaturityRadar, ScoreGauge } from "@/components/charts";
+import { MaturityRadar, ScoreGauge, type ScoresMap } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
 import { useBase } from "@/components/user-context";
 import { LINES, fmtCOP } from "@/data/demo";
@@ -23,9 +23,12 @@ import { ArrowRight, ShieldAlert, AlertTriangle, Info } from "lucide-react";
 /** «3 objetivos», «1 objetivo»: conteo con su sustantivo. */
 const cuenta = (n: number, singular: string, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
 
+/** Sin medición publicada ni fuentes capturadas: los gráficos se muestran vacíos en lugar de «1,0 Incipiente». */
+const EMPTY_SCORES: ScoresMap = { 1: {}, 2: {}, 3: {}, 4: {} };
+
 const SEV_META = {
-  1: { icon: ShieldAlert, color: "var(--bad)", label: "Críticas" },
-  2: { icon: AlertTriangle, color: "var(--warn)", label: "Advertencias" },
+  1: { icon: ShieldAlert, color: "var(--bad-text)", label: "Críticas" },
+  2: { icon: AlertTriangle, color: "var(--warn-text)", label: "Advertencias" },
   3: { icon: Info, color: "var(--muted)", label: "Informativas" },
 } as const;
 
@@ -49,7 +52,9 @@ function PanelHome() {
   const prev = matData?.previous
     ? [1, 2, 3, 4].reduce((a, n) => a + (prevLineScoreOf(n) ?? 0), 0) / 4
     : Object.values(prevByLine).reduce((a, b) => a + b, 0) / 4;
-  const alerts = buildAlerts(v);
+  // empresa sin medición publicada (corte A0): nada que calificar ni alertar todavía
+  const sinDato = (matData?.current.id ?? v.current.id) === "A0";
+  const alerts = sinDato ? [] : buildAlerts(v);
   const summary = executiveSummary(v);
   const initiatives = v.initiatives;
   const budget = initiatives.reduce(
@@ -83,18 +88,22 @@ function PanelHome() {
         <div className="relative grid gap-8 px-7 py-6 lg:grid-cols-[240px_1fr_320px] lg:items-center">
           <div>
             <div className="label mb-2">Madurez de la empresa</div>
-            <ScoreGauge value={score} />
-            <div className="mt-2 flex items-center justify-center gap-1.5 text-[11.5px] text-muted">
-              <span className="chip chip-ok num">▲ {(score - prev).toFixed(1).replace(".", ",")}</span>
-              frente a la medición anterior
-            </div>
+            {sinDato ? (
+              <div className="grid h-[130px] place-items-center rounded-2xl border border-dashed border-line text-center">
+                <div><div className="num text-[30px] font-extrabold text-faint">—</div><div className="text-[12px] text-muted">Sin medición todavía</div></div>
+              </div>
+            ) : <ScoreGauge value={score} />}
+            {!sinDato && <div className="mt-2 flex items-center justify-center gap-1.5 text-[12px] text-muted">
+              <span className="chip chip-ok num">{sinDato ? "—" : `▲ ${(score - prev).toFixed(1).replace(".", ",")}`}</span>
+              {sinDato ? "sin medición anterior" : "frente a la medición anterior"}
+            </div>}
           </div>
 
           <div className="space-y-4">
             <div className="label">Avance por capacidad</div>
             {LINES.map((l) => {
-              const now = lineScoreOf(l.n);
-              const before = prevLineScoreOf(l.n) ?? prevByLine[l.n] ?? 0;
+              const now = sinDato ? 0 : lineScoreOf(l.n);
+              const before = sinDato ? 0 : (prevLineScoreOf(l.n) ?? prevByLine[l.n] ?? 0);
               return (
                 <Link key={l.n} href={`${base}/panel/diagnostico/capacidad/${l.n}`} className="group block">
                   <div className="mb-1.5 flex items-baseline justify-between">
@@ -102,7 +111,7 @@ function PanelHome() {
                       {l.code} <span className="font-semibold text-ink-soft">{l.name}</span>
                     </span>
                     <span className="num text-[12px] text-muted">
-                      {before.toFixed(1)} → <b className="text-[13px] text-cyan-deep">{now.toFixed(1)}</b>
+                      {sinDato ? <span className="text-faint">sin dato</span> : <>{before.toFixed(1)} → <b className="text-[13px] text-cyan-deep">{now.toFixed(1)}</b></>}
                     </span>
                   </div>
                   <div className="relative h-[9px] overflow-hidden rounded-full bg-surface-2">
@@ -119,7 +128,7 @@ function PanelHome() {
                 </Link>
               );
             })}
-            <div className="flex items-center gap-4 pt-1 text-[10.5px] text-faint">
+            <div className="flex items-center gap-4 pt-1 text-[12px] text-faint">
               <span className="flex items-center gap-1.5">
                 <i className="inline-block h-[3px] w-4 rounded-full bg-line-strong" /> medición anterior
               </span>
@@ -130,7 +139,7 @@ function PanelHome() {
           </div>
 
           <div className="hidden lg:block">
-            <MaturityRadar size={320} scores={effScores} />
+            <MaturityRadar size={320} scores={sinDato ? EMPTY_SCORES : effScores} />
           </div>
         </div>
       </div>
@@ -144,8 +153,8 @@ function PanelHome() {
           value={budgetPct} unit="%"
           foot={`${fmtCOP(budget.executed)} de ${fmtCOP(budget.planned)}`}
           accent="linear-gradient(90deg, var(--n4), var(--n5))" />
-        <StatCard label="Alertas del motor de seguimiento" value={summary.alertCounts.critical}
-          unit={`críticas · ${summary.alertCounts.warning} advertencias`}
+        <StatCard label="Alertas del motor de seguimiento" value={sinDato ? 0 : summary.alertCounts.critical}
+          unit={`críticas · ${sinDato ? 0 : summary.alertCounts.warning} advertencias`}
           foot={`${summary.actions.done}/${summary.actions.total} acciones completadas · ${summary.actions.late} vencidas`}
           accent="linear-gradient(90deg, var(--bad), #a13c44)" />
       </div>
@@ -154,6 +163,7 @@ function PanelHome() {
       <Card className="rise rise-3 mb-8">
         <CardHeader title="Alertas del motor de seguimiento"
           sub="Generadas por las reglas del marco conceptual: rachas en rojo, KPI contra meta, rezago de captura, proyección insuficiente, desalineación presupuestal y evidencia faltante" />
+        {alerts.length === 0 && <div className="px-5 py-4 text-[12.5px] italic text-faint">{sinDato ? "El motor de seguimiento arranca con la primera medición publicada." : "Sin alertas abiertas."}</div>}
         <div className="grid gap-x-6 px-4 pb-4 lg:grid-cols-2">
           {alerts.slice(0, 10).map((al) => {
             const meta = SEV_META[al.severity];
@@ -163,8 +173,8 @@ function PanelHome() {
                 <meta.icon size={15} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13px] font-bold text-ink">{al.title}</div>
-                  <div className="text-[11.5px] leading-snug text-muted">{al.detail}</div>
-                  {al.owner && <div className="num mt-0.5 text-[9.5px] text-faint">{al.owner}</div>}
+                  <div className="text-[12px] leading-snug text-muted">{al.detail}</div>
+                  {al.owner && <div className="num mt-0.5 text-[11px] text-faint">{al.owner}</div>}
                 </div>
                 <ArrowRight size={14} className="mt-0.5 shrink-0 text-faint transition-transform group-hover:translate-x-1" />
               </Link>
@@ -172,7 +182,7 @@ function PanelHome() {
           })}
         </div>
         {alerts.length > 10 && (
-          <div className="border-t border-line px-5 py-2.5 text-[11px] text-faint">
+          <div className="border-t border-line px-5 py-2.5 text-[12px] text-faint">
             {alerts.length - 10} alertas más de menor severidad en los módulos correspondientes.
           </div>
         )}

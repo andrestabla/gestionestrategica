@@ -66,10 +66,10 @@ export default function MetodologiaPage() {
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-4">
           {CAPS.map((c) => (
             <div key={c.n} className="rounded-xl px-4 py-3 text-white" style={{ background: c.color }}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80">{c.code} · {c.verb}</div>
+              <div className="text-[12px] font-bold uppercase tracking-[0.18em] opacity-80">{c.code} · {c.verb}</div>
               <div className="text-[17px] font-extrabold">{c.name}</div>
               <p className="mt-1 text-[12px] leading-snug opacity-90">{c.q}</p>
-              <ul className="mt-2 space-y-0.5 text-[11.5px] opacity-90">{dimsOf(c.n).map((d) => <li key={d.code}>{d.code} · {d.name}</li>)}</ul>
+              <ul className="mt-2 space-y-0.5 text-[12px] opacity-90">{dimsOf(c.n).map((d) => <li key={d.code}>{d.code} · {d.name}</li>)}</ul>
             </div>
           ))}
         </div>
@@ -78,7 +78,7 @@ export default function MetodologiaPage() {
       <Section id="arquitectura" icon={Layers} title="De la capacidad a la evidencia" sub="Cuatro niveles trazables: capacidad, dimensión, práctica observable y evidencia verificable. Sin artefacto demostrable, una práctica no supera el nivel 2.">
         <div className="grid gap-3 px-5 pb-4 sm:grid-cols-4">
           {[["4", "Capacidades", "Los cuatro dominios del crecimiento sostenible."], ["17", "Dimensiones", "Los focos que componen cada capacidad."], ["68", "Prácticas", "Lo que la organización hace de forma recurrente."], ["68", "Evidencias", "El artefacto, su contenido mínimo y su forma de verificación."]].map(([n, t, d]) => (
-            <div key={t} className="rounded-xl bg-surface-2 px-4 py-3"><div className="num text-[26px] font-extrabold text-cyan-deep">{n}</div><div className="text-[13px] font-bold text-ink">{t}</div><div className="text-[11.5px] text-muted">{d}</div></div>
+            <div key={t} className="rounded-xl bg-surface-2 px-4 py-3"><div className="num text-[26px] font-extrabold text-cyan-deep">{n}</div><div className="text-[13px] font-bold text-ink">{t}</div><div className="text-[12px] text-muted">{d}</div></div>
           ))}
         </div>
         <p className="px-5 pb-5 text-[12.5px] leading-relaxed text-muted">Cada práctica declara, además, la metodología que la sustenta y el framework con el que la empresa produce su evidencia. La Matriz de capacidades v2.0 es la fuente única del mapa; esta plataforma la lee sin modificarla.</p>
@@ -87,7 +87,7 @@ export default function MetodologiaPage() {
       <Section id="madurez" icon={Gauge} title="Cinco niveles de madurez" sub={`Umbral de brecha: ${THRESHOLD.toFixed(1).replace(".", ",")}. Dos o más capacidades en brecha indican una falla de arquitectura, no un problema de esfuerzo.`}>
         <div className="grid gap-2 px-5 pb-5 sm:grid-cols-5">
           {LEVELS.map((l) => (
-            <div key={l.n} className="rounded-xl px-3 py-3 text-white" style={{ background: l.color }}><div className="num text-[22px] font-extrabold">{l.n}</div><div className="text-[12.5px] font-bold">{l.name}</div><p className="mt-1 text-[11px] leading-snug opacity-90">{l.desc}</p></div>
+            <div key={l.n} className="rounded-xl px-3 py-3 text-white" style={{ background: l.color }}><div className="num text-[22px] font-extrabold">{l.n}</div><div className="text-[12.5px] font-bold">{l.name}</div><p className="mt-1 text-[12px] leading-snug opacity-90">{l.desc}</p></div>
           ))}
         </div>
         <div className="border-t border-line px-5 py-3 text-[12px] text-muted">Rangos de lectura del diagnóstico completo: 1,0 a 1,9 incipiente · 2,0 a 2,9 emergente · 3,0 a 3,7 instalada · 3,8 a 4,5 gestionada · 4,6 a 5,0 multiplicadora. El test usa rangos propios: {TEST.rangos.map((r) => r.split(":")[0].toLowerCase()).join(" · ")}.</div>
@@ -98,11 +98,11 @@ export default function MetodologiaPage() {
           {STAGES.map((s) => (
             <div key={s.name} className="rounded-xl border border-line px-4 py-3">
               <div className="text-[14px] font-extrabold text-ink">{s.name}</div>
-              <p className="mt-0.5 text-[11.5px] leading-snug text-muted">{s.pregunta}</p>
-              <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-cyan-deep">Lidera {s.lider}</div>
-              <div className="text-[10.5px] text-faint">Soporte: {s.soporte}</div>
-              <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-faint">Umbral cruzado cuando</div>
-              <ul className="mt-0.5 space-y-0.5 text-[11px] text-ink-soft">{s.umbral.map((u) => <li key={u}>· {u}</li>)}</ul>
+              <p className="mt-0.5 text-[12px] leading-snug text-muted">{s.pregunta}</p>
+              <div className="mt-2 text-[12px] font-bold uppercase tracking-wider text-cyan-deep">Lidera {s.lider}</div>
+              <div className="text-[12px] text-faint">Soporte: {s.soporte}</div>
+              <div className="mt-2 text-[12px] font-bold uppercase tracking-wider text-faint">Umbral cruzado cuando</div>
+              <ul className="mt-0.5 space-y-0.5 text-[12px] text-ink-soft">{s.umbral.map((u) => <li key={u}>· {u}</li>)}</ul>
               {s.frameworks.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{s.frameworks.map((f) => <a key={f} href={`#${f}`} className="chip">{f}</a>)}</div>}
             </div>
           ))}
@@ -127,7 +127,7 @@ export default function MetodologiaPage() {
       <Section id="metodologias" icon={BookOpenCheck} title="Quince metodologías transversales" sub="Cada práctica declara la metodología que la sustenta; Scaling Up es la columna vertebral y las demás la complementan donde no llega.">
         <div className="overflow-x-auto px-2 pb-3">
           <table className="w-full text-[12px]">
-            <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Código</th><th className="px-3 py-2">Metodología</th><th className="px-3 py-2">Principio</th><th className="px-3 py-2">Dimensiones</th><th className="px-3 py-2">Referentes</th></tr></thead>
+            <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Código</th><th className="px-3 py-2">Metodología</th><th className="px-3 py-2">Principio</th><th className="px-3 py-2">Dimensiones</th><th className="px-3 py-2">Referentes</th></tr></thead>
             <tbody>
               {METHODOLOGIES.map((m) => (
                 <tr key={m.code} className="border-t border-line align-top">
@@ -147,12 +147,12 @@ export default function MetodologiaPage() {
         <div className="grid gap-3 px-5 pb-5 md:grid-cols-2 lg:grid-cols-3">
           {FRAMEWORKS.map((f) => (
             <div key={f.id} id={f.id} className="scroll-mt-20 rounded-xl border border-line px-4 py-3">
-              <div className="flex items-center justify-between"><span className="num text-[10.5px] font-extrabold text-cyan-deep">{f.id}</span><span className="chip">{f.cap}</span></div>
+              <div className="flex items-center justify-between"><span className="num text-[12px] font-extrabold text-cyan-deep">{f.id}</span><span className="chip">{f.cap}</span></div>
               <div className="mt-0.5 text-[13.5px] font-bold text-ink">{f.name}</div>
-              <p className="mt-1 text-[11.5px] leading-snug text-muted">{f.promise}</p>
-              <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-faint">Evidencias · {f.ritmo}</div>
-              <div className="mt-0.5 flex flex-wrap gap-1">{f.ev.map((e) => <span key={e} className="num text-[10px] text-ink-soft">{e}</span>)}</div>
-              <div className="mt-2 text-[10.5px] text-faint">{f.bloques.map((b) => b.title).join(" · ")}</div>
+              <p className="mt-1 text-[12px] leading-snug text-muted">{f.promise}</p>
+              <div className="mt-2 text-[12px] font-bold uppercase tracking-wider text-faint">Evidencias · {f.ritmo}</div>
+              <div className="mt-0.5 flex flex-wrap gap-1">{f.ev.map((e) => <span key={e} className="num text-[12px] text-ink-soft">{e}</span>)}</div>
+              <div className="mt-2 text-[12px] text-faint">{f.bloques.map((b) => b.title).join(" · ")}</div>
             </div>
           ))}
         </div>
@@ -160,14 +160,14 @@ export default function MetodologiaPage() {
 
       <Section id="estrategia" icon={Network} title="Cuadro de mando y OKR" sub="Cuatro perspectivas encadenadas; cada objetivo declara sus resultados clave (KPI), la dimensión que instala y la iniciativa que lo mueve.">
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PERSPECTIVES.map((p) => <div key={p.id} className="rounded-xl px-4 py-3" style={{ background: `color-mix(in srgb, ${p.color} 10%, white)` }}><div className="text-[13px] font-extrabold" style={{ color: p.color }}>{p.name}</div><div className="text-[10.5px] text-faint">{p.sub}</div><p className="mt-1 text-[11.5px] leading-snug text-muted">{p.desc}</p></div>)}
+          {PERSPECTIVES.map((p) => <div key={p.id} className="rounded-xl px-4 py-3" style={{ background: `color-mix(in srgb, ${p.color} 10%, white)` }}><div className="text-[13px] font-extrabold" style={{ color: p.color }}>{p.name}</div><div className="text-[12px] text-faint">{p.sub}</div><p className="mt-1 text-[12px] leading-snug text-muted">{p.desc}</p></div>)}
         </div>
       </Section>
 
       <Section id="permisos" icon={ShieldCheck} title="Quién puede qué" sub="Matriz central de permisos: el servidor la exige y la interfaz la refleja. «Capacidad» restringe al ámbito propio del responsable.">
         <div className="overflow-x-auto px-2 pb-3">
           <table className="w-full text-[12px]">
-            <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Acción</th>{ROLES.map((r) => <th key={r.key} className="px-3 py-2 text-center">{r.label}</th>)}</tr></thead>
+            <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Acción</th>{ROLES.map((r) => <th key={r.key} className="px-3 py-2 text-center">{r.label}</th>)}</tr></thead>
             <tbody>
               {(Object.keys(PERMISSION_MATRIX) as Action[]).map((a) => (
                 <tr key={a} className="border-t border-line"><td className="px-3 py-2 text-ink-soft">{ACTION_LABEL[a]}</td>{ROLES.map((r) => { const g = PERMISSION_MATRIX[a][r.key]; return <td key={r.key} className="px-3 py-2 text-center">{g === true ? <span className="chip chip-ok">Sí</span> : g === "line" ? <span className="chip chip-warn">Su capacidad</span> : <span className="text-faint">—</span>}</td>; })}</tr>

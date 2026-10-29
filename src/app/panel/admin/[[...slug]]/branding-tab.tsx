@@ -72,7 +72,7 @@ export function BrandingTab() {
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
           style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad)" }} />
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
           <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
           <button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
         </div>
@@ -90,11 +90,11 @@ export function BrandingTab() {
         ))}
         <div className="ml-auto flex items-center gap-2 pr-1">
           {okMsg && !dirty && (
-            <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--ok)" }}>
+            <span className="flex items-center gap-1 text-[12px]" style={{ color: "var(--ok-text)" }}>
               <Check size={12} /> Aplicado
             </span>
           )}
-          {dirty && <span className="text-[10.5px] text-warn" style={{ color: "var(--warn)" }}>Cambios sin guardar</span>}
+          {dirty && <span className="text-[12px] text-warn" style={{ color: "var(--warn-text)" }}>Cambios sin guardar</span>}
           <button onClick={save} disabled={saving || !dirty}
             className="btn-primary !py-1.5 text-[12px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Paintbrush size={12} />}
@@ -117,9 +117,9 @@ export function BrandingTab() {
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="label mb-1 !text-[8.5px]">{label}</div>
+      <div className="label mb-1 !text-[11px]">{label}</div>
       {children}
-      {hint && <p className="mt-1 text-[10px] leading-snug text-faint">{hint}</p>}
+      {hint && <p className="mt-1 text-[12px] leading-snug text-faint">{hint}</p>}
     </div>
   );
 }
@@ -177,8 +177,8 @@ function UrlUpload({ label, value, hint, onChange }: {
         )}
         <input type="text" value={value ?? ""} placeholder="https://… o sube un archivo"
           onChange={(e) => onChange(e.target.value || null)}
-          className="input min-w-0 flex-1 !py-1.5 font-mono !text-[10.5px]" />
-        <label className="btn-ghost shrink-0 cursor-pointer !py-1.5 text-[11px]">
+          className="input min-w-0 flex-1 !py-1.5 font-mono !text-[12px]" />
+        <label className="btn-ghost shrink-0 cursor-pointer !py-1.5 text-[12px]">
           {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Subir
           <input type="file" accept="image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
@@ -197,7 +197,7 @@ function ColorField({ label, value, onChange }: {
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)}
           className="h-9 w-11 cursor-pointer rounded-lg border-0 bg-surface-2 p-1" />
         <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
-          className="input w-24 !py-1.5 text-center font-mono !text-[11px]" />
+          className="input w-24 !py-1.5 text-center font-mono !text-[12px]" />
       </div>
     </Field>
   );
@@ -225,7 +225,7 @@ function ImageList({ label, items, hint, onChange }: {
             <img src={url} alt="" className="h-9 w-14 shrink-0 rounded-lg bg-surface-2 object-cover" />
             <input type="text" value={url}
               onChange={(e) => onChange(items.map((u, j) => (j === i ? e.target.value : u)))}
-              className="input min-w-0 flex-1 !py-1.5 font-mono !text-[10px]" />
+              className="input min-w-0 flex-1 !py-1.5 font-mono !text-[12px]" />
             <button onClick={() => onChange(items.filter((_, j) => j !== i))}
               className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Quitar">
               <Trash2 size={13} />
@@ -317,7 +317,7 @@ function IdentidadSection({ d, set }: {
                   ))}
                   <span className="ml-1 text-[12px] font-bold text-ink">{p.name}</span>
                 </div>
-                <p className="mt-1 text-[10px] leading-snug text-muted">{p.desc}</p>
+                <p className="mt-1 text-[12px] leading-snug text-muted">{p.desc}</p>
               </button>
             );
           })}
@@ -347,13 +347,13 @@ function TemaSection({ d, set }: {
             <Field label="Hover automático">
               <div className="flex items-center gap-2">
                 <i className="h-7 w-7 rounded-lg" style={{ background: der.hover }} />
-                <span className="num text-[10.5px] text-muted">{der.hover}</span>
+                <span className="num text-[12px] text-muted">{der.hover}</span>
               </div>
             </Field>
             <Field label="Focus automático">
               <div className="flex items-center gap-2">
                 <i className="h-7 w-7 rounded-lg" style={{ background: der.focus }} />
-                <span className="num text-[10.5px] text-muted">{der.focus}</span>
+                <span className="num text-[12px] text-muted">{der.focus}</span>
               </div>
             </Field>
           </div>
@@ -361,8 +361,8 @@ function TemaSection({ d, set }: {
             <div className="overflow-hidden rounded-xl">
               <div className="h-2" style={{ background: `linear-gradient(90deg, ${derive(d.accent).fill}, ${d.accent} 38%, ${d.primary})` }} />
               <div className="flex items-center gap-3 p-3" style={{ background: `linear-gradient(160deg, ${d.secondary}, ${d.primary})` }}>
-                <span className="text-[11px] font-bold text-white">{d.shortName}</span>
-                <span className="chip !py-0 !text-[8.5px]" style={{ background: "rgba(255,255,255,.12)", color: derive(d.accent).fill }}>
+                <span className="text-[12px] font-bold text-white">{d.shortName}</span>
+                <span className="chip !py-0 !text-[11px]" style={{ background: "rgba(255,255,255,.12)", color: derive(d.accent).fill }}>
                   acento
                 </span>
               </div>
@@ -384,13 +384,13 @@ function TemaSection({ d, set }: {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Radio de borde">
               <input type="text" value={d.radius} onChange={(e) => set("radius", e.target.value)}
-                placeholder="0.8rem" className="input !py-1.5 font-mono !text-[11.5px]" />
+                placeholder="0.8rem" className="input !py-1.5 font-mono !text-[12px]" />
             </Field>
             <Field label="Estilo de botón">
               <div className="flex gap-1.5">
                 {(["solid", "outline"] as const).map((st) => (
                   <button key={st} onClick={() => set("buttonStyle", st)}
-                    className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${
+                    className={`flex-1 rounded-lg py-1.5 text-[12px] font-bold transition-all ${
                       d.buttonStyle === st ? "text-white" : "text-muted"}`}
                     style={d.buttonStyle === st
                       ? { background: d.primary }
@@ -421,7 +421,7 @@ function TemaSection({ d, set }: {
                   borderRadius: d.radius }}>
                 Acción principal
               </button>
-              <span className="bg-surface px-3 py-1.5 text-[11.5px] text-ink shadow-sm"
+              <span className="bg-surface px-3 py-1.5 text-[12px] text-ink shadow-sm"
                 style={{ borderRadius: d.radius }}>
                 Tarjeta {d.radius}
               </span>
@@ -463,7 +463,7 @@ function LoginSection({ d, set }: {
                     </i>
                   )}
                 </div>
-                <p className="mt-1.5 text-[10px] font-semibold leading-snug text-ink">{l.label}</p>
+                <p className="mt-1.5 text-[12px] font-semibold leading-snug text-ink">{l.label}</p>
               </button>
             ))}
           </div>
@@ -504,7 +504,7 @@ function LoginSection({ d, set }: {
                   <div key={i} className="flex items-start gap-2">
                     <textarea value={m} rows={2}
                       onChange={(e) => set("heroMessages", d.heroMessages.map((x, j) => (j === i ? e.target.value : x)))}
-                      className="input min-w-0 flex-1 resize-y !py-1.5 text-[11.5px]" />
+                      className="input min-w-0 flex-1 resize-y !py-1.5 text-[12px]" />
                     <button onClick={() => set("heroMessages", d.heroMessages.filter((_, j) => j !== i))}
                       className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink"><Trash2 size={13} /></button>
                   </div>
@@ -549,7 +549,7 @@ function LoginSection({ d, set }: {
             <textarea value={d.customCss} rows={5}
               onChange={(e) => set("customCss", e.target.value)}
               placeholder={`.kicker { letter-spacing: 0.2em; }`}
-              className="input w-full resize-y font-mono !text-[11px]" />
+              className="input w-full resize-y font-mono !text-[12px]" />
           </div>
         </Card>
       </div>
@@ -574,7 +574,7 @@ function PreviewSection({ d }: { d: Branding }) {
                 style={{ background: panelImg ? `url(${panelImg}) center/cover` : d.primary }}>
                 <div className="absolute inset-0" style={{ background: overlay }} />
                 <div className="relative flex h-full flex-col justify-between">
-                  <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-white">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-white">
                     {d.showPlatformName ? d.platformName : ""}
                   </span>
                   <div>
@@ -582,7 +582,7 @@ function PreviewSection({ d }: { d: Branding }) {
                       <p className="text-[13px] font-extrabold leading-tight text-white">{d.heroTitle}</p>
                     )}
                     {d.showHeroMessages && d.heroMessages[0] && (
-                      <p className="mt-1.5 text-[9px] italic leading-snug text-white/75">“{d.heroMessages[0]}”</p>
+                      <p className="mt-1.5 text-[11px] italic leading-snug text-white/75">“{d.heroMessages[0]}”</p>
                     )}
                   </div>
                   <span className="font-mono text-[7px] uppercase tracking-widest text-white/60">
@@ -600,16 +600,16 @@ function PreviewSection({ d }: { d: Branding }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={d.logoLight} alt="" className="mb-1.5 h-5 object-contain" />
                 ) : (
-                  <div className="mb-1 text-[10px] font-extrabold" style={{ color: d.primary }}>
+                  <div className="mb-1 text-[12px] font-extrabold" style={{ color: d.primary }}>
                     {d.showPlatformName ? d.platformName : d.shortName}
                   </div>
                 )}
-                {d.showLoginTitle && <div className="text-[11px] font-extrabold text-ink">{d.loginTitle}</div>}
+                {d.showLoginTitle && <div className="text-[12px] font-extrabold text-ink">{d.loginTitle}</div>}
                 {d.showLoginWelcome && <p className="mt-0.5 text-[7.5px] leading-snug text-muted">{d.loginWelcome}</p>}
                 <div className="mt-2 space-y-1">
                   <div className="h-4 rounded bg-surface-2" />
                   <div className="h-4 rounded bg-surface-2" />
-                  <div className="grid h-5 place-items-center text-[8px] font-bold text-white"
+                  <div className="grid h-5 place-items-center text-[11px] font-bold text-white"
                     style={{ background: d.buttonStyle === "solid" ? d.primary : "transparent",
                       color: d.buttonStyle === "solid" ? "#fff" : d.primary,
                       boxShadow: d.buttonStyle === "outline" ? `inset 0 0 0 1px ${d.primary}` : undefined,
@@ -640,18 +640,18 @@ function PreviewSection({ d }: { d: Branding }) {
               <div className="h-[2.5px]" style={{ background: `linear-gradient(90deg, ${derive(d.accent).fill}, ${d.accent})` }} />
               <div className="px-3.5 py-2.5">
                 <div className="text-[12px] font-bold text-white">{d.shortName}</div>
-                <div className="text-[9.5px] text-white/45">{d.institutionName}</div>
+                <div className="text-[11px] text-white/45">{d.institutionName}</div>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {[d.primary, d.secondary, d.accent, derive(d.accent).fill].map((c, i) => (
-              <span key={i} className="flex-1 rounded-lg py-2 text-center font-mono text-[8px] text-white" style={{ background: c }}>
+              <span key={i} className="flex-1 rounded-lg py-2 text-center font-mono text-[11px] text-white" style={{ background: c }}>
                 {c}
               </span>
             ))}
           </div>
-          <div className="flex items-center gap-2 text-[11px]">
+          <div className="flex items-center gap-2 text-[12px]">
             <span className="chip" style={{ color: derive(d.accent).deep }}>kicker</span>
             <span className="rounded-full px-2.5 py-1 font-bold text-white" style={{ background: d.accent }}>chip activo</span>
             <span className="num font-bold" style={{ color: derive(d.accent).deep }}>3,2</span>
@@ -661,7 +661,7 @@ function PreviewSection({ d }: { d: Branding }) {
             <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={d.loader} alt="" className="h-6 w-6 object-contain" />
-              {d.showLoaderText && <span className="text-[10.5px] text-muted">{d.loaderText}…</span>}
+              {d.showLoaderText && <span className="text-[12px] text-muted">{d.loaderText}…</span>}
             </div>
           )}
         </div>
@@ -691,7 +691,7 @@ function HistorialSection({ history }: { history: HistoryEntry[] }) {
                   style={{ boxShadow: "0 0 0 1.5px var(--cyan)" }}>
                   <ImageIcon size={7} className="text-cyan-deep" />
                 </span>
-                <div className="num text-[9.5px] font-bold text-faint">
+                <div className="num text-[11px] font-bold text-faint">
                   {new Date(h.at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {h.actor}
                 </div>
                 <div className="text-[12px] leading-snug text-ink-soft">{h.change}</div>

@@ -28,7 +28,7 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
 
   // 1 · alertas del motor, dirigidas por rol y línea (no en modo convención: ahí solo cuentan los hechos registrados por personas)
   const convencion = isConvencion(catalog().company);
-  for (const a of convencion ? [] : buildAlerts(tenantView())) {
+  for (const a of convencion || tenantView().current.id === "A0" ? [] : buildAlerts(tenantView())) {
     const mine =
       user.role === "ADMIN" || user.role === "CONSULTOR" || user.role === "LIDER" ? true
       : user.role === "RESPONSABLE" ? inScope(user, { line: a.line })

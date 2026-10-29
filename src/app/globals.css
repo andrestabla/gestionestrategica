@@ -14,8 +14,8 @@
   --surface-3: #e9ebef;
   --ink: #0f1520;
   --ink-soft: #38404d;
-  --muted: #6a7482;
-  --faint: #9aa3b0;
+  --muted: #5a6473;      /* ≥ 4,5:1 también sobre superficie 2 */
+  --faint: #66707e;      /* antes #9aa3b0 (2,55:1); ahora ≥ 4,5:1 sobre blanco y superficie 2 */
   --line: #e6e8ec;
   --line-strong: #d4d8df;
 
@@ -38,6 +38,12 @@
   --ok: #2e9e6b;
   --warn: #e0913f;
   --bad: #cf5860;
+  /* variantes para texto (≥ 4,5:1 sobre blanco); los tonos vivos quedan para fondos, chips y gráficos */
+  --ok-text: #1f7a50;
+  --warn-text: #9a5a12;
+  --bad-text: #b8323d;
+  --gold-text: #8a6410;
+  --ring: #f1ba5b;
 
   --grad-brand: linear-gradient(90deg, var(--cyan-fill), var(--cyan) 38%, var(--navy));
   --grad-deep: linear-gradient(160deg, #08111c 0%, #0D1B2A 52%, #6b5417 130%);
@@ -138,7 +144,7 @@ body {
 /* ─── tipografía utilitaria ─── */
 
 .label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -150,7 +156,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -173,7 +179,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 3px 10px;
@@ -322,3 +328,16 @@ select.input { text-overflow: ellipsis; }
   .input, select.input, textarea.input { min-height: 42px; font-size: 16px !important; }
   table.w-full { font-size: 12px; }
 }
+
+/* ─── accesibilidad (sistema de diseño MASTER): texto de estado legible, foco visible y salto al contenido ─── */
+.text-ok { color: var(--ok-text); }
+.text-warn { color: var(--warn-text); }
+.text-bad { color: var(--bad-text); }
+.text-gold { color: var(--gold-text); }
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.skip-link { position: absolute; left: 12px; top: -56px; z-index: 100; padding: 8px 14px; border-radius: 8px; background: var(--navy); color: #fff; font-size: 13px; font-weight: 700; transition: top 0.15s; }
+.skip-link:focus { top: 12px; }
