@@ -740,7 +740,10 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
   if (t) t.catalog.company = { ...t.catalog.company, ...c };
   if (hasDb() && c.dbId) {
     const dbId = c.dbId;
-    void persist("empresa", (db) => db.company.update({ where: { id: dbId }, data: companyRow(c) }));
+    // la edición llega desde Administración, fuera del ámbito de la empresa editada: se sube su versión de datos
+    // en la misma escritura para que las demás instancias recarguen su copia (modo, instrumentos, palancas, horizontes…)
+    void persist("empresa", (db) => db.company.update({ where: { id: dbId }, data: { ...companyRow(c), dataVersion: { increment: 1 } } }));
+    if (t) t.version = -1;   // esta instancia también vuelve a leer la empresa en su siguiente chequeo
   }
   audit(actor, "task", `empresa:${c.slug}`, `empresa actualizada`);
   return { ok: true, company: c };
