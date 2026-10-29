@@ -344,6 +344,13 @@ select.input { text-overflow: ellipsis; }
   table.w-full { font-size: 12px; }
 }
 
+/* ─── modo focal (responder un instrumento a pantalla completa) ─── */
+.focal-item:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.focal-item { scroll-margin-top: 96px; }
+:root[data-theme="dark"] .focal-logo-claro { display: none; }
+:root[data-theme="dark"] .focal-logo-oscuro { display: block; }
+html[data-focal] { overflow: hidden; }
+
 /* ─── accesibilidad (sistema de diseño MASTER): texto de estado legible, foco visible y salto al contenido ─── */
 .text-ok { color: var(--ok-text); }
 .text-warn { color: var(--warn-text); }

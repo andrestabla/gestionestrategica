@@ -13,7 +13,7 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, u
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
-import { avisar } from "@/components/feedback";
+import { avisar, confirmar } from "@/components/feedback";
 import { AccessChip, useCan } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
@@ -30,6 +30,7 @@ import type { VariableCapture, TestResponse, TestNotes, F1Response } from "@/ser
 import type { Response } from "@/lib/od";
 import { lecturaF1 } from "@/lib/f1";
 import { InformeIA } from "@/components/informe-ia";
+import { ModoFocal, pedirPantallaCompleta, teclaNumero, irAlSiguientePendiente, focalArriba, ITEM_CLS } from "@/components/modo-focal";
 import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText,
@@ -417,7 +418,7 @@ function TestTab() {
           <div className="text-[15px] font-extrabold">{mine ? "Ya respondiste el test" : "Responde el test de capacidad empresarial"}</div>
           <div className="text-[12px] text-white/75">{mine ? `Guardado el ${new Date(mine.at).toLocaleDateString("es-CO")}. Puedes corregirlo; la última respuesta reemplaza a la anterior.` : "24 preguntas, seis por capacidad, más el desafío dominante. Unos 20 minutos; cada número trae la guía de lo que habría que poder mostrar."}</div>
         </div>
-        <Link href="/panel/diagnostico/test/responder" className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardList size={13} /> {mine ? "Revisar mi test" : "Responder el test"}</Link>
+        <Link href="/panel/diagnostico/test/responder" onClick={pedirPantallaCompleta} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardList size={13} /> {mine ? "Revisar mi test" : "Responder el test"}</Link>
       </div>
       <div className="mb-5 grid gap-5 lg:grid-cols-[1fr_340px]">
         <Card className="rise rise-1">
@@ -492,9 +493,17 @@ function ResponderTest() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [saved, setSaved] = useState<TestResponse | null>(null);
+  const router = useRouter();
   useEffect(() => { if (mine) { setR(mine.r); setCargo(mine.cargo ?? ""); setObjetivo(mine.objetivo ?? ""); } }, [mine]);
   const answered = TEST_QUESTIONS.filter((q) => r[q.n] != null && r[q.n] !== "").length;
   const set = (n: number | string, v: number | string | undefined) => setR((prev) => { const next = { ...prev }; if (v === undefined) delete next[n]; else next[n] = v; return next; });
+  // responder avanza a la siguiente pregunta pendiente (la respuesta no se guarda hasta enviar)
+  const responder = (n: number, v: number | string) => { set(n, v); irAlSiguientePendiente(String(n)); };
+  const sinGuardar = JSON.stringify(r) !== JSON.stringify(mine?.r ?? {}) || cargo !== (mine?.cargo ?? "") || objetivo !== (mine?.objetivo ?? "");
+  const salir = async () => {
+    if (sinGuardar && !(await confirmar({ title: "Salir sin enviar", body: "El test solo se guarda al enviarlo. Si sales ahora, lo respondido en esta sesión se pierde.", confirmLabel: "Salir", danger: true }))) return;
+    router.push("/panel/diagnostico/test");
+  };
   const submit = async () => {
     setBusy(true); setMsg(null);
     const res = await fetch("/api/td/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo, objetivo }) });
@@ -507,7 +516,7 @@ function ResponderTest() {
     const stage = STAGES.find((s) => s.name === T.stage)!;
     return (
       <>
-        <div className="mb-4 flex items-center justify-between"><Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link><button className="chip" onClick={() => setSaved(null)}>Corregir mis respuestas</button></div>
+        <div className="mb-4 flex items-center justify-between"><Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link><button className="chip" onClick={() => { pedirPantallaCompleta(); setSaved(null); }}>Corregir mis respuestas</button></div>
         <Card className="rise rise-1 mb-5">
           <CardHeader title="Tu resultado preliminar" sub={`${saved.name}${saved.cargo ? ` · ${saved.cargo}` : ""} · ${new Date(saved.at).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}`} />
           <div className="grid gap-5 px-5 pb-5 lg:grid-cols-[1fr_1fr]">
@@ -537,11 +546,12 @@ function ResponderTest() {
     );
   }
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link>
-        <span className="num text-[12px] font-bold text-muted">{answered} de 24 respondidas</span>
-      </div>
+    <ModoFocal kicker="Test de capacidad empresarial · puerta de entrada" title="25 preguntas sobre cómo funciona la empresa" color="var(--navy)"
+      progress={{ n: answered, total: 24, label: "con número" }} status={sinGuardar ? "Se guarda al enviar" : undefined} onExit={salir} exitLabel="Participantes"
+      footer={<>
+        <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
+        <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
+      </>}>
       <Card className="rise rise-1 mb-5">
         <CardHeader title="Antes de comenzar" sub="Responde pensando en cómo funciona realmente la empresa en los últimos seis meses. Elige la respuesta que puedas sostener con ejemplos concretos; si no sabes, marca «Sin información»." />
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2">
@@ -555,28 +565,31 @@ function ResponderTest() {
           {b.qs.map((q) => {
             const g = GUIDES.test[String(q.n)]; const v = r[q.n];
             return (
-              <Card key={q.n} className="mb-2">
+              <div key={q.n} className={ITEM_CLS} data-item={String(q.n)} data-pendiente={v == null || v === "" ? "1" : "0"} tabIndex={-1} onKeyDown={(e) => teclaNumero(e, 5, (n) => responder(q.n, n))}>
+              <Card>
                 <div className="px-5 py-4">
                   <div className="flex gap-3"><span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: "var(--navy)" }}>{q.n}</span><div><p className="text-[13.5px] font-semibold leading-snug text-ink">{q.q}</p><p className="mt-0.5 text-[12px] text-muted"><b className="text-[12px] uppercase tracking-wider text-cyan-deep">Lo demuestra</b> {q.demo}</p></div></div>
                   <div className="mt-3 grid grid-cols-5 gap-1.5">
                     {LEVELS.map((l) => (
-                      <button key={l.n} type="button" onClick={() => set(q.n, l.n)} title={g?.n?.[String(l.n)]}
+                      <button key={l.n} type="button" onClick={() => responder(q.n, l.n)} title={g?.n?.[String(l.n)]}
                         className={`rounded-lg border px-1 py-2 text-center transition-all ${v === l.n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === l.n ? { background: "var(--navy)" } : undefined}>
                         <div className="num text-[16px] font-extrabold">{l.n}</div><div className={`text-[11px] font-semibold ${v === l.n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
                       </button>
                     ))}
                   </div>
                   <div className="mt-2 flex flex-wrap items-start gap-2">
-                    <button type="button" onClick={() => set(q.n, v === "NI" ? undefined : "NI")} className={`chip ${v === "NI" ? "chip-warn" : ""}`}>Sin información</button>
+                    <button type="button" onClick={() => (v === "NI" ? set(q.n, undefined) : responder(q.n, "NI"))} className={`chip ${v === "NI" ? "chip-warn" : ""}`}>Sin información</button>
                     {typeof v === "number" && g?.n?.[String(v)] && <p className="flex-1 rounded-lg bg-cyan-wash px-3 py-2 text-[12px] leading-snug text-ink-soft"><b className="text-ink">{v} · {LEVELS[v - 1].name}.</b> {g.n[String(v)]}{g.q && <i className="mt-0.5 block text-muted">{g.q}</i>}</p>}
                     {v === "NI" && g?.ni && <p className="flex-1 rounded-lg bg-surface-2 px-3 py-2 text-[12px] text-muted">{g.ni}</p>}
                   </div>
                 </div>
               </Card>
+              </div>
             );
           })}
         </div>
       ))}
+      <div className={ITEM_CLS} data-item="25" data-pendiente={r[25] ? "0" : "1"} tabIndex={-1}>
       <Card className="mb-5">
         <CardHeader title="25 · El desafío dominante" sub="¿Cuál de estas frases describe mejor el desafío de tu empresa hoy? Elige una sola." />
         <div className="space-y-2 px-5 pb-5">
@@ -587,12 +600,9 @@ function ResponderTest() {
           ))}
         </div>
       </Card>
-      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
-        <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
       </div>
-    </>
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
+    </ModoFocal>
   );
 }
 
@@ -661,7 +671,7 @@ function AutoevaluacionTab() {
         </div>
         <div className="flex flex-wrap gap-2">
           {mine && <Link href="/panel/diagnostico/autoevaluacion/resultado" className="btn-on-dark text-[12px]"><FileText size={13} /> Mi lectura</Link>}
-          {!data?.closed && <Link href="/panel/diagnostico/autoevaluacion/responder" className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardCheck size={13} /> {estado === "pendiente" ? "Responder" : estado === "parcial" ? "Continuar" : "Revisar mis respuestas"}</Link>}
+          {!data?.closed && <Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardCheck size={13} /> {estado === "pendiente" ? "Responder" : estado === "parcial" ? "Continuar" : "Revisar mis respuestas"}</Link>}
         </div>
       </div>
 
@@ -761,20 +771,27 @@ function ResponderF1() {
   const stepN = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).flatMap((d) => d.prac).filter((p) => r[p.code] != null).length;
   const stepTot = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).reduce((a, d) => a + d.prac.length, 0);
   const finish = async () => { const ok = await save(false); if (ok) { avisar("Autoevaluación guardada"); router.push("/panel/diagnostico/autoevaluacion/resultado"); } };
+  // responder una afirmación avanza a la siguiente pendiente; volver a pulsar el mismo número la desmarca
+  const responder = (code: string, v: number) => { const cambia = r[code] !== v; set(code, v); if (cambia) irAlSiguientePendiente(code); };
+  const salir = async () => { if (dirty) await save(true); router.push("/panel/diagnostico/autoevaluacion"); };
+  const irAlPaso = (i: number) => { setStep(i); focalArriba(); };
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/panel/diagnostico/autoevaluacion" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Autoevaluación</Link>
-        <span className="flex items-center gap-3 text-[12px]">
-          <span className="text-faint">{saving ? "Guardando…" : dirty ? "Cambios sin guardar" : savedAt ? `Guardado ${savedAt}` : ""}</span>
-          <span className="num font-bold text-muted">{answered} de {total}</span>
-        </span>
-      </div>
-      <div className="mb-4 grid gap-1.5 sm:grid-cols-4">
+    <ModoFocal kicker={`Fuente 1 · Autoevaluación directiva · paso ${step + 1} de 4`} title={cap.name} color={cap.color}
+      progress={{ n: answered, total, label: "afirmaciones" }}
+      status={saving ? "Guardando…" : dirty ? "Cambios sin guardar" : savedAt ? `Guardado ${savedAt}` : "El avance se guarda solo"}
+      onExit={salir} exitLabel="Autoevaluación"
+      footer={<>
+        <button type="button" onClick={() => irAlPaso(Math.max(0, step - 1))} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>
+        <span className="hidden text-[12px] text-muted sm:inline">{stepN(cap)} de {stepTot(cap)} en este paso · puedes cerrar y seguir después.</span>
+        {step < CAPS.length - 1
+          ? <button type="button" onClick={() => irAlPaso(step + 1)} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]">Siguiente <ArrowRight size={13} /></button>
+          : <button type="button" onClick={finish} disabled={saving || answered === 0} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi lectura</button>}
+      </>}>
+      <div className="mb-4 grid grid-cols-4 gap-1.5">
         {CAPS.map((c, i) => { const n = stepN(c), t = stepTot(c); const on = i === step; return (
-          <button key={c.n} type="button" onClick={() => setStep(i)} className={`rounded-xl px-3 py-2 text-left transition-all ${on ? "text-white shadow-sm" : "bg-surface-2 hover:bg-surface"}`} style={on ? { background: c.color } : undefined}>
-            <div className={`text-[12px] font-bold uppercase tracking-wider ${on ? "text-white/70" : "text-faint"}`}>Paso {i + 1} de 4</div>
-            <div className={`text-[13px] font-extrabold ${on ? "" : "text-ink"}`}>{c.name}</div>
+          <button key={c.n} type="button" onClick={() => irAlPaso(i)} aria-current={on ? "step" : undefined} className={`min-w-0 rounded-xl px-2 py-2 text-left transition-all sm:px-3 ${on ? "text-white shadow-sm" : "bg-surface-2 hover:bg-surface"}`} style={on ? { background: c.color } : undefined}>
+            <div className={`hidden text-[12px] font-bold uppercase tracking-wider sm:block ${on ? "text-white/70" : "text-faint"}`}>Paso {i + 1} de 4</div>
+            <div className={`truncate text-[12px] font-extrabold sm:text-[13px] ${on ? "" : "text-ink"}`}><span className="sm:hidden">{c.code}</span><span className="hidden sm:inline">{c.name}</span></div>
             <div className="relative mt-1.5 h-[5px] overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full" style={{ width: `${(n / t) * 100}%`, background: on ? "rgba(255,255,255,.85)" : c.color }} /></div>
             <div className={`num mt-1 text-[12px] ${on ? "text-white/80" : "text-muted"}`}>{n} de {t}</div>
           </button>
@@ -796,12 +813,13 @@ function ResponderF1() {
           {d.prac.map((p) => {
             const g = GUIDES.f1[p.code]; const v = r[p.code];
             return (
-              <Card key={p.code} className="mb-2">
+              <div key={p.code} className={ITEM_CLS} data-item={p.code} data-pendiente={v == null ? "1" : "0"} tabIndex={-1} onKeyDown={(e) => teclaNumero(e, 5, (n) => responder(p.code, n))}>
+              <Card>
                 <div className="px-5 py-4">
                   <div className="flex gap-3"><span className="num shrink-0 rounded-lg bg-surface-2 px-2 py-1 text-[12px] font-extrabold text-ink-soft">{p.code}</span><p className="text-[13.5px] font-semibold leading-snug text-ink">{p.f1}</p></div>
                   <div className="mt-3 grid grid-cols-5 gap-1.5">
                     {MAPA.escalaF1.map((l, i) => { const n = i + 1; return (
-                      <button key={l.n} type="button" onClick={() => set(p.code, n)} title={g?.n?.[String(n)]}
+                      <button key={l.n} type="button" onClick={() => responder(p.code, n)} title={g?.n?.[String(n)]}
                         className={`rounded-lg border px-1 py-2 text-center transition-all ${v === n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === n ? { background: "var(--navy)" } : undefined}>
                         <div className="num text-[16px] font-extrabold">{n}</div><div className={`text-[11px] font-semibold ${v === n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
                       </button>
@@ -810,19 +828,13 @@ function ResponderF1() {
                   {typeof v === "number" && g?.n?.[String(v)] && <p className="mt-2 rounded-lg bg-cyan-wash px-3 py-2 text-[12px] leading-snug text-ink-soft"><b className="text-ink">{v} · {MAPA.escalaF1[v - 1].name}.</b> {g.n[String(v)]}{g.q && <i className="mt-0.5 block text-muted">{g.q}</i>}</p>}
                 </div>
               </Card>
+              </div>
             );
           })}
         </div>
       ))}
       {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={() => { setStep((s) => Math.max(0, s - 1)); window.scrollTo({ top: 0 }); }} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>
-        <span className="text-[12px] text-muted">El avance se guarda solo; puedes cerrar y seguir después.</span>
-        {step < CAPS.length - 1
-          ? <button type="button" onClick={() => { setStep((s) => s + 1); window.scrollTo({ top: 0 }); }} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]">Siguiente <ArrowRight size={13} /></button>
-          : <button type="button" onClick={finish} disabled={saving || answered === 0} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi lectura</button>}
-      </div>
-    </>
+    </ModoFocal>
   );
 }
 
@@ -841,7 +853,7 @@ function ResultadoF1({ email }: { email: string | null }) {
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href="/panel/diagnostico/autoevaluacion" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Autoevaluación</Link>
         <span className="flex gap-2">
-          {!data.closed && f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() && <Link href="/panel/diagnostico/autoevaluacion/responder" className="chip">Corregir respuestas</Link>}
+          {!data.closed && f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() && <Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="chip">Corregir respuestas</Link>}
           <button type="button" onClick={() => window.print()} className="chip inline-flex items-center gap-1"><Printer size={12} /> Imprimir o guardar en PDF</button>
         </span>
       </div>
