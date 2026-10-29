@@ -96,7 +96,7 @@ export function BrandingTab() {
           )}
           {dirty && <span className="text-[12px] text-warn" style={{ color: "var(--warn-text)" }}>Cambios sin guardar</span>}
           <button onClick={save} disabled={saving || !dirty}
-            className="btn-primary !py-1.5 text-[12px] disabled:opacity-40">
+            className="btn-primary btn-sm.5 text-[12px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Paintbrush size={12} />}
             Guardar y aplicar
           </button>
@@ -178,7 +178,7 @@ function UrlUpload({ label, value, hint, onChange }: {
         <input type="text" value={value ?? ""} placeholder="https://… o sube un archivo"
           onChange={(e) => onChange(e.target.value || null)}
           className="input min-w-0 flex-1 !py-1.5 font-mono !text-[12px]" />
-        <label className="btn-ghost shrink-0 cursor-pointer !py-1.5 text-[12px]">
+        <label className="btn-ghost shrink-0 cursor-pointer btn-sm.5 text-[12px]">
           {busy ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Subir
           <input type="file" accept="image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />

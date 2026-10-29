@@ -5,7 +5,7 @@
 // pantalla de elección de empresa del admin.
 
 import { useState } from "react";
-import { Modal } from "@/components/ui";
+import { Modal, Field } from "@/components/ui";
 import { Loader2, Save, Building2, X } from "lucide-react";
 import { INSTRUMENTS, ALL_INSTRUMENTS } from "@/lib/instrumentos";
 
@@ -73,31 +73,31 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         </button>
       </>}>
       <div className="space-y-2.5">
-        <input value={f.name} onChange={set("name")} placeholder="Nombre de la empresa" className="input !py-2 text-[12px]" />
+        <Field label="Nombre de la empresa"><input value={f.name} onChange={set("name")} placeholder="Razón social o nombre completo" className="input !py-2 text-[12px]" /></Field>
         <div>
-          <input value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder={initial ? "identificador" : "Identificador en la URL (opcional: se toma del nombre)"} className="input num !py-2 text-[12px]" title="Identificador único de la empresa en la URL" />
+          <Field label="Identificador en la URL" help={initial ? undefined : "Opcional: se toma del nombre"}><input value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder="empresa" className="input num !py-2 text-[12px]" title="Identificador único de la empresa en la URL" /></Field>
           <p className="num mt-1 text-[12px] text-faint">Rutas de la empresa: /{f.slug || "empresa"}/login · /{f.slug || "empresa"}/panel{initial && f.slug !== initial.slug ? " · al cambiarlo, sus usuarios vuelven a entrar por la nueva ruta" : ""}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <input value={f.shortName} onChange={set("shortName")} placeholder="Nombre corto" className="input !py-2 text-[12px]" />
-          <input value={f.ciiu} onChange={set("ciiu")} placeholder="CIIU (G4659)" className="input !py-2 text-[12px]" />
+          <Field label="Nombre corto"><input value={f.shortName} onChange={set("shortName")} placeholder="Como se nombra en menús" className="input !py-2 text-[12px]" /></Field>
+          <Field label="CIIU" help="Actividad principal (rev. 4 A.C.), p. ej. G4659"><input value={f.ciiu} onChange={set("ciiu")} placeholder="G4659" className="input !py-2 text-[12px]" /></Field>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <input value={f.city} onChange={set("city")} placeholder="Ciudad" className="input !py-2 text-[12px]" />
-          <input value={f.department} onChange={set("department")} placeholder="Departamento" className="input !py-2 text-[12px]" />
+          <Field label="Ciudad"><input value={f.city} onChange={set("city")} placeholder="Sede principal" className="input !py-2 text-[12px]" /></Field>
+          <Field label="Departamento"><input value={f.department} onChange={set("department")} placeholder="o provincia" className="input !py-2 text-[12px]" /></Field>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <select value={f.country} onChange={set("country")} className="input !py-2 text-[12px]" title="País: define el mapa territorial y el benchmark">
+          <Field label="País" help="Define el mapa territorial y el comparativo sectorial"><select value={f.country} onChange={set("country")} className="input !py-2 text-[12px]">
             <option value="CO">Colombia (departamentos)</option>
             <option value="EC">Ecuador (provincias)</option>
-          </select>
-          <select value={f.currency} onChange={set("currency")} className="input !py-2 text-[12px]" title="Moneda de las cifras financieras">
+          </select></Field>
+          <Field label="Moneda" help="Unidad de las cifras financieras"><select value={f.currency} onChange={set("currency")} className="input !py-2 text-[12px]">
             <option value="COP">COP (pesos colombianos)</option>
             <option value="USD">USD (dólares)</option>
-          </select>
+          </select></Field>
         </div>
-        <input value={f.sector} onChange={set("sector")} placeholder="Sector (p. ej. Distribución de suministros)" className="input !py-2 text-[12px]" />
-        <input value={f.size} onChange={set("size")} placeholder="Tamaño (p. ej. 85 colaboradores · 3 sedes)" className="input !py-2 text-[12px]" />
+        <Field label="Sector"><input value={f.sector} onChange={set("sector")} placeholder="p. ej. Distribución de suministros industriales" className="input !py-2 text-[12px]" /></Field>
+        <Field label="Tamaño"><input value={f.size} onChange={set("size")} placeholder="p. ej. 85 colaboradores · 3 sedes" className="input !py-2 text-[12px]" /></Field>
         <HorizonsEditor value={horizons} onChange={setHorizons} />
         <div className="rounded-xl border border-line px-3 py-2.5">
           <span className="label !text-[11px]">Instrumentos del diagnóstico habilitados</span>

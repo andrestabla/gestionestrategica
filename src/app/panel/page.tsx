@@ -4,7 +4,7 @@
 // feed de atención y módulos.
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isConvencion, isAcompanamiento, horizonsOf, leversOf } from "@/data/catalogo";
 import { vocabOf } from "@/lib/vocabulario";
@@ -18,7 +18,8 @@ import { LINES, fmtCOP } from "@/data/demo";
 import { prevScores } from "@/lib/vista";
 import { buildAlerts, executiveSummary } from "@/lib/logic";
 import { useMaturity } from "@/lib/use-maturity";
-import { ArrowRight, ShieldAlert, AlertTriangle, Info } from "lucide-react";
+import { ArrowRight, ShieldAlert, AlertTriangle, Info, CheckCircle2, Circle } from "lucide-react";
+import { hasInstrument } from "@/lib/instrumentos";
 
 /** «3 objetivos», «1 objetivo»: conteo con su sustantivo. */
 const cuenta = (n: number, singular: string, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
@@ -80,6 +81,8 @@ function PanelHome() {
         title="Estado de la capacidad organizacional"
         desc={`Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}).${serie ? ` Serie de la empresa: ${serie}.` : " Aún no hay mediciones publicadas."}`}
       />
+
+      {sinDato && <ArranqueCard />}
 
       {/* ── héroe: gauge + avance por línea ── */}
       <div className="rise rise-1 panel relative mb-5 overflow-hidden">
@@ -242,5 +245,48 @@ function PanelHome() {
         )}
       </div>
     </>
+  );
+}
+
+
+/* ═══ Lista de arranque (MASTER · «Estados vacíos y primer uso»): los pasos del método con su avance y enlace directo,
+   mientras la empresa no tenga medición publicada. Vocabulario según el modo. ═══ */
+function ArranqueCard() {
+  const base = useBase();
+  const v = useCatalog();
+  const V = vocabOf(v.catalog.company);
+  const c = v.catalog;
+  const f1On = hasInstrument(c.company, "f1");
+  const [respuestas, setRespuestas] = useState<number | null>(null);
+  useEffect(() => {
+    const url = f1On ? "/api/td/f1" : "/api/td/test";
+    fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => setRespuestas(j ? (j.responses?.length ?? 0) : 0)).catch(() => setRespuestas(0));
+  }, [f1On]);
+  const t = (tab: string) => `${base}/panel/convencion?t=${tab}`;
+  const levers = leversOf(c.company);
+  const pasos = [
+    { label: V.tabs.prioridades, n: levers.length, meta: `${levers.length} de hasta 8`, href: t(V.modo === "acompanamiento" ? "prioridades" : "direccion") },
+    { label: V.tabs.direccion, n: c.objectives.length, meta: cuenta(c.objectives.length, "objetivo"), href: t("direccion") },
+    { label: V.tabs.okr, n: v.kpis.length, meta: cuenta(v.kpis.length, "resultado clave", "resultados clave"), href: t("okr") },
+    { label: V.tabs.iniciativas, n: v.initiatives.length, meta: cuenta(v.initiatives.length, "iniciativa"), href: t("iniciativas") },
+    { label: f1On ? "Autoevaluación directiva" : "Test de capacidad empresarial", n: respuestas ?? 0, meta: respuestas === null ? "…" : cuenta(respuestas, "respuesta"), href: `${base}/panel/diagnostico/${f1On ? "autoevaluacion" : "test"}` },
+  ];
+  const hechos = pasos.filter((p) => p.n > 0).length;
+  if (hechos === pasos.length) return null;
+  return (
+    <Card className="rise mb-5">
+      <CardHeader title="Lista de arranque" sub={`${hechos} de ${pasos.length} pasos con información · el panel se llena a medida que avanza el método`} />
+      <ol className="grid gap-2 px-5 pb-5 sm:grid-cols-5">
+        {pasos.map((p, i) => (
+          <li key={p.label}>
+            <Link href={p.href} className={`group flex h-full flex-col gap-1.5 rounded-xl border px-3.5 py-3 transition-colors ${p.n > 0 ? "border-line bg-surface-2/60" : "border-dashed border-line-strong hover:border-gold hover:bg-gold-wash/40"}`}>
+              <span className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-faint">{p.n > 0 ? <CheckCircle2 size={14} className="text-ok" /> : <Circle size={14} />} Paso {i + 1}</span>
+              <span className="text-[13.5px] font-bold leading-snug text-ink group-hover:text-cyan-deep">{p.label}</span>
+              <span className="num mt-auto text-[12px] text-muted">{p.meta}</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }

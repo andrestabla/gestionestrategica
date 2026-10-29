@@ -83,7 +83,7 @@ export default function IniciativasPage() {
     <>
       <PageHeader kicker="M6 · Seguimiento" title="Iniciativas, acciones y factores de éxito"
         desc="Cada iniciativa declara su meta de resultado, sus acciones con meta propia, su responsable, su presupuesto en tres estados y su bitácora. Cuando un factor acumula dos revisiones en rojo, la conversación se puede tener a tiempo."
-        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost !py-1.5 text-[12px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
+        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost btn-sm.5 text-[12px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
 
       <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
         <StatCard label="Presupuesto del portafolio" value={totals.planned / 1e6} decimals={0}
@@ -618,10 +618,10 @@ function FactorReview({ name, current, saving, onSave }: {
       <div className="flex gap-1.5">
         <button onClick={async () => { if (await onSave(state, note || undefined)) setOpen(false); }}
           disabled={saving}
-          className="btn-primary flex-1 !py-1 text-[12px] disabled:opacity-40">
+          className="btn-primary flex-1 btn-sm text-[12px] disabled:opacity-40">
           {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Registrar
         </button>
-        <button onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[12px]">Cancelar</button>
+        <button onClick={() => setOpen(false)} className="btn-ghost btn-sm text-[12px]">Cancelar</button>
       </div>
     </div>
   );
@@ -649,7 +649,7 @@ function LogForm({ saving, onSave }: {
         className="input min-w-0 flex-1 !py-1.5 text-[12px]" />
       <button onClick={async () => { if (text.trim() && await onSave(type, text)) setText(""); }}
         disabled={saving || !text.trim()}
-        className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40">
+        className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40">
         {saving ? <Loader2 size={11} className="animate-spin" /> : <PlusCircle size={11} />}
       </button>
     </div>
@@ -683,10 +683,10 @@ function HitoEditor({ current, saving, onSave }: {
       <div className="flex gap-1.5">
         <button onClick={async () => { if (await onSave(date, text)) setOpen(false); }}
           disabled={saving}
-          className="btn-primary !py-1 text-[12px] disabled:opacity-40">
+          className="btn-primary btn-sm text-[12px] disabled:opacity-40">
           {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Guardar
         </button>
-        <button onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[12px]">Cancelar</button>
+        <button onClick={() => setOpen(false)} className="btn-ghost btn-sm text-[12px]">Cancelar</button>
       </div>
     </div>
   );

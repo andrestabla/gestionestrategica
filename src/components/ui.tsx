@@ -251,3 +251,29 @@ export function AutoTextarea({ value, onChange, className = "", multiline = fals
   return <textarea ref={ref} value={value} onChange={onChange} rows={1} className={`${className} resize-none overflow-hidden leading-snug`} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
     onKeyDown={(e) => { if (!multiline && e.key === "Enter") e.preventDefault(); rest.onKeyDown?.(e); }} {...Object.fromEntries(Object.entries(rest).filter(([k]) => k !== "onKeyDown"))} />;
 }
+
+
+/* ═══ Campo de formulario (MASTER · «Campos de formulario»): etiqueta visible siempre, ayuda y error junto al campo.
+   El control va dentro de <label>, así queda asociado sin ids; el error se anuncia con role="alert". ═══ */
+export function Field({ label, help, error, children, className = "" }: { label: ReactNode; help?: ReactNode; error?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <label className={`block min-w-0 ${className}`}>
+      <span className="label flex items-center gap-1.5 !text-[11px]">{label}</span>
+      <div className="mt-1">{children}</div>
+      {help && !error && <span className="mt-1 block text-[12px] leading-snug text-muted">{help}</span>}
+      {error && <span role="alert" className="mt-1 block text-[12px] font-semibold leading-snug text-bad">{error}</span>}
+    </label>
+  );
+}
+
+/* ═══ Esqueletos de carga: reservan la altura del contenido y evitan el salto de layout ═══ */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div aria-hidden className={`animate-pulse rounded-xl bg-surface-2 ${className}`} />;
+}
+export function SkeletonCards({ n = 4, className = "" }: { n?: number; className?: string }) {
+  return (
+    <div role="status" aria-label="Cargando" className={`grid grid-cols-2 gap-2.5 sm:gap-4 ${n >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"} ${className}`}>
+      {Array.from({ length: n }, (_, i) => <div key={i} className="panel p-5"><Skeleton className="h-3 w-24" /><Skeleton className="mt-3 h-8 w-16" /><Skeleton className="mt-3 h-3 w-32" /></div>)}
+    </div>
+  );
+}

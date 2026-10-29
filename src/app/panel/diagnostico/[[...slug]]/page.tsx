@@ -12,7 +12,8 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, Card, CardHeader, StatCard, LevelBadge } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards } from "@/components/ui";
+import { avisar } from "@/components/feedback";
 import { AccessChip, useCan } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
@@ -99,8 +100,12 @@ export default function DiagnosticoPage() {
     <CutCtx.Provider value={cut}>
       <div className="no-print">
       <PageHeader kicker="M1 · Diagnóstico de capacidades" title="Capacidad organizacional de la empresa"
-        desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico completo de tres fuentes sobre las 68 prácticas del mapa. Madurez = 0,40 × evidencia + 0,30 × dirección + 0,30 × equipos, con techo de evidencia."
+        desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico de tres fuentes sobre las 68 prácticas del mapa."
         actions={<AccessChip module="madurez" />} />
+      <details className="rise mb-4 rounded-xl bg-surface-2/70 px-4 py-2 text-[12.5px] text-ink-soft">
+        <summary className="cursor-pointer select-none font-semibold text-ink">¿Cómo se calcula la madurez?</summary>
+        <p className="mt-2 leading-relaxed">Cada dimensión combina las tres fuentes: madurez = 0,40 × evidencia documental (F3) + 0,30 × autoevaluación directiva (F1) + 0,30 × percepción de equipos (F2). Sin evidencia verificada, la madurez tiene techo de 2,9; sin equipos, pesa 55 % la evidencia y 45 % la dirección. La escala va de 1 (incipiente) a 5 (multiplicadora) y el umbral de práctica instalada es 3,0.</p>
+      </details>
       <div className="rise mb-6 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
         {tabs.map((t) => {
           const on = tab === t.id || (tab === "dimension" && t.id === "capacidad");
@@ -638,7 +643,8 @@ function AutoevaluacionTab() {
   const total = data?.total ?? PRACTICES.length;
   const myN = mine ? Object.keys(mine.r).length : 0;
   const estado = !mine ? "pendiente" : myN >= total ? "completa" : "parcial";
-  const lista = data?.responses ?? [];
+  if (!data) return <><Skeleton className="mb-4 h-24" /><SkeletonCards n={3} /></>;
+  const lista = data.responses;
   const lecturas = lista.map((f) => ({ f, L: f1Lectura(f.r) }));
   // consolidado: promedio de los promedios por persona y dispersión entre ellas, dimensión por dimensión
   const consolidado = DIMS.map((d, i) => {
@@ -774,7 +780,7 @@ function ResponderF1() {
   const dims = DIMS.filter((d) => d.cap === cap.name);
   const stepN = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).flatMap((d) => d.prac).filter((p) => r[p.code] != null).length;
   const stepTot = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).reduce((a, d) => a + d.prac.length, 0);
-  const finish = async () => { const ok = await save(false); if (ok) router.push("/panel/diagnostico/autoevaluacion/resultado"); };
+  const finish = async () => { const ok = await save(false); if (ok) { avisar("Autoevaluación guardada"); router.push("/panel/diagnostico/autoevaluacion/resultado"); } };
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -845,7 +851,7 @@ function ResultadoF1({ email }: { email: string | null }) {
   const canAll = useCan("view_f1_all");
   const f = email && canAll ? (data?.responses.find((x) => x.email.toLowerCase() === email.toLowerCase()) ?? null) : data?.mine ?? null;
   const total = PRACTICES.length;
-  if (!data) return <Card className="rise p-6 text-[12.5px] text-muted">Cargando…</Card>;
+  if (!data) return <Skeleton className="h-44" />;
   if (!f) return (
     <Card className="rise p-6"><div className="text-[13px] text-ink">{email && canAll ? "Esa persona no ha respondido la autoevaluación." : "Todavía no has respondido la autoevaluación."} <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></div></Card>
   );

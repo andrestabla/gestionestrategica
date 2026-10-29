@@ -19,6 +19,7 @@ import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
 import { CatalogoTab } from "../catalogo-tab";
+import { confirmar, avisar } from "@/components/feedback";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
   Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw } from "lucide-react"
@@ -62,7 +63,7 @@ function ActividadTab() {
           right={<span className="flex flex-wrap items-center gap-1.5">
             <input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar persona, correo o acción…" className="input w-full !py-1.5 !text-[12px] sm:w-[220px]" />
             <select value={rol} onChange={(e) => setRol(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[12px]"><option value="">Todos los roles</option>{Object.entries(ROLE_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost !py-1.5 text-[12px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
+            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost btn-sm.5 text-[12px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
           </span>} />
         {error && <p className="px-5 py-3 text-[12px] text-bad">{error}</p>}
         {lista.length === 0 && !error && <p className="px-5 py-6 text-[12.5px] text-muted">Sin actividad todavía{q || rol ? " con ese filtro" : ""}.</p>}
@@ -218,7 +219,7 @@ function EmpresasTab() {
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
-            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary !py-1.5 text-[12px]"><Building2 size={12} /> Nueva empresa</button>} />
+            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm.5 text-[12px]"><Building2 size={12} /> Nueva empresa</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-[12.5px]">
               <thead>
@@ -246,7 +247,7 @@ function EmpresasTab() {
                       <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                       {c.slug !== "andina" && (
                         <button disabled={saving} title="Eliminar con todos sus datos" aria-label="Eliminar con todos sus datos"
-                          onClick={() => { if (window.confirm(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
+                          onClick={async () => { if (await confirmar(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
                           className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
                       )}
                     </td>
@@ -315,7 +316,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
     await refetch(); setSaving(false); return true;
   };
   const sendReset = async (u: ManagedUser) => {
-    if (!window.confirm(`¿Enviar a ${u.name} (${u.email}) un enlace para restablecer su contraseña?`)) return;
+    if (!(await confirmar(`¿Enviar a ${u.name} (${u.email}) un enlace para restablecer su contraseña?`))) return;
     setSaving(true); setError(null); setNotice(null);
     const res = await fetch("/api/td/users/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: u.email }) });
     const j = await res.json().catch(() => null);
@@ -334,7 +335,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span className="text-muted">Contraseña generada (se muestra una sola vez):</span>
               <code className="num rounded-md bg-surface-2 px-2 py-0.5 text-[12.5px] font-bold tracking-wide">{created.password}</code>
-              <button type="button" onClick={() => { void navigator.clipboard?.writeText(created.password!); }} className="btn-ghost !py-1 text-[12px]"><Copy size={12} /> Copiar</button>
+              <button type="button" onClick={() => { void navigator.clipboard?.writeText(created.password!); }} className="btn-ghost btn-sm text-[12px]"><Copy size={12} /> Copiar</button>
             </div>
           )}
           <div className="mt-1 text-[12px] text-faint">{created.mailed ? "Correo de bienvenida enviado con el enlace de entrada, el correo y la contraseña." : created.mailError ? `No se envió el correo: ${created.mailError}` : "Sin correo de bienvenida: comparte el acceso por otro medio."}</div>
@@ -345,7 +346,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
             sub="roles válidos solo en esta empresa · desactivar conserva la cuenta; eliminar la borra (no la propia)"
-            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary !py-1.5 text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
+            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary btn-sm.5 text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-[12.5px]">
               <thead>
@@ -387,7 +388,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                     <td className="whitespace-nowrap px-4 py-2.5 text-right">
                       {canCompanies && companies.length > 1 && (
                         <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa"
-                          onChange={(e) => { if (e.target.value && e.target.value !== me.company?.slug && window.confirm(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
+                          onChange={async (e) => { if (e.target.value && e.target.value !== me.company?.slug && await confirmar(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
                           className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[12px]">
                           {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
                         </select>
@@ -404,7 +405,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                         {u.active ? <PowerOff size={14} /> : <Power size={14} />}
                       </button>
                       <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
-                        onClick={() => { if (window.confirm(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
+                        onClick={async () => { if (await confirmar(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
                         title="Eliminar la cuenta"
                         className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40">
                         <Trash2 size={14} />
@@ -699,16 +700,16 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
         ))}
         <div className="flex gap-2 pt-1">
           <button onClick={() => post({ fields: draft })} disabled={saving || !dirty}
-            className="btn-primary flex-1 !py-1.5 text-[12px] disabled:opacity-40">
+            className="btn-primary flex-1 btn-sm.5 text-[12px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
           </button>
           {(it.key === "ses" || it.key === "r2") && it.configured && (
-            <button onClick={testSend} disabled={saving} className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"} aria-label={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
+            <button onClick={testSend} disabled={saving} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"} aria-label={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
           )}
           <button onClick={() => post({ enabled: !it.enabled })}
             disabled={saving || (!it.enabled && !it.configured) || it.source === "entorno"}
             title={it.source === "entorno" ? "Rige la configuración del entorno; para cambiarla, guarda valores propios" : !it.configured && !it.enabled ? "Completa la configuración primero" : undefined}
-            className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40">
+            className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40">
             {it.enabled ? "Desactivar" : "Activar"}
           </button>
         </div>

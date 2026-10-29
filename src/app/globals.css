@@ -341,3 +341,11 @@ select.input { text-overflow: ellipsis; }
 }
 .skip-link { position: absolute; left: 12px; top: -56px; z-index: 100; padding: 8px 14px; border-radius: 8px; background: var(--navy); color: #fff; font-size: 13px; font-weight: 700; transition: top 0.15s; }
 .skip-link:focus { top: 12px; }
+
+/* ─── tamaños de botón (MASTER · «Botones»): md 40 px por defecto, sm 32 px en barras de escritorio, 44 px en pantallas táctiles ─── */
+.btn-primary, .btn-ghost { min-height: 40px; }
+.btn-sm { min-height: 32px; padding-top: 5px; padding-bottom: 5px; font-size: 12.5px; }
+button.chip { min-height: 28px; cursor: pointer; }
+@media (pointer: coarse) {
+  .btn-primary, .btn-ghost, .btn-sm, button.chip { min-height: 44px; }
+}

@@ -22,6 +22,7 @@ import {
   type Task, type TaskStatus, type Person,
 } from "@/data/proyectos";
 import type { TaskAlert, Workload } from "@/lib/proyectos";
+import { confirmar, avisar } from "@/components/feedback";
 import {
   KanbanSquare, CalendarRange, Users, X, Link2, FileText, ShieldCheck,
   AlertTriangle, Lock, ChevronRight, Loader2, Save, History, Paperclip,
@@ -202,7 +203,7 @@ export default function ProyectosPage() {
             )}
             {canCreate && inis.length > 0 && (
               <button onClick={() => setCreating((c) => !c)}
-                className="btn-primary !py-1.5 text-[12px]">
+                className="btn-primary btn-sm.5 text-[12px]">
                 <Plus size={13} /> Nueva tarea
               </button>
             )}
@@ -894,7 +895,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                     }
                   }}
                   disabled={saving || !evFile || !evTitle.trim()}
-                  className="btn-primary w-full !py-1.5 text-[12px] disabled:opacity-40">
+                  className="btn-primary w-full btn-sm.5 text-[12px] disabled:opacity-40">
                   {saving ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
                   Adjuntar evidencia
                 </button>
@@ -938,7 +939,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                   if (commentText.trim()) { await onComment(commentText); setCommentText(""); }
                 }}
                 disabled={saving || !commentText.trim()}
-                className="btn-ghost !py-1.5 text-[12px] disabled:opacity-40">
+                className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40">
                 Enviar
               </button>
             </div>
@@ -964,8 +965,8 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           {/* archivar */}
           {editable && (
             <button
-              onClick={() => {
-                if (window.confirm(`¿Archivar «${task.title}»? Sale del plan activo pero conserva su auditoría.`)) {
+              onClick={async () => {
+                if (await confirmar(`¿Archivar «${task.title}»? Sale del plan activo pero conserva su auditoría.`)) {
                   onArchive(task.id);
                 }
               }}
@@ -1122,7 +1123,7 @@ function CascadeBlock({ task, allTasks, editable, onRefetch }: {
         <input type="date" value={due} onChange={(e) => { setDue(e.target.value); setPreview(null); }}
           className="input !py-1 text-[12px]" />
         <button onClick={() => call(false)} disabled={busy || due === task.due}
-          className="btn-ghost shrink-0 !py-1 text-[12px] disabled:opacity-40">
+          className="btn-ghost shrink-0 btn-sm text-[12px] disabled:opacity-40">
           {busy ? <Loader2 size={11} className="animate-spin" /> : "Vista previa"}
         </button>
       </div>
@@ -1143,7 +1144,7 @@ function CascadeBlock({ task, allTasks, editable, onRefetch }: {
             </div>
           ))}
           <button onClick={() => call(true)} disabled={busy}
-            className="btn-primary w-full !py-1.5 text-[12px] disabled:opacity-40">
+            className="btn-primary w-full btn-sm.5 text-[12px] disabled:opacity-40">
             {busy ? <Loader2 size={11} className="animate-spin" /> : <CalendarRange size={11} />}
             Aplicar corrimiento
           </button>

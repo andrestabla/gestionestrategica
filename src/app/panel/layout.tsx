@@ -5,6 +5,7 @@ import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
 import { hydrateCompanies, companyBySlug, listCompanies, tenantView } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
+import { FeedbackProvider } from "@/components/feedback";
 import { CatalogProvider } from "@/components/catalog-context";
 import { emptyView } from "@/lib/vista";
 
@@ -38,6 +39,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   return (
     <UserProvider user={user}>
       <CatalogProvider initial={view ?? emptyView()}>
+        <FeedbackProvider>
         <AppShell user={user} companies={companies} mode={company?.mode ?? "completa"}>
           {noCompany && user.role !== "ADMIN" ? (
             <p className="rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
@@ -49,6 +51,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
             </p>
           )}
         </AppShell>
+        </FeedbackProvider>
       </CatalogProvider>
     </UserProvider>
   );

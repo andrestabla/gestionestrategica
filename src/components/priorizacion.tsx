@@ -17,6 +17,7 @@ import {
 } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
 import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2 } from "lucide-react";
+import { confirmar, avisar } from "@/components/feedback";
 
 /** Decisión de la gerencia sobre una iniciativa (misma forma que las del catálogo). */
 type DecisionRecord = Catalog["seedDecisions"][number];
@@ -110,7 +111,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
     setSaving(true); setError(null);
     const res = await fetch("/api/td/priorizacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: iniId, ...body }) });
     if (!res.ok) setError((await res.json()).error ?? "Error al guardar");
-    else await refetch();
+    else { await refetch(); avisar(body.evaluation ? "Calificación registrada" : body.decision ? "Decisión registrada" : "Guardado"); }
     setSaving(false);
     return res.ok;
   };
@@ -141,7 +142,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
             <span className="chip chip-gold" title="Según el puntaje consolidado y las reglas de la matriz">Sugerido: {horizonLabel(cv.catalog.company, row.suggested)}</span>
             {canDecide && (
               <button type="button" disabled={saving} onClick={() => post({ horizon: row.suggested })}
-                className="btn-ghost !py-1 text-[12px]" title="Mover la iniciativa al horizonte sugerido (decisión de tiempo)">
+                className="btn-ghost btn-sm text-[12px]" title="Mover la iniciativa al horizonte sugerido (decisión de tiempo)">
                 Mover a {horizonLabel(cv.catalog.company, row.suggested)}
               </button>
             )}
@@ -339,8 +340,8 @@ export function EvaluationForm({ initial, saving, rule, onSave, confirmOnce = fa
           {preview !== null ? <>Tu puntaje: <b className="text-[15px] text-ink">{preview}</b> · {previewType === "ESTRATEGICO" ? "estratégica" : "táctica"}</> : (rule.criteria.length ? `Completa los ${validationCriteriaCount(rule)} criterios: tipo (1 a ${rule.criteria.length}) y matriz (${rule.criteria.length + 1} a ${validationCriteriaCount(rule)}).` : "Califica los cuatro criterios de 1 a 4.")}
         </div>
         <button type="button" disabled={!complete || saving}
-          onClick={async () => { if (confirmOnce && !initial && !window.confirm("¿Estás seguro de tu valoración? Solo se puede calificar una vez; después no se puede cambiar.")) return; setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
-          className="btn-primary ml-auto w-full justify-center !py-2.5 text-[12.5px] disabled:opacity-40 sm:w-auto sm:!py-1.5 sm:text-[12px]">
+          onClick={async () => { if (confirmOnce && !initial && !(await confirmar("¿Estás seguro de tu valoración? Solo se puede calificar una vez; después no se puede cambiar."))) return; setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
+          className="btn-primary ml-auto w-full justify-center !py-2.5 text-[12.5px] disabled:opacity-40 sm:w-auto sm:btn-sm.5 sm:text-[12px]">
           {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12} /> : <Save size={12} />} {initial ? "Actualizar evaluación" : "Registrar evaluación"}
         </button>
       </div>
@@ -356,7 +357,7 @@ function DecisionForm({ current, c, saving, onSave }: {
   const [d, setD] = useState<Decision | null>(current?.decision ?? null);
   const [rationale, setRationale] = useState(current?.rationale ?? "");
   if (!open) {
-    return <button onClick={() => setOpen(true)} className="btn-ghost mt-2 !py-1 text-[12px]">{current ? "Cambiar la decisión" : "Registrar la decisión"}</button>;
+    return <button onClick={() => setOpen(true)} className="btn-ghost mt-2 btn-sm text-[12px]">{current ? "Cambiar la decisión" : "Registrar la decisión"}</button>;
   }
   const hint = (k: Decision) =>
     k === "IMPLEMENTAR" && c.n === 0 ? "exige evaluación"
@@ -380,10 +381,10 @@ function DecisionForm({ current, c, saving, onSave }: {
         className="input !py-1.5 text-[12px]" />
       <div className="flex gap-1.5">
         <button type="button" disabled={!d || saving} onClick={async () => { if (d && await onSave(d, rationale)) setOpen(false); }}
-          className="btn-primary flex-1 !py-1 text-[12px] disabled:opacity-40">
+          className="btn-primary flex-1 btn-sm text-[12px] disabled:opacity-40">
           {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Registrar decisión
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="btn-ghost !py-1 text-[12px]">Cancelar</button>
+        <button type="button" onClick={() => setOpen(false)} className="btn-ghost btn-sm text-[12px]">Cancelar</button>
       </div>
     </div>
   );
