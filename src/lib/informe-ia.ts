@@ -12,6 +12,7 @@ export type InformeIA = {
   titulo: string;
   hipotesis_central?: string;
   resumen: string[];
+  contexto_empresa?: string;
   dimensiones?: { dimension: string; lectura: string }[];
   capacidades: { capacidad: string; puntaje: number | null; lectura: string }[];
   fortalezas: { dimension: string; por_que: string }[];
@@ -57,6 +58,7 @@ const FORMATO = `Devuelve un JSON con exactamente estas claves:
  "titulo": string (una línea, sin la palabra «informe», sobre la compañía),
  "hipotesis_central": string (una sola frase de 20-35 palabras: la hipótesis principal sobre la compañía que deja esta lectura),
  "resumen": string[] (dos o tres párrafos de 60-110 palabras: qué muestra la lectura, qué la explica, qué está en juego; en lenguaje de hipótesis),
+ "contexto_empresa": string (70-120 palabras: cómo dialoga esta lectura con los datos de entrada de la empresa y con la inteligencia del sector recibidos: prioridades declaradas, objetivos, iniciativas, cifras y benchmark; si el contexto es escaso, dilo y señala qué dato cambiaría la lectura),
  "dimensiones": [{"dimension": "código · nombre", "lectura": string (20-35 palabras: qué sugiere ese puntaje a la luz del marco y qué habría que verificar)}] (todas las dimensiones con puntaje, en el orden recibido),
  "capacidades": [{"capacidad": "Dirección|Liderazgo|Ejecución|Multiplicación", "puntaje": number|null, "lectura": string (40-80 palabras)}] (las cuatro),
  "fortalezas": [{"dimension": "código · nombre", "por_que": string (30-60 palabras)}] (dos a cuatro),
@@ -71,8 +73,8 @@ const EXTRA_CONSOLIDADO = `,
  "nivel_acompanamiento": {"nivel": "Focus|Growth Partner|Enterprise Elite|Sin intervención estructural", "por_que": string (30-60 palabras; parte del nivel que indica la regla del método y matiza solo con lo que la lectura sustenta)}`;
 const formato = (kind: InformeKind) => FORMATO.replace("__EXTRA__", kind === "consolidado" ? EXTRA_CONSOLIDADO : "");
 
-export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; cargo?: string }; lectura: LecturaF1; fecha: string }): { system: string; user: string } {
-  const { empresa, persona, lectura, fecha } = args;
+export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; cargo?: string }; lectura: LecturaF1; fecha: string; contexto?: string }): { system: string; user: string } {
+  const { empresa, persona, lectura, fecha, contexto } = args;
   const dimsFoco = lectura.prios.slice(0, 6).map((x) => x.d.code);
   const lineas = lectura.dims.map((x) => `${x.d.code} ${x.d.name}: ${fmt(x.m)} (${x.n} de ${x.d.prac.length} ítems)`).join("\n");
   const caps = lectura.caps.map((c) => `${c.cap.name}: ${fmt(c.m)} (${c.n} de ${c.tot} ítems)`).join("\n");
@@ -81,6 +83,7 @@ export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; c
     "",
     `EMPRESA: ${empresa.name}${empresa.sector ? ` · ${empresa.sector}` : ""}.`,
     empresa.levers?.length ? `Prioridades estratégicas declaradas: ${empresa.levers.map((l) => l.name).join("; ")}.` : "",
+    contexto ?? "",
     `LECTURA: autoevaluación directiva individual (Fuente 1) de ${persona.nombre}${persona.cargo ? `, ${persona.cargo}` : ""}, guardada el ${fecha}. ${lectura.answered} de 68 afirmaciones respondidas.`,
     "Promedio por capacidad:", caps,
     "Promedio por dimensión:", lineas,
@@ -93,8 +96,8 @@ export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; c
   return { system: SISTEMA, user };
 }
 
-export function encargoConsolidado(args: { empresa: Empresa; C: Consolidated; rec: Recommendation; n: number; dispersion: { code: string; name: string; sd: number | null }[]; fecha: string; cobertura?: number[] }): { system: string; user: string } {
-  const { empresa, C, rec, n, dispersion, fecha, cobertura } = args;
+export function encargoConsolidado(args: { empresa: Empresa; C: Consolidated; rec: Recommendation; n: number; dispersion: { code: string; name: string; sd: number | null }[]; fecha: string; cobertura?: number[]; contexto?: string }): { system: string; user: string } {
+  const { empresa, C, rec, n, dispersion, fecha, cobertura, contexto } = args;
   const dimsFoco = C.priorities.slice(0, 6).map((d) => d.code);
   const caps = C.caps.map((c) => `${c.name}: F1 ${fmt(c.f1)} · F2 ${fmt(c.f2)} · F3 ${fmt(c.f3)} · madurez ${fmt(c.m)}`).join("\n");
   const dims = C.dims.map((d) => `${d.code} ${d.name}: F1 ${fmt(d.f1)} · madurez ${fmt(d.m)} · base «${d.base}»${d.flags.length ? ` · banderas: ${d.flags.map((f) => f.key).join(", ")}` : ""}`).join("\n");
@@ -104,6 +107,7 @@ export function encargoConsolidado(args: { empresa: Empresa; C: Consolidated; re
     "",
     `EMPRESA: ${empresa.name}${empresa.sector ? ` · ${empresa.sector}` : ""}.`,
     empresa.levers?.length ? `Prioridades estratégicas declaradas: ${empresa.levers.map((l) => `${l.name}${l.desc ? ` (${l.desc})` : ""}`).join("; ")}.` : "",
+    contexto ?? "",
     `LECTURA CONSOLIDADA del comité al ${fecha}: ${n} autoevaluaciones directivas (Fuente 1)${C.okF2 ? `, ${C.f2n} respuestas de equipos (Fuente 2)` : ", sin percepción de equipos"}${C.hasF3 ? ", con evidencia documental (Fuente 3)" : ", sin evidencia documental"}.`,
     cobertura?.length ? `Cobertura: cada persona respondió ${cobertura.join(", ")} de 68 afirmaciones; las dimensiones con «—» no tienen respuesta y no se interpretan.` : "",
     "Por capacidad:", caps,
@@ -132,6 +136,7 @@ export function parseInforme(raw: unknown): InformeIA {
     capacidades: arr(o.capacidades, (x) => (s(x.capacidad) ? { capacidad: s(x.capacidad, 40), puntaje: num(x.puntaje), lectura: s(x.lectura) } : null)),
     fortalezas: arr(o.fortalezas, (x) => (s(x.dimension) ? { dimension: s(x.dimension, 120), por_que: s(x.por_que) } : null)),
     brechas: arr(o.brechas, (x) => (s(x.dimension) ? { dimension: s(x.dimension, 120), puntaje: num(x.puntaje), que_revela: s(x.que_revela), evidencia_a_verificar: s(x.evidencia_a_verificar), framework: s(x.framework, 160) } : null)),
+    contexto_empresa: s(o.contexto_empresa, 1500) || undefined,
     dimensiones: arr(o.dimensiones, (x) => (s(x.dimension) ? { dimension: s(x.dimension, 120), lectura: s(x.lectura, 600) } : null)),
     patrones: s(o.patrones, 3000),
     prioridades: arr(o.prioridades, (x) => (s(x.dimension) ? { orden: num(x.orden) ?? 0, dimension: s(x.dimension, 120), framework: s(x.framework, 160), primer_paso: s(x.primer_paso) } : null)).sort((a, b) => a.orden - b.orden),
