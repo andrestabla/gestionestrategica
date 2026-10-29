@@ -522,6 +522,8 @@ const ACTION_DESC: Record<Action, string> = {
   decide_initiatives: "Decidir el tiempo de cada iniciativa: implementar, preparar, backlog o renunciar",
   report_kpi: "Registrar valores de KPI (incluida la importación CSV)",
   capture_maturity: "Capturar la medición en curso (percepción de su ámbito)",
+  answer_f1: "Responder la autoevaluación directiva y ver el propio resultado",
+  view_f1_all: "Ver todas las autoevaluaciones directivas y su consolidado",
   publish_maturity: "Calificar D/I/K y nivel, y publicar mediciones",
   verify_evidence: "Verificar evidencia — la garantía de independencia",
   manage_users: "Administrar usuarios y roles de la empresa",

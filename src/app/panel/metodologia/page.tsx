@@ -26,6 +26,8 @@ const ACTION_LABEL: Record<Action, string> = {
   decide_initiatives: "Decidir el tiempo: implementar, preparar, backlog o renunciar",
   report_kpi: "Registrar valores de KPI",
   capture_maturity: "Capturar la autoevaluación de un corte",
+  answer_f1: "Responder la autoevaluación directiva y ver el propio resultado",
+  view_f1_all: "Ver todas las autoevaluaciones directivas y su consolidado",
   publish_maturity: "Verificar evidencia, calificar y publicar mediciones",
   verify_evidence: "Verificar evidencia de tareas",
   manage_users: "Administrar usuarios y roles de la empresa",

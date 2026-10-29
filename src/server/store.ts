@@ -92,6 +92,16 @@ export type TestResponse = {
 };
 
 /** Respuesta anónima de la Fuente 2 (percepción de equipos) desde el enlace de la empresa. */
+/** Fuente 1 · autoevaluación directiva por persona: los 68 ítems del mapa (código de práctica → 1–5). */
+export type F1Response = {
+  email: string;
+  name: string;
+  role: string;
+  cargo?: string;
+  at: string;                   // ISO
+  r: Record<string, number>;    // DIR-1.1 … MUL-5.4 → 1–5
+};
+
 export type F2Response = {
   id: string;                   // F2-0001…
   at: string;                   // ISO
@@ -145,6 +155,7 @@ export type TenantState = {
   published: AssessmentRecord | null;
   kpiReports: Map<string, KpiReport[]>;
   tests: Map<string, TestResponse>;
+  f1: Map<string, F1Response>;
   f2: F2Response[];
   testNotes: Map<string, TestNotes>;
   iniOverrides: Map<string, InitiativeOverride>;
@@ -199,7 +210,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     // línea base del cronograma: las fechas del plan aprobado se congelan;
     // las reprogramaciones mueven las vigentes y el deslizamiento se mide contra esta.
     baselines: new Map(catalog.tasks.map((t) => [t.id, { start: t.start, due: t.due }])),
-    capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f2: [], testNotes: new Map(),
+    capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f1: new Map(), f2: [], testNotes: new Map(),
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
@@ -404,12 +415,12 @@ async function loadTenant(st: TenantState) {
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
     // el resto de la empresa, en paralelo: una ida y vuelta a la base en lugar de quince en serie
-    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows] = await Promise.all([
+    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows] = await Promise.all([
       db.projectTask.findMany(W), db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } }), db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } }),
       db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } }), db.initiativeOverride.findMany(W), db.initiativeEvaluation.findMany(W), db.initiativeDecision.findMany(W),
       db.itineraryComment.findMany(W), db.user.findMany(W), db.integration.findMany(W), db.branding.findUnique({ where: { companyId } }), db.notifRead.findMany(W),
       db.practiceCapture.findMany({ where: { companyId, cut: "A3" } }), db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } }),
-      db.testResponse.findMany(W), db.testNote.findMany(W),
+      db.testResponse.findMany(W), db.testNote.findMany(W), db.f1Response.findMany(W),
     ]);
     const rows = rowsRaw as (DbTaskRow & {
       iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
@@ -484,6 +495,9 @@ async function loadTenant(st: TenantState) {
     }
     for (const t of testRows) {
       testStore().set(t.email, { email: t.email, name: t.name, role: t.role, cargo: t.cargo ?? undefined, objetivo: t.objetivo ?? undefined, at: t.at.toISOString(), r: t.answers as TestResponse["r"] });
+    }
+    for (const f of f1Rows) {
+      f1Store().set(f.email, { email: f.email, name: f.name, role: f.role, cargo: f.cargo ?? undefined, at: f.at.toISOString(), r: f.answers as F1Response["r"] });
     }
     for (const n of noteRows) {
       testNotes().set(n.participant, { restriccion: n.restriccion ?? undefined, evidencias: n.evidencias ?? undefined, accion: n.accion ?? undefined, noNecesita: n.noNecesita ?? undefined, by: n.by, at: n.at.toISOString() });
@@ -1560,6 +1574,57 @@ export function setTestNotes(
    quién responde ni desde dónde. El advisor y el líder ven el conteo y los
    agregados; nadie ve una respuesta individual con nombre. */
 
+/* ═══ Fuente 1 · Autoevaluación directiva por persona ═══
+   Cada cuenta de la empresa responde los 68 ítems (1–5) y ve su propio
+   resultado; el advisor y el administrador ven todas las respuestas y el
+   consolidado. El avance se guarda parcial y la última respuesta reemplaza a
+   la anterior; al publicar el corte A3 la autoevaluación queda cerrada. */
+
+function f1Store() { return S().f1; }
+
+export const F1_CAN_SEE_ALL = (user: SessionUser) => ["ADMIN", "CONSULTOR"].includes(user.role);
+
+/** Todas las respuestas para el advisor y el administrador; la propia para los demás. */
+export function getF1Responses(user: SessionUser): F1Response[] {
+  const all = [...f1Store().values()].sort((a, b) => a.at.localeCompare(b.at));
+  return F1_CAN_SEE_ALL(user) ? all : all.filter((f) => f.email.toLowerCase() === user.email.toLowerCase());
+}
+
+/** ¿Está cerrada la autoevaluación? Sí cuando el corte A3 ya se publicó desde la plataforma. */
+export const f1Closed = (): boolean => Boolean(S().published);
+
+export function saveF1Response(
+  user: SessionUser,
+  input: { r: Record<string, unknown>; cargo?: string },
+): { ok: true; response: F1Response; answered: number } | { ok: false; status: number; error: string } {
+  if (!can(user, "answer_f1")) return { ok: false, status: 403, error: "Tu rol no responde la autoevaluación directiva." };
+  if (f1Closed()) return { ok: false, status: 422, error: "El corte A3 ya está publicado: la autoevaluación está cerrada." };
+  const r: Record<string, number> = {};
+  for (const [code, raw] of Object.entries(input.r ?? {})) {
+    if (raw === undefined || raw === null || raw === "") continue;
+    if (!PRACTICES.some((p) => p.code === code)) return { ok: false, status: 422, error: `La práctica ${code} no existe en el mapa.` };
+    const v = typeof raw === "string" ? Number(raw) : raw;
+    if (!inRange(v, 1, 5)) return { ok: false, status: 422, error: `El ítem ${code} admite un entero de 1 a 5.` };
+    r[code] = Number(v);
+  }
+  const answered = Object.keys(r).length;
+  if (!answered) return { ok: false, status: 422, error: "Responde al menos un ítem para guardar el avance." };
+  const prev = f1Store().get(user.email);
+  const response: F1Response = {
+    email: user.email, name: user.name, role: user.role,
+    cargo: input.cargo?.trim() || prev?.cargo || undefined,
+    at: new Date().toISOString(), r,
+  };
+  f1Store().set(user.email, response);
+  audit(user, "task", `f1:${user.email}`, `autoevaluación directiva guardada (${answered} de ${PRACTICES.length} ítems)`);
+  void persist("autoevaluación", async (db) => {
+    const companyId = cid();
+    const data = { name: response.name, role: response.role, cargo: response.cargo ?? null, answers: response.r, at: new Date(response.at) };
+    await db.f1Response.upsert({ where: { companyId_email: { companyId, email: response.email } }, update: data, create: { email: response.email, companyId, ...data } });
+  });
+  return { ok: true, response, answered };
+}
+
 function f2Store() { return S().f2; }
 const F2_CODES = new Set([...DIMS.flatMap((d) => d.f2.map((q) => q.code)), ...F2_GENERAL.map((q) => q.code)]);
 
@@ -1603,13 +1668,18 @@ export function saveF2Response(
 
 export function platformResponses(): OdResponse[] {
   const out: OdResponse[] = [];
-  const byUser = new Map<string, OdResponse>();
-  for (const [code, c] of capture()) {
-    if (c.perception === undefined) continue;
-    const r = byUser.get(c.by) ?? { tipo: "f1" as const, meta: { nombre: c.by }, r: {} };
-    r.r[code] = c.perception; byUser.set(c.by, r);
+  if (f1Store().size) {
+    // autoevaluación directiva por persona (cada quien los 68 ítems); con ella, la percepción de la captura A3 no se duplica
+    for (const f of f1Store().values()) out.push({ tipo: "f1", meta: { nombre: f.name, cargo: f.cargo ?? f.role }, r: { ...f.r } });
+  } else {
+    const byUser = new Map<string, OdResponse>();
+    for (const [code, c] of capture()) {
+      if (c.perception === undefined) continue;
+      const r = byUser.get(c.by) ?? { tipo: "f1" as const, meta: { nombre: c.by }, r: {} };
+      r.r[code] = c.perception; byUser.set(c.by, r);
+    }
+    out.push(...byUser.values());
   }
-  out.push(...byUser.values());
   for (const f of f2Store()) out.push({ tipo: "f2", meta: { area: f.area ?? "" }, r: f.r, n: { abierta: f.abierta ?? "" } });
   const r3: OdResponse["r"] = {}; const lv: Record<string, number> = {}; let any = false;
   for (const d of DIMS) {

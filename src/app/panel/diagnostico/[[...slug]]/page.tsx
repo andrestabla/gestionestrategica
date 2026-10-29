@@ -5,6 +5,7 @@
 //   /panel/diagnostico/capacidad/<n>        → una capacidad y sus dimensiones
 //   /panel/diagnostico/dimension/<DIR-1>    → una dimensión: prácticas, evidencia y fuentes
 //   /panel/diagnostico/test                 → test de capacidad empresarial: participantes y contraste
+//   /panel/diagnostico/autoevaluacion       → fuente 1: autoevaluación directiva por persona (responder, mi lectura, consolidado)
 //   /panel/diagnostico/brechas              → brechas priorizadas y nivel de acompañamiento
 //   /panel/diagnostico/captura              → captura del corte A3 (autoevaluación y verificación)
 
@@ -17,20 +18,20 @@ import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/com
 import { useCatalog } from "@/components/catalog-context";
 import { LINES, fmtNum } from "@/data/demo";
 import {
-  CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, TEST_QUESTIONS, GUIDES, FLAG_TEXT,
-  methodologyOf, frameworkOf, frameworkOfPractice, DRAG_WEIGHT, THRESHOLD, levelName,
+  CAPS, DIMS, dimOf, dimsOf, PRACTICES, LEVELS, STAGES, TEST, TEST_QUESTIONS, GUIDES, FLAG_TEXT, MAPA,
+  methodologyOf, frameworkOf, frameworkOfPractice, DRAG_WEIGHT, THRESHOLD, levelName, levelOf,
 } from "@/data/mapa";
 import { scoresOf, responsible } from "@/lib/vista";
-import { consolidate, readTest, recommend, testContrast, avg, rangeText, type DimResult, type Consolidated } from "@/lib/od";
+import { consolidate, readTest, recommend, testContrast, avg, sdev, rangeText, type DimResult, type Consolidated } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
-import type { VariableCapture, TestResponse, TestNotes } from "@/server/store";
+import type { VariableCapture, TestResponse, TestNotes, F1Response } from "@/server/store";
 import type { Response } from "@/lib/od";
 import {
-  Radar, Layers, ClipboardList, Flame, PenLine, ArrowLeft, CheckCircle2,
+  Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText,
 } from "lucide-react";
 
-type Tab = "resumen" | "capacidad" | "dimension" | "test" | "brechas" | "captura" | "informe";
+type Tab = "resumen" | "capacidad" | "dimension" | "test" | "autoevaluacion" | "brechas" | "captura" | "informe";
 
 /* ═══ Corte que se lee: el publicado (las fuentes demo de la empresa, si las
    tiene) o el que se captura en la plataforma ═══ */
@@ -52,6 +53,7 @@ const TABS: { id: Tab; label: string; icon: typeof Radar; href: string }[] = [
   { id: "resumen", label: "Resumen", icon: Radar, href: "/panel/diagnostico" },
   { id: "capacidad", label: "Capacidades", icon: Layers, href: "/panel/diagnostico/capacidad/1" },
   { id: "test", label: "Test", icon: ClipboardList, href: "/panel/diagnostico/test" },
+  { id: "autoevaluacion", label: "Autoevaluación", icon: ClipboardCheck, href: "/panel/diagnostico/autoevaluacion" },
   { id: "brechas", label: "Brechas", icon: Flame, href: "/panel/diagnostico/brechas" },
   { id: "captura", label: "Captura A3", icon: PenLine, href: "/panel/diagnostico/captura" },
   { id: "informe", label: "Informe", icon: FileText, href: "/panel/diagnostico/informe" },
@@ -64,7 +66,7 @@ export default function DiagnosticoPage() {
   const params = useParams<{ slug?: string[] }>();
   const slug = params.slug ?? [];
   const seg = (slug[0] ?? "resumen").toLowerCase();
-  const tab: Tab = (["capacidad", "dimension", "test", "brechas", "captura", "informe"].includes(seg) ? seg : "resumen") as Tab;
+  const tab: Tab = (["capacidad", "dimension", "test", "autoevaluacion", "brechas", "captura", "informe"].includes(seg) ? seg : "resumen") as Tab;
   const arg = slug[1] ? decodeURIComponent(slug[1]).toUpperCase() : null;
   const arg2 = slug[2] ? decodeURIComponent(slug[2]) : null;
   const router = useRouter();
@@ -104,7 +106,7 @@ export default function DiagnosticoPage() {
             </button>
           );
         })}
-        {hasCurso && tab !== "captura" && tab !== "test" && (
+        {hasCurso && tab !== "captura" && tab !== "test" && tab !== "autoevaluacion" && (
           <div className="ml-auto flex items-center gap-1 pr-1 text-[11px]">
             <span className="hidden text-faint sm:inline">Leer:</span>
             <button onClick={() => setSrc("vigente")} className={`chip ${cut.src === "vigente" ? "chip-cyan" : ""}`}>Corte publicado</button>
@@ -122,6 +124,7 @@ export default function DiagnosticoPage() {
       {tab === "capacidad" && <Capacidad n={Number(arg ?? 1)} />}
       {tab === "dimension" && arg && <Dimension code={arg} />}
       {tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : arg === "INFORME" && arg2 ? <InformeTest id={arg2} /> : <TestTab />)}
+      {tab === "autoevaluacion" && (arg === "RESPONDER" ? <ResponderF1 /> : arg === "RESULTADO" ? <ResultadoF1 email={arg2} /> : <AutoevaluacionTab />)}
       {tab === "informe" && <InformeDiagnostico />}
       {tab === "brechas" && <Brechas />}
       {tab === "captura" && <Captura />}
@@ -572,6 +575,332 @@ function ResponderTest() {
       <div className="flex items-center justify-between gap-3">
         <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
         <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
+      </div>
+    </>
+  );
+}
+
+/* ═══ Fuente 1 · Autoevaluación directiva por persona ═══
+   Cada cuenta responde los 68 ítems del mapa (cuatro por dimensión) y ve su
+   lectura; el advisor y el administrador ven a todo el comité y su consolidado,
+   que a su vez alimenta el corte en curso del diagnóstico. */
+
+type F1Api = { responses: F1Response[]; mine: F1Response | null; all: boolean; total: number; closed: boolean };
+
+function useF1() {
+  const [data, setData] = useState<F1Api | null>(null);
+  const refetch = useCallback(async () => {
+    try { const r = await fetch("/api/td/f1"); if (r.ok) setData(await r.json()); } catch { /* sin red */ }
+  }, []);
+  useEffect(() => { refetch(); }, [refetch]);
+  return { data, refetch };
+}
+
+/** Promedio por dimensión y por capacidad de una respuesta (solo lo contestado). */
+function f1Lectura(r: Record<string, number>) {
+  const dims = DIMS.map((d) => { const vals = d.prac.map((p) => r[p.code]); return { d, m: avg(vals), n: vals.filter((x) => typeof x === "number").length }; });
+  const caps = CAPS.map((c) => {
+    const xs = dims.filter((x) => x.d.cap === c.name);
+    return { cap: c, m: avg(xs.map((x) => x.m)), n: xs.reduce((a, x) => a + x.n, 0), tot: xs.reduce((a, x) => a + x.d.prac.length, 0) };
+  });
+  const answered = dims.reduce((a, x) => a + x.n, 0);
+  const prios = dims.filter((x) => x.m != null && x.m < THRESHOLD).map((x) => ({ ...x, p: (THRESHOLD - (x.m as number)) * DRAG_WEIGHT(x.d.code) })).sort((a, b) => b.p - a.p);
+  return { dims, caps, answered, prios };
+}
+
+const f1Fecha = (iso: string) => new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+
+function EscalaF1() {
+  return (
+    <div className="grid gap-2 sm:grid-cols-5">
+      {MAPA.escalaF1.map((e, i) => (
+        <div key={e.n} className="rounded-xl bg-surface-2 px-3 py-2.5">
+          <div className="flex items-center gap-2"><span className="num flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: LEVELS[i].color }}>{e.n}</span><b className="text-[12.5px] text-ink">{e.name}</b></div>
+          <p className="mt-1 text-[11px] leading-snug text-muted">{e.desc}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AutoevaluacionTab() {
+  const { data } = useF1();
+  const canAll = useCan("view_f1_all");
+  const mine = data?.mine ?? null;
+  const total = data?.total ?? PRACTICES.length;
+  const myN = mine ? Object.keys(mine.r).length : 0;
+  const estado = !mine ? "pendiente" : myN >= total ? "completa" : "parcial";
+  const lista = data?.responses ?? [];
+  const lecturas = lista.map((f) => ({ f, L: f1Lectura(f.r) }));
+  // consolidado: promedio de los promedios por persona y dispersión entre ellas, dimensión por dimensión
+  const consolidado = DIMS.map((d, i) => {
+    const xs = lecturas.map((x) => x.L.dims[i].m).filter((m): m is number => m != null);
+    return { d, m: avg(xs), s: sdev(xs), n: xs.length };
+  });
+  const capsCons = CAPS.map((c) => ({ cap: c, m: avg(consolidado.filter((x) => x.d.cap === c.name).map((x) => x.m)) }));
+  const dispersas = consolidado.filter((x) => (x.s ?? 0) >= 1);
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Fuente 1 · Autoevaluación directiva</div>
+          <div className="text-[15px] font-extrabold">{estado === "completa" ? "Ya respondiste la autoevaluación" : estado === "parcial" ? `Llevas ${myN} de ${total} afirmaciones` : "Responde la autoevaluación directiva"}</div>
+          <div className="text-[12px] text-white/75">
+            {data?.closed ? "El corte ya se publicó: la autoevaluación está cerrada y tu lectura queda como quedó."
+              : estado === "pendiente" ? "68 afirmaciones, cuatro por dimensión, en la escala de 1 a 5. Entre 35 y 45 minutos; puedes parar y seguir después: el avance se guarda en la plataforma."
+              : `Guardada el ${f1Fecha(mine!.at)}. Puedes corregir cualquier respuesta hasta que el advisor cierre el corte.`}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {mine && <Link href="/panel/diagnostico/autoevaluacion/resultado" className="btn-ghost inline-flex items-center gap-1.5 !border-white/30 !text-white text-[12px]"><FileText size={13} /> Mi lectura</Link>}
+          {!data?.closed && <Link href="/panel/diagnostico/autoevaluacion/responder" className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardCheck size={13} /> {estado === "pendiente" ? "Responder" : estado === "parcial" ? "Continuar" : "Revisar mis respuestas"}</Link>}
+        </div>
+      </div>
+
+      <Card className="rise rise-1 mb-5">
+        <CardHeader title="Cómo se responde" sub="califica lo que la organización hace de forma recurrente y podría demostrar con un ejemplo, un documento o un indicador; no lo que te gustaría que ocurriera" />
+        <div className="px-5 pb-5">
+          <ul className="mb-4 grid gap-1.5 text-[12.5px] text-ink-soft sm:grid-cols-3">
+            <li className="rounded-xl bg-surface-2 px-3 py-2">Responde de forma individual, sin deliberar con otros miembros del comité.</li>
+            <li className="rounded-xl bg-surface-2 px-3 py-2">Si dudas entre dos números, elige el menor.</li>
+            <li className="rounded-xl bg-surface-2 px-3 py-2">Tu respuesta es confidencial: al comité se le reportan agregados; solo el advisor ve cada lectura.</li>
+          </ul>
+          <EscalaF1 />
+        </div>
+      </Card>
+
+      {canAll && (
+        <>
+          <div className="mb-5 grid gap-4 sm:grid-cols-3">
+            <StatCard label="Respuestas" value={lista.length} foot={`${lecturas.filter((x) => x.L.answered >= total).length} completas · ${lecturas.filter((x) => x.L.answered < total).length} en curso`} />
+            <StatCard label="Autoevaluación del comité" value={avg(capsCons.map((c) => c.m)) ?? 0} decimals={1} foot="promedio de las cuatro capacidades" />
+            <StatCard label="Dimensiones con lecturas distintas" value={dispersas.length} unit="de 17" foot="dispersión de 1,0 o más entre miembros" good={dispersas.length === 0} />
+          </div>
+          <div className="mb-5 grid gap-5 lg:grid-cols-[1fr_320px]">
+            <Card className="rise rise-2">
+              <CardHeader title="Quién ha respondido" sub="cada lectura individual la ve solo el advisor; el comité recibe el consolidado" />
+              <div className="overflow-x-auto px-2 pb-3">
+                <table className="w-full text-[12.5px]">
+                  <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{CAPS.map((c) => <th key={c.n} className="num px-2 py-2 text-center">{c.code}</th>)}<th className="num px-3 py-2 text-center">Avance</th><th className="px-3 py-2">Guardada</th></tr></thead>
+                  <tbody>
+                    {lista.length === 0 && <tr className="border-t border-line"><td colSpan={4 + CAPS.length} className="px-3 py-4 text-[12.5px] italic text-faint">Nadie ha respondido todavía.</td></tr>}
+                    {lecturas.map(({ f, L }) => (
+                      <tr key={f.email} className="border-t border-line">
+                        <td className="px-3 py-2"><Link href={`/panel/diagnostico/autoevaluacion/resultado/${encodeURIComponent(f.email)}`} className="font-bold text-cyan-deep hover:underline">{f.name}</Link><div className="text-[10.5px] text-faint">{f.cargo ?? f.role}</div></td>
+                        {L.caps.map((c) => <td key={c.cap.n} className={`num px-2 py-2 text-center ${c.m != null && c.m < THRESHOLD ? "font-bold" : ""}`} style={c.m != null && c.m < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(c.m, 2)}</td>)}
+                        <td className="num px-3 py-2 text-center">{L.answered}/{total}</td>
+                        <td className="px-3 py-2 text-muted">{new Date(f.at).toLocaleDateString("es-CO")}</td>
+                      </tr>
+                    ))}
+                    {lecturas.length > 1 && <tr className="border-t border-line bg-surface-2/60"><td className="px-3 py-2 font-bold text-ink">Comité</td>{capsCons.map((c) => <td key={c.cap.n} className="num px-2 py-2 text-center font-extrabold text-ink">{f1(c.m, 2)}</td>)}<td colSpan={2} /></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+            <Card className="rise rise-3">
+              <CardHeader title="Perfil del comité" sub="promedio de las lecturas individuales" />
+              <div className="px-4 pb-4"><MiniRadar color="var(--gold)" axes={capsCons.map((c) => ({ label: c.cap.code, value: Math.max(0, c.m ?? 0), target: THRESHOLD }))} /></div>
+            </Card>
+          </div>
+          <Card className="rise rise-4 mb-5">
+            <CardHeader title="Las diecisiete dimensiones según el comité" sub="promedio, dispersión entre miembros y nivel; la dispersión alta se conversa, no se promedia" />
+            <div className="overflow-x-auto px-2 pb-3">
+              <table className="w-full text-[12.5px]">
+                <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Promedio</th><th className="num px-2 py-2 text-center">Dispersión</th><th className="num px-2 py-2 text-center">Respuestas</th><th className="px-3 py-2">Nivel</th></tr></thead>
+                <tbody>
+                  {consolidado.map((x) => (
+                    <tr key={x.d.code} className="border-t border-line">
+                      <td className="px-3 py-2"><b className="text-ink">{x.d.code}</b> · {x.d.name}</td>
+                      <td className="px-3 py-2 text-muted">{x.d.cap}</td>
+                      <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(x.m, 2)}</td>
+                      <td className="num px-2 py-2 text-center">{x.s != null ? <span className={`chip !py-0 ${x.s >= 1 ? "chip-warn" : ""}`}>{f1(x.s, 2)}</span> : "—"}</td>
+                      <td className="num px-2 py-2 text-center text-muted">{x.n}</td>
+                      <td className="px-3 py-2">{x.m != null ? <span className={`chip !py-0 ${LEVEL_CLS[levelOf(x.m)]}`}>{levelName(x.m)}</span> : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-line px-5 py-3 text-[12px] text-muted">El consolidado entra al corte en curso como Fuente 1: en <Link href="/panel/diagnostico" className="font-bold text-cyan-deep hover:underline">Resumen</Link> se cruza con la percepción de equipos y la evidencia.</div>
+          </Card>
+        </>
+      )}
+    </>
+  );
+}
+
+function ResponderF1() {
+  const { data, refetch } = useF1();
+  const [r, setR] = useState<Record<string, number>>({});
+  const [cargo, setCargo] = useState("");
+  const [step, setStep] = useState(0);        // 0..3 capacidades
+  const [loaded, setLoaded] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const router = useRouter();
+  useEffect(() => { if (data && !loaded) { if (data.mine) { setR(data.mine.r); setCargo(data.mine.cargo ?? ""); } setLoaded(true); } }, [data, loaded]);
+  const total = PRACTICES.length;
+  const answered = Object.keys(r).length;
+  const save = useCallback(async (silent: boolean) => {
+    if (!Object.keys(r).length) return false;
+    setSaving(true); setMsg(null);
+    const res = await fetch("/api/td/f1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo }) });
+    const j = await res.json().catch(() => ({}));
+    setSaving(false);
+    if (!res.ok) { setMsg(j.error ?? "No se pudo guardar."); return false; }
+    setDirty(false); setSavedAt(new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }));
+    if (!silent) await refetch();
+    return true;
+  }, [r, cargo, refetch]);
+  // guardado automático: un segundo después del último cambio
+  useEffect(() => { if (!dirty || data?.closed) return; const t = setTimeout(() => { void save(true); }, 1000); return () => clearTimeout(t); }, [dirty, r, cargo, data?.closed, save]);
+  const set = (code: string, v: number) => { setR((prev) => { const next = { ...prev }; if (next[code] === v) delete next[code]; else next[code] = v; return next; }); setDirty(true); };
+  if (data?.closed) {
+    return (
+      <Card className="rise p-6"><div className="text-[13px] text-ink"><b>La autoevaluación está cerrada:</b> el advisor ya publicó el corte. {data.mine ? <Link href="/panel/diagnostico/autoevaluacion/resultado" className="font-bold text-cyan-deep hover:underline">Ver mi lectura</Link> : "No alcanzaste a responder."}</div></Card>
+    );
+  }
+  const cap = CAPS[step];
+  const dims = DIMS.filter((d) => d.cap === cap.name);
+  const stepN = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).flatMap((d) => d.prac).filter((p) => r[p.code] != null).length;
+  const stepTot = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).reduce((a, d) => a + d.prac.length, 0);
+  const finish = async () => { const ok = await save(false); if (ok) router.push("/panel/diagnostico/autoevaluacion/resultado"); };
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Link href="/panel/diagnostico/autoevaluacion" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Autoevaluación</Link>
+        <span className="flex items-center gap-3 text-[12px]">
+          <span className="text-faint">{saving ? "Guardando…" : dirty ? "Cambios sin guardar" : savedAt ? `Guardado ${savedAt}` : ""}</span>
+          <span className="num font-bold text-muted">{answered} de {total}</span>
+        </span>
+      </div>
+      <div className="mb-4 grid gap-1.5 sm:grid-cols-4">
+        {CAPS.map((c, i) => { const n = stepN(c), t = stepTot(c); const on = i === step; return (
+          <button key={c.n} type="button" onClick={() => setStep(i)} className={`rounded-xl px-3 py-2 text-left transition-all ${on ? "text-white shadow-sm" : "bg-surface-2 hover:bg-surface"}`} style={on ? { background: c.color } : undefined}>
+            <div className={`text-[10px] font-bold uppercase tracking-wider ${on ? "text-white/70" : "text-faint"}`}>Paso {i + 1} de 4</div>
+            <div className={`text-[13px] font-extrabold ${on ? "" : "text-ink"}`}>{c.name}</div>
+            <div className="relative mt-1.5 h-[5px] overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full" style={{ width: `${(n / t) * 100}%`, background: on ? "rgba(255,255,255,.85)" : c.color }} /></div>
+            <div className={`num mt-1 text-[10px] ${on ? "text-white/80" : "text-muted"}`}>{n} de {t}</div>
+          </button>
+        ); })}
+      </div>
+      {step === 0 && (
+        <Card className="rise rise-1 mb-5">
+          <CardHeader title="Antes de comenzar" sub="responde según lo que la empresa hace de forma recurrente y podría demostrar; si dudas entre dos números, elige el menor" />
+          <div className="grid gap-4 px-5 pb-5 lg:grid-cols-[260px_1fr]">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-faint">Tu cargo<input className="input mt-1 font-normal normal-case tracking-normal" value={cargo} onChange={(e) => { setCargo(e.target.value); setDirty(true); }} /></label>
+            <EscalaF1 />
+          </div>
+        </Card>
+      )}
+      <div className="mb-2 rounded-xl px-5 py-3 text-white" style={{ background: cap.color }}><div className="text-[10px] font-bold uppercase tracking-[0.18em] opacity-80">{cap.code} · {cap.verb}</div><div className="text-[16px] font-extrabold">{cap.name}</div><div className="text-[12px] opacity-85">{cap.q}</div></div>
+      {dims.map((d) => (
+        <div key={d.code} className="mb-5">
+          <div className="mb-2 mt-4 px-1"><div className="text-[14px] font-extrabold text-ink">{d.code} · {d.name}</div><p className="text-[12px] leading-snug text-muted">{d.defn}</p></div>
+          {d.prac.map((p) => {
+            const g = GUIDES.f1[p.code]; const v = r[p.code];
+            return (
+              <Card key={p.code} className="mb-2">
+                <div className="px-5 py-4">
+                  <div className="flex gap-3"><span className="num shrink-0 rounded-lg bg-surface-2 px-2 py-1 text-[11px] font-extrabold text-ink-soft">{p.code}</span><p className="text-[13.5px] font-semibold leading-snug text-ink">{p.f1}</p></div>
+                  <div className="mt-3 grid grid-cols-5 gap-1.5">
+                    {MAPA.escalaF1.map((l, i) => { const n = i + 1; return (
+                      <button key={l.n} type="button" onClick={() => set(p.code, n)} title={g?.n?.[String(n)]}
+                        className={`rounded-lg border px-1 py-2 text-center transition-all ${v === n ? "border-navy text-white" : "border-line bg-surface hover:border-gold"}`} style={v === n ? { background: "var(--navy)" } : undefined}>
+                        <div className="num text-[16px] font-extrabold">{n}</div><div className={`text-[9.5px] font-semibold ${v === n ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
+                      </button>
+                    ); })}
+                  </div>
+                  {typeof v === "number" && g?.n?.[String(v)] && <p className="mt-2 rounded-lg bg-cyan-wash px-3 py-2 text-[12px] leading-snug text-ink-soft"><b className="text-ink">{v} · {MAPA.escalaF1[v - 1].name}.</b> {g.n[String(v)]}{g.q && <i className="mt-0.5 block text-muted">{g.q}</i>}</p>}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      ))}
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad)" }}>{msg}</div>}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={() => { setStep((s) => Math.max(0, s - 1)); window.scrollTo({ top: 0 }); }} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>
+        <span className="text-[12px] text-muted">El avance se guarda solo; puedes cerrar y seguir después.</span>
+        {step < CAPS.length - 1
+          ? <button type="button" onClick={() => { setStep((s) => s + 1); window.scrollTo({ top: 0 }); }} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]">Siguiente <ArrowRight size={13} /></button>
+          : <button type="button" onClick={finish} disabled={saving || answered === 0} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi lectura</button>}
+      </div>
+    </>
+  );
+}
+
+function ResultadoF1({ email }: { email: string | null }) {
+  const { data } = useF1();
+  const canAll = useCan("view_f1_all");
+  const f = email && canAll ? (data?.responses.find((x) => x.email.toLowerCase() === email.toLowerCase()) ?? null) : data?.mine ?? null;
+  const total = PRACTICES.length;
+  if (!data) return <Card className="rise p-6 text-[12.5px] text-muted">Cargando…</Card>;
+  if (!f) return (
+    <Card className="rise p-6"><div className="text-[13px] text-ink">{email && canAll ? "Esa persona no ha respondido la autoevaluación." : "Todavía no has respondido la autoevaluación."} <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></div></Card>
+  );
+  const L = f1Lectura(f.r);
+  return (
+    <>
+      <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Link href="/panel/diagnostico/autoevaluacion" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Autoevaluación</Link>
+        <span className="flex gap-2">
+          {!data.closed && f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() && <Link href="/panel/diagnostico/autoevaluacion/responder" className="chip">Corregir respuestas</Link>}
+          <button type="button" onClick={() => window.print()} className="chip inline-flex items-center gap-1"><Printer size={12} /> Imprimir o guardar en PDF</button>
+        </span>
+      </div>
+      <Card className="rise rise-1 mb-5">
+        <CardHeader title="Tu lectura · Fuente 1 de 3" sub={`${f.name}${f.cargo ? ` · ${f.cargo}` : ""} · ${f1Fecha(f.at)}`} />
+        <div className="px-5 pb-2 text-[13px] leading-relaxed text-ink-soft">Cómo se ve la organización desde tu silla. Es tu respuesta individual: el informe del comité promedia a todos sus miembros y los contrasta con lo que viven los equipos y con la evidencia documental.</div>
+        {L.answered < total && <div className="mx-5 mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}><b>Lectura parcial.</b> Llevas {L.answered} de {total} afirmaciones. Las dimensiones sin responder aparecen vacías y los promedios se calculan solo con lo contestado.</div>}
+        <div className="grid gap-5 px-5 pb-5 lg:grid-cols-[260px_1fr]">
+          <div><div className="label mb-2">Perfil de las cuatro capacidades</div><MiniRadar color="var(--navy)" size={230} axes={L.caps.map((c) => ({ label: c.cap.code, value: Math.max(0, c.m ?? 0), target: THRESHOLD }))} /></div>
+          <div className="space-y-3">
+            {L.caps.map((c) => (
+              <div key={c.cap.n} className="text-[12px]">
+                <div className="flex items-baseline justify-between"><b className="text-ink">{c.cap.name}</b><span className="num text-muted">{f1(c.m, 2)} · {c.n} de {c.tot} respondidas</span></div>
+                <div className="relative h-[7px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.m ?? 0) / 5) * 100}%`, background: c.m != null && c.m < THRESHOLD ? "var(--bad)" : c.cap.color }} /><i className="absolute top-0 h-full w-px bg-ink/40" style={{ left: `${(THRESHOLD / 5) * 100}%` }} /></div>
+                <div className="mt-0.5 text-[11.5px] text-muted">{c.m != null ? <><b className="text-ink">{levelName(c.m)}.</b> {LEVELS[levelOf(c.m) - 1].desc}</> : "Sin responder"}</div>
+              </div>
+            ))}
+            <p className="text-[11px] italic text-faint">La marca del umbral señala 3,0: por debajo, la práctica no está instalada. Un promedio alto no borra una dimensión débil.</p>
+          </div>
+        </div>
+      </Card>
+      <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+        <Card className="rise rise-2">
+          <CardHeader title="Las diecisiete dimensiones" sub="promedio de las cuatro afirmaciones de cada una" />
+          <div className="overflow-x-auto px-2 pb-3">
+            <table className="w-full text-[12.5px]">
+              <thead><tr className="text-left text-[10.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Tu puntaje</th><th className="px-3 py-2">Nivel</th></tr></thead>
+              <tbody>
+                {L.dims.map((x) => (
+                  <tr key={x.d.code} className="border-t border-line">
+                    <td className="px-3 py-2"><b className="text-ink">{x.d.code}</b> · {x.d.name}{x.n < x.d.prac.length && <span className="num ml-1 text-[10px] text-faint">{x.n}/{x.d.prac.length}</span>}</td>
+                    <td className="px-3 py-2 text-muted">{x.d.cap}</td>
+                    <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad)" } : undefined}>{f1(x.m, 2)}</td>
+                    <td className="px-3 py-2">{x.m != null ? <span className={`chip !py-0 ${LEVEL_CLS[levelOf(x.m)]}`}>{levelName(x.m)}</span> : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <Card className="rise rise-3">
+          <CardHeader title="Qué conviene mirar primero" sub="dimensiones bajo 3,0 ordenadas por su arrastre sobre las demás" />
+          <div className="divide-y divide-line">
+            {L.prios.length === 0 && <div className="px-5 py-4 text-[12.5px] italic text-faint">{L.answered ? "Ninguna dimensión quedó bajo el umbral según tu lectura." : "Responde para ver qué mirar primero."}</div>}
+            {L.prios.slice(0, 6).map((x, i) => (
+              <div key={x.d.code} className="px-5 py-3">
+                <div className="flex items-baseline justify-between gap-3"><div className="text-[13px] font-bold text-ink">{i + 1}. {x.d.name}</div><span className="num text-[12px] text-muted">{f1(x.m, 2)}</span></div>
+                <div className="text-[11.5px] text-muted">{x.d.code} · {x.d.cap}{x.d.fws.length ? ` · se instala con ${x.d.fws.map((id) => MAPA.fw[id]?.name ?? id).join(", ")}` : ""}</div>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-line px-5 py-3 text-[11.5px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con la percepción de los equipos y la evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</div>
+        </Card>
       </div>
     </>
   );

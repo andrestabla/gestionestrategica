@@ -74,6 +74,7 @@ model Company {
   initiatives     Initiative[]
   testResponses   TestResponse[]
   teamResponses   TeamResponse[]
+  f1Responses     F1Response[]
   responsibles    Responsible[]
   objectives      CmiObjective[]
   people          Person[]
@@ -193,6 +194,22 @@ model Evidence {
 
   @@id([companyId, id])
   @@unique([companyId, practice])
+}
+
+/// Fuente 1 · Autoevaluación directiva por persona: una respuesta por cuenta,
+/// con los 68 ítems del mapa (código de práctica → 1–5). Editable hasta que
+/// el advisor publique el corte.
+model F1Response {
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email     String
+  name      String
+  role      String
+  cargo     String?
+  answers   Json // DIR-1.1 … MUL-5.4 → 1–5
+  at        DateTime @default(now())
+
+  @@id([companyId, email])
 }
 
 model TestResponse {

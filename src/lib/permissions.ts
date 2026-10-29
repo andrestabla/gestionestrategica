@@ -36,6 +36,8 @@ export type Action =
   | "decide_initiatives"   // decidir el tiempo: implementar, preparar, backlog o renunciar
   | "report_kpi"        // registrar valores de KPI
   | "capture_maturity"  // capturar celdas de una medición en curso
+  | "answer_f1"         // responder la autoevaluación directiva (Fuente 1) y ver el propio resultado
+  | "view_f1_all"       // ver todas las autoevaluaciones y su consolidado
   | "publish_maturity"  // publicar mediciones / configurar el instrumento
   | "verify_evidence"   // marcar evidencia como VERIFICADA
   | "manage_users"      // administrar usuarios y roles de la empresa
@@ -72,6 +74,9 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
   decide_initiatives:   { ADMIN: false, CONSULTOR: true, LIDER: true, RESPONSABLE: false, DIRECTIVO: false },
   report_kpi:       { ADMIN: false, CONSULTOR: true, LIDER: true, RESPONSABLE: "line", DIRECTIVO: false },
   capture_maturity: { ADMIN: false, CONSULTOR: true, LIDER: false, RESPONSABLE: "line", DIRECTIVO: false },
+  // la autoevaluación directiva la responde toda cuenta con acceso al módulo; el consolidado lo ven el advisor y el administrador
+  answer_f1:        { ADMIN: true,  CONSULTOR: true, LIDER: true, RESPONSABLE: true, DIRECTIVO: true },
+  view_f1_all:      { ADMIN: true,  CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   publish_maturity: { ADMIN: false, CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   verify_evidence:  { ADMIN: false, CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   manage_users:     { ADMIN: true,  CONSULTOR: true, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
@@ -96,7 +101,7 @@ export function can(user: SessionUser | null, action: Action, target?: number | 
 /** Acciones relevantes por módulo (para el chip de acceso y la documentación). */
 export const MODULE_ACTIONS: Record<ModuleKey, Action[]> = {
   panel:        ["view"],
-  madurez:      ["view", "capture_maturity", "publish_maturity", "verify_evidence"],
+  madurez:      ["view", "answer_f1", "view_f1_all", "capture_maturity", "publish_maturity", "verify_evidence"],
   benchmark:    ["view"],
   capacidades:  ["view", "edit_initiatives"],
   kpi:          ["view", "report_kpi"],
