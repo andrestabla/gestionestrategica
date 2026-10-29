@@ -79,9 +79,9 @@ export function ModoFocal({ kicker, title, color, progress, status, extra, onExi
   useEffect(() => {
     if (!onExit) return;
     // en pantalla completa, Esc la cierra (lo hace el navegador); fuera de ella, Esc sale del modo focal
-    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape" && !document.fullscreenElement) { const t = e.target as HTMLElement | null; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return; exit(); } };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape" && !document.fullscreenElement) { const t = e.target as HTMLElement | null; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return; e.stopImmediatePropagation(); exit(); } };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [onExit, exit]);
   const pct = progress.total ? Math.round((progress.n / progress.total) * 100) : 0;
   const soportaFull = typeof document !== "undefined" && Boolean(document.documentElement.requestFullscreen);

@@ -26,7 +26,9 @@ import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
-import { usePriorizacion, DECISION_CLS, HorizonHint, EvaluationForm, type PriorizacionData } from "@/components/priorizacion";
+import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
+import { EvaluacionFocal } from "@/components/evaluacion-focal";
+import { pedirPantallaCompleta } from "@/components/modo-focal";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
 import { confirmar, avisar } from "@/components/feedback";
@@ -1399,6 +1401,7 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plegado, setPlegado] = useState(false);
+  const [abierta, setAbierta] = useState(false);   // evaluación en modo focal, un criterio por pantalla
   const cur = pendientes.length ? pendientes[salto % pendientes.length] : undefined;
   const kr = cur ? cat.kpis.find((k) => k.code === cur.kpi) : undefined;
   const obj = cur ? cat.objectives.find((o) => o.id === cur.cmi) : undefined;
@@ -1412,7 +1415,9 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
     const j = await res.json().catch(() => null);
     setSaving(false);
     if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return false; }
-    setSalto(0); onDone(); return true;
+    setSalto(0); onDone();
+    if (pendientes.length <= 1) setAbierta(false);   // era la última: se cierra el modo focal y queda el cierre de abajo
+    return true;
   };
   const n = list.length, ok = n - pendientes.length;
   return (
@@ -1449,8 +1454,16 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
                 {cur.objetivo && <p className="mt-1 text-[12px] leading-snug text-ink-soft">{cur.objetivo}</p>}
                 {kr && <p className="mt-1.5 text-[12px] text-muted">Mueve el resultado clave <b className="text-ink">{kr.code} · {kr.name}</b>{obj ? ` del objetivo «${obj.name}»` : ""}.</p>}
               </div>
-              {error && <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{error}</p>}
-              <EvaluationForm key={cur.id} saving={saving} rule={rule} confirmOnce onSave={(ev) => guardar(ev as never)} />
+              {error && !abierta && <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{error}</p>}
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => { pedirPantallaCompleta(); setAbierta(true); }} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]"><Scale size={13} /> Calificar · {validationCriteriaCount(rule)} criterios</button>
+                <span className="text-[12px] text-muted">Se abre a pantalla completa, un criterio por paso; al registrar pasa a la siguiente iniciativa.</span>
+              </div>
+              {abierta && (
+                <EvaluacionFocal key={cur.id} ini={{ id: cur.id, name: cur.name, objetivo: cur.objetivo, detalle: kr ? <>Mueve el resultado clave <b className="text-ink">{kr.code} · {kr.name}</b>{obj ? ` del objetivo «${obj.name}»` : ""}.</> : undefined }}
+                  rule={rule} confirmOnce saving={saving} error={error} onSave={(ev) => guardar(ev as never)} onExit={() => setAbierta(false)}
+                  progreso={{ hechas: ok, total: n }} onSaltar={pendientes.length > 1 ? () => setSalto((s) => s + 1) : undefined} titulo={`Calificación · ${tribu}`} />
+              )}
             </div>
           )}
         </div>

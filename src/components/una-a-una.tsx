@@ -18,6 +18,9 @@ export type PantallaItem = {
   niveles: Nivel[]; guia?: Guia;
   value: number | string | undefined; onSet: (v: number | string | undefined) => void;
   ni?: boolean;                                // admite «Sin información»
+  pregunta?: string;                           // pregunta guía bajo la afirmación (criterios de evaluación)
+  variante?: "numeros" | "tarjetas";           // tarjetas: opciones con nombre y descripción visibles (sin número grande)
+  nota?: { value: string; onChange: (v: string) => void; placeholder?: string; etiqueta?: string };   // sustento opcional
 };
 export type PantallaLibre = { kind: "libre"; id: string; node: ReactNode };
 export type Pantalla = PantallaItem | PantallaLibre;
@@ -43,41 +46,41 @@ export function SelectorVista({ vista, onChange }: { vista: Vista; onChange: (v:
 
 const respondida = (p: Pantalla) => p.kind === "item" && p.value !== undefined && p.value !== "";
 
-export function UnaAUna({ pantallas, color = "var(--navy)", etiqueta = "afirmación" }: { pantallas: Pantalla[]; color?: string; etiqueta?: string }) {
+export function UnaAUna({ pantallas, color = "var(--navy)", etiqueta = "afirmación", inicio }: { pantallas: Pantalla[]; color?: string; etiqueta?: string; inicio?: number }) {
   const items = pantallas.filter((p): p is PantallaItem => p.kind === "item");
-  // arranque: en la introducción si no hay nada respondido; si no, en la primera afirmación pendiente
-  const [i, setI] = useState(() => { const algo = pantallas.some(respondida); const pend = pantallas.findIndex((p) => p.kind === "item" && !respondida(p)); return algo ? (pend >= 0 ? pend : pantallas.length - 1) : 0; });
+  // arranque: donde pida el formulario; si no, en la introducción cuando no hay nada respondido o en la primera pendiente
+  const [i, setI] = useState(() => { if (inicio != null) return inicio; const algo = pantallas.some(respondida); const pend = pantallas.findIndex((p) => p.kind === "item" && !respondida(p)); return algo ? (pend >= 0 ? pend : pantallas.length - 1) : 0; });
   const [hover, setHover] = useState<number | null>(null);
   const [tocado, setTocado] = useState(false);       // ya eligió en esta pantalla: mostrar confirmación
-  const timer = useRef<number | null>(null);
+  const siguienteRef = useRef<HTMLButtonElement | null>(null);
   const puedeHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
   const p = pantallas[Math.min(i, pantallas.length - 1)];
-  const ir = (n: number) => { if (timer.current) { window.clearTimeout(timer.current); timer.current = null; } setHover(null); setTocado(false); setI(Math.max(0, Math.min(pantallas.length - 1, n))); };
+  const ir = (n: number) => { setHover(null); setTocado(false); setI(Math.max(0, Math.min(pantallas.length - 1, n))); };
   const siguiente = () => ir(i + 1);
   const anterior = () => ir(i - 1);
-  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
 
   const elegir = (item: PantallaItem, v: number | string) => {
     const quita = item.value === v;
     item.onSet(quita ? undefined : v);
     setTocado(!quita);
-    if (timer.current) window.clearTimeout(timer.current);
-    // con cursor, la guía ya se leyó al pasar por el número: avanza solo; en táctil se lee tras tocar y se avanza a mano
-    if (!quita && puedeHover && i < pantallas.length - 1) timer.current = window.setTimeout(() => { timer.current = null; setTocado(false); setHover(null); setI((x) => Math.min(pantallas.length - 1, x + 1)); }, 900);
+    // sin avance automático: la persona lee la confirmación y pasa con «Siguiente» (o Enter / →), que recibe el foco
+    if (!quita) window.setTimeout(() => siguienteRef.current?.focus({ preventScroll: true }), 50);
   };
 
-  // teclado: 1–5 responde, ← → navegan, Enter avanza (fuera de campos de texto)
+  // teclado: 1–5 responde, ← → navegan, Enter avanza (fuera de campos de texto). Se escucha en fase de captura y
+  // se detiene la propagación de las teclas atendidas: la página de fondo (p. ej. ← → entre iniciativas) no debe reaccionar.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); siguiente(); return; }
-      if (e.key === "ArrowLeft") { e.preventDefault(); anterior(); return; }
-      if (p?.kind === "item") { const n = Number(e.key); if (Number.isInteger(n) && n >= 1 && n <= p.niveles.length) { e.preventDefault(); elegir(p, n); } }
+      const atendida = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+      if (e.key === "ArrowRight" || e.key === "Enter") { atendida(); siguiente(); return; }
+      if (e.key === "ArrowLeft") { atendida(); anterior(); return; }
+      if (p?.kind === "item") { const n = Number(e.key); if (Number.isInteger(n) && n >= 1 && n <= p.niveles.length) { atendida(); elegir(p, n); } }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   });
 
   if (!p) return null;
@@ -113,24 +116,41 @@ export function UnaAUna({ pantallas, color = "var(--navy)", etiqueta = "afirmaci
               <h2 className="text-[18px] font-extrabold leading-snug text-ink sm:text-[20px]">{p.texto}</h2>
             </div>
             {p.demo && <p className="mt-2 pl-[52px] text-[12.5px] text-muted"><b className="uppercase tracking-wider text-cyan-deep">Lo demuestra</b> {p.demo}</p>}
-            <div className="mt-5 grid grid-cols-5 gap-2" onMouseLeave={() => setHover(null)}>
-              {p.niveles.map((l) => {
-                const on = p.value === l.n;
-                return (
-                  <button key={l.n} type="button" onClick={() => elegir(p, l.n)} onMouseEnter={() => setHover(l.n)} onFocus={() => setHover(l.n)} onBlur={() => setHover(null)}
-                    aria-pressed={on} aria-label={`${l.n} · ${l.name}`}
-                    className={`rounded-xl border px-1 py-3 text-center transition-all sm:py-4 ${on ? "border-navy text-white shadow-md" : "border-line bg-surface hover:-translate-y-[1px] hover:border-gold hover:shadow-sm"}`} style={on ? { background: "var(--navy)" } : undefined}>
-                    <div className="num text-[20px] font-extrabold sm:text-[22px]">{l.n}</div>
-                    <div className={`text-[11px] font-semibold sm:text-[12px] ${on ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
-                  </button>
-                );
-              })}
-            </div>
+            {p.pregunta && <p className="mt-2 pl-[52px] text-[13px] leading-snug text-ink-soft">{p.pregunta}</p>}
+            {p.variante === "tarjetas" ? (
+              <div className={`mt-5 grid gap-2 ${p.niveles.length <= 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+                {p.niveles.map((l) => {
+                  const on = p.value === l.n;
+                  return (
+                    <button key={l.n} type="button" onClick={() => elegir(p, l.n)} aria-pressed={on}
+                      className={`rounded-xl border px-4 py-3 text-left transition-all ${on ? "border-navy text-white shadow-md" : "border-line bg-surface hover:-translate-y-[1px] hover:border-gold hover:shadow-sm"}`} style={on ? { background: "var(--navy)" } : undefined}>
+                      <div className="flex items-baseline gap-2"><span className={`num text-[12px] font-extrabold ${on ? "text-cyan-fill" : "text-cyan-deep"}`}>{l.n}</span><b className="text-[13.5px]">{l.name}</b></div>
+                      {l.desc && <p className={`mt-1 text-[12.5px] leading-snug ${on ? "text-white/85" : "text-muted"}`}>{l.desc}</p>}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-5 grid grid-cols-5 gap-2" onMouseLeave={() => setHover(null)}>
+                {p.niveles.map((l) => {
+                  const on = p.value === l.n;
+                  return (
+                    <button key={l.n} type="button" onClick={() => elegir(p, l.n)} onMouseEnter={() => setHover(l.n)} onFocus={() => setHover(l.n)} onBlur={() => setHover(null)}
+                      aria-pressed={on} aria-label={`${l.n} · ${l.name}`}
+                      className={`rounded-xl border px-1 py-3 text-center transition-all sm:py-4 ${on ? "border-navy text-white shadow-md" : "border-line bg-surface hover:-translate-y-[1px] hover:border-gold hover:shadow-sm"}`} style={on ? { background: "var(--navy)" } : undefined}>
+                      <div className="num text-[20px] font-extrabold sm:text-[22px]">{l.n}</div>
+                      <div className={`text-[11px] font-semibold sm:text-[12px] ${on ? "text-cyan-fill" : "text-muted"}`}>{l.name}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {/* guía: misma área siempre, para que nada salte */}
             <GuiaNivel item={p} hover={hover} tocado={tocado} />
+            {p.nota && <Sustento nota={p.nota} />}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               {p.ni ? <button type="button" onClick={() => elegir(p, "NI")} className={`chip ${p.value === "NI" ? "chip-warn" : ""}`}>{p.value === "NI" ? <Check size={11} /> : null} Sin información</button> : <span />}
-              <span className="text-[11.5px] text-faint">{puedeHover ? "Pasa por los números para ver qué significa cada uno · 1–5 responde · ← → navegan" : "Toca un número: verás qué significa y podrás cambiarlo"}</span>
+              <span className="text-[11.5px] text-faint">{p.variante === "tarjetas" ? `Teclas 1–${p.niveles.length} eligen · Enter o → sigue` : puedeHover ? "Pasa por los números para ver qué significa cada uno · 1–5 responde · Enter o → sigue" : "Toca un número: verás qué significa y podrás cambiarlo antes de seguir"}</span>
             </div>
           </div>
         </div>
@@ -139,14 +159,28 @@ export function UnaAUna({ pantallas, color = "var(--navy)", etiqueta = "afirmaci
       <div className="mt-4 flex items-center justify-between gap-3">
         <button type="button" onClick={anterior} disabled={i === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ChevronLeft size={14} /> Anterior</button>
         <span className="text-[12px] text-muted">{respondidas} de {items.length} {etiqueta === "afirmación" ? "afirmaciones" : etiqueta} respondidas en esta sección</span>
-        <button type="button" onClick={siguiente} disabled={i >= pantallas.length - 1} className={`${p.kind === "item" && !respondida(p) ? "btn-ghost" : "btn-primary"} inline-flex items-center gap-1 text-[12.5px] disabled:opacity-40`}>{p.kind === "item" && !respondida(p) ? "Omitir por ahora" : "Siguiente"} <ChevronRight size={14} /></button>
+        <button ref={siguienteRef} type="button" onClick={siguiente} disabled={i >= pantallas.length - 1} className={`${p.kind === "item" && !respondida(p) ? "btn-ghost" : "btn-primary"} inline-flex items-center gap-1 text-[12.5px] disabled:opacity-40`}>{p.kind === "item" && !respondida(p) ? "Omitir por ahora" : "Siguiente"} <ChevronRight size={14} /></button>
       </div>
     </div>
   );
 }
 
+function Sustento({ nota }: { nota: NonNullable<PantallaItem["nota"]> }) {
+  const [abierto, setAbierto] = useState(Boolean(nota.value));
+  if (!abierto) return <button type="button" onClick={() => setAbierto(true)} className="mt-2 text-[12px] font-bold text-cyan-deep hover:underline">+ {nota.etiqueta ?? "Sustento"}</button>;
+  return <textarea value={nota.value} onChange={(e) => nota.onChange(e.target.value)} rows={2} maxLength={600} placeholder={nota.placeholder} aria-label={nota.etiqueta ?? "Sustento"} className="input mt-2 text-[12.5px]" />;
+}
+
 function GuiaNivel({ item, hover, tocado }: { item: PantallaItem; hover: number | null; tocado: boolean }) {
   const g = item.guia;
+  if (item.variante === "tarjetas") {
+    const sel = typeof item.value === "number" ? item.niveles.find((l) => l.n === item.value) : null;
+    return (
+      <div aria-live="polite" className={`mt-3 min-h-[56px] rounded-xl px-4 py-3 text-[12.5px] leading-relaxed ${sel ? "bg-cyan-wash text-ink-soft" : "bg-surface-2/60 text-muted"}`}>
+        {sel ? <p><b className="text-ink">{tocado ? "Elegiste " : ""}{sel.name}.</b> Puedes cambiarlo antes de seguir.</p> : <p>Elige la opción que describa mejor esta iniciativa.</p>}
+      </div>
+    );
+  }
   const n = hover ?? (typeof item.value === "number" ? item.value : null);
   const nivel = n != null ? item.niveles.find((l) => l.n === n) : null;
   const texto = n != null ? g?.n?.[String(n)] : null;

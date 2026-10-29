@@ -18,6 +18,8 @@ import {
 import type { Catalog } from "@/data/catalogo";
 import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2 } from "lucide-react";
 import { confirmar, avisar } from "@/components/feedback";
+import { EvaluacionFocal } from "@/components/evaluacion-focal";
+import { pedirPantallaCompleta } from "@/components/modo-focal";
 
 /** Decisión de la gerencia sobre una iniciativa (misma forma que las del catálogo). */
 type DecisionRecord = Catalog["seedDecisions"][number];
@@ -106,6 +108,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   };
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [evaluando, setEvaluando] = useState(false);   // evaluación en modo focal, un criterio por pantalla
 
   const post = async (body: Record<string, unknown>) => {
     setSaving(true); setError(null);
@@ -251,7 +254,20 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
           ) : canEval && !linked ? (
             <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">Esta iniciativa aún no está vinculada a un resultado clave. {acomp ? `Se vincula en «${V.tabs.iniciativas}»` : "El líder de la tribu la vincula en «Iniciativas → KR»"} y entonces queda habilitada para calificar.</p>
           ) : canEval ? (
-            <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} confirmOnce={convencion} onSave={(ev) => post({ evaluation: ev })} />
+            <div className="space-y-3">
+              {mine && (
+                <div className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">
+                  <div className="mb-1 flex items-center gap-1.5 font-bold text-ink"><CheckCircle2 size={13} className="text-ok" /> Tu evaluación · {mine.at.slice(0, 10)}</div>
+                  <div className="num">{(["D", "E", "M", "L"] as const).map((k) => `${k} ${mine.scores[k]}`).join(" · ")} · {typeOf(mine.type, rule, mine.scores) === "ESTRATEGICO" ? "estratégica" : "táctica"}</div>
+                </div>
+              )}
+              <button type="button" onClick={() => { pedirPantallaCompleta(); setEvaluando(true); }} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]"><Scale size={13} /> {mine ? "Actualizar evaluación" : `Evaluar · ${validationCriteriaCount(rule)} criterios`}</button>
+              <p className="text-[12px] text-muted">Se abre a pantalla completa, un criterio por paso, con la descripción de cada nivel a la vista.</p>
+              {evaluando && (
+                <EvaluacionFocal key={mine?.at ?? "nueva"} ini={{ id: iniId, name: ini?.name ?? iniId, objetivo: ini?.objetivo }} rule={rule} initial={mine} confirmOnce={convencion} saving={saving} error={error}
+                  onSave={async (ev) => { const ok = await post({ evaluation: ev }); if (ok) setEvaluando(false); return ok; }} onExit={() => setEvaluando(false)} />
+              )}
+            </div>
           ) : (
             <p className="rounded-xl bg-surface-2/60 px-4 py-4 text-[12px] leading-relaxed text-muted">
               {user.role === "RESPONSABLE"

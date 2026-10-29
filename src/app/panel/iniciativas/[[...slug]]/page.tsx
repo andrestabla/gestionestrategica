@@ -209,6 +209,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
   // Escape vuelve al listado · flechas navegan entre iniciativas
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (document.documentElement.dataset.focal) return;   // con la evaluación a pantalla completa abierta, las teclas son suyas
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft" && prev) onNav(prev.id);
       if (e.key === "ArrowRight" && next) onNav(next.id);
