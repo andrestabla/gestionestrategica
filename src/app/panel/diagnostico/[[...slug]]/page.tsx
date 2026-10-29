@@ -412,7 +412,7 @@ function TestTab() {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[280px]">
           <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Puerta de entrada</div>
           <div className="text-[15px] font-extrabold">{mine ? "Ya respondiste el test" : "Responde el test de capacidad empresarial"}</div>
           <div className="text-[12px] text-white/75">{mine ? `Guardado el ${new Date(mine.at).toLocaleDateString("es-CO")}. Puedes corregirlo; la última respuesta reemplaza a la anterior.` : "24 preguntas, seis por capacidad, más el desafío dominante. Unos 20 minutos; cada número trae la guía de lo que habría que poder mostrar."}</div>
@@ -650,7 +650,7 @@ function AutoevaluacionTab() {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[280px]">
           <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Fuente 1 · Autoevaluación directiva</div>
           <div className="text-[15px] font-extrabold">{estado === "completa" ? "Ya respondiste la autoevaluación" : estado === "parcial" ? `Llevas ${myN} de ${total} afirmaciones` : "Responde la autoevaluación directiva"}</div>
           <div className="text-[12px] text-white/75">
