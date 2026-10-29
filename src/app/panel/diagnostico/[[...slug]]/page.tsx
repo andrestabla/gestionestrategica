@@ -660,7 +660,7 @@ function AutoevaluacionTab() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {mine && <Link href="/panel/diagnostico/autoevaluacion/resultado" className="btn-ghost inline-flex items-center gap-1.5 !border-white/30 !text-white text-[12px]"><FileText size={13} /> Mi lectura</Link>}
+          {mine && <Link href="/panel/diagnostico/autoevaluacion/resultado" className="btn-on-dark text-[12px]"><FileText size={13} /> Mi lectura</Link>}
           {!data?.closed && <Link href="/panel/diagnostico/autoevaluacion/responder" className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardCheck size={13} /> {estado === "pendiente" ? "Responder" : estado === "parcial" ? "Continuar" : "Revisar mis respuestas"}</Link>}
         </div>
       </div>
