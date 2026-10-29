@@ -29,6 +29,7 @@ import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile, URL_RE } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
+import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 
@@ -332,6 +333,7 @@ export async function hydrateCompanies() {
         krTemplates: (() => { const r = parseKrTemplates(c.krTemplates); return r.ok ? r.templates : undefined; })(),
         prioSessions: (() => { const r = parsePrioSessions(c.prioSessions); return r.ok ? r.sessions : undefined; })(),
         mode: isCompanyMode(c.mode) ? c.mode : "completa",
+        instruments: (() => { const r = parseInstruments(c.instruments); return r.ok ? r.instruments : undefined; })(),
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
@@ -529,6 +531,7 @@ export type CompanyInput = {
   levers?: unknown;     // [{id, name, order, ownerId, indicator, desc}] · palancas estratégicas
   typeRule?: unknown;   // "4shine" | "cresio" | {criteria: [{key, name, strategic, tactical}], min} · regla estratégica/táctica
   mode?: unknown;       // "completa" | "convencion" · menú completo o solo las cinco secciones de la convención
+  instruments?: unknown; // ["test","f1","f2","captura"] · instrumentos del diagnóstico habilitados (nulo = todos)
   krTemplates?: unknown; // [{oe, code, name, unit, …}] · plantillas de KR por objetivo (lista vacía = sin biblioteca)
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
@@ -651,6 +654,9 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   if (tr.rule) info.typeRule = tr.rule;
   if (input.mode !== undefined && !isCompanyMode(input.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
   if (isCompanyMode(input.mode)) info.mode = input.mode;
+  const ins = parseInstruments(input.instruments);
+  if (!ins.ok) return { ok: false, status: 422, error: ins.error };
+  if (ins.instruments) info.instruments = ins.instruments;
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
   if (hasDb()) {
@@ -722,6 +728,12 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     if (!isCompanyMode(patch.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
     c.mode = patch.mode;
     audit(actor, "task", `empresa:${c.slug}`, `modo ${patch.mode}`);
+  }
+  if (patch.instruments !== undefined) {
+    const ins = parseInstruments(patch.instruments);
+    if (!ins.ok) return { ok: false, status: 422, error: ins.error };
+    c.instruments = ins.instruments;
+    audit(actor, "task", `empresa:${c.slug}`, `instrumentos del diagnóstico: ${ins.instruments?.join(", ") ?? "todos"}`);
   }
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(c.slug);
@@ -1392,6 +1404,7 @@ export function captureVariable(
   varId: string,
   patch: { perception?: number; evidence?: "V" | "P" | "N"; level?: number; note?: string },
 ): { ok: true; capture: VariableCapture } | { ok: false; status: number; error: string } {
+  if (!hasInstrument(cat().company, "captura")) return { ok: false, status: 403, error: `${instrumentLabel("captura")}: no está habilitada para esta empresa.` };
   const v = PRACTICES.find((x) => x.code === varId);
   if (!v) return { ok: false, status: 404, error: "La práctica no existe en el mapa." };
   if (S().published) {
@@ -1507,6 +1520,7 @@ export function saveTestResponse(
   user: SessionUser,
   input: { r: Record<string, unknown>; cargo?: string; objetivo?: string },
 ): { ok: true; response: TestResponse } | { ok: false; status: number; error: string } {
+  if (!hasInstrument(cat().company, "test")) return { ok: false, status: 403, error: `${instrumentLabel("test")}: no está habilitado para esta empresa.` };
   const r: Record<string, number | string> = {};
   let answered = 0;
   for (let n = 1; n <= 24; n++) {
@@ -1597,6 +1611,7 @@ export function saveF1Response(
   user: SessionUser,
   input: { r: Record<string, unknown>; cargo?: string },
 ): { ok: true; response: F1Response; answered: number } | { ok: false; status: number; error: string } {
+  if (!hasInstrument(cat().company, "f1")) return { ok: false, status: 403, error: `${instrumentLabel("f1")}: no está habilitada para esta empresa.` };
   if (!can(user, "answer_f1")) return { ok: false, status: 403, error: "Tu rol no responde la autoevaluación directiva." };
   if (f1Closed()) return { ok: false, status: 422, error: "El corte A3 ya está publicado: la autoevaluación está cerrada." };
   const r: Record<string, number> = {};
@@ -1635,6 +1650,7 @@ export function saveF2Response(
 ): { ok: true; response: F2Response; total: number } | { ok: false; status: number; error: string } {
   const r: Record<string, number> = {};
   for (const code of F2_CODES) {
+  if (!hasInstrument(cat().company, "f2")) return { ok: false, status: 403, error: `${instrumentLabel("f2")}: no está habilitada para esta empresa.` };
     const v = input.r?.[code];
     if (v === undefined || v === null || v === "") continue;
     const n = typeof v === "string" ? Number(v) : v;

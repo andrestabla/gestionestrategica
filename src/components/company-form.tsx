@@ -7,9 +7,10 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui";
 import { Loader2, Save, Building2, X } from "lucide-react";
+import { INSTRUMENTS, ALL_INSTRUMENTS } from "@/lib/instrumentos";
 
 export type HorizonLite = { id: string; label: string; months: number };
-export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion" };
+export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion"; instruments?: string[] };
 export const DEFAULT_HZ: HorizonLite[] = [{ id: "CORTO", label: "Corto plazo", months: 12 }, { id: "MEDIANO", label: "Mediano plazo", months: 36 }];
 
 /** Horizontes de planeación de la empresa (ordenan el roadmap y la priorización). */
@@ -51,6 +52,9 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
     slug: initial?.slug ?? "",
   });
   const [horizons, setHorizons] = useState<HorizonLite[]>(initial?.horizons?.length ? initial.horizons : DEFAULT_HZ);
+  // instrumentos del diagnóstico habilitados: sin configuración, todos
+  const [instruments, setInstruments] = useState<string[]>(initial?.instruments?.length ? initial.instruments : [...ALL_INSTRUMENTS]);
+  const toggleInstrument = (id: string) => setInstruments((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <Modal title={initial ? `Editar · ${initial.name}` : "Nueva empresa"} sub={initial ? "identidad, sector y horizontes de planeación" : "nace activa; elige si parte vacía o de la plantilla demo"} onClose={onCancel}
@@ -59,10 +63,10 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         <button type="button" onClick={async () => {
             const { slug: slugField, typeRule, ...rest } = f;
             const tr = typeRule === "propia" ? undefined : typeRule;   // «propia» (regla definida por API) se conserva tal cual
-            const input = initial ? { ...rest, horizons, ...(tr ? { typeRule: tr } : {}), newSlug: slugField } : { ...rest, horizons, typeRule: tr ?? "4shine", slug: slugField || undefined };
+            const input = initial ? { ...rest, horizons, instruments, ...(tr ? { typeRule: tr } : {}), newSlug: slugField } : { ...rest, horizons, instruments, typeRule: tr ?? "4shine", slug: slugField || undefined };
             if (await onSubmit(input) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "", slug: "" });
           }}
-          disabled={saving || f.name.trim().length < 3}
+          disabled={saving || f.name.trim().length < 3 || instruments.length === 0}
           className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Building2 size={13} />}
           {initial ? "Guardar cambios" : "Crear empresa"}
@@ -95,6 +99,18 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         <input value={f.sector} onChange={set("sector")} placeholder="Sector (p. ej. Distribución de suministros)" className="input !py-2 text-[12px]" />
         <input value={f.size} onChange={set("size")} placeholder="Tamaño (p. ej. 85 colaboradores · 3 sedes)" className="input !py-2 text-[12px]" />
         <HorizonsEditor value={horizons} onChange={setHorizons} />
+        <div className="rounded-xl border border-line px-3 py-2.5">
+          <span className="label !text-[8.5px]">Instrumentos del diagnóstico habilitados</span>
+          <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+            {INSTRUMENTS.map((i) => (
+              <label key={i.id} className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-[11.5px] hover:bg-surface-2" title={i.desc}>
+                <input type="checkbox" checked={instruments.includes(i.id)} onChange={() => toggleInstrument(i.id)} className="mt-0.5" />
+                <span className="text-ink">{i.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] leading-snug text-faint">Lo no habilitado no aparece en el módulo de diagnóstico ni acepta respuestas. Al menos uno.</p>
+        </div>
         <div>
           <select value={f.mode} onChange={set("mode")} className="input !py-2 text-[12px]" title="Qué ve el menú de la empresa">
             <option value="completa">Modo completo · todos los módulos</option>

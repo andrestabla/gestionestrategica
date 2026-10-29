@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { verifySurveyToken } from "@/lib/public-token";
 import { hydrateCompanies, companyBySlug } from "@/server/store";
 import { SurveyForm } from "./form";
+import { hasInstrument } from "@/lib/instrumentos";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,6 @@ export default async function SurveyPage({ params }: { params: Promise<{ token: 
   const [slug, ...rest] = token.split("-");
   await hydrateCompanies();
   const company = companyBySlug(slug);
-  if (!company?.active || !verifySurveyToken(slug, rest.join("-"))) notFound();
+  if (!company?.active || !verifySurveyToken(slug, rest.join("-")) || !hasInstrument(company, "f2")) notFound();
   return <SurveyForm token={token} company={company.name} />;
 }

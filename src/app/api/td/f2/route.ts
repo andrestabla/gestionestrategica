@@ -3,6 +3,7 @@ import { withTenant } from "../_helpers";
 import { surveyToken } from "@/lib/public-token";
 
 import { getF2Responses, catalog } from "@/server/store";
+import { hasInstrument } from "@/lib/instrumentos";
 
 // GET /api/td/f2 — enlace anónimo de la encuesta y conteo de respuestas recibidas.
 // Solo advisor, líder y admin ven el enlace; los agregados nunca bajan a una
@@ -14,7 +15,8 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const byArea: Record<string, number> = {};
   for (const r of all) byArea[r.area ?? "Sin área"] = (byArea[r.area ?? "Sin área"] ?? 0) + 1;
   return NextResponse.json({
-    url: canLink ? `${origin}/e/${catalog().company.slug}-${surveyToken(catalog().company.slug)}` : null,
+    enabled: hasInstrument(catalog().company, "f2"),
+    url: canLink && hasInstrument(catalog().company, "f2") ? `${origin}/e/${catalog().company.slug}-${surveyToken(catalog().company.slug)}` : null,
     total: all.length,
     byArea,
     latest: all.at(-1)?.at ?? null,

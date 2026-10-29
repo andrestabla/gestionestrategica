@@ -58,6 +58,7 @@ model Company {
   krTemplates Json? // plantillas de resultados clave por objetivo [{oe, code, name, unit, …}]; nulo = sin biblioteca
   prioSessions Json? // sesión de calificación por tribu en la priorización en vivo {tribu: {status, order, …}}
   mode        String  @default("completa") // completa | convencion (menú reducido a las cinco secciones)
+  instruments Json? // instrumentos del diagnóstico habilitados ["test","f1","f2","captura"]; nulo = todos
   access      Json? // acceso por sección de la convención con QR: {seccion: {token, role, at}}
   itinerary   Json? // itinerario de la convención {title, days, items, public, token}
   financials  Json? // estados financieros de cierre (COP millones)

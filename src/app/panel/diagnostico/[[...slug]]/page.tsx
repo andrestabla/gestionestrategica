@@ -24,6 +24,7 @@ import {
 import { scoresOf, responsible } from "@/lib/vista";
 import { consolidate, readTest, recommend, testContrast, avg, sdev, rangeText, type DimResult, type Consolidated } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
+import { hasInstrument, instrumentLabel, type Instrument } from "@/lib/instrumentos";
 import type { VariableCapture, TestResponse, TestNotes, F1Response } from "@/server/store";
 import type { Response } from "@/lib/od";
 import {
@@ -60,6 +61,8 @@ const TABS: { id: Tab; label: string; icon: typeof Radar; href: string }[] = [
 ];
 
 const f1 = (x: number | null | undefined, d = 1) => (x == null ? "—" : fmtNum(x, d));
+/** Pestañas que dependen de un instrumento habilitado por la empresa. */
+const TAB_INSTRUMENT: Partial<Record<Tab, Instrument>> = { test: "test", autoevaluacion: "f1", captura: "captura" };
 const LEVEL_CLS = ["", "chip-bad", "chip-warn", "", "chip-ok", "chip-ok"];
 
 export default function DiagnosticoPage() {
@@ -75,6 +78,8 @@ export default function DiagnosticoPage() {
   const [src, setSrc] = useState<"vigente" | "curso" | null>(null);
   useEffect(() => { fetch("/api/td/od").then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) setOd(j); }).catch(() => null); }, [tab]);
   const hasCurso = (od?.responses.length ?? 0) > 0;
+  const tabEnabled = (t: Tab) => { const ins = TAB_INSTRUMENT[t]; return !ins || hasInstrument(v.catalog.company, ins); };
+  const tabs = TABS.filter((t) => tabEnabled(t.id));
   // Corte publicado: las fuentes demo de la empresa (vacías en una empresa nueva:
   // entonces el corte publicado no tiene respuestas y la UI rinde con el corte en curso).
   const publishedCut = useMemo<Cut>(() => {
@@ -97,7 +102,7 @@ export default function DiagnosticoPage() {
         desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico completo de tres fuentes sobre las 68 prácticas del mapa. Madurez = 0,40 × evidencia + 0,30 × dirección + 0,30 × equipos, con techo de evidencia."
         actions={<AccessChip module="madurez" />} />
       <div className="rise mb-6 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const on = tab === t.id || (tab === "dimension" && t.id === "capacidad");
           return (
             <button key={t.id} onClick={() => router.push(t.href)}
@@ -120,14 +125,15 @@ export default function DiagnosticoPage() {
           <b>{cut.label}.</b> {cut.C.f1n} autoevaluaciones, {cut.C.f2n} respuestas de equipos y evidencia {cut.C.hasF3 ? "registrada" : "pendiente"}; las dimensiones sin dato quedan en blanco. {od?.published ? "Es la medición vigente." : "No es la medición vigente hasta que el advisor publique el corte."}
         </div>
       )}
+      {!tabEnabled(tab) && <Card className="rise p-6"><div className="text-[13px] text-ink"><b>{instrumentLabel(TAB_INSTRUMENT[tab]!)}</b> no está habilitada para esta empresa. <Link href="/panel/diagnostico" className="font-bold text-cyan-deep hover:underline">Ir al resumen</Link></div></Card>}
       {tab === "resumen" && <Resumen />}
       {tab === "capacidad" && <Capacidad n={Number(arg ?? 1)} />}
       {tab === "dimension" && arg && <Dimension code={arg} />}
-      {tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : arg === "INFORME" && arg2 ? <InformeTest id={arg2} /> : <TestTab />)}
-      {tab === "autoevaluacion" && (arg === "RESPONDER" ? <ResponderF1 /> : arg === "RESULTADO" ? <ResultadoF1 email={arg2} /> : <AutoevaluacionTab />)}
+      {tabEnabled(tab) && tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : arg === "INFORME" && arg2 ? <InformeTest id={arg2} /> : <TestTab />)}
+      {tabEnabled(tab) && tab === "autoevaluacion" && (arg === "RESPONDER" ? <ResponderF1 /> : arg === "RESULTADO" ? <ResultadoF1 email={arg2} /> : <AutoevaluacionTab />)}
       {tab === "informe" && <InformeDiagnostico />}
       {tab === "brechas" && <Brechas />}
-      {tab === "captura" && <Captura />}
+      {tabEnabled(tab) && tab === "captura" && <Captura />}
     </CutCtx.Provider>
   );
 }
@@ -1160,6 +1166,7 @@ function F2Card() {
 type CaptureApi = { capture: { vars: Record<string, VariableCapture>; progress: { total: number; perception: number; dik: number; level: number } }; published: boolean };
 
 function Captura() {
+  const cv = useCatalog();
   const canCapture = useCan("capture_maturity");
   const canPublish = useCan("publish_maturity");
   const [data, setData] = useState<CaptureApi | null>(null);
@@ -1203,7 +1210,7 @@ function Captura() {
         )}
       </div>
       {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "var(--gold-wash)", color: "var(--gold)" }}>{msg}</div>}
-      <F2Card />
+      {hasInstrument(cv.catalog.company, "f2") && <F2Card />}
       {!canCapture && <div className="mb-4 rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] text-muted">Tu rol consulta la captura; la registran los responsables de cada capacidad y el advisor.</div>}
       <div className="space-y-5">
         {dimsOf(cap).map((d) => (
