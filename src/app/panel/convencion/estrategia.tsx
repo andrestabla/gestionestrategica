@@ -17,7 +17,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
 import Link from "next/link";
-import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea, SkeletonCards } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea, SkeletonCards, Field as UiField } from "@/components/ui";
 import { AccessChip, useCan, useBase, useUser } from "@/components/user-context";
 import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
@@ -114,7 +114,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
       <PageHeader kicker={V.kicker} title={V.title(cat.company.name)}
         desc={V.desc}
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
-          {canAccess && !acomp && <button type="button" onClick={() => setQr(true)} className="btn-ghost btn-sm.5 text-[12px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
+          {canAccess && !acomp && <button type="button" onClick={() => setQr(true)} className="btn-ghost btn-sm text-[12px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
 
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))" }}>
@@ -170,7 +170,7 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">Las {V.leversLow} ordenan la estrategia: cada objetivo, resultado clave e iniciativa cuelga de una. Máximo ocho; el orden es la jerarquía acordada por la dirección.</p>
-        {canEdit && <button onClick={() => setOpen(true)} className="btn-primary ml-auto btn-sm.5 text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
+        {canEdit && <button onClick={() => setOpen(true)} className="btn-primary ml-auto btn-sm text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
       </div>
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus {V.leversLow}. {canEdit ? "Defínelas aquí: nombre, sponsor, indicador y descripción." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
@@ -214,8 +214,8 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           ? <p className="text-[12.5px] text-muted">Objetivos directivos por {V.leverLow} y horizonte: qué se logra en {horizons[0]?.label ?? "el primer horizonte"} y qué queda habilitado hacia {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}.</p>
           : <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>}
         {canEdit && <span className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-          {!acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center btn-sm.5 text-[12px] sm:flex-none"><Pencil size={12} /> {V.levers}</button>}
-          <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center btn-sm.5 text-[12px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
+          {!acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center btn-sm text-[12px] sm:flex-none"><Pencil size={12} /> {V.levers}</button>}
+          <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center btn-sm text-[12px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
         </span>}
       </div>
       {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, var(--surface))" }}><b>Dirección 3x3 es informativa:</b> agrupa los objetivos estratégicos de CRESIO por palanca. El objetivo rector de cada palanca es el objetivo del único OKR de su tribu; el día 2 no se modifica (solo el relator registra ajustes ratificados).</p>}
@@ -371,7 +371,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
         {okr && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : "Elige la palanca y escribe el objetivo"}>
+              <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : "Elige la palanca y escribe el objetivo"}>
                 {sug.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {sug.okr ? "Otra propuesta" : "Sugerir OKR"}
               </button>
               {sug.okr && sug.fuentes.length > 0 && <FuentesButton onClick={() => setVerFuentes(true)} />}
@@ -481,8 +481,8 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
         <span className="num text-[12px] font-bold text-ink">{objectives.length} de {allObjectives.length} objetivos</span>
         <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm.5 text-[12px]"><X size={12} /> Quitar filtros</button>}
-        {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto btn-sm.5 text-[12px]"><Plus size={12} /> Objetivo</button>}
+        {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
+        {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
         {!canEdit && <span className="ml-auto text-[12px] text-faint">{acomp ? "Solo lectura: registra el advisor." : "Solo lectura: el líder de cada tribu registra con el QR de edición."}</span>}
       </div>
       {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>{acomp ? <>Aún no hay objetivos en {horizonLabel(cat.company, horizon)}. Primero el objetivo directivo (en «{V.tabs.direccion}»), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</> : <>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</>}</EmptyNote></Card>}
@@ -491,8 +491,8 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
         <Card key={g.key} className="rise mb-5 overflow-hidden">
           <CardHeader title={g.label} sub={acomp ? (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}` : "sin objetivos todavía en esta prioridad") : (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)")}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
-              {canEdit && !scope && !acomp && <button onClick={() => setEjemplo(g.key)} className="btn-ghost btn-sm.5 text-[12px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
-              {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost btn-sm.5 text-[12px]"><Plus size={12} /> Objetivo</button>}
+              {canEdit && !scope && !acomp && <button onClick={() => setEjemplo(g.key)} className="btn-ghost btn-sm text-[12px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
+              {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
             {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>{acomp ? "Aún no hay resultados clave para este objetivo: de 2 a 4 (máximo 5), con «+ Resultado clave»." : <>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</>}</EmptyNote></div>}
@@ -508,7 +508,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
                       {o.indicator && <div className="mt-0.5 text-[12px] text-muted">Indicador impulsor: {o.indicator}</div>}
                     </div>
                     {canEditObj(o) && o.okr && <button onClick={() => setObj(o)} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar el objetivo"><Pencil size={13} /></button>}
-                    {canEditObj(o) && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:btn-sm.5 sm:text-[12px]"><Plus size={12} /> Resultado clave</button>}
+                    {canEditObj(o) && <button onClick={() => setKr({ obj: o, kpi: null })} className="btn-primary w-full justify-center !py-2 text-[12px] sm:w-auto sm:btn-sm sm:text-[12px]"><Plus size={12} /> Resultado clave</button>}
                   </div>
                   {krs.length > 0 && (
                     <div className="mt-3 space-y-2 sm:hidden">
@@ -702,7 +702,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary btn-sm.5 text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
+        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary btn-sm text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
         <span className="text-[12px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
@@ -741,7 +741,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
             {unlinked.map((i) => (
               <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
                 <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
-                {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 btn-sm.5 text-[12px] sm:btn-sm sm:text-[12px]"><Link2 size={11} /> Vincular</button>}
+                {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 btn-sm text-[12px] sm:btn-sm sm:text-[12px]"><Link2 size={11} /> Vincular</button>}
                 {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
               </div>
             ))}
@@ -900,7 +900,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         </div>
         <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? (acomp ? V.leversAll : V.groupsAll) : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
         <label className="flex items-center gap-1.5 text-[12px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[12px]" /></label>
-        <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm.5 text-[12px]"><RefreshCw size={12} /> Actualizar</button>
+        <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[12px] text-faint">se refresca cada 15 s</span>
       </div>
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
@@ -1043,7 +1043,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">{acomp ? `El portafolio se lee por ${V.leverLow} y ${V.groupLow}. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa.` : convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
-        <button onClick={download} className="btn-ghost w-full justify-center btn-sm.5 text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
+        <button onClick={download} className="btn-ghost w-full justify-center btn-sm text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
       </div>
       <Card className="rise mb-5 overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
@@ -1053,7 +1053,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={`${V.group} o área responsable`}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
           <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
           <select value={fStatus} onChange={(e) => setFStatus(e.target.value as PortStatus)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto" title="Estado"><option value="">Todos los estados</option>{PORT_STATUS.filter((x) => x.key).map((x) => <option key={x.key} value={x.key}>{x.label} ({count(x.key)})</option>)}</select>
-          {filtered && <button type="button" onClick={() => { setFOe(""); setFTribe(""); setFLever(""); setFStatus(""); }} className="btn-ghost btn-sm.5 text-[12px]"><X size={12} /> Quitar filtros</button>}
+          {filtered && <button type="button" onClick={() => { setFOe(""); setFTribe(""); setFLever(""); setFStatus(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
         </div>
         <div className="flex flex-wrap gap-1.5 border-t border-line px-4 py-2">
           {(["PENDIENTE", "RENUNCIAR", "SIN_DUENO", "SIN_KR", "TACTICA", "SIN_EVAL"] as PortStatus[]).map((st) => (
@@ -1137,8 +1137,8 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   );
 }
 
-function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="label flex items-center !text-[11px]">{label}{help && <FieldHelp text={help} />}</span><div className="mt-1">{children}</div></label>;
+function Field({ label, help, error, children }: { label: string; help?: string; error?: string; children: ReactNode }) {
+  return <UiField label={<>{label}{help && <FieldHelp text={help} />}</>} error={error}>{children}</UiField>;
 }
 
 /** Botón «?» junto al rótulo: abre una nota breve de cómo se construye el campo (método de la plataforma). */
@@ -1223,10 +1223,10 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
                     <p className="mt-1 text-[12px] leading-snug text-faint">Lleva siempre al enlace vigente del QR, aunque se regenere. Se puede escribir a mano o proyectar junto al QR.</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary btn-sm.5 text-[12px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
-                    <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost btn-sm.5 text-[12px]"><Download size={12} /> SVG</a>
-                    <button type="button" onClick={() => { if (confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post(row.section, { regenerate: true }); }} disabled={busy} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Regenerar</button>
-                    <button type="button" onClick={() => { if (row.enabled ? confirm("Al desactivar, nadie podrá entrar escaneando el QR ni por la URL corta hasta que lo actives de nuevo. Quien ya está dentro conserva su sesión. ¿Desactivar?") : true) void post(row.section, { enabled: !row.enabled }); }} disabled={busy} className={`btn-sm.5 text-[12px] disabled:opacity-40 ${row.enabled ? "btn-ghost" : "btn-primary"}`} title={row.enabled ? "Cerrar la entrada por QR y por la URL corta" : "Volver a permitir la entrada"}>{row.enabled ? "Desactivar QR" : "Activar QR"}</button>
+                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(row.url); setCopied(row.section); setTimeout(() => setCopied(null), 1500); }} className="btn-primary btn-sm text-[12px]">{copied === row.section ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied === row.section ? "Copiado" : "Copiar enlace"}</button>
+                    <a href={`/api/td/convencion/acceso/qr?section=${row.section}&v=${row.token}`} download={`qr-${row.section}.svg`} className="btn-ghost btn-sm text-[12px]"><Download size={12} /> SVG</a>
+                    <button type="button" onClick={() => { if (confirm("Al regenerar, los QR impresos con el enlace anterior dejan de valer. ¿Continuar?")) void post(row.section, { regenerate: true }); }} disabled={busy} className="btn-ghost btn-sm text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Regenerar</button>
+                    <button type="button" onClick={() => { if (row.enabled ? confirm("Al desactivar, nadie podrá entrar escaneando el QR ni por la URL corta hasta que lo actives de nuevo. Quien ya está dentro conserva su sesión. ¿Desactivar?") : true) void post(row.section, { enabled: !row.enabled }); }} disabled={busy} className={`btn-sm text-[12px] disabled:opacity-40 ${row.enabled ? "btn-ghost" : "btn-primary"}`} title={row.enabled ? "Cerrar la entrada por QR y por la URL corta" : "Volver a permitir la entrada"}>{row.enabled ? "Desactivar QR" : "Activar QR"}</button>
                   </div>
                 </div>
               </div>
@@ -1513,10 +1513,10 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
             : <select value={tribe} onChange={(e) => { setTribe(e.target.value); setOrder(null); }} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[320px]">{tribes.map((t) => <option key={t.id} value={t.id}>{groupName(t.id)}</option>)}</select>}
           <span className={`chip !py-0.5 text-[12px] ${tone}`}>{PRIO_STATUS_LABEL[ses.status]}</span>
           <span className="ml-auto flex flex-wrap gap-2">
-            {ses.status === "cerrada" && <button type="button" disabled={busy || own.length === 0} onClick={() => void act("abrir")} className="btn-primary btn-sm.5 text-[12px] disabled:opacity-40"><Scale size={12} /> Abrir calificación</button>}
-            {ses.status === "abierta" && <button type="button" disabled={busy} onClick={() => void act("cerrar")} className="btn-primary btn-sm.5 text-[12px] disabled:opacity-40"><Lock size={12} /> Cerrar calificación y revisar</button>}
-            {(ses.status === "revision" || ses.status === "abierta") && <button type="button" disabled={busy} onClick={() => void act("guardar")} className={`${ses.status === "revision" ? "btn-primary" : "btn-ghost"} btn-sm.5 text-[12px] disabled:opacity-40`}><Save size={12} /> Guardar priorización</button>}
-            {(ses.status === "guardada" || ses.status === "revision") && <button type="button" disabled={busy} onClick={() => void act("reabrir")} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Reabrir</button>}
+            {ses.status === "cerrada" && <button type="button" disabled={busy || own.length === 0} onClick={() => void act("abrir")} className="btn-primary btn-sm text-[12px] disabled:opacity-40"><Scale size={12} /> Abrir calificación</button>}
+            {ses.status === "abierta" && <button type="button" disabled={busy} onClick={() => void act("cerrar")} className="btn-primary btn-sm text-[12px] disabled:opacity-40"><Lock size={12} /> Cerrar calificación y revisar</button>}
+            {(ses.status === "revision" || ses.status === "abierta") && <button type="button" disabled={busy} onClick={() => void act("guardar")} className={`${ses.status === "revision" ? "btn-primary" : "btn-ghost"} btn-sm text-[12px] disabled:opacity-40`}><Save size={12} /> Guardar priorización</button>}
+            {(ses.status === "guardada" || ses.status === "revision") && <button type="button" disabled={busy} onClick={() => void act("reabrir")} className="btn-ghost btn-sm text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Reabrir</button>}
           </span>
         </div>
         {err && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{err}</p>}
@@ -1600,7 +1600,7 @@ function Refs({ n }: { n?: number[] }) {
 }
 
 function FuentesButton({ onClick }: { onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="btn-ghost btn-sm.5 text-[12px]" title="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia" aria-label="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia"><BookOpen size={12} /> Fuentes</button>;
+  return <button type="button" onClick={onClick} className="btn-ghost btn-sm text-[12px]" title="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia" aria-label="Hechos del sector y del país, con su fuente, en los que se basa la sugerencia"><BookOpen size={12} /> Fuentes</button>;
 }
 
 function FuentesModal({ fuentes, usadas, onClose }: { fuentes: Evidencia[]; usadas: number[]; onClose: () => void }) {
@@ -1654,7 +1654,7 @@ function KrChecklist({ krs, chosen, onToggle, onCrear, creando, nota }: { krs: K
       ))}
       {onCrear && (
         <div className="flex flex-wrap items-center gap-2 pt-0.5">
-          <button type="button" disabled={creando || elegidos.length === 0} onClick={() => onCrear(elegidos)} className="btn-primary btn-sm.5 text-[12px] disabled:opacity-40">{creando ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Crear {elegidos.length} KR</button>
+          <button type="button" disabled={creando || elegidos.length === 0} onClick={() => onCrear(elegidos)} className="btn-primary btn-sm text-[12px] disabled:opacity-40">{creando ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Crear {elegidos.length} KR</button>
           <span className="text-[12px] leading-snug text-faint">{nota}</span>
         </div>
       )}
@@ -1701,8 +1701,8 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
     <div className="mt-3 rounded-xl border border-dashed border-line px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-faint"><Sparkles size={12} /> Asistente</span>
-        {canEdit && <button type="button" onClick={() => void pedir("sugerir")} disabled={loading || lleno} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title={lleno ? "Este objetivo ya tiene el máximo de 5 resultados clave" : "El modelo propone resultados clave complementarios a los registrados; eliges cuáles se crean"}>{loading && modo === "sugerir" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Sugerir KR</button>}
-        <button type="button" onClick={() => void pedir("validar")} disabled={loading || krs.length === 0} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title={krs.length ? "El modelo revisa cada resultado clave y el conjunto: resultado y no actividad, medible, base y meta, cobertura del objetivo" : "Primero registra los resultados clave"}>{loading && modo === "validar" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Validar KR</button>
+        {canEdit && <button type="button" onClick={() => void pedir("sugerir")} disabled={loading || lleno} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={lleno ? "Este objetivo ya tiene el máximo de 5 resultados clave" : "El modelo propone resultados clave complementarios a los registrados; eliges cuáles se crean"}>{loading && modo === "sugerir" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Sugerir KR</button>}
+        <button type="button" onClick={() => void pedir("validar")} disabled={loading || krs.length === 0} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={krs.length ? "El modelo revisa cada resultado clave y el conjunto: resultado y no actividad, medible, base y meta, cobertura del objetivo" : "Primero registra los resultados clave"}>{loading && modo === "validar" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Validar KR</button>
         {fuentes.length > 0 && (sug || val) && <FuentesButton onClick={() => setVerFuentes(true)} />}
         <span className="text-[12px] leading-snug text-faint">{canEdit ? "Propone KR que falten y revisa los registrados con las reglas del método y la base de conocimiento del sector; nada se guarda sin confirmarlo." : "Revisa los resultados clave de tu tribu con las reglas del método y la base de conocimiento del sector; el líder registra los cambios."}</span>
       </div>

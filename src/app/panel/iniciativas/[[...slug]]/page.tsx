@@ -83,7 +83,7 @@ export default function IniciativasPage() {
     <>
       <PageHeader kicker="M6 · Seguimiento" title="Iniciativas, acciones y factores de éxito"
         desc="Cada iniciativa declara su meta de resultado, sus acciones con meta propia, su responsable, su presupuesto en tres estados y su bitácora. Cuando un factor acumula dos revisiones en rojo, la conversación se puede tener a tiempo."
-        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost btn-sm.5 text-[12px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
+        actions={<span className="flex items-center gap-2"><Link href="/panel/iniciativas/priorizacion" className="btn-ghost btn-sm text-[12px]"><Scale size={13} /> Portafolio priorizado</Link><AccessChip module="iniciativas" /></span>} />
 
       <div className="rise rise-1 mb-6 grid gap-4 sm:grid-cols-4">
         <StatCard label="Presupuesto del portafolio" value={totals.planned / 1e6} decimals={0}
@@ -649,7 +649,7 @@ function LogForm({ saving, onSave }: {
         className="input min-w-0 flex-1 !py-1.5 text-[12px]" />
       <button onClick={async () => { if (text.trim() && await onSave(type, text)) setText(""); }}
         disabled={saving || !text.trim()}
-        className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40">
+        className="btn-ghost btn-sm text-[12px] disabled:opacity-40">
         {saving ? <Loader2 size={11} className="animate-spin" /> : <PlusCircle size={11} />}
       </button>
     </div>

@@ -84,7 +84,7 @@ export function SurveyForm({ token, company }: { token: string; company: string 
               <p className="text-[12px] text-muted">Opcional y anónima. Se cita sin nombre en la devolución.</p>
               <textarea className="input mt-2 min-h-[80px]" value={abierta} onChange={(e) => setAbierta(e.target.value)} maxLength={600} />
             </div>
-            {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad-text)" }}>{msg}</div>}
+            {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="num text-[12px] text-muted">{answered} de 40 respondidas · se necesitan al menos 30</span>
               <button onClick={submit} disabled={busy || answered < 30} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar mi respuesta</button>

@@ -341,7 +341,7 @@ export function EvaluationForm({ initial, saving, rule, onSave, confirmOnce = fa
         </div>
         <button type="button" disabled={!complete || saving}
           onClick={async () => { if (confirmOnce && !initial && !(await confirmar("¿Estás seguro de tu valoración? Solo se puede calificar una vez; después no se puede cambiar."))) return; setSaved(false); if (await onSave({ scores: scores as Record<CriterionKey, Level>, type, notes })) setSaved(true); }}
-          className="btn-primary ml-auto w-full justify-center !py-2.5 text-[12.5px] disabled:opacity-40 sm:w-auto sm:btn-sm.5 sm:text-[12px]">
+          className="btn-primary ml-auto w-full justify-center !py-2.5 text-[12.5px] disabled:opacity-40 sm:w-auto sm:btn-sm sm:text-[12px]">
           {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <CheckCircle2 size={12} /> : <Save size={12} />} {initial ? "Actualizar evaluación" : "Registrar evaluación"}
         </button>
       </div>

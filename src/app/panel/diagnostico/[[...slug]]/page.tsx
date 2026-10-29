@@ -585,7 +585,7 @@ function ResponderTest() {
           ))}
         </div>
       </Card>
-      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad-text)" }}>{msg}</div>}
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
       <div className="flex items-center justify-between gap-3">
         <span className="text-[12px] text-muted">Se guarda una respuesta por persona; la última reemplaza a la anterior. Se necesitan al menos 12 preguntas con número.</span>
         <button onClick={submit} disabled={busy || answered < 12} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi resultado</button>
@@ -694,22 +694,14 @@ function AutoevaluacionTab() {
           <div className="mb-5 grid gap-5 lg:grid-cols-[1fr_320px]">
             <Card className="rise rise-2">
               <CardHeader title="Quién ha respondido" sub="cada lectura individual la ve solo el advisor; el comité recibe el consolidado" />
-              <div className="overflow-x-auto px-2 pb-3">
-                <table className="w-full text-[12.5px]">
-                  <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Participante</th>{CAPS.map((c) => <th key={c.n} className="num px-2 py-2 text-center">{c.code}</th>)}<th className="num px-3 py-2 text-center">Avance</th><th className="px-3 py-2">Guardada</th></tr></thead>
-                  <tbody>
-                    {lista.length === 0 && <tr className="border-t border-line"><td colSpan={4 + CAPS.length} className="px-3 py-4 text-[12.5px] italic text-faint">Nadie ha respondido todavía.</td></tr>}
-                    {lecturas.map(({ f, L }) => (
-                      <tr key={f.email} className="border-t border-line">
-                        <td className="px-3 py-2"><Link href={`/panel/diagnostico/autoevaluacion/resultado/${encodeURIComponent(f.email)}`} className="font-bold text-cyan-deep hover:underline">{f.name}</Link><div className="text-[12px] text-faint">{f.cargo ?? f.role}</div></td>
-                        {L.caps.map((c) => <td key={c.cap.n} className={`num px-2 py-2 text-center ${c.m != null && c.m < THRESHOLD ? "font-bold" : ""}`} style={c.m != null && c.m < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(c.m, 2)}</td>)}
-                        <td className="num px-3 py-2 text-center">{L.answered}/{total}</td>
-                        <td className="px-3 py-2 text-muted">{new Date(f.at).toLocaleDateString("es-CO")}</td>
-                      </tr>
-                    ))}
-                    {lecturas.length > 1 && <tr className="border-t border-line bg-surface-2/60"><td className="px-3 py-2 font-bold text-ink">Comité</td>{capsCons.map((c) => <td key={c.cap.n} className="num px-2 py-2 text-center font-extrabold text-ink">{f1(c.m, 2)}</td>)}<td colSpan={2} /></tr>}
-                  </tbody>
-                </table>
+              <div className="px-3 pb-3">
+                <ResponsiveTable rows={lecturas} rowKey={(x) => x.f.email} empty="Nadie ha respondido todavía." columns={[
+                  { key: "quien", header: "Participante", priority: 1, cell: ({ f }) => <><Link href={`/panel/diagnostico/autoevaluacion/resultado/${encodeURIComponent(f.email)}`} className="font-bold text-cyan-deep hover:underline">{f.name}</Link><div className="text-[12px] font-normal text-faint">{f.cargo ?? f.role}</div></> },
+                  ...CAPS.map((c, i) => ({ key: c.code, header: c.code, align: "center" as const, priority: 2 as const, cell: ({ L }: (typeof lecturas)[number]) => { const m = L.caps[i].m; return <span className={m != null && m < THRESHOLD ? "font-bold text-bad" : ""}>{f1(m, 2)}</span>; } })),
+                  { key: "avance", header: "Avance", align: "center", priority: 2, cell: ({ L }) => `${L.answered}/${total}` },
+                  { key: "fecha", header: "Guardada", priority: 3, cell: ({ f }) => <span className="text-muted">{new Date(f.at).toLocaleDateString("es-CO")}</span> },
+                ]} />
+                {lecturas.length > 1 && <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl bg-surface-2/60 px-4 py-2 text-[12.5px]"><b className="text-ink">Comité</b>{capsCons.map((c) => <span key={c.cap.n} className="num"><span className="text-faint">{c.cap.code}</span> <b className="text-ink">{f1(c.m, 2)}</b></span>)}</div>}
               </div>
             </Card>
             <Card className="rise rise-3">
@@ -828,7 +820,7 @@ function ResponderF1() {
           })}
         </div>
       ))}
-      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "#fbeaea", color: "var(--bad-text)" }}>{msg}</div>}
+      {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => { setStep((s) => Math.max(0, s - 1)); window.scrollTo({ top: 0 }); }} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>
         <span className="text-[12px] text-muted">El avance se guarda solo; puedes cerrar y seguir después.</span>

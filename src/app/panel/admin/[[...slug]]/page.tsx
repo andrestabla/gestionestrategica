@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, Card, CardHeader, Modal, StatCard } from "@/components/ui";
+import { PageHeader, Card, CardHeader, Modal, StatCard , ResponsiveTable } from "@/components/ui";
 import { AccessChip, useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { CompanyForm, type CompanyLite } from "@/components/company-form";
@@ -63,7 +63,7 @@ function ActividadTab() {
           right={<span className="flex flex-wrap items-center gap-1.5">
             <input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Buscar persona, correo o acción…" className="input w-full !py-1.5 !text-[12px] sm:w-[220px]" />
             <select value={rol} onChange={(e) => setRol(e.target.value)} className="input w-auto !py-1.5 pr-7 !text-[12px]"><option value="">Todos los roles</option>{Object.entries(ROLE_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost btn-sm.5 text-[12px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
+            <button type="button" onClick={() => setVivo((v) => !v)} className={`btn-ghost btn-sm text-[12px] ${vivo ? "text-ok" : ""}`} title={vivo ? "Pausar la actualización automática" : "Reanudar"}><RefreshCw size={12} className={vivo ? "animate-spin [animation-duration:3s]" : ""} /> {vivo ? "En vivo" : "Pausado"}</button>
           </span>} />
         {error && <p className="px-5 py-3 text-[12px] text-bad">{error}</p>}
         {lista.length === 0 && !error && <p className="px-5 py-6 text-[12.5px] text-muted">Sin actividad todavía{q || rol ? " con ese filtro" : ""}.</p>}
@@ -219,42 +219,28 @@ function EmpresasTab() {
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
-            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm.5 text-[12px]"><Building2 size={12} /> Nueva empresa</button>} />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-[12.5px]">
-              <thead>
-                <tr className="border-b border-line-strong bg-surface-2/60">
-                  {["Empresa", "Sector · ciudad", "Origen", "Estado", ""].map((h) => (
-                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[11px]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((c) => (
-                  <tr key={c.slug} className={`border-b border-line last:border-0 ${c.active ? "" : "opacity-50"} ${me.company?.slug === c.slug ? "bg-cyan-wash/40" : ""}`}>
-                    <td className="px-4 py-2.5">
-                      <div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[11px]">activa</span>}</div>
-                      <div className="num text-[12px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div>
-                    </td>
-                    <td className="px-4 py-2.5 text-muted">{c.sector || "—"}<div className="text-[12px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}{c.country === "EC" ? " · Ecuador · USD" : ""}</div></td>
-                    <td className="px-4 py-2.5"><span className="chip">{c.template === "demo" ? "Plantilla demo" : "Vacía"}</span></td>
-                    <td className="px-4 py-2.5"><span className={`chip ${c.active ? "chip-ok" : "chip-bad"}`}>{c.active ? "Activa" : "Desactivada"}</span></td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                      {me.company?.slug !== c.slug && c.active && (
-                        <button disabled={saving} onClick={() => activate(c.slug)} title="Operar esta empresa" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><ArrowRightLeft size={14} /></button>
-                      )}
-                      <button disabled={saving} onClick={() => setOpen(c)} title="Editar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
-                      <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
-                      {c.slug !== "andina" && (
-                        <button disabled={saving} title="Eliminar con todos sus datos" aria-label="Eliminar con todos sus datos"
-                          onClick={async () => { if (await confirmar(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
-                          className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm text-[12px]"><Building2 size={12} /> Nueva empresa</button>} />
+          <div className="px-2 pb-2">
+            <ResponsiveTable rows={companies} rowKey={(c) => c.slug} empty="Sin empresas." columns={[
+              { key: "empresa", header: "Empresa", priority: 1, cell: (c) => <div className={c.active ? "" : "opacity-50"}><div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[11px]">activa</span>}</div><div className="num text-[12px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div></div> },
+              { key: "sector", header: "Sector · ciudad", priority: 3, cell: (c) => <span className="text-muted">{c.sector || "—"}<div className="text-[12px] text-faint">{[c.city, c.department].filter(Boolean).join(", ") || "—"}{c.country === "EC" ? " · Ecuador · USD" : ""}</div></span> },
+              { key: "origen", header: "Origen", priority: 3, cell: (c) => <span className="chip">{c.template === "demo" ? "Plantilla demo" : "Vacía"}</span> },
+              { key: "estado", header: "Estado", priority: 2, cell: (c) => <span className={`chip ${c.active ? "chip-ok" : "chip-bad"}`}>{c.active ? "Activa" : "Desactivada"}</span> },
+              { key: "acciones", header: "", priority: 2, align: "right", cell: (c) => (
+                <span className="inline-flex flex-wrap justify-end gap-0.5">
+                  {me.company?.slug !== c.slug && c.active && (
+                    <button disabled={saving} onClick={() => activate(c.slug)} title="Operar esta empresa" aria-label="Operar esta empresa" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><ArrowRightLeft size={14} /></button>
+                  )}
+                  <button disabled={saving} onClick={() => setOpen(c)} title="Editar" aria-label="Editar" className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40"><Pencil size={14} /></button>
+                  <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} aria-label={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
+                  {c.slug !== "andina" && (
+                    <button disabled={saving} title="Eliminar con todos sus datos" aria-label="Eliminar con todos sus datos"
+                      onClick={async () => { if (await confirmar(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
+                      className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
+                  )}
+                </span>
+              ) },
+            ]} />
           </div>
         </Card>
         {open !== null && (
@@ -346,75 +332,34 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
             sub="roles válidos solo en esta empresa · desactivar conserva la cuenta; eliminar la borra (no la propia)"
-            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary btn-sm.5 text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-[12.5px]">
-              <thead>
-                <tr className="border-b border-line-strong bg-surface-2/60">
-                  {["Usuario", "Rol", "Ámbito", "Estado", canCompanies ? "Empresa" : ""].map((h) => (
-                    <th key={h} className="label whitespace-nowrap px-4 py-2.5 text-left !text-[11px]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.email} className={`border-b border-line last:border-0 ${u.active ? "" : "opacity-45"}`}>
-                    <td className="min-w-[180px] px-4 py-2.5">
-                      <div className="font-semibold text-ink">{u.name}</div>
-                      <div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <select value={u.role} disabled={saving}
-                        onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })}
-                        className="input w-auto !py-1 pr-7 !text-[12px]">
-                        {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => (
-                          <option key={r} value={r}>{ROLE_LABEL[r]}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {u.role === "RESPONSABLE" ? (
-                        <ScopeSelects compact line={u.line} responsibleId={u.responsibleId} responsibles={responsibles} disabled={saving}
-                          onChange={(patch) => mutate("PATCH", { email: u.email, ...patch })} />
-                      ) : (
-                        <span className="text-faint">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={`chip ${u.active ? "chip-ok" : "chip-bad"}`}>
-                        {u.active ? "Activo" : "Desactivado"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                      {canCompanies && companies.length > 1 && (
-                        <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa"
-                          onChange={async (e) => { if (e.target.value && e.target.value !== me.company?.slug && await confirmar(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
-                          className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[12px]">
-                          {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
-                        </select>
-                      )}
-                      <button disabled={saving || !u.active} onClick={() => void sendReset(u)}
-                        title="Enviar por correo un enlace para restablecer la contraseña (vale 60 minutos)"
-                        className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">
-                        <KeyRound size={14} />
-                      </button>
-                      <button disabled={saving}
-                        onClick={() => mutate("PATCH", { email: u.email, active: !u.active })}
-                        title={u.active ? "Desactivar" : "Reactivar"}
-                        className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">
-                        {u.active ? <PowerOff size={14} /> : <Power size={14} />}
-                      </button>
-                      <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
-                        onClick={async () => { if (await confirmar(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
-                        title="Eliminar la cuenta"
-                        className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40">
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary btn-sm text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
+          <div className="px-2 pb-2">
+            <ResponsiveTable rows={users} rowKey={(u) => u.email} empty="Sin cuentas." columns={[
+              { key: "usuario", header: "Usuario", priority: 1, cell: (u) => <div className={u.active ? "" : "opacity-45"}><div className="font-semibold text-ink">{u.name}</div><div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div></div> },
+              { key: "rol", header: "Rol", priority: 2, cell: (u) => (
+                <select value={u.role} disabled={saving} aria-label={`Rol de ${u.name}`} onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })} className="input w-auto !py-1 pr-7 !text-[12px]">
+                  {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                </select>
+              ) },
+              { key: "ambito", header: "Ámbito", priority: 3, cell: (u) => u.role === "RESPONSABLE" ? <ScopeSelects compact line={u.line} responsibleId={u.responsibleId} responsibles={responsibles} disabled={saving} onChange={(patch) => mutate("PATCH", { email: u.email, ...patch })} /> : <span className="text-faint">—</span> },
+              { key: "estado", header: "Estado", priority: 2, cell: (u) => <span className={`chip ${u.active ? "chip-ok" : "chip-bad"}`}>{u.active ? "Activo" : "Desactivado"}</span> },
+              { key: "acciones", header: canCompanies ? "Empresa" : "", priority: 2, align: "right", cell: (u) => (
+                <span className="inline-flex flex-wrap items-center justify-end gap-0.5">
+                  {canCompanies && companies.length > 1 && (
+                    <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa" aria-label={`Empresa de ${u.name}`}
+                      onChange={async (e) => { if (e.target.value && e.target.value !== me.company?.slug && await confirmar(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
+                      className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[12px]">
+                      {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
+                    </select>
+                  )}
+                  <button disabled={saving || !u.active} onClick={() => void sendReset(u)} title="Enviar por correo un enlace para restablecer la contraseña (vale 60 minutos)" aria-label="Enviar enlace para restablecer la contraseña" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40"><KeyRound size={14} /></button>
+                  <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, active: !u.active })} title={u.active ? "Desactivar" : "Reactivar"} aria-label={u.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">{u.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
+                  <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
+                    onClick={async () => { if (await confirmar(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
+                    title="Eliminar la cuenta" aria-label="Eliminar la cuenta" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
+                </span>
+              ) },
+            ]} />
           </div>
         </Card>
 
@@ -700,16 +645,16 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
         ))}
         <div className="flex gap-2 pt-1">
           <button onClick={() => post({ fields: draft })} disabled={saving || !dirty}
-            className="btn-primary flex-1 btn-sm.5 text-[12px] disabled:opacity-40">
+            className="btn-primary flex-1 btn-sm text-[12px] disabled:opacity-40">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
           </button>
           {(it.key === "ses" || it.key === "r2") && it.configured && (
-            <button onClick={testSend} disabled={saving} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"} aria-label={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
+            <button onClick={testSend} disabled={saving} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"} aria-label={it.key === "ses" ? "Envía un correo de prueba a tu propia dirección" : "Escribe, lee y borra un objeto de prueba en el bucket"}><Send size={12} /> Probar</button>
           )}
           <button onClick={() => post({ enabled: !it.enabled })}
             disabled={saving || (!it.enabled && !it.configured) || it.source === "entorno"}
             title={it.source === "entorno" ? "Rige la configuración del entorno; para cambiarla, guarda valores propios" : !it.configured && !it.enabled ? "Completa la configuración primero" : undefined}
-            className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40">
+            className="btn-ghost btn-sm text-[12px] disabled:opacity-40">
             {it.enabled ? "Desactivar" : "Activar"}
           </button>
         </div>

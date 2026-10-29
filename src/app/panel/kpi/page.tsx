@@ -59,12 +59,12 @@ export default function KpiPage() {
 
   return (
     <>
-      <PageHeader kicker="M4 · Indicadores" title="Indicadores de la educación digital"
+      <PageHeader kicker="M4 · Indicadores" title="Indicadores de la empresa"
         desc="Cada indicador declara su definición operativa, su fórmula, quién produce el dato y con qué frecuencia. Clic en una tarjeta para abrir la ficha completa."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canReportAny && (
-              <button onClick={() => setImporting((v) => !v)} className="btn-ghost btn-sm.5 text-[12px]">
+              <button onClick={() => setImporting((v) => !v)} className="btn-ghost btn-sm text-[12px]">
                 <Upload size={13} /> Importar CSV
               </button>
             )}
@@ -496,7 +496,7 @@ function ReportForm({ kpi, onReported }: {
       )}
       {okMsg && <p className="num text-[12px]" style={{ color: "var(--ok-text)" }}>✓ {okMsg}</p>}
       <button onClick={submit} disabled={saving || !period.trim() || value === ""}
-        className="btn-primary w-full btn-sm.5 text-[12px] disabled:opacity-40">
+        className="btn-primary w-full btn-sm text-[12px] disabled:opacity-40">
         {saving ? <Loader2 size={12} className="animate-spin" /> : <PlusCircle size={12} />}
         Reportar
       </button>

@@ -203,7 +203,7 @@ export default function ProyectosPage() {
             )}
             {canCreate && inis.length > 0 && (
               <button onClick={() => setCreating((c) => !c)}
-                className="btn-primary btn-sm.5 text-[12px]">
+                className="btn-primary btn-sm text-[12px]">
                 <Plus size={13} /> Nueva tarea
               </button>
             )}
@@ -790,7 +790,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           )}
 
           {task.note && (
-            <p className="rounded-lg bg-gold-wash px-3 py-2.5 text-[12px] leading-relaxed" style={{ color: "#6b5312" }}>
+            <p className="rounded-lg bg-gold-wash px-3 py-2.5 text-[12px] leading-relaxed" style={{ color: "var(--gold-text)" }}>
               {task.note}
             </p>
           )}
@@ -895,7 +895,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                     }
                   }}
                   disabled={saving || !evFile || !evTitle.trim()}
-                  className="btn-primary w-full btn-sm.5 text-[12px] disabled:opacity-40">
+                  className="btn-primary w-full btn-sm text-[12px] disabled:opacity-40">
                   {saving ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
                   Adjuntar evidencia
                 </button>
@@ -939,7 +939,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
                   if (commentText.trim()) { await onComment(commentText); setCommentText(""); }
                 }}
                 disabled={saving || !commentText.trim()}
-                className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40">
+                className="btn-ghost btn-sm text-[12px] disabled:opacity-40">
                 Enviar
               </button>
             </div>
@@ -1144,7 +1144,7 @@ function CascadeBlock({ task, allTasks, editable, onRefetch }: {
             </div>
           ))}
           <button onClick={() => call(true)} disabled={busy}
-            className="btn-primary w-full btn-sm.5 text-[12px] disabled:opacity-40">
+            className="btn-primary w-full btn-sm text-[12px] disabled:opacity-40">
             {busy ? <Loader2 size={11} className="animate-spin" /> : <CalendarRange size={11} />}
             Aplicar corrimiento
           </button>

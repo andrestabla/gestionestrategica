@@ -106,24 +106,24 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
           <p className="text-[12.5px] text-muted">{itinerary.sub ?? "Ruta de la convención, momento a momento: descripción, metodología, materiales y plataforma."}{pending ? <> · <b className="text-ink">{pending}</b> comentario{pending === 1 ? "" : "s"} por atender</> : null}</p>
           {canManage && (
             <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
-              {editable && <button type="button" onClick={() => setEditHeader(true)} className="btn-ghost btn-sm.5 text-[12px]"><Pencil size={12} /> Encabezado</button>}
-              {editable && onUploadFile && <button type="button" onClick={() => setShowFiles((v) => !v)} className="btn-ghost btn-sm.5 text-[12px]"><FileText size={12} /> Materiales ({files.length})</button>}
-              <label className="btn-ghost cursor-pointer btn-sm.5 text-[12px]"><Upload size={12} /> Cargar JSON<input type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f || !onUpload) return; try { await onUpload(JSON.parse(await f.text())); } catch { alert("El archivo no es un JSON válido."); } e.target.value = ""; }} /></label>
+              {editable && <button type="button" onClick={() => setEditHeader(true)} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Encabezado</button>}
+              {editable && onUploadFile && <button type="button" onClick={() => setShowFiles((v) => !v)} className="btn-ghost btn-sm text-[12px]"><FileText size={12} /> Materiales ({files.length})</button>}
+              <label className="btn-ghost cursor-pointer btn-sm text-[12px]"><Upload size={12} /> Cargar JSON<input type="file" accept="application/json" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f || !onUpload) return; try { await onUpload(JSON.parse(await f.text())); } catch { alert("El archivo no es un JSON válido."); } e.target.value = ""; }} /></label>
               {itinerary.public
-                ? <button type="button" onClick={() => onPublish?.(false)} disabled={busy} className="btn-ghost btn-sm.5 text-[12px]"><Lock size={12} /> Retirar del público</button>
-                : <button type="button" onClick={() => onPublish?.(true)} disabled={busy} className="btn-primary btn-sm.5 text-[12px]"><Globe size={12} /> Publicar sin login</button>}
-              {itinerary.public && publicUrl && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="btn-ghost btn-sm.5 text-[12px]">{copied ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copied ? "Copiado" : "Copiar enlace público"}</button>}
-              {itinerary.public && <button type="button" onClick={() => { if (confirm("El enlace anterior dejará de valer. ¿Regenerar?")) void onPublish?.(true, true); }} disabled={busy} className="btn-ghost btn-sm.5 text-[12px]" title="Cambia el enlace público"><RefreshCw size={12} /></button>}
+                ? <button type="button" onClick={() => onPublish?.(false)} disabled={busy} className="btn-ghost btn-sm text-[12px]"><Lock size={12} /> Retirar del público</button>
+                : <button type="button" onClick={() => onPublish?.(true)} disabled={busy} className="btn-primary btn-sm text-[12px]"><Globe size={12} /> Publicar sin login</button>}
+              {itinerary.public && publicUrl && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="btn-ghost btn-sm text-[12px]">{copied ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copied ? "Copiado" : "Copiar enlace público"}</button>}
+              {itinerary.public && <button type="button" onClick={() => { if (confirm("El enlace anterior dejará de valer. ¿Regenerar?")) void onPublish?.(true, true); }} disabled={busy} className="btn-ghost btn-sm text-[12px]" title="Cambia el enlace público"><RefreshCw size={12} /></button>}
               {itinerary.publicP
-                ? <button type="button" onClick={() => onPublish?.(false, false, "participantes")} disabled={busy} className="btn-ghost btn-sm.5 text-[12px]" title="La agenda para participantes deja de verse"><Lock size={12} /> Retirar agenda</button>
-                : <button type="button" onClick={() => onPublish?.(true, false, "participantes")} disabled={busy} className="btn-ghost btn-sm.5 text-[12px]" title="Enlace aparte, sin logística ni comentarios: horario, momento, quién y descripción"><Globe size={12} /> Agenda para participantes</button>}
-              {itinerary.publicP && publicUrlP && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrlP); setCopiedP(true); setTimeout(() => setCopiedP(false), 1500); }} className="btn-ghost btn-sm.5 text-[12px]">{copiedP ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copiedP ? "Copiado" : "Copiar enlace de participantes"}</button>}
+                ? <button type="button" onClick={() => onPublish?.(false, false, "participantes")} disabled={busy} className="btn-ghost btn-sm text-[12px]" title="La agenda para participantes deja de verse"><Lock size={12} /> Retirar agenda</button>
+                : <button type="button" onClick={() => onPublish?.(true, false, "participantes")} disabled={busy} className="btn-ghost btn-sm text-[12px]" title="Enlace aparte, sin logística ni comentarios: horario, momento, quién y descripción"><Globe size={12} /> Agenda para participantes</button>}
+              {itinerary.publicP && publicUrlP && <button type="button" onClick={async () => { await navigator.clipboard.writeText(publicUrlP); setCopiedP(true); setTimeout(() => setCopiedP(false), 1500); }} className="btn-ghost btn-sm text-[12px]">{copiedP ? <CheckCircle2 size={12} /> : <Link2 size={12} />} {copiedP ? "Copiado" : "Copiar enlace de participantes"}</button>}
             </span>
           )}
         </div>
       )}
       {!pub && itinerary.public && publicUrl && <p className="num mb-2 break-all rounded-xl bg-cyan-wash/60 px-3 py-2 text-[12px] text-ink"><Globe size={12} className="mr-1 inline text-cyan-deep" /> Equipo organizador (logística y comentarios): {publicUrl}</p>}
-      {!pub && itinerary.publicP && publicUrlP && <p className="num mb-4 break-all rounded-xl bg-[#FAF4E3] px-3 py-2 text-[12px] text-ink"><Globe size={12} className="mr-1 inline text-[#8A6D1F]" /> Participantes (agenda): {publicUrlP}</p>}
+      {!pub && itinerary.publicP && publicUrlP && <p className="num mb-4 break-all rounded-xl bg-gold-wash px-3 py-2 text-[12px] text-ink"><Globe size={12} className="mr-1 inline text-[#8A6D1F]" /> Participantes (agenda): {publicUrlP}</p>}
       {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{error}</p>}
       {!pub && showFiles && onUploadFile && (
         <div className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
@@ -131,7 +131,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
             <div className="text-[13px] font-bold text-ink">Materiales</div>
             <span className="text-[12px] text-muted">PDF (se abre en línea), PowerPoint .pptx (se descarga) o enlace. Los archivos se guardan en el almacenamiento (R2). También puedes añadirlos desde el modal de cada momento: quedan vinculados a ese momento.</span>
             {onAddLink && <LinkForm busy={busy} onAdd={(n, u) => onAddLink(n, u)} className="ml-auto" />}
-            <label className={`btn-primary cursor-pointer btn-sm.5 text-[12px] ${onAddLink ? "" : "ml-auto"}`}><Upload size={12} /> Subir PDF o PowerPoint<input type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple className="hidden" onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) await onUploadFile(f, "material"); e.target.value = ""; }} /></label>
+            <label className={`btn-primary cursor-pointer btn-sm text-[12px] ${onAddLink ? "" : "ml-auto"}`}><Upload size={12} /> Subir PDF o PowerPoint<input type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple className="hidden" onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) await onUploadFile(f, "material"); e.target.value = ""; }} /></label>
           </div>
           <FileList files={files} href={fileHref} onRemove={onRemoveFile} busy={busy} />
         </div>
@@ -244,10 +244,10 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
       <div className="space-y-4 text-[13.5px]">
         {onEdit && !editing && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <button type="button" onClick={startEdit} className="btn-ghost btn-sm.5 text-[12px]"><Pencil size={12} /> Editar textos</button>
-            {onMove && <button type="button" onClick={() => void onMove(-1)} disabled={busy || !onPrev} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title="Mover antes"><ArrowUp size={12} /></button>}
-            {onMove && <button type="button" onClick={() => void onMove(1)} disabled={busy || !onNext} className="btn-ghost btn-sm.5 text-[12px] disabled:opacity-40" title="Mover después"><ArrowDown size={12} /></button>}
-            {onRemove && <button type="button" onClick={() => { if (confirm(`¿Eliminar el momento «${it.title}»?`)) void onRemove(); }} disabled={busy} className="btn-ghost ml-auto btn-sm.5 text-[12px] text-bad"><Trash2 size={12} /> Eliminar</button>}
+            <button type="button" onClick={startEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar textos</button>
+            {onMove && <button type="button" onClick={() => void onMove(-1)} disabled={busy || !onPrev} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title="Mover antes"><ArrowUp size={12} /></button>}
+            {onMove && <button type="button" onClick={() => void onMove(1)} disabled={busy || !onNext} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title="Mover después"><ArrowDown size={12} /></button>}
+            {onRemove && <button type="button" onClick={() => { if (confirm(`¿Eliminar el momento «${it.title}»?`)) void onRemove(); }} disabled={busy} className="btn-ghost ml-auto btn-sm text-[12px] text-bad"><Trash2 size={12} /> Eliminar</button>}
           </div>
         )}
         {editing ? (
@@ -280,7 +280,7 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
         <div><div className="label !text-[11px]">Descripción del momento</div><p className="mt-1 leading-relaxed text-ink">{it.description || "—"}</p></div>
         <div><div className="label !text-[11px]">Metodología · dinámica y resultado</div><p className="mt-1 leading-relaxed text-ink">{it.method || "—"}</p></div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-[#FAF4E3] px-3.5 py-3"><div className="label !text-[11px]">Materiales físicos</div>{it.materials.length ? <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-ink">{it.materials.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="mt-1 text-[13px] text-muted">—</p>}</div>
+          <div className="rounded-xl bg-gold-wash px-3.5 py-3"><div className="label !text-[11px]">Materiales físicos</div>{it.materials.length ? <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-ink">{it.materials.map((m, i) => <li key={i}>{m}</li>)}</ul> : <p className="mt-1 text-[13px] text-muted">—</p>}</div>
           <div className="rounded-xl bg-cyan-wash/60 px-3.5 py-3"><div className="label !text-[11px]">Plataforma y pantalla</div><p className="mt-1 text-[13px] text-ink">{it.platform || "—"}</p></div>
         </div>
         {(linked.length > 0 || onFiles) && (
@@ -289,7 +289,7 @@ function MomentModal({ it, day, days, comments, pub, simple = false, canManage, 
             {linked.length ? <ul className="mt-1.5 space-y-1">{linked.map((f) => <li key={f.id}><a href={href(f)} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-cyan-deep hover:underline"><FileIcon f={f} size={13} /> {f.name}<span className="num text-[12px] font-normal text-faint">· {fileMeta(f)}</span></a></li>)}</ul> : <p className="mt-1 text-[12px] italic text-faint">Sin materiales vinculados.</p>}
             {onAddLink && <div className="mt-2"><LinkForm busy={busy} onAdd={onAddLink} label="Añadir enlace a este momento" /></div>}
             {onUpload && (
-              <label className={`btn-ghost mt-2 inline-flex cursor-pointer btn-sm.5 text-[12px] ${busy ? "pointer-events-none opacity-50" : ""}`} title="Sube un PDF o un PowerPoint al almacenamiento y lo deja vinculado a este momento">
+              <label className={`btn-ghost mt-2 inline-flex cursor-pointer btn-sm text-[12px] ${busy ? "pointer-events-none opacity-50" : ""}`} title="Sube un PDF o un PowerPoint al almacenamiento y lo deja vinculado a este momento">
                 <Upload size={12} /> Subir PDF o PowerPoint a este momento
                 <input type="file" accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple className="hidden" disabled={busy} onChange={async (e) => { const list = Array.from(e.target.files ?? []); for (const f of list) { if (!(await onUpload(f))) break; } e.target.value = ""; }} />
               </label>
@@ -383,13 +383,13 @@ const fileMeta = (f: ItineraryFile) => (fileKindOf(f) === "link" ? linkHost(f.ur
 function LinkForm({ busy, onAdd, label = "Añadir enlace", className = "" }: { busy: boolean; onAdd: (name: string, url: string) => Promise<boolean>; label?: string; className?: string }) {
   const [open, setOpen] = useState(false); const [name, setName] = useState(""); const [url, setUrl] = useState("");
   const ok = name.trim().length >= 2 && URL_RE.test(url.trim());
-  if (!open) return <button type="button" onClick={() => setOpen(true)} className={`btn-ghost btn-sm.5 text-[12px] ${className}`}><Link2 size={12} /> {label}</button>;
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className={`btn-ghost btn-sm text-[12px] ${className}`}><Link2 size={12} /> {label}</button>;
   return (
     <div className={`flex w-full flex-wrap items-end gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-2 ${className}`}>
       <label className="block min-w-[160px] flex-1"><span className="label !text-[11px]">Nombre</span><AutoTextarea value={name} onChange={(e) => setName(e.target.value)} maxLength={160} className="input mt-1 !py-1.5 text-[12.5px]" placeholder="Presentación de la tribu" /></label>
       <label className="block min-w-[200px] flex-[2]"><span className="label !text-[11px]">URL</span><AutoTextarea value={url} onChange={(e) => setUrl(e.target.value)} maxLength={600} inputMode="url" className="input mt-1 !py-1.5 text-[12.5px]" placeholder="https://…" /></label>
-      <button type="button" onClick={() => setOpen(false)} className="btn-ghost btn-sm.5 text-[12px]">Cancelar</button>
-      <button type="button" disabled={busy || !ok} onClick={async () => { if (await onAdd(name.trim(), url.trim())) { setName(""); setUrl(""); setOpen(false); } }} className="btn-primary btn-sm.5 text-[12px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Añadir</button>
+      <button type="button" onClick={() => setOpen(false)} className="btn-ghost btn-sm text-[12px]">Cancelar</button>
+      <button type="button" disabled={busy || !ok} onClick={async () => { if (await onAdd(name.trim(), url.trim())) { setName(""); setUrl(""); setOpen(false); } }} className="btn-primary btn-sm text-[12px] disabled:opacity-40">{busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Añadir</button>
     </div>
   );
 }

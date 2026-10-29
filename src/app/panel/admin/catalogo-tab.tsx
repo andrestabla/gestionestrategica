@@ -1033,7 +1033,7 @@ function FormCard({ title, sub, saving, isEdit, canSave, onSave, onCancel, child
 
 function NewBtn({ label, onClick, edit = false }: { label: string; onClick: () => void; edit?: boolean }) {
   return (
-    <button type="button" onClick={onClick} className="btn-primary btn-sm.5 text-[12px]">
+    <button type="button" onClick={onClick} className="btn-primary btn-sm text-[12px]">
       {edit ? <Pencil size={12} /> : <Plus size={12} />} {label}
     </button>
   );

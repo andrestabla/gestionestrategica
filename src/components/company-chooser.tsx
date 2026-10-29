@@ -57,7 +57,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-[12px] text-muted sm:inline">{userName}</span>
-          <button onClick={logout} className="btn-ghost btn-sm.5 text-[12px]"><LogOut size={13} /> <span className="hidden sm:inline">Cerrar sesión</span></button>
+          <button onClick={logout} className="btn-ghost btn-sm text-[12px]"><LogOut size={13} /> <span className="hidden sm:inline">Cerrar sesión</span></button>
         </div>
       </header>
 
