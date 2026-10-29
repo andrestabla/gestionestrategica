@@ -21,7 +21,8 @@ import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea 
 import { AccessChip, useCan, useBase, useUser } from "@/components/user-context";
 import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
-import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, type Lever } from "@/data/catalogo";
+import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
+import { vocabOf, yearOfFirstHorizon, startQuarters, type Vocab } from "@/lib/vocabulario";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
@@ -29,8 +30,18 @@ import { usePriorizacion, DECISION_CLS, HorizonHint, EvaluationForm, type Priori
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
 
-type Tab = "itinerario" | "guia" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
-const TABS: { id: Tab; label: string; icon: typeof Target; agenda: string }[] = [
+type Tab = "itinerario" | "guia" | "prioridades" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
+type TabDef = { id: Tab; label: string; icon: typeof Target; agenda: string };
+/** Secciones según el modo: el acompañamiento no tiene itinerario ni guía y habla de prioridades y sponsors. */
+const tabsFor = (V: Vocab, acomp: boolean): TabDef[] => acomp ? [
+  { id: "prioridades", label: V.tabs.prioridades, icon: Target, agenda: "Las prioridades 3 a 5 años: nombre, sponsor, indicador y descripción" },
+  { id: "direccion", label: V.tabs.direccion, icon: Target, agenda: "Objetivos del cuadro de mando por prioridad estratégica y horizonte" },
+  { id: "okr", label: V.tabs.okr, icon: Gauge, agenda: "Cada objetivo con sus resultados clave: definición, base, meta, dueño y plazo" },
+  { id: "iniciativas", label: V.tabs.iniciativas, icon: Rocket, agenda: "Qué iniciativa mueve cada resultado clave" },
+  { id: "priorizacion", label: V.tabs.priorizacion, icon: Scale, agenda: "Calificación con la matriz por sesión de prioridad y ranking" },
+  { id: "portafolio", label: V.tabs.portafolio, icon: Layers, agenda: "Portafolio por prioridad y decisión de tiempo" },
+] : TABS_CV;
+const TABS_CV: TabDef[] = [
   { id: "itinerario", label: "Itinerario", icon: CalendarDays, agenda: "Ruta de los dos días: metodología, materiales, plataforma y comentarios del equipo organizador" },
   { id: "guia", label: "Guía del día 2", icon: BookOpen, agenda: "Qué hace cada tribu en la mesa y en la plataforma, etapa por etapa" },
   { id: "direccion", label: "Dirección 3x3", icon: Target, agenda: "Día 1 · mesa redonda y talleres 2027 / 2030 / 2033" },
@@ -44,6 +55,9 @@ const SCORE_COLOR = (s: number) => s >= 80 ? "var(--ok)" : s >= 65 ? "var(--cyan
 
 export default function ConvencionPage() {
   const v = useCatalog();
+  const V = vocabOf(v.catalog.company);
+  const acomp = isAcompanamiento(v.catalog.company);
+  const TABS = tabsFor(V, acomp);
   const refetch = useCatalogRefetch();
   const base = useBase();
   const canEdit = useCan("manage_catalog");
@@ -54,13 +68,13 @@ export default function ConvencionPage() {
   const guest = !!me.qr || !(me.role === "ADMIN" || me.role === "CONSULTOR" || me.role === "LIDER");
   // en la convención, el líder de tribu (con tribu asignada) solo edita el OKR, los KR y las iniciativas de su tribu; gerencia, advisor y admin, todo
   const tribeScope = isConvencion(v.catalog.company) && me.role === "LIDER" && me.responsibleId ? me.responsibleId : null;
-  const agendaOf = (t: (typeof TABS)[number]) => t.id === "itinerario" && guest ? "Agenda de los dos días: horario, momento, quién lo conduce y descripción" : t.agenda;
+  const agendaOf = (t: TabDef) => t.id === "itinerario" && guest ? "Agenda de los dos días: horario, momento, quién lo conduce y descripción" : t.agenda;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // la sección vive en la URL (?t=okr): el menú lateral en modo convención y los enlaces QR apuntan a ella
   const tParam = searchParams.get("t");
-  const tab: Tab = TABS.some((x) => x.id === tParam) ? (tParam as Tab) : "direccion";
+  const tab: Tab = TABS.some((x) => x.id === tParam) ? (tParam as Tab) : acomp ? "prioridades" : "direccion";
   const setTab = (t: Tab) => router.replace(`${pathname}?t=${t}`);
   const convencion = isConvencion(v.catalog.company);
   const [qr, setQr] = useState(false);
@@ -91,10 +105,10 @@ export default function ConvencionPage() {
 
   return (
     <div>
-      <PageHeader kicker="Convención de planeación" title={`Convención · ${cat.company.name}`}
-        desc="De los diagnósticos de las tribus a la dirección compartida, de los objetivos a OKR y prioridades ejecutables. Lo que se decide en sala queda registrado aquí, en vivo."
+      <PageHeader kicker={V.kicker} title={V.title(cat.company.name)}
+        desc={V.desc}
         actions={<span className="flex items-center gap-2"><AccessChip module="iniciativas" />
-          {canAccess && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
+          {canAccess && !acomp && <button type="button" onClick={() => setQr(true)} className="btn-ghost !py-1.5 text-[11.5px]" title="QR único de la convención: tribu y rol al entrar"><QrCode size={13} /> QR de la convención</button>}</span>} />
 
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3" style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
@@ -122,6 +136,7 @@ export default function ConvencionPage() {
 
       {tab === "itinerario" && <ItinerarioTab />}
       {tab === "guia" && <GuiaTab me={me} />}
+      {tab === "prioridades" && <PrioridadesTab cat={cat} levers={levers} canEdit={canEdit} saving={saving} mutate={mutate} />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} myTribe={me.responsibleId} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} myTribe={me.responsibleId} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
@@ -133,11 +148,54 @@ export default function ConvencionPage() {
 
 type Mutate = (entity: string, op: "upsert" | "delete", data: unknown) => Promise<boolean>;
 type Cat = ReturnType<typeof useCatalog>["catalog"];
+const useVocab = () => vocabOf(useCatalog().catalog.company);
+const Vb = (cat: Cat) => vocabOf(cat.company);
+
+/* ═══ Prioridades estratégicas (las palancas como sección propia, acompañamiento) ═══ */
+
+function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
+  const V = useVocab();
+  const [open, setOpen] = useState(false);
+  const owner = (id?: string) => cat.responsibles.find((r) => r.id === id);
+  const objs = (l: Lever) => cat.objectives.filter((o) => o.lever === l.id);
+  const krs = (l: Lever) => cat.kpis.filter((k) => objs(l).some((o) => o.id === k.cmi));
+  const inis = (l: Lever) => cat.initiatives.filter((i) => objs(l).some((o) => o.id === i.cmi));
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <p className="text-[12.5px] text-muted">Las {V.leversLow} ordenan la estrategia: cada objetivo, resultado clave e iniciativa cuelga de una. Máximo ocho; el orden es la jerarquía acordada por la dirección.</p>
+        {canEdit && <button onClick={() => setOpen(true)} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
+      </div>
+      {levers.length === 0 ? (
+        <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus {V.leversLow}. {canEdit ? "Defínelas aquí: nombre, sponsor, indicador y descripción." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
+      ) : (
+        <div className="rise grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[...levers].sort((a, b) => a.order - b.order).map((l) => { const o = owner(l.ownerId); return (
+            <Card key={l.id} className="flex flex-col p-5">
+              <div className="num text-[10px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+              <div className="mt-0.5 text-[16px] font-extrabold leading-tight text-ink">{l.name}</div>
+              {l.desc && <p className="mt-2 text-[12.5px] leading-snug text-ink-soft">{l.desc}</p>}
+              {l.indicator && <p className="mt-2 text-[11.5px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {l.indicator}</p>}
+              <div className="mt-3 text-[11.5px] text-muted"><b className="text-ink">{V.group}.</b> {o ? (o.cargo || o.dependencia) : <span className="italic text-faint">por definir</span>}</div>
+              <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
+                <span className="chip !py-0 text-[10px]">{objs(l).length} objetivo{objs(l).length === 1 ? "" : "s"}</span>
+                <span className="chip !py-0 text-[10px]">{krs(l).length} KR</span>
+                <span className="chip !py-0 text-[10px]">{inis(l).length} iniciativa{inis(l).length === 1 ? "" : "s"}</span>
+              </div>
+            </Card>
+          ); })}
+        </div>
+      )}
+      {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setOpen(false); return ok; }} />}
+    </>
+  );
+}
 
 /* ═══ Dirección 3x3: palanca × horizonte ═══ */
 
 function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; horizons: { id: string; label: string; months: number }[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
   const m = objectivesMatrix(cat);
+  const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   const [open, setOpen] = useState<CmiObjective | { lever?: string; horizon?: string } | null>(null);
   const [leversOpen, setLeversOpen] = useState(false);
   const owner = (id?: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "";
@@ -146,15 +204,17 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>
+        {acomp
+          ? <p className="text-[12.5px] text-muted">Objetivos directivos por {V.leverLow} y horizonte: qué se logra en {horizons[0]?.label ?? "el primer horizonte"} y qué queda habilitado hacia {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}.</p>
+          : <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>}
         {canEdit && <span className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-          <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Pencil size={12} /> Palancas</button>
+          {!acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Pencil size={12} /> {V.levers}</button>}
           <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center !py-1.5 text-[11.5px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
         </span>}
       </div>
       {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}><b>Dirección 3x3 es informativa:</b> agrupa los objetivos estratégicos de CRESIO por palanca. El objetivo rector de cada palanca es el objetivo del único OKR de su tribu; el día 2 no se modifica (solo el relator registra ajustes ratificados).</p>}
       {levers.length === 0 ? (
-        <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus palancas estratégicas. {canEdit ? "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas." : "Las define el advisor o la gerencia."}</EmptyNote></Card>
+        <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus {V.leversLow}. {canEdit ? (acomp ? `Defínelas en «${V.tabs.prioridades}»: ordenan la estrategia y agrupan objetivos e iniciativas.` : "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas.") : "Las define el advisor o la gerencia."}</EmptyNote></Card>
       ) : (<>
         {/* móvil: una tarjeta por palanca con sus horizontes apilados */}
         <div className="rise space-y-4 sm:hidden">
@@ -183,7 +243,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           <table className="w-full min-w-[820px] border-separate border-spacing-2">
             <thead>
               <tr>
-                <th className="w-[200px] text-left align-bottom"><span className="label">Palanca</span></th>
+                <th className="w-[200px] text-left align-bottom"><span className="label">{V.lever}</span></th>
                 {hz.map((h) => <th key={h.id} className="text-left"><div className="rounded-xl bg-surface-2 px-3 py-2 text-[12px] font-extrabold text-ink">{h.label} <span className="num font-semibold text-faint">· {h.months} meses</span></div></th>)}
               </tr>
             </thead>
@@ -216,7 +276,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
       </>)}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
-          <CardHeader title={`Objetivos sin palanca u horizonte (${m.orphan.length})`} sub="siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención" />
+          <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la ruta" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
           <div className="flex flex-wrap gap-2 px-5 pb-5">
             {m.orphan.map((o) => <button key={o.id} onClick={canEdit ? () => setOpen(o) : undefined} className="chip !py-1 text-[11px]">{o.id} · {o.name.slice(0, 60)}{o.name.length > 60 ? "…" : ""}</button>)}
           </div>
@@ -282,7 +342,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
   const krsElegidos = sug.okr ? sug.okr.krs.filter((_, n) => sug.chosen[n]) : [];
   const redaccionDistinta = !!sug.okr && sug.okr.objective.name.trim() !== f.name.trim();
   return (
-    <Modal title={initial ? `Objetivo · ${initial.id}` : okr ? "Nuevo objetivo de la tribu" : "Nuevo objetivo"} sub={okr ? "primero el objetivo; después, de 2 a 4 resultados clave (máximo 5)" : "aspiración, indicador impulsor, palanca y horizonte"} onClose={onCancel}
+    <Modal title={initial ? `Objetivo · ${initial.id}` : okr ? "Nuevo objetivo de la tribu" : "Nuevo objetivo"} sub={okr ? "primero el objetivo; después, de 2 a 4 resultados clave (máximo 5)" : `aspiración, indicador impulsor, ${Vb(cat).leverLow} y horizonte`} onClose={onCancel}
       footer={<>
         {onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}
         <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
@@ -293,9 +353,9 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
       </>}>
       <div className="space-y-2.5">
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Palanca"><select value={f.lever} onChange={set("lever")} className={INPUT}><option value="">— sin palanca —</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select></Field>
+          <Field label={Vb(cat).lever}><select value={f.lever} onChange={set("lever")} className={INPUT}><option value="">— sin {Vb(cat).leverLow} —</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select></Field>
           {okr
-            ? <Field label="Tribu"><input value={cat.responsibles.find((r) => r.id === levers.find((l) => l.id === f.lever)?.ownerId)?.dependencia ?? "—"} disabled className={INPUT} /></Field>
+            ? <Field label={Vb(cat).group}><input value={cat.responsibles.find((r) => r.id === levers.find((l) => l.id === f.lever)?.ownerId)?.dependencia ?? "—"} disabled className={INPUT} /></Field>
             : <Field label="Horizonte"><select value={f.horizon} onChange={set("horizon")} className={INPUT}><option value="">— sin horizonte —</option>{horizons.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></Field>}
         </div>
         {okr && parents.length > 0 && <p className="text-[11px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
@@ -309,7 +369,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
                 {sug.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {sug.okr ? "Otra propuesta" : "Sugerir OKR"}
               </button>
               {sug.okr && sug.fuentes.length > 0 && <FuentesButton onClick={() => setVerFuentes(true)} />}
-              <span className="text-[11px] text-faint">{puedeSugerir ? `Resultados clave sugeridos para este objetivo${tribe ? ` y ${tribe.dependencia}` : ""}; eliges cuáles se crean.` : "Con la palanca y el objetivo escritos, el modelo propone sus resultados clave."}</span>
+              <span className="text-[11px] text-faint">{puedeSugerir ? `Resultados clave sugeridos para este objetivo${tribe ? ` y ${tribe.dependencia}` : ""}; eliges cuáles se crean.` : `Con la ${Vb(cat).leverLow} y el objetivo escritos, el modelo propone sus resultados clave.`}</span>
             </div>
             {sug.error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{sug.error}</p>}
             {sug.okr && (
@@ -353,7 +413,7 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
   const upd = (i: number, k: string, v: string) => setRows(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= rows.length) return; const c = [...rows]; [c[i], c[j]] = [c[j], c[i]]; setRows(c); };
   return (
-    <Modal title="Palancas estratégicas" sub="el orden es la jerarquía acordada por la dirección; cada tribu trabaja una palanca" onClose={onCancel} wide
+    <Modal title={Vb(cat).levers} sub={isAcompanamiento(cat.company) ? "el orden es la jerarquía acordada por la dirección; cada prioridad tiene un sponsor" : "el orden es la jerarquía acordada por la dirección; cada tribu trabaja una palanca"} onClose={onCancel} wide
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || rows.some((r) => !r.id.trim() || r.name.trim().length < 3)} onClick={() => onSubmit(rows)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar palancas</button></>}>
       <div className="space-y-2">
@@ -361,9 +421,9 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
           <div key={i} className="grid grid-cols-[28px_80px_1fr_1fr_1fr_60px] items-start gap-1.5">
             <div className="flex flex-col pt-1"><button onClick={() => move(i, -1)} className="text-[10px] text-faint hover:text-ink">▲</button><button onClick={() => move(i, 1)} className="text-[10px] text-faint hover:text-ink">▼</button></div>
             <input value={r.id} onChange={(e) => upd(i, "id", e.target.value.toUpperCase())} placeholder="MS" className="input num !py-1.5 !text-[11px]" />
-            <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)} placeholder="Nombre de la palanca" className="input !py-1.5 !text-[11px]" />
+            <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)} placeholder={`Nombre de la ${Vb(cat).leverLow}`} className="input !py-1.5 !text-[11px]" />
             <input value={r.indicator} onChange={(e) => upd(i, "indicator", e.target.value)} placeholder="Indicador principal" className="input !py-1.5 !text-[11px]" />
-            <select value={r.ownerId} onChange={(e) => upd(i, "ownerId", e.target.value)} className="input !py-1.5 !text-[11px]"><option value="">Tribu / responsable</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}</option>)}</select>
+            <select value={r.ownerId} onChange={(e) => upd(i, "ownerId", e.target.value)} className="input !py-1.5 !text-[11px]"><option value="">{Vb(cat).group} / responsable</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}</option>)}</select>
             <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="pt-1.5 text-[11px] text-faint hover:text-bad">Quitar</button>
           </div>
         ))}
@@ -383,6 +443,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
   const [kr, setKr] = useState<{ obj: CmiObjective; kpi: KpiFull | null } | null>(null);
   const [obj, setObj] = useState<CmiObjective | { lever?: string; name?: string; desc?: string; indicator?: string } | null>(null);
   const editingObj = obj && "id" in obj ? (obj as CmiObjective) : null;
+  const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   const [ejemplo, setEjemplo] = useState<string | null>(null);   // palanca cuyo ejemplo se muestra
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   // filtros: palanca y tribu (la tribu dueña de la palanca o de alguno de los KR); los objetivos no se filtran uno a uno
@@ -412,23 +473,23 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <span className="num text-[12px] font-bold text-ink">{objectives.length} de {allObjectives.length} objetivos</span>
-        <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Palanca"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
-        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
         {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
-        {!canEdit && <span className="ml-auto text-[10.5px] text-faint">Solo lectura: el líder de cada tribu registra con el QR de edición.</span>}
+        {!canEdit && <span className="ml-auto text-[10.5px] text-faint">{acomp ? "Solo lectura: registra el advisor." : "Solo lectura: el líder de cada tribu registra con el QR de edición."}</span>}
       </div>
-      {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</EmptyNote></Card>}
+      {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>{acomp ? <>Aún no hay objetivos en {horizonLabel(cat.company, horizon)}. Primero el objetivo directivo (en «{V.tabs.direccion}»), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</> : <>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</>}</EmptyNote></Card>}
       {allObjectives.length > 0 && objectives.length === 0 && <Card className="rise p-6"><EmptyNote>Ningún objetivo coincide con el filtro.</EmptyNote></Card>}
       {byLever.map((g) => (
         <Card key={g.key} className="rise mb-5 overflow-hidden">
-          <CardHeader title={g.label} sub={g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)"}
+          <CardHeader title={g.label} sub={acomp ? (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}` : "sin objetivos todavía en esta prioridad") : (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)")}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
-              {canEdit && !scope && <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
+              {canEdit && !scope && !acomp && <button onClick={() => setEjemplo(g.key)} className="btn-ghost !py-1.5 text-[11.5px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
               {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost !py-1.5 text-[11.5px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
-            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</EmptyNote></div>}
+            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>{acomp ? "Aún no hay resultados clave para este objetivo: de 2 a 4 (máximo 5), con «+ Resultado clave»." : <>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</>}</EmptyNote></div>}
             {g.objs.map((o) => {
               const krs = keyResultsOf(cat, o);
               const mine = issues.filter((i) => i.ref === o.id || krs.some((k) => k.code === i.ref));
@@ -512,7 +573,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
       {obj && <ObjectiveForm cat={cat} levers={levers} horizons={[{ id: horizon, label: horizonLabel(cat.company, horizon) }]} initial={editingObj} preset={editingObj ? undefined : { ...(obj as { lever?: string; name?: string; desc?: string; indicator?: string }), horizon }} okr directive={directive} saving={saving} onCancel={() => setObj(null)}
         onSubmit={async (d) => {
           const { krs, ...data } = d as Record<string, unknown> & { krs?: KrSugerido[] };
-          const body = { ...data, ...(editingObj ? { id: editingObj.id } : {}), okr: true, horizon };
+          const body = { ...data, ...(editingObj ? { id: editingObj.id } : {}), okr: !acomp, horizon };
           if (!krs?.length) { const ok = await mutate("objective", "upsert", body); if (ok) setObj(null); return ok; }
           const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "objective", op: "upsert", data: body }) });
           const j = await res.json().catch(() => null);
@@ -585,7 +646,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
               <option value="">Elegir de la biblioteca del objetivo… ({templates.length})</option>
               {templates.map((t) => { const used = cat.kpis.some((k) => k.code === t.code); return <option key={t.code} value={t.code}>{t.code} · {t.name}{used ? " (ya creado)" : ""}</option>; })}
             </select>
-            <span className="mt-1 block text-[10.5px] leading-snug text-faint">La plantilla trae nombre, unidad, sentido, frecuencia y definición; la tribu fija línea base, meta, dueño y plazo. Se puede editar todo antes de crear.</span>
+            <span className="mt-1 block text-[10.5px] leading-snug text-faint">La plantilla trae nombre, unidad, sentido, frecuencia y definición; {Vb(cat).modo === "acompanamiento" ? "el sponsor" : "la tribu"} fija línea base, meta, dueño y plazo. Se puede editar todo antes de crear.</span>
           </Field>
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr]">
@@ -613,6 +674,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 /* ═══ Iniciativas → resultado clave ═══ */
 
 function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTribe, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; scope: string | null; myTribe?: string; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
+  const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   const objectives = okrObjectivesOf(cat, horizon);
   // en esta sección solo entran los resultados clave completos; los incompletos se terminan en «OKR»
   const todosKr = objectives.flatMap((o) => keyResultsOf(cat, o).map((k) => ({ k, o })));
@@ -633,9 +695,9 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
-        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[11.5px]" title="Crear una iniciativa nueva, vinculada a un OKR de la tribu"><Plus size={12} /> Iniciativa</button>}
-        <span className="text-[11px] text-faint">{canEdit ? "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar." : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
+        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary !py-1.5 text-[11.5px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
+        <span className="text-[11px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <StatCard label="Resultados clave completos" value={krs.length} unit={incompletos.length ? `+ ${incompletos.length} incompletos` : undefined} foot={`en ${horizonLabel(cat.company, horizon)}`} />
@@ -658,10 +720,10 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
                 </div>
               );
             })}
-            {krs.length === 0 && <div className="px-5 py-4"><EmptyNote>Sin resultados clave completos en {horizonLabel(cat.company, horizon)}: defínelos o complétalos en «OKR».</EmptyNote></div>}
+            {krs.length === 0 && <div className="px-5 py-4"><EmptyNote>Sin resultados clave completos en {horizonLabel(cat.company, horizon)}: defínelos o complétalos en «{V.tabs.okr}».</EmptyNote></div>}
             {incompletos.filter((x) => !fTribe || levers.find((l) => l.id === x.o.lever)?.ownerId === fTribe).length > 0 && (
               <div className="px-5 py-3 text-[11.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, white)" }}>
-                <b>No reciben iniciativas todavía</b> (complétalos en «OKR»):
+                <b>No reciben iniciativas todavía</b> (complétalos en «{V.tabs.okr}»):
                 <ul className="mt-1 space-y-0.5">{incompletos.filter((x) => !fTribe || levers.find((l) => l.id === x.o.lever)?.ownerId === fTribe).map(({ k }) => <li key={k.code}><span className="num font-bold text-ink">{k.code}</span> · {k.name} <span className="text-faint">· sin {krFaltantes(k).join(", ")}</span></li>)}</ul>
               </div>
             )}
@@ -708,11 +770,11 @@ function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; 
   const krsDe = (o: CmiObjective) => keyResultsOf(cat, o).filter(krCompleto);
   const conKr = objectives.filter((o) => krsDe(o).length > 0);
   const hayIncompletos = objectives.some((o) => keyResultsOf(cat, o).length > 0);
-  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "Tu tribu aún no tiene su OKR registrado" : `Aún no hay OKR de las tribus en ${horizonLabel(cat.company, horizon)}`}: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «OKR».</p>;
-  if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{scope ? "El OKR de tu tribu" : "Los OKR de las tribus"} aún no {scope ? "tiene" : "tienen"} resultados clave {hayIncompletos ? "completos" : ""}: las iniciativas se vinculan a un resultado clave completo (nombre con cifra, línea base, meta, dueño, plazo y definición con fórmula). {hayIncompletos ? "Complétalos" : "Regístralos"} primero en la pestaña «OKR» (etapa 3) y vuelve a vincular.</p>;
+  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{Vb(cat).modo === "acompanamiento" ? `Aún no hay objetivos en ${horizonLabel(cat.company, horizon)}` : scope ? "Tu tribu aún no tiene su OKR registrado" : `Aún no hay OKR de las tribus en ${horizonLabel(cat.company, horizon)}`}: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «{Vb(cat).tabs.okr}».</p>;
+  if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, white)" }}>{Vb(cat).modo === "acompanamiento" ? "Los objetivos" : scope ? "El OKR de tu tribu" : "Los OKR de las tribus"} aún no {scope && Vb(cat).modo !== "acompanamiento" ? "tiene" : "tienen"} resultados clave {hayIncompletos ? "completos" : ""}: las iniciativas se vinculan a un resultado clave completo (nombre con cifra, línea base, meta, dueño, plazo y definición con fórmula). {hayIncompletos ? "Complétalos" : "Regístralos"} primero en la pestaña «{Vb(cat).tabs.okr}»{Vb(cat).modo === "acompanamiento" ? "" : " (etapa 3)"} y vuelve a vincular.</p>;
   return (
     <div className="space-y-2">
-      <Field label={scope ? "Resultado clave de tu tribu que mueve (obligatorio)" : "Resultado clave que mueve (obligatorio)"}>
+      <Field label={scope ? `Resultado clave de tu ${Vb(cat).groupLow} que mueve (obligatorio)` : "Resultado clave que mueve (obligatorio)"}>
         <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => krsDe(x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code }); }} className={INPUT}>
           <option value="">— elegir el resultado clave —</option>
           {objectives.map((o) => { const ks = krsDe(o); return (
@@ -740,7 +802,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const ok = f.name.trim().length >= 5 && !!f.ownerId && okrLinkOk(cat, horizon, link);
   return (
-    <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub="lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar" onClose={onCancel}
+    <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub={isAcompanamiento(cat.company) ? "lo que se hace para mover un resultado clave; con él queda habilitada para calificar" : "lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar"} onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
           onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: initial?.capability ?? "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
@@ -749,7 +811,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
       <div className="space-y-2.5">
         <Field label="Iniciativa"><AutoTextarea value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
-        <Field label="Tribu dueña"><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
+        <Field label={isAcompanamiento(cat.company) ? "Sponsor" : "Tribu dueña"}><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} />
         <p className="text-[11px] text-faint">Queda asociada al resultado clave elegido y a {horizonLabel(cat.company, horizon)}; así se califica en Priorización en vivo como las demás.</p>
       </div>
@@ -773,8 +835,9 @@ function LinkForm({ cat, horizon, ini, scope = null, saving, onCancel, onSubmit 
 /* ═══ Priorización en vivo ═══ */
 
 function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh, me }: { cat: Cat; levers: Lever[]; prio: PriorizacionData | null; base: string; onRefresh: () => void; onCatalogRefresh: () => void; me: { role: string; responsibleId?: string; email: string } }) {
-  // sesión de calificación por tribu (modo convención): el líder la abre, la cierra, ajusta el orden y guarda
-  const convencion = cat.company.mode === "convencion";
+  // sesión de calificación por grupo: en la convención, el líder de tribu la abre, la cierra, ajusta el orden y guarda; en el acompañamiento, el advisor por prioridad
+  const V = useVocab(); const acomp = isAcompanamiento(cat.company);
+  const convencion = isGuiada(cat.company);
   const sessions = prio?.sessions ?? cat.company.prioSessions ?? {};
   const canManageSession = convencion && (me.role === "CONSULTOR" || me.role === "ADMIN" || me.role === "LIDER");
   const tribeOfLever = (leverId: string) => levers.find((l) => l.id === leverId)?.ownerId ?? "";
@@ -783,7 +846,9 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   // quien pertenece a una tribu llega con su tribu filtrada y primero; puede quitar el filtro para ver las demás
   const myLever = levers.find((l) => l.ownerId === me.responsibleId)?.id ?? "";
   const [sel, setSel] = useState(myLever);
-  const enTribu = convencion && !!me.responsibleId && (me.role === "RESPONSABLE" || me.role === "LIDER");
+  const enTribu = cat.company.mode === "convencion" && !!me.responsibleId && (me.role === "RESPONSABLE" || me.role === "LIDER");
+  // acompañamiento: el comité califica paso a paso cada prioridad cuya sesión esté abierta
+  const abiertas = acomp && ["DIRECTIVO", "LIDER", "RESPONSABLE", "CONSULTOR"].includes(me.role) ? Object.entries(sessions).filter(([, ses]) => ses.status === "abierta").map(([k]) => k) : [];
   const mySession = me.responsibleId ? sessionOf(sessions, me.responsibleId) : null;
   const [expected, setExpected] = useState(3);
   const rows = prio?.ranking ?? [];
@@ -791,12 +856,12 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   type Ini = Cat["initiatives"][number];
   const objLever = (i: { cmi: string }) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
   const tribe = (id?: string) => (id ? cat.responsibles.find((r) => r.id === id)?.dependencia : undefined);
-  const leverLabel = (l: Lever) => { const t = tribe(l.ownerId); return t ? `${t} · ${l.name}` : `${l.order}. ${l.name}`; };
+  const leverLabel = (l: Lever) => { const t = tribe(l.ownerId); return acomp ? `${l.order}. ${l.name}${t ? ` · ${t}` : ""}` : t ? `${t} · ${l.name}` : `${l.order}. ${l.name}`; };
   const krs = cat.kpis.filter((k) => cat.initiatives.some((i) => i.kpi === k.code));
   const groupKey = (i: Ini) => (mode === "tribu" ? objLever(i) : i.kpi && krs.some((k) => k.code === i.kpi) ? i.kpi : "");
   const leversOrdenadas = [...levers].sort((a, b) => Number(b.id === myLever) - Number(a.id === myLever) || a.order - b.order);
   const groupDefs: { key: string; label: string }[] = mode === "tribu"
-    ? [...leversOrdenadas.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: "Sin palanca" }]
+    ? [...leversOrdenadas.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: `Sin ${V.leverLow}` }]
     : [...krs.map((k) => ({ key: k.code, label: `${k.code} · ${k.name}` })), { key: "", label: "Sin resultado clave" }];
   const list = cat.initiatives.filter((i) => !sel || groupKey(i) === sel);
   const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
@@ -809,12 +874,13 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
     const pos = new Map(ses.order.map((id, n) => [id, n]));
     return [...items].sort((a, b) => (pos.get(a.i.id) ?? 999) - (pos.get(b.i.id) ?? 999));
   };
-  const groups = groupDefs.map((g) => { const ses = mode === "tribu" ? sessionOf(sessions, tribeOfLever(g.key)) : null; const tag = ses && ses.status === "guardada" && ses.order ? " · orden guardado por el líder" : ses && ses.status === "abierta" ? " · calificación abierta" : ""; return { ...g, label: g.label + tag, items: applyOrder(g.key, rank(list.filter((i) => groupKey(i) === g.key))) }; }).filter((g) => g.items.length > 0);
+  const groups = groupDefs.map((g) => { const ses = mode === "tribu" ? sessionOf(sessions, tribeOfLever(g.key)) : null; const tag = ses && ses.status === "guardada" && ses.order ? ` · orden guardado por ${V.manager}` : ses && ses.status === "abierta" ? " · calificación abierta" : ""; return { ...g, label: g.label + tag, items: applyOrder(g.key, rank(list.filter((i) => groupKey(i) === g.key))) }; }).filter((g) => g.items.length > 0);
   const ranked = groups.flatMap((g) => g.items);
   const sub = (i: Ini) => (mode === "tribu" ? (i.kpi ? `KR ${i.kpi}` : "sin KR") : owner(i.ownerId));
   return (
     <>
       {enTribu && mySession?.status === "abierta" && <CalificacionGuiada cat={cat} prio={prio} email={me.email} tribe={me.responsibleId!} onDone={() => { onRefresh(); }} />}
+      {abiertas.map((t) => <CalificacionGuiada key={t} cat={cat} prio={prio} email={me.email} tribe={t} onDone={() => { onRefresh(); }} />)}
       {enTribu && mySession?.status !== "abierta" && me.role === "RESPONSABLE" && (
         <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, white)" }}>
           {mySession?.status === "cerrada" ? "La calificación de tu tribu aún no está abierta. Cuando el líder la abra, aquí aparecerá paso a paso cada iniciativa lista para calificar." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización. Abajo ves el ranking en vivo."}
@@ -823,10 +889,10 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[11px]" role="group" aria-label="Agrupar el ranking">
           {(["tribu", "resultado"] as const).map((m) => (
-            <button key={m} type="button" onClick={() => { setMode(m); setSel(""); }} className={`rounded-md px-2.5 py-1 font-bold transition-colors ${mode === m ? "text-white" : "text-muted hover:text-ink"}`} style={mode === m ? { background: "var(--navy)" } : undefined}>{m === "tribu" ? "Por tribu" : "Por resultado"}</button>
+            <button key={m} type="button" onClick={() => { setMode(m); setSel(""); }} className={`rounded-md px-2.5 py-1 font-bold transition-colors ${mode === m ? "text-white" : "text-muted hover:text-ink"}`} style={mode === m ? { background: "var(--navy)" } : undefined}>{m === "tribu" ? (acomp ? `Por ${V.leverLow}` : "Por tribu") : "Por resultado"}</button>
           ))}
         </div>
-        <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? "Todas las tribus" : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
+        <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? (acomp ? V.leversAll : V.groupsAll) : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
         <label className="flex items-center gap-1.5 text-[11.5px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[11.5px]" /></label>
         <button onClick={onRefresh} className="btn-ghost ml-auto !py-1.5 text-[11.5px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[10.5px] text-faint">se refresca cada 15 s</span>
@@ -836,7 +902,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Evaluaciones registradas" value={(prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)).length} foot={`${cov.evaluators.length} evaluadores activos`} />
-        <StatCard label="Habilitadas para calificar" value={list.filter((i) => i.kpi).length} unit={`de ${list.length}`} foot="vinculadas a un resultado clave por el líder de tribu" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+        <StatCard label="Habilitadas para calificar" value={list.filter((i) => i.kpi).length} unit={`de ${list.length}`} foot={acomp ? "vinculadas a un resultado clave" : "vinculadas a un resultado clave por el líder de tribu"} accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="rise overflow-hidden">
@@ -853,7 +919,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                     <span className="block text-[13px] font-bold leading-snug text-ink">{i.name}</span>
                     <span className="num block text-[10.5px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">
-                      {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title="Sin resultado clave: el líder de tribu la vincula en Iniciativas → KR">sin KR · no se califica</span>}
+                      {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR · no se califica</span>}
                       <span className={`chip !py-0 text-[9.5px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
                       {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
                       {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
@@ -887,7 +953,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                       {CRITERIA.map((cr) => <td key={cr.key} className="num px-2 py-2 text-center">{c && c.n ? <span className={`font-bold ${c.rounded[cr.key] >= 3 ? "text-ink" : "text-muted"}`}>{c.avg[cr.key]}</span> : <span className="text-faint">—</span>}</td>)}
                       <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
                       <td className="px-2 py-2"><span className="flex flex-wrap gap-1">
-                        {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title="Sin resultado clave: el líder de tribu la vincula en Iniciativas → KR">sin KR</span>}
+                        {!i.kpi && <span className="chip chip-warn !py-0 text-[9.5px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR</span>}
                         {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[9.5px]">D {c.rounded.D}</span>}
                         {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[9.5px]">L {c.rounded.L}</span>}
                         {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[9.5px]">consenso</span>}
@@ -936,6 +1002,7 @@ const matchStatus = (r: PortRow, st: PortStatus) =>
   st === "" ? true : st === "PENDIENTE" ? !r.decision : st === "TACTICA" ? r.c.transfer : st === "SIN_DUENO" ? !r.ownerId : st === "SIN_KR" ? !r.kpi : st === "SIN_EVAL" ? r.c.n === 0 : r.decision === st;
 
 function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers: Lever[]; horizons: string[]; prio: PriorizacionData | null; base: string }) {
+  const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   // el portafolio parte del 100 % de las iniciativas del catálogo; el ranking consolidado se superpone cuando llega
   const all: PortRow[] = useMemo(() => cat.initiatives.map((i) => {
     const r = prio?.ranking.find((x) => x.id === i.id);
@@ -951,12 +1018,12 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   const rows = useMemo(() => all.filter((r) => (!fOe || r.oe === fOe) && (!fTribe || r.ownerId === fTribe) && (!fLever || r.leverId === fLever) && matchStatus(r, fStatus)), [all, fOe, fTribe, fLever, fStatus]);
   const filtered = !!(fOe || fTribe || fLever || fStatus);
   // en la convención todas las iniciativas se desarrollan a 2027: el portafolio se lee por palanca (y tribu), no por horizonte
-  const convencion = isConvencion(cat.company);
+  const convencion = isGuiada(cat.company);
   const count = (st: PortStatus) => all.filter((r) => matchStatus(r, st)).length;
   const hzAll = useMemo(() => [...horizons, ...[...new Set(all.map((r) => r.horizon))].filter((h) => !horizons.includes(h))], [horizons, all]);   // «sin horizonte» o valores fuera del catálogo también se muestran
   const groups = convencion ? [...levers.map((l) => l.id), ...(all.some((r) => !r.leverId) ? [""] : [])] : hzAll;
   const gKey = (r: PortRow) => convencion ? (r.leverId ?? "") : r.horizon;
-  const gLabel = (g: string) => convencion ? (levers.find((l) => l.id === g)?.name ?? "Sin palanca") : (g ? horizonLabel(cat.company, g) : "Sin horizonte");
+  const gLabel = (g: string) => convencion ? (levers.find((l) => l.id === g)?.name ?? `Sin ${V.leverLow}`) : (g ? horizonLabel(cat.company, g) : "Sin horizonte");
   const sum = portfolioSummary(convencion ? rows.map((r) => ({ ...r, horizon: r.leverId ?? "" })) : rows, groups);
   const tactical = rows.filter((r) => r.c.transfer);
   const DEC: (Decision | "PENDIENTE")[] = ["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR", "PENDIENTE"];
@@ -968,7 +1035,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <p className="text-[12.5px] text-muted">{convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
+        <p className="text-[12.5px] text-muted">{acomp ? `El portafolio se lee por ${V.leverLow} y ${V.groupLow}. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa.` : convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
         <button onClick={download} className="btn-ghost w-full justify-center !py-1.5 text-[11.5px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
       </div>
       <Card className="rise mb-5 overflow-hidden">
@@ -976,8 +1043,8 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           <Filter size={13} className="shrink-0 text-cyan-deep" />
           <span className="num text-[12px] font-bold text-ink">{rows.length} de {all.length} iniciativas{filtered ? "" : " · 100 %"}</span>
           <select value={fOe} onChange={(e) => setFOe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[300px]" title="Objetivo estratégico"><option value="">Todos los objetivos (OE)</option>{oes.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select>
-          <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title="Tribu o área responsable"><option value="">Todas las tribus</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
-          <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title="Palanca"><option value="">Todas las palancas</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+          <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[260px]" title={`${V.group} o área responsable`}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+          <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
           <select value={fStatus} onChange={(e) => setFStatus(e.target.value as PortStatus)} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto" title="Estado"><option value="">Todos los estados</option>{PORT_STATUS.filter((x) => x.key).map((x) => <option key={x.key} value={x.key}>{x.label} ({count(x.key)})</option>)}</select>
           {filtered && <button type="button" onClick={() => { setFOe(""); setFTribe(""); setFLever(""); setFStatus(""); }} className="btn-ghost !py-1.5 text-[11.5px]"><X size={12} /> Quitar filtros</button>}
         </div>
@@ -988,7 +1055,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         </div>
       </Card>
       <Card className="rise mb-5 overflow-hidden">
-        <CardHeader title={convencion ? "Resumen por palanca y decisión" : "Resumen por horizonte y decisión"} />
+        <CardHeader title={convencion ? `Resumen por ${V.leverLow} y decisión` : "Resumen por horizonte y decisión"} />
         <div className="space-y-2 px-4 pb-3 sm:hidden">
           {groups.map((h) => (
             <div key={h} className="rounded-xl bg-surface-2/60 px-3 py-2">
@@ -999,7 +1066,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         </div>
         <div className="hidden overflow-x-auto px-2 pb-3 sm:block">
           <table className="w-full min-w-[560px] text-[12px]">
-            <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? "Palanca" : "Horizonte"}</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
+            <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? V.lever : "Horizonte"}</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
             <tbody>
               {groups.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{gLabel(h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
             </tbody>
@@ -1032,11 +1099,11 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                   {r.rationale && <p className="mt-1 text-[11px] leading-snug text-ink-soft">{r.rationale}</p>}
                 </Link>
               ))}
-              {hr.length === 0 && <p className="px-4 py-3 text-[12px] italic text-faint">{convencion ? "Sin iniciativas en esta palanca." : "Sin iniciativas en este horizonte."}</p>}
+              {hr.length === 0 && <p className="px-4 py-3 text-[12px] italic text-faint">{convencion ? `Sin iniciativas en esta ${V.leverLow}.` : "Sin iniciativas en este horizonte."}</p>}
             </div>
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] text-[12px]">
-                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">Palanca</th><th className="num px-2 py-2 text-right">Puntaje</th>{convencion ? <th className="px-2 py-2">Inicio</th> : <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
+                <thead><tr className="text-left text-[9.5px] uppercase tracking-wider text-faint"><th className="px-4 py-2">Iniciativa</th><th className="px-2 py-2">{V.lever}</th><th className="num px-2 py-2 text-right">Puntaje</th>{convencion ? <th className="px-2 py-2">Inicio</th> : <th className="px-2 py-2">Sugerido</th>}<th className="px-2 py-2">Decisión</th><th className="px-2 py-2">Motivo</th></tr></thead>
                 <tbody>
                   {hr.map((r) => (
                     <tr key={r.id} className="border-t border-line">
@@ -1048,7 +1115,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                       <td className="px-2 py-2 text-[11px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
                     </tr>
                   ))}
-                  {hr.length === 0 && <tr><td colSpan={6} className="px-4 py-3 text-[12px] italic text-faint">{convencion ? "Sin iniciativas en esta palanca." : "Sin iniciativas en este horizonte."}</td></tr>}
+                  {hr.length === 0 && <tr><td colSpan={6} className="px-4 py-3 text-[12px] italic text-faint">{convencion ? `Sin iniciativas en esta ${V.leverLow}.` : "Sin iniciativas en este horizonte."}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -1114,7 +1181,7 @@ function AccesoQrModal({ section, onClose }: { section: Tab; onClose: () => void
     if (!res.ok) setError(j?.error ?? `Error ${res.status}`); else setRows(j.access);
     setBusy(false);
   };
-  const meta = TABS.find((t) => t.id === section)!;
+  const meta = TABS_CV.find((t) => t.id === section)!;
   const mine = rows ?? [];   // un solo acceso para toda la convención
   void section;
   return (
@@ -1328,7 +1395,9 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
   const cur = pendientes.length ? pendientes[salto % pendientes.length] : undefined;
   const kr = cur ? cat.kpis.find((k) => k.code === cur.kpi) : undefined;
   const obj = cur ? cat.objectives.find((o) => o.id === cur.cmi) : undefined;
-  const tribu = cat.responsibles.find((r) => r.id === tribe)?.dependencia ?? "tu tribu";
+  const acomp = isAcompanamiento(cat.company);
+  const leverDe = leversOf(cat.company).find((l) => l.ownerId === tribe);
+  const tribu = acomp ? (leverDe?.name ?? cat.responsibles.find((r) => r.id === tribe)?.dependencia ?? "esta prioridad") : (cat.responsibles.find((r) => r.id === tribe)?.dependencia ?? "tu tribu");
   const guardar = async (ev: { scores: Record<string, number>; type: Record<string, string>; notes: Partial<Record<string, string>> }) => {
     if (!cur) return false;
     setSaving(true); setError(null);
@@ -1353,11 +1422,11 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
       <div className="h-1.5 bg-surface-2"><div className="h-1.5 transition-all" style={{ width: `${n ? Math.round((100 * ok) / n) : 0}%`, background: "var(--grad-brand)" }} /></div>
       {!plegado && (
         <div className="px-4 py-4 sm:px-5">
-          {n === 0 && <EmptyNote>Tu tribu aún no tiene iniciativas vinculadas a un resultado clave: el líder las vincula en «Iniciativas → KR» y entonces aparecen aquí.</EmptyNote>}
+          {n === 0 && <EmptyNote>{acomp ? "Esta prioridad aún no tiene iniciativas vinculadas a un resultado clave: vincúlalas en «Iniciativas» y entonces aparecen aquí." : "Tu tribu aún no tiene iniciativas vinculadas a un resultado clave: el líder las vincula en «Iniciativas → KR» y entonces aparecen aquí."}</EmptyNote>}
           {n > 0 && !cur && (
             <div className="rounded-xl px-4 py-5 text-center" style={{ background: "color-mix(in srgb, var(--ok) 10%, white)" }}>
               <CheckCircle2 size={28} className="mx-auto text-ok" />
-              <div className="mt-2 text-[15px] font-extrabold text-ink">Listo: calificaste las {n} iniciativas de tu tribu</div>
+              <div className="mt-2 text-[15px] font-extrabold text-ink">Listo: calificaste las {n} iniciativas de {acomp ? tribu : "tu tribu"}</div>
               <p className="mt-1 text-[12px] text-muted">El ranking de abajo se actualiza en vivo con las calificaciones de todos; el líder cierra, consolida y propone el trimestre de inicio.</p>
             </div>
           )}
@@ -1385,6 +1454,9 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
 
 function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { cat: Cat; sessions: NonNullable<Cat["company"]["prioSessions"]>; me: { role: string; responsibleId?: string }; rank: (items: Cat["initiatives"]) => Cat["initiatives"]; scoreOf: (id: string) => number | null; onChanged: () => void }) {
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
+  const V = vocabOf(cat.company); const acomp = isAcompanamiento(cat.company);
+  const leverOf = (id: string) => leversOf(cat.company).find((l) => l.ownerId === id);
+  const groupName = (id: string) => { const t = tribes.find((x) => x.id === id); const l = leverOf(id); return acomp && l ? `${l.name}${t ? ` · ${t.dependencia || t.cargo}` : ""}` : (t?.dependencia || t?.cargo || id); };
   const leaderOnly = me.role === "LIDER" && !!me.responsibleId;
   const [tribe, setTribe] = useState(me.responsibleId && tribes.some((t) => t.id === me.responsibleId) ? me.responsibleId : (tribes[0]?.id ?? ""));
   const ses = sessionOf(sessions, tribe);
@@ -1395,9 +1467,9 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
   const ids = order ?? base.map((i) => i.id);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   const MSG: Record<PrioSessionAction, string> = {
-    abrir: "Vas a abrir la calificación para tu tribu: desde ahora cada miembro puede calificar una sola vez las iniciativas de la tribu. ¿Confirmas?",
+    abrir: acomp ? "Vas a abrir la calificación de esta prioridad: desde ahora cada miembro del comité puede calificar una sola vez sus iniciativas. ¿Confirmas?" : "Vas a abrir la calificación para tu tribu: desde ahora cada miembro puede calificar una sola vez las iniciativas de la tribu. ¿Confirmas?",
     cerrar: "Vas a cerrar la calificación: nadie más podrá calificar. Después podrás ajustar el orden a mano y guardar. ¿Confirmas?",
-    guardar: "Vas a guardar la priorización definitiva de tu tribu con este orden. ¿Confirmas?",
+    guardar: acomp ? "Vas a guardar la priorización definitiva de esta prioridad con este orden. ¿Confirmas?" : "Vas a guardar la priorización definitiva de tu tribu con este orden. ¿Confirmas?",
     reabrir: "Vas a reabrir la calificación; el orden guardado se conserva hasta que vuelvas a guardar. ¿Confirmas?",
   };
   const act = async (action: PrioSessionAction) => {
@@ -1412,7 +1484,7 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
   const move = (id: string, d: -1 | 1) => { const a = [...ids]; const i = a.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setOrder(a); };
   const name = (id: string) => cat.initiatives.find((i) => i.id === id)?.name ?? id;
   // trimestre de inicio propuesto por la tribu (T1 a T4 de 2027, o después); lo ratifica el directorio en la ficha
-  const INICIO = [["2027-T1", "T1"], ["2027-T2", "T2"], ["2027-T3", "T3"], ["2027-T4", "T4"], ["2028-T1", "Después"]] as const;
+  const INICIO = startQuarters(yearOfFirstHorizon(horizonsOf(cat.company)));
   const startOf = (id: string) => cat.initiatives.find((i) => i.id === id)?.start ?? "";
   const setStart = async (id: string, start: string) => {
     const ini = cat.initiatives.find((i) => i.id === id); if (!ini) return;
@@ -1426,11 +1498,11 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
   const hora = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) : "");
   return (
     <Card className="rise mb-5 overflow-hidden">
-      <CardHeader title="Mesa de la tribu · calificación y trimestre de inicio" sub="el líder abre la calificación, la cierra, ajusta el orden si hace falta, propone el trimestre de inicio de cada iniciativa y guarda" />
+      <CardHeader title={acomp ? "Sesión por prioridad · calificación y trimestre de inicio" : "Mesa de la tribu · calificación y trimestre de inicio"} sub={acomp ? "el advisor abre la calificación de la prioridad, la cierra, ajusta el orden si hace falta, propone el trimestre de inicio de cada iniciativa y guarda" : "el líder abre la calificación, la cierra, ajusta el orden si hace falta, propone el trimestre de inicio de cada iniciativa y guarda"} />
       <div className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-2">
-          {leaderOnly ? <span className="text-[12.5px] font-bold text-ink">{tribes.find((t) => t.id === tribe)?.dependencia ?? "Tu tribu"}</span>
-            : <select value={tribe} onChange={(e) => { setTribe(e.target.value); setOrder(null); }} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[320px]">{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>}
+          {leaderOnly ? <span className="text-[12.5px] font-bold text-ink">{groupName(tribe)}</span>
+            : <select value={tribe} onChange={(e) => { setTribe(e.target.value); setOrder(null); }} className="input w-full !py-1.5 pr-7 !text-[11.5px] sm:w-auto sm:max-w-[320px]">{tribes.map((t) => <option key={t.id} value={t.id}>{groupName(t.id)}</option>)}</select>}
           <span className={`chip !py-0.5 text-[10px] ${tone}`}>{PRIO_STATUS_LABEL[ses.status]}</span>
           <span className="ml-auto flex flex-wrap gap-2">
             {ses.status === "cerrada" && <button type="button" disabled={busy || own.length === 0} onClick={() => void act("abrir")} className="btn-primary !py-1.5 text-[11.5px] disabled:opacity-40"><Scale size={12} /> Abrir calificación</button>}
@@ -1441,10 +1513,10 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
         </div>
         {err && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{err}</p>}
         <p className="mt-2 text-[11px] text-faint">
-          {ses.status === "cerrada" ? "Mientras no abras la calificación, los miembros de la tribu no pueden calificar."
+          {ses.status === "cerrada" ? `Mientras no abras la calificación, ${V.members} no pueden calificar.`
             : ses.status === "abierta" ? `Abierta${ses.openedAt ? " a las " + hora(ses.openedAt) : ""}: cada miembro califica una sola vez; el ranking se actualiza en vivo.`
-            : ses.status === "revision" ? "Calificación cerrada. Revisa el orden: mueve las iniciativas si la tribu decide algo distinto al puntaje, y guarda."
-            : `Priorización guardada${ses.savedAt ? " a las " + hora(ses.savedAt) : ""}. Este orden y los trimestres de inicio propuestos son los que presenta la tribu en la socialización; el directorio ratifica el trimestre definitivo en la ficha de cada iniciativa.`}
+            : ses.status === "revision" ? `Calificación cerrada. Revisa el orden: mueve las iniciativas si ${acomp ? "el comité" : "la tribu"} decide algo distinto al puntaje, y guarda.`
+            : `Priorización guardada${ses.savedAt ? " a las " + hora(ses.savedAt) : ""}. Este orden y los trimestres de inicio propuestos son los que ${acomp ? "se llevan a la sesión de trabajo; la dirección" : "presenta la tribu en la socialización; el directorio"} ratifica el trimestre definitivo en la ficha de cada iniciativa.`}
         </p>
         {(ses.status === "revision" || ses.status === "guardada") && own.length > 0 && (
           <ol className="mt-3 space-y-1">
@@ -1591,8 +1663,8 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
   const [fuentes, setFuentes] = useState<Evidencia[]>([]);
   const [verFuentes, setVerFuentes] = useState(false);
   const [creando, setCreando] = useState(false);
-  const tribe = cat.responsibles.find((r) => r.id === tribeId)?.dependencia ?? "la tribu";
-  const nota = `Se crean con línea base 0 y la meta sugerida (si la hay), dueño ${tribe} y plazo a fin de ${horizonLabel(cat.company, horizon)}; la tribu fija base y meta reales.`;
+  const tribe = cat.responsibles.find((r) => r.id === tribeId)?.dependencia ?? (isAcompanamiento(cat.company) ? "el sponsor" : "la tribu");
+  const nota = `Se crean con línea base 0 y la meta sugerida (si la hay), dueño ${tribe} y plazo a fin de ${horizonLabel(cat.company, horizon)}; ${isAcompanamiento(cat.company) ? "el sponsor" : "la tribu"} fija base y meta reales.`;
   const pedir = async (m: "sugerir" | "validar") => {
     setModo(m); setLoading(true); setError(null); setSug(null); setVal(null); setFuentes([]);
     const res = await fetch(m === "sugerir" ? "/api/td/okr/sugerir" : "/api/td/okr/validar", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -1664,7 +1736,7 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
               <KrChecklist krs={val.v.faltantes} chosen={val.chosen} onToggle={(n, v) => setVal({ ...val, chosen: val.chosen.map((c, m) => (m === n ? v : c)) })} onCrear={canEdit && !lleno ? (l) => void crear(l) : undefined} creando={creando} nota={nota} />
             </div>
           )}
-          <p className="text-[10.5px] leading-snug text-faint">Revisión del asistente, no una decisión: la tribu discute y el líder registra. Vuelve a validar después de los cambios.</p>
+          <p className="text-[10.5px] leading-snug text-faint">Revisión del asistente, no una decisión: {isAcompanamiento(cat.company) ? "el comité discute y el advisor registra" : "la tribu discute y el líder registra"}. Vuelve a validar después de los cambios.</p>
         </div>
       )}
     </div>

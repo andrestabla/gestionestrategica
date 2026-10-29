@@ -6,7 +6,8 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isConvencion, horizonsOf } from "@/data/catalogo";
+import { isConvencion, isAcompanamiento, horizonsOf, leversOf } from "@/data/catalogo";
+import { vocabOf } from "@/lib/vocabulario";
 import { DIMS, PRACTICES } from "@/data/mapa";
 import { PERSPECTIVES } from "@/data/cmi";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
@@ -61,6 +62,9 @@ function PanelHome() {
   const budgetPct = budget.planned ? Math.round((budget.executed / budget.planned) * 100) : 0;
   // etiquetas de los módulos: lo que hay en el catálogo de esta empresa, no cifras fijas
   const horizons = horizonsOf(v.catalog.company);
+  const acomp = isAcompanamiento(v.catalog.company);
+  const V = vocabOf(v.catalog.company);
+  const levers = leversOf(v.catalog.company);
   const roadmap = horizons.length > 1 ? `${horizons[0].label} → ${horizons[horizons.length - 1].label}` : horizons[0].label;
   const serie = summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ");
 
@@ -177,6 +181,34 @@ function PanelHome() {
       {/* ── módulos ── */}
       <div className="rise rise-4">
         <div className="kicker mb-4">Módulos de la plataforma</div>
+        {acomp ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
+            desc="Autoevaluación directiva y lectura de las capacidades: perfil, dimensiones y qué mirar primero."
+            tags={[cuenta(DIMS.length, "dimensión", "dimensiones")]} />
+          <ModuleCard href={`${base}/panel/convencion?t=prioridades`} code="PE" title={V.tabs.prioridades}
+            desc="Las prioridades 3 a 5 años con su sponsor, su indicador y su descripción: ordenan todo lo demás."
+            tags={[cuenta(levers.length, "prioridad", "prioridades")]} />
+          <ModuleCard href={`${base}/panel/convencion?t=direccion`} code="OD" title={V.tabs.direccion}
+            desc="Objetivos del cuadro de mando por prioridad estratégica y horizonte."
+            tags={[cuenta(v.catalog.objectives.length, "objetivo")]} />
+          <ModuleCard href={`${base}/panel/convencion?t=okr`} code="KR" title={V.tabs.okr}
+            desc="Cada objetivo con sus resultados clave: definición, línea base, meta, dueño y plazo."
+            tags={[cuenta(v.kpis.length, "resultado clave", "resultados clave")]} />
+          <ModuleCard href={`${base}/panel/convencion?t=iniciativas`} code="IN" title={V.tabs.iniciativas}
+            desc="Las iniciativas del plan, vinculadas al resultado clave que mueven."
+            tags={[cuenta(initiatives.length, "iniciativa")]} />
+          <ModuleCard href={`${base}/panel/convencion?t=priorizacion`} code="PR" title={V.tabs.priorizacion}
+            desc="Calificación con la matriz D·E·M·L por sesión de prioridad, ranking y trimestre de inicio."
+            tags={["Matriz D·E·M·L"]} />
+          <ModuleCard href={`${base}/panel/convencion?t=portafolio`} code="PO" title={V.tabs.portafolio}
+            desc="Decisión de tiempo por iniciativa y portafolio por prioridad estratégica."
+            tags={[roadmap]} />
+          <ModuleCard href={`${base}/panel/bi`} code="M7" title="Inteligencia"
+            desc="Contexto del sector con datos reales y lectura territorial."
+            tags={[v.catalog.company.sector || "Sector"]} />
+        </div>
+        ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
             desc={`Radar de capacidades, mapa de calor de las ${DIMS.length} dimensiones, evidencia por práctica y serie de mediciones.`}
@@ -197,6 +229,7 @@ function PanelHome() {
             desc="Avance, presupuesto en tres estados y factores críticos de éxito en semáforo."
             tags={[fmtCOP(budget.planned)]} />
         </div>
+        )}
       </div>
     </>
   );

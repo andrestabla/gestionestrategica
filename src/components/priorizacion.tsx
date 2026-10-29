@@ -9,7 +9,8 @@ import { useCallback, useEffect, useState } from "react";
 import { sessionOf, type PrioSessions } from "@/lib/priorizacion-sesion";
 import { useCan, useUser } from "@/components/user-context";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
-import { horizonLabel, typeRuleOf, isConvencion } from "@/data/catalogo";
+import { horizonLabel, typeRuleOf, isConvencion, horizonsOf } from "@/data/catalogo";
+import { vocabOf, yearOfFirstHorizon, startQuarters } from "@/lib/vocabulario";
 import {
   CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount, validationLabel,
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
@@ -86,14 +87,16 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const canEval = useCan("evaluate_initiatives", ini ? { line, ownerId: ini.ownerId } : line) && !(cv.catalog.company.mode === "convencion" && user.role === "LIDER" && !!user.responsibleId && ini?.ownerId !== user.responsibleId);
   const linked = !!ini?.kpi;   // sin resultado clave no se califica
   // modo convención: la tribu califica solo con su calificación abierta por el líder, y cada miembro una sola vez
-  const convencion = cv.catalog.company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER");
+  const V = vocabOf(cv.catalog.company);
+  const acomp = cv.catalog.company.mode === "acompanamiento";
+  const convencion = (cv.catalog.company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER")) || (acomp && (user.role === "RESPONSABLE" || user.role === "LIDER" || user.role === "DIRECTIVO"));
   const session = sessionOf(cv.catalog.company.prioSessions, ini?.ownerId);
   // en la convención el líder de tribu propone; decide y ratifica el directorio con gerencia y el advisor
   const canDecide = useCan("decide_initiatives") && !(cv.catalog.company.mode === "convencion" && user.role === "LIDER" && !!user.responsibleId);
   const refetchCatalog = useCatalogRefetch();
   const { data, refetch } = usePriorizacion(iniId);
   // convención: trimestre de inicio (propuesto por la tribu, ratificado por el directorio) en lugar del horizonte
-  const INICIO = [["2027-T1", "T1 2027"], ["2027-T2", "T2 2027"], ["2027-T3", "T3 2027"], ["2027-T4", "T4 2027"], ["2028-T1", "Después"]] as const;
+  const INICIO = startQuarters(yearOfFirstHorizon(horizonsOf(cv.catalog.company))).map(([v, l]) => [v, l === "Después" ? l : `${l} ${v.slice(0, 4)}`] as const);
   const setStart = async (start: string) => {
     if (!ini) return; setSaving(true); setError(null);
     const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
@@ -243,9 +246,9 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
               <div className="num">{(["D", "E", "M", "L"] as const).map((k) => `${k} ${mine.scores[k]}`).join(" · ")}{mine.type && Object.keys(mine.type).length ? ` · ${Object.values(mine.type).includes("TACTICO") ? "táctica" : "estratégica"}` : ""}</div>
             </div>
           ) : canEval && linked && convencion && session.status !== "abierta" ? (
-            <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">{session.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : session.status === "revision" ? "La calificación de tu tribu ya se cerró: el líder revisa el orden y guarda la priorización." : "La priorización de tu tribu ya está guardada."}</p>
+            <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">{session.status === "cerrada" ? `La calificación de ${acomp ? "esta prioridad" : "tu tribu"} aún no está abierta: la abre ${V.manager} desde ${V.tabs.priorizacion}.` : session.status === "revision" ? `La calificación de ${acomp ? "esta prioridad" : "tu tribu"} ya se cerró: ${V.manager} revisa el orden y guarda la priorización.` : `La priorización de ${acomp ? "esta prioridad" : "tu tribu"} ya está guardada.`}</p>
           ) : canEval && !linked ? (
-            <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">Esta iniciativa aún no está vinculada a un resultado clave. El líder de la tribu la vincula en «Iniciativas → KR» y entonces queda habilitada para calificar.</p>
+            <p className="rounded-xl bg-surface-2/60 px-4 py-3 text-[12px] leading-relaxed text-muted">Esta iniciativa aún no está vinculada a un resultado clave. {acomp ? `Se vincula en «${V.tabs.iniciativas}»` : "El líder de la tribu la vincula en «Iniciativas → KR»"} y entonces queda habilitada para calificar.</p>
           ) : canEval ? (
             <EvaluationForm key={mine?.at ?? "nueva"} initial={mine} saving={saving} rule={typeRuleOf(cv.catalog.company)} confirmOnce={convencion} onSave={(ev) => post({ evaluation: ev })} />
           ) : (

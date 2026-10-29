@@ -13,7 +13,8 @@ import {
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
   FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
-import { ACCESS_TABS } from "@/lib/acceso";
+import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
+import { vocabOf } from "@/lib/vocabulario";
 const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
 import { CommandPalette, SearchButton } from "@/components/command-palette";
 import type { SessionUser } from "@/lib/session";
@@ -191,11 +192,13 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   children: ReactNode;
   user: SessionUser;
   companies?: { slug: string; name: string; shortName: string; active: boolean }[];
-  mode?: "completa" | "convencion";
+  mode?: CompanyMode;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const convencion = mode === "convencion";
+  const acomp = mode === "acompanamiento";
+  const V = vocabOf({ mode });
   const router = useRouter();
   const company = user.company;
   const base = company ? `/${company.slug}` : "";
@@ -237,13 +240,25 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
 
   // modo convención: solo las cinco secciones (y Administración para quien administra)
   const NAV_CV = [{ href: "/panel/convencion?t=itinerario", label: "Itinerario", icon: CalendarDays, code: undefined as string | undefined }, { href: "/panel/convencion?t=guia", label: "Guía del día 2", icon: BookOpen, code: undefined as string | undefined }, ...ACCESS_TABS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }))];
-  const baseNav = convencion ? NAV_CV : NAV;
+  // modo acompañamiento: diagnóstico y la ruta de estrategia con el vocabulario de la empresa (prioridades y sponsors), sin QR ni itinerario
+  const NAV_AC = [
+    { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined },
+    { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" as string | undefined },
+    { href: "/panel/convencion?t=prioridades", label: V.tabs.prioridades, icon: Target, code: undefined as string | undefined },
+    { href: "/panel/convencion?t=direccion", label: V.tabs.direccion, icon: Network, code: undefined as string | undefined },
+    { href: "/panel/convencion?t=okr", label: V.tabs.okr, icon: Gauge, code: undefined as string | undefined },
+    { href: "/panel/convencion?t=iniciativas", label: V.tabs.iniciativas, icon: Rocket, code: undefined as string | undefined },
+    { href: "/panel/convencion?t=priorizacion", label: V.tabs.priorizacion, icon: Scale, code: undefined as string | undefined },
+    { href: "/panel/convencion?t=portafolio", label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined },
+    { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined },
+  ];
+  const baseNav = convencion ? NAV_CV : acomp ? NAV_AC : NAV;
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
     ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2 }]
     : baseNav;
   const isActive = (href: string) => {
-    if (href.includes("?t=")) return path.startsWith("/panel/convencion") && (searchParams.get("t") ?? "direccion") === href.split("?t=")[1];
-    if (convencion && href === "/panel/admin") return path.startsWith("/panel/admin");
+    if (href.includes("?t=")) return path.startsWith("/panel/convencion") && (searchParams.get("t") ?? (acomp ? "prioridades" : "direccion")) === href.split("?t=")[1];
+    if ((convencion || acomp) && href === "/panel/admin") return path.startsWith("/panel/admin");
     return href === "/panel" ? path === "/panel" : path.startsWith(href);
   };
 
@@ -386,9 +401,11 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
 
           <div className="flex min-w-0 items-baseline gap-2.5">
             <span className="truncate text-[13.5px] font-bold tracking-tight text-ink">
-              {convencion && path.startsWith("/panel/convencion") ? ((searchParams.get("t") === "itinerario" ? "Itinerario" : ACCESS_TABS.find((x) => x.id === (searchParams.get("t") ?? "direccion"))?.label) ?? "Convención") : (current?.label ?? "Panel")}
+              {convencion && path.startsWith("/panel/convencion") ? ((searchParams.get("t") === "itinerario" ? "Itinerario" : ACCESS_TABS.find((x) => x.id === (searchParams.get("t") ?? "direccion"))?.label) ?? "Convención")
+                : acomp && path.startsWith("/panel/convencion") ? (NAV_AC.find((n) => n.href === `/panel/convencion?t=${searchParams.get("t") ?? "prioridades"}`)?.label ?? "Estrategia")
+                : (current?.label ?? "Panel")}
             </span>
-            {current?.code && (
+            {current?.code && !(acomp && path.startsWith("/panel/convencion")) && (
               <span className="num text-[10px] font-bold tracking-wider text-faint">{current.code}</span>
             )}
           </div>

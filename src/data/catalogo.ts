@@ -64,6 +64,10 @@ export type Lever = { id: string; name: string; order: number; ownerId?: string;
 
 /** ¿La empresa opera en modo convención (menú reducido a las cinco secciones)? */
 export const isConvencion = (c: Pick<CompanyInfo, "mode"> | null | undefined): boolean => c?.mode === "convencion";
+/** ¿Acompañamiento (prioridades estratégicas, objetivos directivos, resultados clave, iniciativas, priorización y portafolio, con cuentas)? */
+export const isAcompanamiento = (c: Pick<CompanyInfo, "mode"> | null | undefined): boolean => c?.mode === "acompanamiento";
+/** Modos guiados por el método (convención y acompañamiento): KR completo para vincular, máximo dos iniciativas por KR y calificación por sesión. */
+export const isGuiada = (c: Pick<CompanyInfo, "mode"> | null | undefined): boolean => c?.mode === "convencion" || c?.mode === "acompanamiento";
 
 /** Regla de tipo (estratégica o táctica) de la empresa; sin definición rige la regla general. */
 export const typeRuleOf = (c: Pick<CompanyInfo, "typeRule"> | null | undefined): TypeRule =>

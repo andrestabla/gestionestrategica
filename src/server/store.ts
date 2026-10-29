@@ -14,7 +14,7 @@ import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
-  type Catalog, type CompanyInfo, horizonsOf, typeRuleOf, type Horizon, type Lever } from "@/data/catalogo";
+  type Catalog, type CompanyInfo, horizonsOf, typeRuleOf, isGuiada, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
@@ -652,7 +652,7 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const tr = parseTypeRule(input.typeRule);
   if (!tr.ok) return { ok: false, status: 422, error: tr.error };
   if (tr.rule) info.typeRule = tr.rule;
-  if (input.mode !== undefined && !isCompanyMode(input.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
+  if (input.mode !== undefined && !isCompanyMode(input.mode)) return { ok: false, status: 422, error: "Modo inválido: completa, convencion o acompanamiento." };
   if (isCompanyMode(input.mode)) info.mode = input.mode;
   const ins = parseInstruments(input.instruments);
   if (!ins.ok) return { ok: false, status: 422, error: ins.error };
@@ -725,7 +725,7 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     audit(actor, "task", `empresa:${c.slug}`, `plantillas de KR: ${kt.templates?.length ?? 0}`);
   }
   if (patch.mode !== undefined) {
-    if (!isCompanyMode(patch.mode)) return { ok: false, status: 422, error: "Modo inválido: completa o convencion." };
+    if (!isCompanyMode(patch.mode)) return { ok: false, status: 422, error: "Modo inválido: completa, convencion o acompanamiento." };
     c.mode = patch.mode;
     audit(actor, "task", `empresa:${c.slug}`, `modo ${patch.mode}`);
   }
@@ -1956,9 +1956,14 @@ export function evaluateInitiative(
     };
   }
   // en modo convención, los miembros y líderes de tribu califican solo con la calificación de su tribu abierta, y una sola vez
-  if (isCompanyMode(cat().company.mode) && cat().company.mode === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER")) {
+  // en acompañamiento, también los directivos del comité: la sesión de la prioridad (su sponsor) la abre el advisor
+  const modo = cat().company.mode;
+  const porSesion = (modo === "convencion" && (user.role === "RESPONSABLE" || user.role === "LIDER")) || (modo === "acompanamiento" && (user.role === "RESPONSABLE" || user.role === "LIDER" || user.role === "DIRECTIVO"));
+  if (porSesion) {
     const ses = sessionOf(cat().company.prioSessions, base.ownerId);
-    if (ses.status !== "abierta") return { ok: false, status: 403, error: ses.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización." };
+    if (ses.status !== "abierta") return { ok: false, status: 403, error: modo === "acompanamiento"
+      ? (ses.status === "cerrada" ? "La calificación de esta prioridad aún no está abierta: la abre el advisor desde Priorización." : "La calificación de esta prioridad ya se cerró; el advisor revisa y guarda el orden.")
+      : (ses.status === "cerrada" ? "La calificación de tu tribu aún no está abierta: la abre el líder de tribu desde Priorización en vivo." : "La calificación de tu tribu ya se cerró; el líder revisa y guarda la priorización.") };
     if (evals().has(`${iniId}|${user.email.toLowerCase()}`)) return { ok: false, status: 409, error: "Ya calificaste esta iniciativa: cada miembro califica una sola vez." };
   }
   const scores = {} as Record<CriterionKey, 1 | 2 | 3 | 4>;
@@ -1996,7 +2001,7 @@ export function evaluateInitiative(
 export function setPrioSession(user: SessionUser, tribeId: unknown, action: PrioSessionAction, order?: unknown): { ok: true; session: import("@/lib/priorizacion-sesion").PrioSession } | { ok: false; status: number; error: string } {
   const c = cat();
   const tribe = str(tribeId, 20);
-  if (!c.responsibles.some((r) => r.id === tribe)) return { ok: false, status: 422, error: "La tribu no existe." };
+  if (!c.responsibles.some((r) => r.id === tribe)) return { ok: false, status: 422, error: "El responsable del grupo no existe." };
   const leader = user.role === "LIDER" && (!user.responsibleId || user.responsibleId === tribe);
   if (!(leader || user.role === "CONSULTOR" || user.role === "ADMIN")) return { ok: false, status: 403, error: user.role === "LIDER" ? "Solo el líder de esa tribu (o el advisor) maneja su calificación." : "Solo el líder de tribu abre, cierra y guarda la calificación." };
   const prev = sessionOf(c.company.prioSessions, tribe);
@@ -2040,7 +2045,7 @@ export function setPrioSession(user: SessionUser, tribeId: unknown, action: Prio
 export function resetPrioSession(user: SessionUser, tribeId: unknown): { ok: true; removed: number } | { ok: false; status: number; error: string } {
   const c = cat();
   const tribe = str(tribeId, 20);
-  if (!c.responsibles.some((r) => r.id === tribe)) return { ok: false, status: 422, error: "La tribu no existe." };
+  if (!c.responsibles.some((r) => r.id === tribe)) return { ok: false, status: 422, error: "El responsable del grupo no existe." };
   if (!(user.role === "CONSULTOR" || user.role === "ADMIN")) return { ok: false, status: 403, error: "Solo el advisor o el admin reinician la calificación de una tribu." };
   const ids = new Set(c.initiatives.filter((i) => i.ownerId === tribe).map((i) => i.id));
   const keys = [...evals().keys()].filter((k) => ids.has(k.split("|")[0]));
@@ -2670,7 +2675,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   const kpi = str(input.kpi, 20).toUpperCase();
   if (kpi && !c.kpis.some((k) => k.code === kpi)) return fail(422, "El KPI asociado no existe.");
   // convención: una iniciativa solo se vincula a un resultado clave completo (nombre con cifra, base, meta, dueño, plazo y definición)
-  if (kpi && c.company.mode === "convencion") {
+  if (kpi && isGuiada(c.company)) {
     const faltan = krFaltantes(c.kpis.find((k) => k.code === kpi)!);
     if (faltan.length) return fail(422, `El resultado clave ${kpi} está incompleto (sin ${faltan.join(", ")}): complétalo en OKR antes de vincularle iniciativas.`);
     // y recibe como máximo dos iniciativas

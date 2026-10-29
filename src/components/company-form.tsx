@@ -10,7 +10,7 @@ import { Loader2, Save, Building2, X } from "lucide-react";
 import { INSTRUMENTS, ALL_INSTRUMENTS } from "@/lib/instrumentos";
 
 export type HorizonLite = { id: string; label: string; months: number };
-export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion"; instruments?: string[] };
+export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion" | "acompanamiento"; instruments?: string[] };
 export const DEFAULT_HZ: HorizonLite[] = [{ id: "CORTO", label: "Corto plazo", months: 12 }, { id: "MEDIANO", label: "Mediano plazo", months: 36 }];
 
 /** Horizontes de planeación de la empresa (ordenan el roadmap y la priorización). */
@@ -115,6 +115,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
           <select value={f.mode} onChange={set("mode")} className="input !py-2 text-[12px]" title="Qué ve el menú de la empresa">
             <option value="completa">Modo completo · todos los módulos</option>
             <option value="convencion">Modo convención · solo Dirección, OKR, Iniciativas → KR, Priorización en vivo y Portafolio, con QR de acceso por sección</option>
+            <option value="acompanamiento">Modo acompañamiento · Diagnóstico, Prioridades estratégicas, Objetivos directivos, Resultados clave, Iniciativas, Priorización, Portafolio e Inteligencia, con cuentas (sin QR)</option>
           </select>
         </div>
         <div>

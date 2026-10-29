@@ -77,6 +77,7 @@ export function sectionOfToken(access: AccessConfig | undefined, token: string):
   return null;
 }
 
-/** Modo de la empresa: completa (todos los módulos) o convención (solo las cinco secciones). */
-export type CompanyMode = "completa" | "convencion";
-export const isCompanyMode = (m: unknown): m is CompanyMode => m === "completa" || m === "convencion";
+/** Modo de la empresa: completa (todos los módulos), convención (las cinco secciones con QR) o acompañamiento
+    (diagnóstico, prioridades estratégicas, objetivos directivos, resultados clave, iniciativas, priorización, portafolio e inteligencia, con cuentas). */
+export type CompanyMode = "completa" | "convencion" | "acompanamiento";
+export const isCompanyMode = (m: unknown): m is CompanyMode => m === "completa" || m === "convencion" || m === "acompanamiento";
