@@ -10,7 +10,9 @@ export type InformeKind = "f1" | "consolidado";
 
 export type InformeIA = {
   titulo: string;
+  hipotesis_central?: string;
   resumen: string[];
+  dimensiones?: { dimension: string; lectura: string }[];
   capacidades: { capacidad: string; puntaje: number | null; lectura: string }[];
   fortalezas: { dimension: string; por_que: string }[];
   brechas: { dimension: string; puntaje: number | null; que_revela: string; evidencia_a_verificar: string; framework: string }[];
@@ -48,12 +50,14 @@ export function contextoMetodo(dimsDetalle: string[] = []): string {
   ].filter(Boolean).join("\n");
 }
 
-const SISTEMA = `Eres el advisor senior de 4Shine Empresas. Escribes informes de diagnóstico para comités directivos de empresas medianas en Colombia y Ecuador: profundos, concretos, en español neutro de Colombia, con tono profesional y directo, sin halagos vacíos ni jerga de moda. Cada afirmación se apoya en las cifras recibidas y en el método; donde falte evidencia, lo dices como hipótesis. Nunca inventes datos que no estén en la entrada. Reglas estrictas: (1) una dimensión o capacidad marcada «—» no tiene respuesta: no es brecha, ni fortaleza, ni hallazgo; solo puedes decir que está pendiente de responder y no entra en prioridades ni en patrones; (2) las brechas y prioridades salen únicamente de dimensiones con puntaje bajo el umbral; si no hay ninguna, dilo y propone como prioridad completar la lectura; (3) si hay una sola autoevaluación no existe dispersión ni desacuerdo entre miembros: no lo menciones; (4) escribe los decimales con coma (2,5) y conserva los códigos de dimensión tal como llegan. No uses listas de viñetas dentro de los párrafos. Responde únicamente con el JSON pedido.`;
+const SISTEMA = `Eres el advisor senior de 4Shine Empresas. Escribes informes de diagnóstico para comités directivos de empresas medianas en Colombia y Ecuador: profundos, concretos, en español neutro de Colombia, con tono profesional y directo, sin halagos vacíos ni jerga de moda. Lo que analizas es la evaluación que un directivo (o el comité) hace de SU COMPAÑÍA, nunca un diagnóstico de la persona: no juzgues a quien respondió, no uses «tu desempeño» ni atribuyas rasgos personales. Todo se enuncia como hipótesis sobre la organización, a contrastar con las lecturas de los pares, la percepción de los equipos y la evidencia documental; usa formulaciones como «la lectura sugiere», «la hipótesis es», «habría que verificar». Cada afirmación se apoya en las cifras recibidas y en el método. Nunca inventes datos que no estén en la entrada. Reglas estrictas: (1) una dimensión o capacidad marcada «—» no tiene respuesta: no es brecha, ni fortaleza, ni hallazgo; solo puedes decir que está pendiente de responder y no entra en prioridades ni en patrones; (2) las brechas y prioridades salen únicamente de dimensiones con puntaje bajo el umbral; si no hay ninguna, dilo y propone como prioridad completar la lectura; (3) si hay una sola autoevaluación no existe dispersión ni desacuerdo entre miembros: no lo menciones; (4) escribe los decimales con coma (2,5) y conserva los códigos de dimensión tal como llegan. No uses listas de viñetas dentro de los párrafos. Responde únicamente con el JSON pedido.`;
 
 const FORMATO = `Devuelve un JSON con exactamente estas claves:
 {
- "titulo": string (una línea, sin la palabra «informe»),
- "resumen": string[] (dos o tres párrafos de 60-110 palabras: qué muestra la lectura, qué la explica, qué está en juego),
+ "titulo": string (una línea, sin la palabra «informe», sobre la compañía),
+ "hipotesis_central": string (una sola frase de 20-35 palabras: la hipótesis principal sobre la compañía que deja esta lectura),
+ "resumen": string[] (dos o tres párrafos de 60-110 palabras: qué muestra la lectura, qué la explica, qué está en juego; en lenguaje de hipótesis),
+ "dimensiones": [{"dimension": "código · nombre", "lectura": string (20-35 palabras: qué sugiere ese puntaje a la luz del marco y qué habría que verificar)}] (todas las dimensiones con puntaje, en el orden recibido),
  "capacidades": [{"capacidad": "Dirección|Liderazgo|Ejecución|Multiplicación", "puntaje": number|null, "lectura": string (40-80 palabras)}] (las cuatro),
  "fortalezas": [{"dimension": "código · nombre", "por_que": string (30-60 palabras)}] (dos a cuatro),
  "brechas": [{"dimension": "código · nombre", "puntaje": number|null, "que_revela": string (40-80 palabras), "evidencia_a_verificar": string (qué documento, ritual o indicador comprobaría la práctica), "framework": string (el framework del método que la instala)}] (las dimensiones bajo el umbral, de mayor a menor arrastre; máximo seis),
@@ -83,7 +87,7 @@ export function encargoF1(args: { empresa: Empresa; persona: { nombre: string; c
     lectura.prios.length ? `Dimensiones bajo el umbral ordenadas por arrastre: ${lectura.prios.map((x) => `${x.d.code} (${fmt(x.m)})`).join(", ")}.` : "Ninguna dimensión bajo el umbral.",
     "",
     lectura.answered < 68 ? `LECTURA PARCIAL: faltan ${68 - lectura.answered} afirmaciones; las dimensiones con «—» no se interpretan.` : "",
-    "Escribe el informe para esta persona: es su propia lectura, individual y confidencial; háblale de «tu lectura» y «la organización», distingue lo que declara de lo que habría que demostrar, y cierra con lo que conviene llevar a la conversación del comité.",
+    "Escribe el informe ejecutivo de esta evaluación: es la lectura que este directivo hace de la compañía, individual y confidencial. Habla de «la compañía» y de «esta lectura»; dirígete al directivo solo para proponerle qué contrastar con sus pares y qué llevar a la conversación del comité. Distingue lo que la organización declara de lo que habría que demostrar.",
     formato("f1"),
   ].filter(Boolean).join("\n");
   return { system: SISTEMA, user };
@@ -123,10 +127,12 @@ export function parseInforme(raw: unknown): InformeIA {
   const strs = (v: unknown) => (Array.isArray(v) ? v.map((x) => s(x)).filter(Boolean) : typeof v === "string" && v.trim() ? v.split(/\n\n+/).map((x) => x.trim()).filter(Boolean) : []);
   const informe: InformeIA = {
     titulo: s(o.titulo, 160) || "Lectura del diagnóstico",
+    hipotesis_central: s(o.hipotesis_central, 400) || undefined,
     resumen: strs(o.resumen),
     capacidades: arr(o.capacidades, (x) => (s(x.capacidad) ? { capacidad: s(x.capacidad, 40), puntaje: num(x.puntaje), lectura: s(x.lectura) } : null)),
     fortalezas: arr(o.fortalezas, (x) => (s(x.dimension) ? { dimension: s(x.dimension, 120), por_que: s(x.por_que) } : null)),
     brechas: arr(o.brechas, (x) => (s(x.dimension) ? { dimension: s(x.dimension, 120), puntaje: num(x.puntaje), que_revela: s(x.que_revela), evidencia_a_verificar: s(x.evidencia_a_verificar), framework: s(x.framework, 160) } : null)),
+    dimensiones: arr(o.dimensiones, (x) => (s(x.dimension) ? { dimension: s(x.dimension, 120), lectura: s(x.lectura, 600) } : null)),
     patrones: s(o.patrones, 3000),
     prioridades: arr(o.prioridades, (x) => (s(x.dimension) ? { orden: num(x.orden) ?? 0, dimension: s(x.dimension, 120), framework: s(x.framework, 160), primer_paso: s(x.primer_paso) } : null)).sort((a, b) => a.orden - b.orden),
     preguntas: strs(o.preguntas),

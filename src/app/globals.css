@@ -275,6 +275,22 @@ body {
   .rise, .rise-1, .rise-2, .rise-3, .rise-4 { animation: none !important; }
   .print-break { break-before: page; }
   div[class*="lg:pl-"] { padding-left: 0 !important; }
+
+  /* informe ejecutivo: portada en su hoja, secciones sin cortes, lecturas por dimensión desplegadas, pie en cada página */
+  @page { size: A4; margin: 14mm 13mm 18mm; }
+  .informe { max-width: none !important; }
+  .informe * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  /* la regla general oculta header y footer: la portada y el pie del informe sí se imprimen */
+  .informe header.informe-portada { display: flex !important; break-after: page; border-radius: 0 !important; min-height: 250mm; flex-direction: column; justify-content: center; padding: 22mm 18mm !important; }
+  .informe-seccion { break-inside: auto; }
+  .informe .panel, .informe-dim, .informe-seccion > div > .panel { break-inside: avoid; }
+  .informe .sticky { display: none !important; }
+  .informe-aviso { display: none !important; }
+  .informe-dim-texto { display: block !important; }
+  .informe-dim button { pointer-events: none; }
+  .informe .panel { border: 1px solid var(--line) !important; }
+  .informe-pie { position: fixed; bottom: 0; left: 0; right: 0; display: block !important; padding: 4px 0; font-size: 9px; text-align: center; background: white; }
+  .informe svg text { fill-opacity: 1; }
 }
 
 @keyframes rise {
@@ -343,6 +359,9 @@ select.input { text-overflow: ellipsis; }
   .input, select.input, textarea.input { min-height: 42px; font-size: 16px !important; }
   table.w-full { font-size: 12px; }
 }
+
+/* informe ejecutivo: el pie de página es solo para el PDF */
+.informe-pie { display: none; }
 
 /* ─── modo focal (responder un instrumento a pantalla completa) ─── */
 .focal-item:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }

@@ -67,7 +67,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (!iaDisponible()) return NextResponse.json({ error: "El modelo no está configurado en Administración → Integraciones (OpenAI)." }, { status: 503 });
   const { system, user: prompt } = e.encargo();
   let informe;
-  try { informe = parseInforme(await chatJson(system, prompt, { maxTokens: 3200, timeoutMs: 55_000 })); }
+  try { informe = parseInforme(await chatJson(system, prompt, { maxTokens: 5000, timeoutMs: 55_000 })); }
   catch (err) { return NextResponse.json({ error: (err as Error).message }, { status: 502 }); }
   const r = saveInforme(user, e.kind, e.subject, e.inputHash, informe, effectiveIntegration("openai")?.fields.model?.trim() || "gpt-4o-mini");
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

@@ -29,12 +29,13 @@ import { hasInstrument, instrumentLabel, type Instrument } from "@/lib/instrumen
 import type { VariableCapture, TestResponse, TestNotes, F1Response } from "@/server/store";
 import type { Response } from "@/lib/od";
 import { lecturaF1 } from "@/lib/f1";
-import { InformeIA } from "@/components/informe-ia";
+import { InformeEjecutivo, useInformeIA } from "@/components/informe-ejecutivo";
+import { datosDesdeRespuesta, datosDesdeComite } from "@/lib/informe-datos";
 import { ModoFocal, pedirPantallaCompleta, teclaNumero, irAlSiguientePendiente, focalArriba, ITEM_CLS } from "@/components/modo-focal";
 import { UnaAUna, SelectorVista, useVista, type Pantalla } from "@/components/una-a-una";
 import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
-  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText,
+  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText, RefreshCw,
 } from "lucide-react";
 
 type Tab = "resumen" | "capacidad" | "dimension" | "test" | "autoevaluacion" | "brechas" | "captura" | "informe";
@@ -140,7 +141,7 @@ export default function DiagnosticoPage() {
       {tab === "capacidad" && <Capacidad n={Number(arg ?? 1)} />}
       {tab === "dimension" && arg && <Dimension code={arg} />}
       {tabEnabled(tab) && tab === "test" && (arg === "RESPONDER" ? <ResponderTest /> : arg === "INFORME" && arg2 ? <InformeTest id={arg2} /> : <TestTab />)}
-      {tabEnabled(tab) && tab === "autoevaluacion" && (arg === "RESPONDER" ? <ResponderF1 /> : arg === "RESULTADO" ? <ResultadoF1 email={arg2} /> : <AutoevaluacionTab />)}
+      {tabEnabled(tab) && tab === "autoevaluacion" && (arg === "RESPONDER" ? <ResponderF1 /> : arg === "RESULTADO" ? <ResultadoF1 email={arg2} /> : arg === "INFORME" ? <InformeF1 email={arg2} /> : <AutoevaluacionTab />)}
       {tab === "informe" && <InformeDiagnostico />}
       {tab === "brechas" && <Brechas />}
       {tabEnabled(tab) && tab === "captura" && <Captura />}
@@ -766,7 +767,7 @@ function AutoevaluacionTab() {
             </div>
             <div className="border-t border-line px-5 py-3 text-[12px] text-muted">El consolidado entra al corte en curso como Fuente 1: en <Link href="/panel/diagnostico" className="font-bold text-cyan-deep hover:underline">Resumen</Link> se cruza con la percepción de equipos y la evidencia.</div>
           </Card>
-          <InformeIA kind="consolidado" canShare titulo="Análisis consolidado con IA" />
+          <InformeCta kind="consolidado" completa={lista.length > 0} href="/panel/diagnostico/autoevaluacion/informe/consolidado" />
         </>
       )}
     </>
@@ -926,8 +927,8 @@ function ResultadoF1({ email }: { email: string | null }) {
         </span>
       </div>
       <Card className="rise rise-1 mb-5">
-        <CardHeader title="Tu lectura · Fuente 1 de 3" sub={`${f.name}${f.cargo ? ` · ${f.cargo}` : ""} · ${f1Fecha(f.at)}`} />
-        <div className="px-5 pb-2 text-[13px] leading-relaxed text-ink-soft">Cómo se ve la organización desde tu silla. Es tu respuesta individual: el informe del comité promedia a todos sus miembros y los contrasta con lo que viven los equipos y con la evidencia documental.</div>
+        <CardHeader title="Tu evaluación de la compañía · Fuente 1 de 3" sub={`${f.name}${f.cargo ? ` · ${f.cargo}` : ""} · ${f1Fecha(f.at)}`} />
+        <div className="px-5 pb-2 text-[13px] leading-relaxed text-ink-soft">Cómo ves las capacidades de la compañía desde tu rol. Es una hipótesis individual: el consolidado promedia a todos los miembros del comité y se contrasta con lo que viven los equipos y con la evidencia documental.</div>
         {L.answered < total && <div className="mx-5 mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold-text)" }}><b>Lectura parcial.</b> Llevas {L.answered} de {total} afirmaciones. Las dimensiones sin responder aparecen vacías y los promedios se calculan solo con lo contestado.</div>}
         <div className="grid gap-5 px-5 pb-5 lg:grid-cols-[260px_1fr]">
           <div><div className="label mb-2">Perfil de las cuatro capacidades</div><MiniRadar color="var(--navy)" size={230} axes={L.caps.map((c) => ({ label: c.cap.code, value: Math.max(0, c.m ?? 0), target: THRESHOLD }))} /></div>
@@ -976,7 +977,7 @@ function ResultadoF1({ email }: { email: string | null }) {
           <div className="border-t border-line px-5 py-3 text-[12px] italic text-faint">Lectura automática de tus respuestas. El advisor la confirma con la percepción de los equipos y la evidencia: una práctica declarada y no demostrada queda como máximo en nivel 2.</div>
         </Card>
       </div>
-      <InformeIA kind="f1" email={email && canAll ? f.email : null} titulo={email && canAll && f.email.toLowerCase() !== (data.mine?.email ?? "").toLowerCase() ? `Análisis con IA · ${f.name}` : "Tu análisis con IA"} />
+      <InformeCta kind="f1" email={email && canAll ? f.email : null} completa={L.answered >= total} href={`/panel/diagnostico/autoevaluacion/informe${email && canAll ? `/${encodeURIComponent(f.email)}` : ""}`} />
     </>
   );
 }
@@ -1317,5 +1318,68 @@ function Captura() {
         ))}
       </div>
     </>
+  );
+}
+
+/* ═══ Informe ejecutivo de la autoevaluación (individual o consolidado) ═══
+   El análisis con IA se genera una sola vez, de forma automática, cuando la evaluación individual está
+   completa; queda guardado en la base y forma parte del informe. El consolidado lo generan admin y advisor. */
+
+function InformeCta({ kind, email, completa, href }: { kind: "f1" | "consolidado"; email?: string | null; completa: boolean; href: string }) {
+  const canAll = useCan("view_f1_all");
+  const { data, busy, error, generar } = useInformeIA(kind, email, kind === "f1" && completa);
+  const estado = !data ? "cargando" : data.informe ? (data.desactualizado ? "desactualizado" : "listo") : !data.disponible ? "no-disponible" : busy || (kind === "f1" && completa) ? "generando" : "pendiente";
+  return (
+    <Card className="rise mt-5 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white" style={{ background: "var(--grad-deep)" }}><FileText size={18} /></div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-extrabold text-ink">{kind === "f1" ? "Informe ejecutivo de tu evaluación" : "Informe ejecutivo consolidado del comité"}</div>
+          <div className="text-[12.5px] text-muted">
+            {estado === "cargando" && "Cargando…"}
+            {estado === "listo" && `Lectura con IA generada${data?.at ? ` el ${f1Fecha(data.at)}` : ""}. Gráficas por capacidad y dimensión, hallazgos y ruta de 90 días; descargable en PDF.`}
+            {estado === "desactualizado" && "Hay respuestas nuevas desde el análisis guardado. El informe muestra las cifras vigentes; la lectura con IA puede actualizarse."}
+            {estado === "generando" && (busy ? "El advisor virtual está escribiendo la lectura: tarda menos de un minuto." : "La lectura con IA se genera sola al abrir el informe.")}
+            {estado === "pendiente" && (kind === "f1" ? "La lectura con IA se genera automáticamente al completar las 68 afirmaciones. Mientras tanto puedes ver las cifras." : "Aún no se ha generado la lectura consolidada con IA.")}
+            {estado === "no-disponible" && "El análisis con IA requiere la integración de OpenAI (Administración → Integraciones). Las cifras del informe están disponibles."}
+            {error && <span className="text-bad-text"> {error}</span>}
+          </div>
+        </div>
+        <span className="flex flex-wrap items-center gap-2">
+          {kind === "consolidado" && canAll && data?.disponible && (!data.informe || data.desactualizado) && <button type="button" onClick={() => void generar()} disabled={busy} className="btn-ghost btn-sm">{busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {data.informe ? "Actualizar lectura" : "Generar lectura"}</button>}
+          <Link href={href} className="btn-primary btn-sm">Abrir informe <ArrowRight size={13} /></Link>
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+function InformeF1({ email }: { email: string | null }) {
+  const { data } = useF1();
+  const canAll = useCan("view_f1_all");
+  const cv = useCatalog();
+  const consolidado = email === "consolidado";
+  const f = consolidado ? null : email && canAll ? (data?.responses.find((x) => x.email.toLowerCase() === email.toLowerCase()) ?? null) : data?.mine ?? null;
+  const completa = !!f && Object.keys(f.r).length >= PRACTICES.length;
+  const ia = useInformeIA(consolidado ? "consolidado" : "f1", consolidado ? null : f?.email ?? email, !consolidado && completa);
+  if (!data) return <Skeleton className="h-64" />;
+  if (consolidado && !canAll) return <Card className="rise p-6 text-[13px] text-ink">El consolidado lo ven el administrador y el advisor. <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></Card>;
+  if (!consolidado && !f) return <Card className="rise p-6 text-[13px] text-ink">{email && canAll ? "Esa persona no ha respondido la autoevaluación." : "Todavía no has respondido la autoevaluación."} <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></Card>;
+  let datos; let fecha: string; let persona: { nombre: string; cargo?: string } | undefined;
+  if (consolidado) {
+    const lect = data.responses.map((x) => lecturaF1(x.r));
+    const porDim = DIMS.map((d, i) => { const xs = lect.map((L) => L.dims[i].m).filter((m): m is number => m != null); return { code: d.code, m: avg(xs), sd: sdev(xs), n: xs.length }; });
+    datos = datosDesdeComite(porDim, data.responses.length, lect.map((L) => L.answered));
+    fecha = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
+  } else {
+    datos = datosDesdeRespuesta(f!.r); fecha = f1Fecha(f!.at); persona = { nombre: f!.name, cargo: f!.cargo };
+  }
+  const d = ia.data;
+  const estado = !d ? "generando" : d.informe ? (d.desactualizado ? "desactualizado" : "listo") : !d.disponible ? "no-disponible" : ia.busy || (!consolidado && completa) ? "generando" : "pendiente";
+  const meta = d?.at ? `Lectura con IA generada el ${new Date(d.at).toLocaleString("es-CO", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}${d.model ? ` · modelo ${d.model}` : ""}.` : undefined;
+  return (
+    <InformeEjecutivo kind={consolidado ? "consolidado" : "f1"} empresa={cv.catalog.company.name} persona={persona} fecha={fecha} datos={datos} informe={d?.informe ?? null}
+      estado={estado} meta={meta} shareUrl={consolidado ? d?.shareUrl : null} canRegen={canAll} onRegen={() => void ia.generar()} busy={ia.busy} error={ia.error}
+      volverHref={consolidado ? "/panel/diagnostico/autoevaluacion" : `/panel/diagnostico/autoevaluacion/resultado${email && canAll && !consolidado ? `/${encodeURIComponent(email)}` : ""}`} />
   );
 }
