@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isConvencion, isAcompanamiento, horizonsOf, leversOf } from "@/data/catalogo";
-import { vocabOf } from "@/lib/vocabulario";
+import { vocabOf, estrategiaHref } from "@/lib/vocabulario";
 import { DIMS, PRACTICES } from "@/data/mapa";
 import { PERSPECTIVES } from "@/data/cmi";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
@@ -199,22 +199,22 @@ function PanelHome() {
           <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
             desc="Autoevaluación directiva y lectura de las capacidades: perfil, dimensiones y qué mirar primero."
             tags={[cuenta(DIMS.length, "dimensión", "dimensiones")]} />
-          <ModuleCard href={`${base}/panel/convencion?t=prioridades`} code="PE" title={V.tabs.prioridades}
+          <ModuleCard href={estrategiaHref(v.catalog.company, "prioridades", base)} code="PE" title={V.tabs.prioridades}
             desc="Las prioridades 3 a 5 años con su sponsor, su indicador y su descripción: ordenan todo lo demás."
             tags={[cuenta(levers.length, "prioridad", "prioridades")]} />
-          <ModuleCard href={`${base}/panel/convencion?t=direccion`} code="OD" title={V.tabs.direccion}
+          <ModuleCard href={estrategiaHref(v.catalog.company, "direccion", base)} code="OD" title={V.tabs.direccion}
             desc="Objetivos del cuadro de mando por prioridad estratégica y horizonte."
             tags={[cuenta(v.catalog.objectives.length, "objetivo")]} />
-          <ModuleCard href={`${base}/panel/convencion?t=okr`} code="KR" title={V.tabs.okr}
+          <ModuleCard href={estrategiaHref(v.catalog.company, "okr", base)} code="KR" title={V.tabs.okr}
             desc="Cada objetivo con sus resultados clave: definición, línea base, meta, dueño y plazo."
             tags={[cuenta(v.kpis.length, "resultado clave", "resultados clave")]} />
-          <ModuleCard href={`${base}/panel/convencion?t=iniciativas`} code="IN" title={V.tabs.iniciativas}
+          <ModuleCard href={estrategiaHref(v.catalog.company, "iniciativas", base)} code="IN" title={V.tabs.iniciativas}
             desc="Las iniciativas del plan, vinculadas al resultado clave que mueven."
             tags={[cuenta(initiatives.length, "iniciativa")]} />
-          <ModuleCard href={`${base}/panel/convencion?t=priorizacion`} code="PR" title={V.tabs.priorizacion}
+          <ModuleCard href={estrategiaHref(v.catalog.company, "priorizacion", base)} code="PR" title={V.tabs.priorizacion}
             desc="Calificación con la matriz D·E·M·L por sesión de prioridad, ranking y trimestre de inicio."
             tags={["Matriz D·E·M·L"]} />
-          <ModuleCard href={`${base}/panel/convencion?t=portafolio`} code="PO" title={V.tabs.portafolio}
+          <ModuleCard href={estrategiaHref(v.catalog.company, "portafolio", base)} code="PO" title={V.tabs.portafolio}
             desc="Decisión de tiempo por iniciativa y portafolio por prioridad estratégica."
             tags={[roadmap]} />
           <ModuleCard href={`${base}/panel/bi`} code="M7" title="Inteligencia"
@@ -262,7 +262,7 @@ function ArranqueCard() {
     const url = f1On ? "/api/td/f1" : "/api/td/test";
     fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => setRespuestas(j ? (j.responses?.length ?? 0) : 0)).catch(() => setRespuestas(0));
   }, [f1On]);
-  const t = (tab: string) => `${base}/panel/convencion?t=${tab}`;
+  const t = (tab: "prioridades" | "direccion" | "okr" | "iniciativas") => estrategiaHref(c.company, tab, base);
   const levers = leversOf(c.company);
   const pasos = [
     { label: V.tabs.prioridades, n: levers.length, meta: `${levers.length} de hasta 8`, href: t(V.modo === "acompanamiento" ? "prioridades" : "direccion") },

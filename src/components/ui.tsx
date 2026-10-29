@@ -44,11 +44,17 @@ function CountUp({ value, decimals = 0, suffix = "" }:
 
 /* ─── cabecera de página ─── */
 
-export function PageHeader({ kicker, title, desc, actions }:
-  { kicker: string; title: string; desc?: string; actions?: ReactNode }) {
+export type Crumb = { label: string; href?: string };
+export function PageHeader({ kicker, title, desc, actions, crumbs }:
+  { kicker: string; title: string; desc?: string; actions?: ReactNode; crumbs?: Crumb[] }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-8 sm:gap-4">
       <div className="max-w-2xl">
+        {crumbs && crumbs.length > 0 && (
+          <nav aria-label="Ruta" className="mb-2 flex flex-wrap items-center gap-1 text-[12px] text-muted">
+            {crumbs.map((c, i) => <span key={i} className="flex items-center gap-1">{i > 0 && <span aria-hidden className="text-faint">›</span>}{c.href && i < crumbs.length - 1 ? <Link href={c.href} className="font-semibold text-cyan-deep hover:underline">{c.label}</Link> : <span aria-current={i === crumbs.length - 1 ? "page" : undefined} className="font-semibold text-ink">{c.label}</span>}</span>)}
+          </nav>
+        )}
         <div className="kicker mb-1.5 sm:mb-2">{kicker}</div>
         <h1 className="text-[22px] font-extrabold leading-[1.15] tracking-[-0.028em] text-ink sm:text-[27px]">
           {title}
@@ -274,6 +280,40 @@ export function SkeletonCards({ n = 4, className = "" }: { n?: number; className
   return (
     <div role="status" aria-label="Cargando" className={`grid grid-cols-2 gap-2.5 sm:gap-4 ${n >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"} ${className}`}>
       {Array.from({ length: n }, (_, i) => <div key={i} className="panel p-5"><Skeleton className="h-3 w-24" /><Skeleton className="mt-3 h-8 w-16" /><Skeleton className="mt-3 h-3 w-32" /></div>)}
+    </div>
+  );
+}
+
+
+/* ═══ Tabla responsive (MASTER · «Tarjetas y tablas»): tabla en escritorio; bajo lg, una tarjeta por fila con las
+   columnas prioritarias visibles (prioridad 1 como título, 2 en línea) y las demás en un detalle plegable. ═══ */
+export type ColumnDef<T> = { key: string; header: ReactNode; cell: (row: T) => ReactNode; priority?: 1 | 2 | 3; align?: "left" | "center" | "right"; className?: string };
+export function ResponsiveTable<T>({ columns, rows, rowKey, empty = "Sin filas.", className = "" }: {
+  columns: ColumnDef<T>[]; rows: T[]; rowKey: (row: T) => string; empty?: ReactNode; className?: string;
+}) {
+  const al = (a?: "left" | "center" | "right") => (a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left");
+  const p1 = columns.filter((c) => (c.priority ?? 2) === 1), p2 = columns.filter((c) => (c.priority ?? 2) === 2), p3 = columns.filter((c) => c.priority === 3);
+  return (
+    <div className={className}>
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full text-[12.5px]">
+          <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint">{columns.map((c) => <th key={c.key} className={`px-3 py-2 ${al(c.align)} ${c.className ?? ""}`}>{c.header}</th>)}</tr></thead>
+          <tbody>
+            {rows.length === 0 && <tr className="border-t border-line"><td colSpan={columns.length} className="px-3 py-4 text-[12.5px] italic text-faint">{empty}</td></tr>}
+            {rows.map((r) => <tr key={rowKey(r)} className="border-t border-line">{columns.map((c) => <td key={c.key} className={`px-3 py-2 align-top ${al(c.align)} ${c.align === "right" || c.align === "center" ? "num" : ""} ${c.className ?? ""}`}>{c.cell(r)}</td>)}</tr>)}
+          </tbody>
+        </table>
+      </div>
+      <ul className="space-y-2 lg:hidden">
+        {rows.length === 0 && <li className="rounded-xl bg-surface-2 px-4 py-3 text-[12.5px] italic text-faint">{empty}</li>}
+        {rows.map((r) => (
+          <li key={rowKey(r)} className="rounded-xl border border-line px-4 py-3">
+            {p1.map((c) => <div key={c.key} className="text-[13.5px] font-bold text-ink">{c.cell(r)}</div>)}
+            {p2.length > 0 && <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px]">{p2.map((c) => <div key={c.key} className="min-w-0"><dt className="text-[11px] uppercase tracking-wider text-faint">{c.header}</dt><dd className="num truncate text-ink-soft">{c.cell(r)}</dd></div>)}</dl>}
+            {p3.length > 0 && <details className="mt-2 text-[12px]"><summary className="cursor-pointer font-semibold text-cyan-deep">Más detalles</summary><dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1">{p3.map((c) => <div key={c.key} className="min-w-0"><dt className="text-[11px] uppercase tracking-wider text-faint">{c.header}</dt><dd className="text-ink-soft">{c.cell(r)}</dd></div>)}</dl></details>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

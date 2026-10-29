@@ -42,7 +42,7 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
         <div className="mt-3"><span className="label !text-[11px]">Tu rol en la convención</span>
           <div className="mt-1 grid gap-1.5">
             {ENTRY_ROLES.map((r) => (
-              <label key={r.id} className="flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5" style={entryRole === r.id ? { borderColor: "var(--navy)", background: "color-mix(in srgb, var(--navy) 6%, white)" } : { borderColor: "var(--line)" }}>
+              <label key={r.id} className="flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5" style={entryRole === r.id ? { borderColor: "var(--navy)", background: "color-mix(in srgb, var(--navy) 6%, var(--surface))" } : { borderColor: "var(--line)" }}>
                 <input type="radio" name="rol" checked={entryRole === r.id} onChange={() => setEntryRole(r.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--navy)]" />
                 <span><span className="block text-[13px] font-bold text-ink">{r.label}</span><span className="block text-[12px] leading-snug text-muted">{r.what}</span></span>
               </label>
@@ -61,7 +61,7 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
           <summary className="cursor-pointer font-bold text-cyan-deep">Leer la autorización completa</summary>
           <div className="mt-1.5 space-y-1.5 leading-snug">{consentText(company.name).map((p, i) => <p key={i}>{p}</p>)}</div>
         </details>
-        {error && <p className="mt-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+        {error && <p className="mt-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{error}</p>}
         <button type="submit" disabled={busy || !consent || (askTribe && !tribe) || !entryRole} className="btn-primary mt-4 w-full justify-center !py-2.5 text-[13.5px] disabled:opacity-50">
           {busy ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />} Entrar a {section.label}
         </button>

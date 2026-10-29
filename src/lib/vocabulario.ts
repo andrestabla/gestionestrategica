@@ -45,6 +45,13 @@ const ACOMPANAMIENTO: Vocab = {
 /** Vocabulario de la empresa: por su modo (el modo completo usa el de la convención). */
 export const vocabOf = (c: { mode?: CompanyMode } | null | undefined): Vocab => (c?.mode === "acompanamiento" ? ACOMPANAMIENTO : CONVENCION);
 
+/** Segmento de URL de cada sección en las rutas semánticas /panel/estrategia/<slug> (modo acompañamiento). */
+export const ESTRATEGIA_SLUG: Record<EstrategiaTab, string> = { prioridades: "prioridades", direccion: "objetivos", okr: "resultados-clave", iniciativas: "iniciativas", priorizacion: "priorizacion", portafolio: "portafolio" };
+export const estrategiaTabOfSlug = (slug: string | undefined): EstrategiaTab | null => (Object.entries(ESTRATEGIA_SLUG).find(([, s]) => s === slug)?.[0] as EstrategiaTab | undefined) ?? null;
+/** Enlace a una sección de estrategia: ruta semántica en acompañamiento; en los demás modos, la página de la convención con ?t= (los QR de Cresio siguen valiendo). */
+export const estrategiaHref = (c: { mode?: CompanyMode } | null | undefined, tab: EstrategiaTab, base = ""): string =>
+  c?.mode === "acompanamiento" ? `${base}/panel/estrategia/${ESTRATEGIA_SLUG[tab]}` : `${base}/panel/convencion?t=${tab}`;
+
 /** Pestañas de estrategia que ve cada modo, en orden de menú. */
 export const ESTRATEGIA_TABS_ACOMPANAMIENTO: EstrategiaTab[] = ["prioridades", "direccion", "okr", "iniciativas", "priorizacion", "portafolio"];
 

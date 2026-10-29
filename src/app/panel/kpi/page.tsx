@@ -206,8 +206,8 @@ export default function KpiPage() {
                   <div className="mt-4 rounded-lg px-3.5 py-2.5"
                     style={{
                       background: health.projection.willReachTarget
-                        ? "color-mix(in srgb, var(--ok) 8%, white)"
-                        : "color-mix(in srgb, var(--warn) 10%, white)",
+                        ? "color-mix(in srgb, var(--ok) 8%, var(--surface))"
+                        : "color-mix(in srgb, var(--warn) 10%, var(--surface))",
                     }}>
                     <div className="label !text-[11px]"
                       style={{ color: health.projection.willReachTarget ? "var(--ok)" : "var(--warn)" }}>

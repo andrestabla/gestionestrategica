@@ -97,7 +97,7 @@ export default async function PublicView(
           <div className="grid gap-3 sm:grid-cols-2">
             {criticals.map((a) => (
               <div key={a.id} className="rounded-xl px-4 py-3"
-                style={{ background: "color-mix(in srgb, var(--bad) 6%, white)" }}>
+                style={{ background: "color-mix(in srgb, var(--bad) 6%, var(--surface))" }}>
                 <div className="text-[13px] font-bold text-ink">{a.title}</div>
                 <div className="mt-0.5 text-[12px] leading-snug text-muted">{a.detail}</div>
                 {a.owner && <div className="num mt-1 text-[12px] text-faint">{a.owner}</div>}

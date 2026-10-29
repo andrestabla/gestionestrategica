@@ -30,7 +30,7 @@ export function RestablecerClient({ token }: { token: string }) {
           <input value={p1} onChange={(e) => setP1(e.target.value)} type="password" autoComplete="new-password" required minLength={PASSWORD_MIN} className="input mt-1 !py-2.5 text-[14px]" /></label>
         <label className="mt-3 block"><span className="label !text-[11px]">Repítela</span>
           <input value={p2} onChange={(e) => setP2(e.target.value)} type="password" autoComplete="new-password" required minLength={PASSWORD_MIN} className="input mt-1 !py-2.5 text-[14px]" /></label>
-        {error && <p className="mt-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+        {error && <p className="mt-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{error}</p>}
         <button type="submit" disabled={busy || p1.length < PASSWORD_MIN} className="btn-primary mt-4 w-full justify-center !py-2.5 text-[13.5px] disabled:opacity-50">
           {busy ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />} Guardar y entrar
         </button>

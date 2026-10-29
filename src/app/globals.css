@@ -190,9 +190,9 @@ body {
 }
 .chip-cyan { background: var(--cyan-wash); color: var(--cyan-deep); box-shadow: inset 0 0 0 1px rgb(14 147 180 / 0.22); }
 .chip-gold { background: var(--gold-wash); color: var(--gold); box-shadow: inset 0 0 0 1px rgb(168 122 20 / 0.24); }
-.chip-ok   { background: color-mix(in srgb, var(--ok) 9%, white); color: var(--ok); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 30%, white); }
-.chip-warn { background: color-mix(in srgb, var(--warn) 10%, white); color: var(--warn); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 32%, white); }
-.chip-bad  { background: color-mix(in srgb, var(--bad) 9%, white); color: var(--bad); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 30%, white); }
+.chip-ok   { background: color-mix(in srgb, var(--ok) 9%, var(--surface)); color: var(--ok); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 30%, var(--surface)); }
+.chip-warn { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); color: var(--warn); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 32%, var(--surface)); }
+.chip-bad  { background: color-mix(in srgb, var(--bad) 9%, var(--surface)); color: var(--bad); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 30%, var(--surface)); }
 
 /* ─── botones ─── */
 
@@ -349,3 +349,32 @@ button.chip { min-height: 28px; cursor: pointer; }
 @media (pointer: coarse) {
   .btn-primary, .btn-ghost, .btn-sm, button.chip { min-height: 44px; }
 }
+
+/* ─── tema oscuro (MASTER · derivado de los tokens; opcional por usuario, data-theme="dark" en <html>) ─── */
+:root[data-theme="dark"] {
+  --bg: #0b1119;
+  --bg-warm: #0d131b;
+  --surface: #121b27;
+  --surface-2: #18232f;
+  --surface-3: #1f2b39;
+  --ink: #e9edf3;
+  --ink-soft: #c6ced8;
+  --muted: #a1acbb;
+  --faint: #8f9aa9;
+  --line: #263345;
+  --line-strong: #34435a;
+  --cyan: #c9a44a;
+  --cyan-deep: #e0b653;
+  --cyan-wash: #27220f;
+  --gold: #e0b653;
+  --gold-wash: #2b2310;
+  --gold-text: #e3b75a;
+  --ok-text: #62d19c;
+  --warn-text: #f3b26b;
+  --bad-text: #f29aa1;
+  --e1: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.4);
+  --e2: 0 0 0 1px rgb(255 255 255 / 0.07), 0 2px 6px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+  --e3: 0 0 0 1px rgb(255 255 255 / 0.08), 0 4px 12px rgb(0 0 0 / 0.5), 0 28px 64px -24px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+:root[data-theme="dark"] body { background: var(--bg); }

@@ -11,10 +11,10 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays } from "lucide-react"
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
-import { vocabOf } from "@/lib/vocabulario";
+import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
 const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
 import { CommandPalette, SearchButton } from "@/components/command-palette";
 import type { SessionUser } from "@/lib/session";
@@ -244,12 +244,12 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   const NAV_AC = [
     { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined },
     { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" as string | undefined },
-    { href: "/panel/convencion?t=prioridades", label: V.tabs.prioridades, icon: Target, code: undefined as string | undefined },
-    { href: "/panel/convencion?t=direccion", label: V.tabs.direccion, icon: Network, code: undefined as string | undefined },
-    { href: "/panel/convencion?t=okr", label: V.tabs.okr, icon: Gauge, code: undefined as string | undefined },
-    { href: "/panel/convencion?t=iniciativas", label: V.tabs.iniciativas, icon: Rocket, code: undefined as string | undefined },
-    { href: "/panel/convencion?t=priorizacion", label: V.tabs.priorizacion, icon: Scale, code: undefined as string | undefined },
-    { href: "/panel/convencion?t=portafolio", label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.prioridades}`, label: V.tabs.prioridades, icon: Target, code: undefined as string | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.direccion}`, label: V.tabs.direccion, icon: Network, code: undefined as string | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.okr}`, label: V.tabs.okr, icon: Gauge, code: undefined as string | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.iniciativas}`, label: V.tabs.iniciativas, icon: Rocket, code: undefined as string | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.priorizacion}`, label: V.tabs.priorizacion, icon: Scale, code: undefined as string | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.portafolio}`, label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined },
     { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined },
   ];
   const baseNav = convencion ? NAV_CV : acomp ? NAV_AC : NAV;
@@ -398,10 +398,10 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           <div className="flex min-w-0 items-baseline gap-2.5">
             <span className="truncate text-[13.5px] font-bold tracking-tight text-ink">
               {convencion && path.startsWith("/panel/convencion") ? ((searchParams.get("t") === "itinerario" ? "Itinerario" : ACCESS_TABS.find((x) => x.id === (searchParams.get("t") ?? "direccion"))?.label) ?? "Convención")
-                : acomp && path.startsWith("/panel/convencion") ? (NAV_AC.find((n) => n.href === `/panel/convencion?t=${searchParams.get("t") ?? "prioridades"}`)?.label ?? "Estrategia")
+                : acomp && (path.startsWith("/panel/estrategia/") || path.startsWith("/panel/convencion")) ? (NAV_AC.filter((n) => n.href.startsWith("/panel/estrategia/")).find((n) => path.startsWith(n.href))?.label ?? "Estrategia")
                 : (current?.label ?? "Panel")}
             </span>
-            {current?.code && !(acomp && path.startsWith("/panel/convencion")) && (
+            {current?.code && !(acomp && (path.startsWith("/panel/convencion") || path.startsWith("/panel/estrategia/"))) && (
               <span className="num text-[12px] font-bold tracking-wider text-faint">{current.code}</span>
             )}
           </div>
@@ -410,6 +410,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           <div className="ml-auto flex items-center gap-2.5">
             <span className="hidden sm:inline-flex"><SearchButton /></span>
             <NotificationsBell />
+            <ThemeToggle />
             {/* la vista pública de la plataforma completa no aplica a la convención: se oculta en ese modo */}
             {!convencion && <span className="hidden sm:inline-flex"><PublicLinkButton /></span>}
             <div className="flex items-center gap-2.5 pl-1">
@@ -435,5 +436,22 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
       {/* buscador global (⌘K) */}
       <CommandPalette />
     </div>
+  );
+}
+
+
+/* ═══ Tema claro u oscuro por usuario (MASTER · tema oscuro derivado de los tokens). Se guarda en el navegador. ═══ */
+function ThemeToggle() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("pgtd-theme") === "dark";
+    setDark(saved); document.documentElement.dataset.theme = saved ? "dark" : "";
+  }, []);
+  const toggle = () => setDark((d) => { const next = !d; localStorage.setItem("pgtd-theme", next ? "dark" : "light"); document.documentElement.dataset.theme = next ? "dark" : ""; return next; });
+  return (
+    <button type="button" onClick={toggle} aria-pressed={dark} aria-label={dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"} title={dark ? "Tema claro" : "Tema oscuro"}
+      className="grid h-9 w-9 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-ink">
+      {dark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
   );
 }

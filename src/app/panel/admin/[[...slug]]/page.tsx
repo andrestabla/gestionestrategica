@@ -327,7 +327,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   return (
     <>
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
-      {notice && <div className="mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, white)" }}><MailCheck size={14} className="shrink-0" style={{ color: "var(--ok-text)" }} />{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto text-[12px] text-faint hover:text-ink">Cerrar</button></div>}
+      {notice && <div className="mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}><MailCheck size={14} className="shrink-0" style={{ color: "var(--ok-text)" }} />{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto text-[12px] text-faint hover:text-ink">Cerrar</button></div>}
       {created && (
         <div className="mb-4 rounded-xl border border-line bg-surface px-4 py-3 text-[12px] text-ink" style={{ boxShadow: "var(--e1)" }}>
           <div className="font-bold">Cuenta creada: {created.name} · <span className="num font-normal text-muted">{created.email}</span></div>
@@ -729,7 +729,7 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
 function ErrorBanner({ error, onClose }: { error: string; onClose: () => void }) {
   return (
     <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
-      style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
+      style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))" }}>
       <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
       <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
       <button onClick={onClose} className="text-faint hover:text-ink"><X size={14} /></button>

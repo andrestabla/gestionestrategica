@@ -224,7 +224,7 @@ export default function ProyectosPage() {
       {/* error de mutación (403/422 explicado por el servidor) */}
       {error && (
         <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
-          style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
+          style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))" }}>
           <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
           <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
           <button onClick={() => setError(null)} className="text-faint hover:text-ink"><X size={14} /></button>
@@ -259,7 +259,7 @@ export default function ProyectosPage() {
       {/* deslizamiento del cronograma (línea base vs vigente) */}
       {data.slippage.tasksShifted > 0 && (
         <div className="rise rise-2 mb-5 flex items-center gap-2.5 rounded-xl px-4 py-2.5"
-          style={{ background: "color-mix(in srgb, var(--warn) 9%, white)" }}>
+          style={{ background: "color-mix(in srgb, var(--warn) 9%, var(--surface))" }}>
           <CalendarRange size={14} style={{ color: "var(--warn-text)" }} />
           <p className="text-[12px] text-ink-soft">
             <b>Deslizamiento del cronograma:</b> {data.slippage.tasksShifted} tarea{data.slippage.tasksShifted > 1 ? "s" : ""} reprogramada{data.slippage.tasksShifted > 1 ? "s" : ""} frente a la línea base ·{" "}
@@ -275,7 +275,7 @@ export default function ProyectosPage() {
           {data.alerts.slice(0, 4).map((a) => (
             <button key={a.id} onClick={() => setOpenTask(a.taskId)}
               className="flex max-w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[12px] transition-transform hover:-translate-y-0.5"
-              style={{ background: a.severity === 1 ? "color-mix(in srgb, var(--bad) 9%, white)" : "color-mix(in srgb, var(--warn) 10%, white)" }}>
+              style={{ background: a.severity === 1 ? "color-mix(in srgb, var(--bad) 9%, var(--surface))" : "color-mix(in srgb, var(--warn) 10%, var(--surface))" }}>
               {a.kind === "TAREA_BLOQUEADA"
                 ? <Lock size={12} className="shrink-0" style={{ color: "var(--bad-text)" }} />
                 : <AlertTriangle size={12} className="shrink-0" style={{ color: a.severity === 1 ? "var(--bad)" : "var(--warn)" }} />}
@@ -736,7 +736,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
               ) : (
                 <div className="num rounded-lg px-3 py-2 text-[12.5px] font-bold"
                   style={{
-                    background: isOverdueFn(task) ? "color-mix(in srgb, var(--bad) 9%, white)" : "var(--surface-2)",
+                    background: isOverdueFn(task) ? "color-mix(in srgb, var(--bad) 9%, var(--surface))" : "var(--surface-2)",
                     color: isOverdueFn(task) ? "var(--bad)" : "var(--ink)",
                   }}>
                   {fmtDate(task.due)}{isOverdueFn(task) ? " · vencida" : ""}
@@ -749,7 +749,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           {baseline && deviation !== 0 && (
             <p className="num rounded-lg px-3 py-2 text-[12px]"
               style={{
-                background: deviation > 0 ? "color-mix(in srgb, var(--warn) 10%, white)" : "color-mix(in srgb, var(--ok) 8%, white)",
+                background: deviation > 0 ? "color-mix(in srgb, var(--warn) 10%, var(--surface))" : "color-mix(in srgb, var(--ok) 8%, var(--surface))",
                 color: deviation > 0 ? "var(--warn)" : "var(--ok)",
               }}>
               Línea base: {fmtDate(baseline.due)} → vigente {fmtDate(task.due)} ({deviation > 0 ? "+" : ""}{deviation} días)
@@ -865,7 +865,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             ))}
             {(task.evidenceIds?.length ?? 0) === 0 && uploads.length === 0 && task.status !== "HECHA" && (
               <p className="rounded-lg px-3 py-2 text-[12px]"
-                style={{ background: "color-mix(in srgb, var(--warn) 10%, white)", color: "var(--warn-text)" }}>
+                style={{ background: "color-mix(in srgb, var(--warn) 10%, var(--surface))", color: "var(--warn-text)" }}>
                 Toda actividad exige al menos una evidencia: el servidor rechazará «Hecha» sin soporte adjunto.
               </p>
             )}

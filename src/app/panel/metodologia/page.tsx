@@ -7,7 +7,8 @@
 // cambia en los generadores de la línea, esta página cambia con ella.
 
 import { PageHeader, Card, CardHeader } from "@/components/ui";
-import { AccessChip } from "@/components/user-context";
+import { AccessChip, useUser } from "@/components/user-context";
+import Link from "next/link";
 import {
   CAPS, DIMS, dimsOf, LEVELS, STAGES, METHODOLOGIES, FRAMEWORKS, THRESHOLD, REGION, TEST,
 } from "@/data/mapa";
@@ -51,6 +52,7 @@ function Section({ id, icon: Icon, title, sub, children }: { id: string; icon: L
 }
 
 export default function MetodologiaPage() {
+  const me = useUser();
   const NAVL = [
     ["tesis", "Tesis y capacidades"], ["arquitectura", "Arquitectura"], ["madurez", "Escala de madurez"], ["etapas", "Etapas"],
     ["diagnostico", "Diagnóstico"], ["metodologias", "Metodologías"], ["frameworks", "Frameworks"], ["estrategia", "Cuadro de mando"], ["permisos", "Permisos"],
@@ -59,7 +61,7 @@ export default function MetodologiaPage() {
     <>
       <PageHeader kicker="Metodología" title="El modelo de gestión estratégica"
         desc="Ninguna empresa puede sostener un crecimiento superior a la capacidad organizacional que ha desarrollado para dirigir, liderar, ejecutar y multiplicar. La plataforma gestiona esa capacidad: la diagnostica con evidencia, la prioriza y la instala con frameworks."
-        actions={<AccessChip module="metodologia" />} />
+        actions={<span className="flex items-center gap-2"><AccessChip module="metodologia" />{(me.role === "ADMIN" || me.role === "CONSULTOR") && <Link href="/panel/metodologia/componentes" className="btn-ghost btn-sm">Catálogo de componentes</Link>}</span>} />
       <div className="rise mb-6 flex flex-wrap gap-1.5">{NAVL.map(([id, l]) => <a key={id} href={`#${id}`} className="chip">{l}</a>)}</div>
 
       <Section id="tesis" icon={Compass} title="Cuatro capacidades, una secuencia" sub="Dirección elige · Liderazgo moviliza · Ejecución cumple · Multiplicación escala. Cada brecha temprana reaparece disfrazada más adelante.">

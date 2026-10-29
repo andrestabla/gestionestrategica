@@ -1091,7 +1091,7 @@ function RemoveBtn({ onClick }: { onClick: () => void }) {
 function ErrorBanner({ error, onClose }: { error: string; onClose: () => void }) {
   return (
     <div className="rise mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3"
-      style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>
+      style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))" }}>
       <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: "var(--bad-text)" }} />
       <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
       <button onClick={onClose} className="text-faint hover:text-ink"><X size={14} /></button>

@@ -12,7 +12,7 @@
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
 import { avisar } from "@/components/feedback";
 import { AccessChip, useCan } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
@@ -100,6 +100,7 @@ export default function DiagnosticoPage() {
     <CutCtx.Provider value={cut}>
       <div className="no-print">
       <PageHeader kicker="M1 · Diagnóstico de capacidades" title="Capacidad organizacional de la empresa"
+        crumbs={tab === "resumen" ? undefined : [{ label: "Diagnóstico", href: "/panel/diagnostico" }, { label: TABS.find((t) => t.id === tab)?.label ?? (tab === "dimension" ? "Dimensión" : tab), href: TABS.find((t) => t.id === tab)?.href }, ...(arg ? [{ label: arg === "RESPONDER" ? "Responder" : arg === "RESULTADO" ? "Lectura" : arg === "INFORME" ? "Informe" : arg }] : [])]}
         desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico de tres fuentes sobre las 68 prácticas del mapa."
         actions={<AccessChip module="madurez" />} />
       <details className="rise mb-4 rounded-xl bg-surface-2/70 px-4 py-2 text-[12.5px] text-ink-soft">
@@ -718,22 +719,15 @@ function AutoevaluacionTab() {
           </div>
           <Card className="rise rise-4 mb-5">
             <CardHeader title="Las diecisiete dimensiones según el comité" sub="promedio, dispersión entre miembros y nivel; la dispersión alta se conversa, no se promedia" />
-            <div className="overflow-x-auto px-2 pb-3">
-              <table className="w-full text-[12.5px]">
-                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Dimensión</th><th className="px-3 py-2">Capacidad</th><th className="num px-2 py-2 text-center">Promedio</th><th className="num px-2 py-2 text-center">Dispersión</th><th className="num px-2 py-2 text-center">Respuestas</th><th className="px-3 py-2">Nivel</th></tr></thead>
-                <tbody>
-                  {consolidado.map((x) => (
-                    <tr key={x.d.code} className="border-t border-line">
-                      <td className="px-3 py-2"><b className="text-ink">{x.d.code}</b> · {x.d.name}</td>
-                      <td className="px-3 py-2 text-muted">{x.d.cap}</td>
-                      <td className={`num px-2 py-2 text-center ${x.m != null && x.m < THRESHOLD ? "font-bold" : ""}`} style={x.m != null && x.m < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(x.m, 2)}</td>
-                      <td className="num px-2 py-2 text-center">{x.s != null ? <span className={`chip !py-0 ${x.s >= 1 ? "chip-warn" : ""}`}>{f1(x.s, 2)}</span> : "—"}</td>
-                      <td className="num px-2 py-2 text-center text-muted">{x.n}</td>
-                      <td className="px-3 py-2">{x.m != null ? <span className={`chip !py-0 ${LEVEL_CLS[levelOf(x.m)]}`}>{levelName(x.m)}</span> : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-3 pb-3">
+              <ResponsiveTable rows={consolidado} rowKey={(x) => x.d.code} columns={[
+                { key: "dim", header: "Dimensión", priority: 1, cell: (x) => <><b className="text-ink">{x.d.code}</b> · {x.d.name}</> },
+                { key: "cap", header: "Capacidad", priority: 3, cell: (x) => <span className="text-muted">{x.d.cap}</span> },
+                { key: "m", header: "Promedio", align: "center", priority: 2, cell: (x) => <span className={x.m != null && x.m < THRESHOLD ? "font-bold text-bad" : ""}>{f1(x.m, 2)}</span> },
+                { key: "s", header: "Dispersión", align: "center", priority: 2, cell: (x) => x.s != null ? <span className={`chip !py-0 ${x.s >= 1 ? "chip-warn" : ""}`}>{f1(x.s, 2)}</span> : "—" },
+                { key: "n", header: "Respuestas", align: "center", priority: 3, cell: (x) => <span className="text-muted">{x.n}</span> },
+                { key: "nivel", header: "Nivel", priority: 2, cell: (x) => x.m != null ? <span className={`chip !py-0 ${LEVEL_CLS[levelOf(x.m)]}`}>{levelName(x.m)}</span> : "—" },
+              ]} />
             </div>
             <div className="border-t border-line px-5 py-3 text-[12px] text-muted">El consolidado entra al corte en curso como Fuente 1: en <Link href="/panel/diagnostico" className="font-bold text-cyan-deep hover:underline">Resumen</Link> se cruza con la percepción de equipos y la evidencia.</div>
           </Card>

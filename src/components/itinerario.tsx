@@ -82,7 +82,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
       {pub && (
         <div className="mb-6 overflow-hidden rounded-2xl px-5 py-6 text-white sm:px-7 sm:py-8" style={heroStyle}>
           {itinerary.logo && (
-            <div className="mb-4 inline-flex items-center rounded-xl bg-white px-4 py-2.5">
+            <div className="mb-4 inline-flex items-center rounded-xl bg-surface px-4 py-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={itinerary.logo} alt={company?.name ?? "Empresa"} className="h-10 w-auto max-w-[200px] object-contain" />
             </div>
@@ -124,7 +124,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
       )}
       {!pub && itinerary.public && publicUrl && <p className="num mb-2 break-all rounded-xl bg-cyan-wash/60 px-3 py-2 text-[12px] text-ink"><Globe size={12} className="mr-1 inline text-cyan-deep" /> Equipo organizador (logística y comentarios): {publicUrl}</p>}
       {!pub && itinerary.publicP && publicUrlP && <p className="num mb-4 break-all rounded-xl bg-[#FAF4E3] px-3 py-2 text-[12px] text-ink"><Globe size={12} className="mr-1 inline text-[#8A6D1F]" /> Participantes (agenda): {publicUrlP}</p>}
-      {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, white)" }}>{error}</p>}
+      {error && <p className="mb-3 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{error}</p>}
       {!pub && showFiles && onUploadFile && (
         <div className="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -169,7 +169,7 @@ export function ItinerarioView({ itinerary, comments, mode, audience = "organiza
                 return (
                   <button key={it.id} type="button" onClick={() => setOpen(i)}
                     className={`relative mb-2 grid w-full grid-cols-[54px_1fr] items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-all active:bg-cyan-wash sm:grid-cols-[62px_1fr_auto] ${soft ? "border-dashed border-line bg-transparent" : "border-line bg-surface hover:-translate-y-px hover:shadow-sm"}`}>
-                    <span className="absolute -left-[23px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-[3px] bg-white" style={th ? { borderColor: kindStyle(it.kind, accent, bg).background, background: it.kind === "mesa" ? accent : "#fff" } : { borderColor: DOT[it.kind], background: it.kind === "mesa" ? DOT.mesa : "#fff" }} />
+                    <span className="absolute -left-[23px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-[3px] bg-surface" style={th ? { borderColor: kindStyle(it.kind, accent, bg).background, background: it.kind === "mesa" ? accent : "#fff" } : { borderColor: DOT[it.kind], background: it.kind === "mesa" ? DOT.mesa : "#fff" }} />
                     <span className="num text-[13px] font-extrabold text-ink" style={th ? { color: accent } : undefined}>{it.time}{it.minutes ? <small className="block text-[12px] font-semibold text-muted">{it.minutes} min</small> : null}</span>
                     <span className="min-w-0">
                       <span className="block text-[13.5px] font-bold leading-snug text-ink">{it.title}</span>

@@ -74,7 +74,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
           <button onClick={() => setCreating(true)} className="btn-primary !py-2 text-[12.5px]"><Plus size={13} /> Nueva empresa</button>
         </div>
 
-        {error && <p className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 8%, white)" }}>{error}</p>}
+        {error && <p className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))" }}>{error}</p>}
 
         {companies.length > 6 && (
           <label className="rise rise-1 mb-5 flex items-center gap-2 rounded-xl bg-surface px-3 py-2 shadow-sm">

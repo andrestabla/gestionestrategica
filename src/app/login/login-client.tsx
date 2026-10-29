@@ -199,7 +199,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
 
         {error && (
           <p className="rounded-lg px-3.5 py-2.5 text-[12.5px]"
-            style={{ background: "color-mix(in srgb, var(--bad) 8%, white)", color: "var(--bad-text)" }}>
+            style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))", color: "var(--bad-text)" }}>
             {error}
           </p>
         )}
