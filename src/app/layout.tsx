@@ -6,7 +6,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jbMono = JetBrains_Mono({ variable: "--font-jb", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gestión estratégica · plataforma de Algoritmo T",
+  title: "Gestión estratégica · plataforma de 4Shine Empresas",
   description:
     "Plataforma de gestión estratégica del modelo de gestión estratégica: diagnóstico de capacidades, benchmark, cuadro de mando y OKR, indicadores, ruta, iniciativas, proyectos e inteligencia.",
 };

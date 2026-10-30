@@ -18,7 +18,7 @@ ${input.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opaci
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
   <tr><td style="background:#0D1B2A;border-radius:16px 16px 0 0;padding:22px 28px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle"><img src="${origin}/ge-logo-blanco.png" alt="Gestión estratégica" width="150" style="display:block;width:150px;height:auto;border:0"></td>
+      <td style="vertical-align:middle"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle;padding-right:10px"><img src="${origin}/ge-isotipo.png" alt="" width="34" style="display:block;width:34px;height:auto;border:0"></td><td style="vertical-align:middle;color:#FFFFFF;font-weight:800;font-size:16px;line-height:1.1">Gestión estratégica<div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:600;margin-top:3px">4Shine Empresas</div></td></tr></table></td>
       <td align="right" style="vertical-align:middle;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D4AF37;font-weight:700">${company ? esc(company) : "Plataforma de gestión estratégica"}</td>
     </tr></table>
   </td></tr>
@@ -28,9 +28,9 @@ ${input.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opaci
     ${input.body}
   </td></tr>
   <tr><td style="background:#FAF4E3;border-radius:0 0 16px 16px;padding:16px 28px;font-size:11.5px;line-height:1.5;color:#5B6775">
-    <div style="font-weight:700;color:#0D1B2A">Gestión estratégica · plataforma de Algoritmo T</div>
+    <div style="font-weight:700;color:#0D1B2A">Gestión estratégica · plataforma de 4Shine Empresas</div>
     <div>${company ? `Mensaje para el equipo de ${esc(company)}. ` : ""}Mensaje automático de la plataforma; si necesitas ayuda escribe a <a href="mailto:${MAIL_CONTACT}" style="color:#0D1B2A;font-weight:700">${MAIL_CONTACT}</a>.</div>
-    <div style="margin-top:6px;color:#8A93A0">Algoritmo T · <a href="${origin}" style="color:#8A93A0">${origin.replace(/^https?:\/\//, "")}</a> · ${year}</div>
+    <div style="margin-top:6px;color:#8A93A0">4Shine Empresas · <a href="${origin}" style="color:#8A93A0">${origin.replace(/^https?:\/\//, "")}</a> · ${year}</div>
   </td></tr>
 </table>
 </td></tr></table></body></html>`;
@@ -44,6 +44,6 @@ export const mailButton = (href: string, label: string) =>
 export function mailText(input: { body: string; company?: string; origin?: string }): string {
   const origin = (input.origin ?? MAIL_ORIGIN).replace(/\/$/, "");
   const head = `GESTIÓN ESTRATÉGICA · ${input.company?.trim() ? input.company.trim().toUpperCase() : "PLATAFORMA DE GESTIÓN ESTRATÉGICA"}\n${"─".repeat(44)}\n\n`;
-  const foot = `\n\n${"─".repeat(44)}\nGestión estratégica · plataforma de Algoritmo T · Algoritmo T\nMensaje automático; si necesitas ayuda escribe a ${MAIL_CONTACT}.\n${origin}`;
+  const foot = `\n\n${"─".repeat(44)}\nGestión estratégica · plataforma de 4Shine Empresas\nMensaje automático; si necesitas ayuda escribe a ${MAIL_CONTACT}.\n${origin}`;
   return head + input.body.trim() + foot;
 }

@@ -131,7 +131,7 @@ export type BrandPreset = {
 
 export const BRAND_PRESETS: BrandPreset[] = [
   {
-    id: "algoritmo", name: "Algoritmo T",
+    id: "algoritmo", name: "4Shine Empresas",
     desc: "Navy · Cian · Inter · 14px — el tema original",
     values: { primary: "#1a2d5a", secondary: "#0d1830", accent: "#0e93b4", font: "Inter", radius: "14px" },
   },

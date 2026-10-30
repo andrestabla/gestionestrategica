@@ -182,7 +182,7 @@ function ScopeSelects({ line, responsibleId, responsibles, disabled, compact, on
 
 const ROLE_LABEL: Record<ManagedUser["role"], string> = {
   ADMIN: "Admin de la plataforma",
-  CONSULTOR: "Consultor Algoritmo T",
+  CONSULTOR: "Consultor 4Shine Empresas",
   LIDER: "Líder de la empresa",
   RESPONSABLE: "Responsable de ámbito",
   DIRECTIVO: "Directivo",

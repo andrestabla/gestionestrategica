@@ -206,8 +206,8 @@ export default function BiPage() {
 
       <p className="rise rise-4 mt-5 rounded-xl border border-dashed border-line-strong bg-surface px-5 py-4 text-[12.5px] leading-relaxed text-muted">
         {isEC
-          ? "El sector de referencia se define por el código CIIU de la empresa (Administración → empresa). Para Ecuador el módulo enlaza con las fuentes oficiales (SCVS, INEC, ARCSA, BCE); los observatorios propios de Algoritmo T para el país se incorporarán a medida que se construyan."
-          : "El sector de referencia se define por los códigos CIIU de la empresa (Administración → empresa). En producción el módulo enlaza con el BI de Algoritmo T mediante inicio de sesión unificado, de modo que el equipo navega los observatorios y genera informes sin una segunda credencial."}
+          ? "El sector de referencia se define por el código CIIU de la empresa (Administración → empresa). Para Ecuador el módulo enlaza con las fuentes oficiales (SCVS, INEC, ARCSA, BCE); los observatorios propios de 4Shine Empresas para el país se incorporarán a medida que se construyan."
+          : "El sector de referencia se define por los códigos CIIU de la empresa (Administración → empresa). En producción el módulo enlaza con el BI de 4Shine Empresas mediante inicio de sesión unificado, de modo que el equipo navega los observatorios y genera informes sin una segunda credencial."}
       </p>
     </>
   );

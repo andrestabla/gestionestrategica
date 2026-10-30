@@ -613,7 +613,7 @@ export default function EjecutivoTab() {
       )}
 
       <p className="mt-5 text-[12px] leading-relaxed text-faint">
-        Generado por la PGTD · Algoritmo T S.A.S. · datos ilustrativos del modo demo. Las reglas de
+        Generado por Gestión estratégica · 4Shine Empresas · datos ilustrativos del modo demo. Las reglas de
         semáforos, riesgo y proyección están documentadas en Metodología.
       </p>
     </>

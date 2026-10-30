@@ -23,7 +23,7 @@ export function RestablecerClient({ token }: { token: string }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-8">
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-sm">
-        <div className="label">Gestión estratégica · plataforma de Algoritmo T</div>
+        <div className="label">Gestión estratégica · plataforma de 4Shine Empresas</div>
         <h1 className="mt-1 text-[22px] font-extrabold leading-tight text-ink">Crea una contraseña nueva</h1>
         <p className="mt-1 text-[12.5px] text-muted">Mínimo {PASSWORD_MIN} caracteres. Al guardarla entras directamente.</p>
         <label className="mt-5 block"><span className="label !text-[11px]">Contraseña nueva</span>

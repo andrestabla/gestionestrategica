@@ -46,7 +46,7 @@ export default async function PublicView(
       <header className="mb-8 flex flex-wrap items-center gap-4">
         <AlgoritmoMark size={34} />
         <div className="min-w-0 flex-1">
-          <div className="kicker">Gestión estratégica · plataforma de Algoritmo T</div>
+          <div className="kicker">Gestión estratégica · plataforma de 4Shine Empresas</div>
           <h1 className="text-[22px] font-extrabold tracking-tight text-ink">{INSTITUTION.name}</h1>
         </div>
         <span className="chip chip-cyan"><Eye size={11} /> Vista pública de solo lectura</span>
@@ -166,7 +166,7 @@ export default async function PublicView(
       </section>
 
       <footer className="pb-4 pt-2 text-center text-[12px] font-medium uppercase tracking-[0.14em] text-faint">
-        Generado por la PGTD · Algoritmo T S.A.S. · Enlace de solo lectura — no permite editar ni descargar datos personales
+        Generado por Gestión estratégica · 4Shine Empresas · Enlace de solo lectura — no permite editar ni descargar datos personales
       </footer>
     </div>
   );

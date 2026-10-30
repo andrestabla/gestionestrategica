@@ -324,7 +324,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
             <div className="leading-tight">
               <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "Gestión estratégica"}</div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
-                Algoritmo T
+                4Shine Empresas
               </div>
             </div>
           )}
@@ -429,7 +429,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
         <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none">{children}</main>
 
         <footer className="px-8 pb-6 pt-2 text-[12px] font-medium uppercase tracking-[0.14em] text-faint/70">
-          Gestión estratégica · plataforma de Algoritmo T
+          Gestión estratégica · plataforma de 4Shine Empresas
         </footer>
       </div>
 

@@ -9,6 +9,7 @@ import { CAPS, DIMS, F2_GENERAL, GUIDES, MAPA } from "@/data/mapa";
 import { Loader2, Send, CheckCircle2, ShieldCheck } from "lucide-react";
 import { ModoFocal, teclaNumero, irAlSiguientePendiente, ITEM_CLS } from "@/components/modo-focal";
 import { UnaAUna, SelectorVista, useVista, type Pantalla } from "@/components/una-a-una";
+import { MarcaGE } from "@/components/logo";
 
 const SCALE = MAPA.escalaF2;
 
@@ -123,7 +124,7 @@ export function SurveyForm({ token, company }: { token: string; company: string 
       <header className="px-6 py-5 text-white" style={{ background: "var(--grad-deep)" }}>
         <div className="mx-auto flex max-w-[860px] items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ge-logo-blanco.png" alt="Gestión estratégica" className="h-7 object-contain" />
+          <MarcaGE oscura alto="28px" />
           <div className="min-w-0"><div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Diagnóstico de capacidades · Percepción de equipos</div><div className="truncate text-[15px] font-extrabold">{company}</div></div>
           <span className="chip ml-auto hidden sm:inline-flex" style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}><ShieldCheck size={11} /> Anónima</span>
         </div>

@@ -3286,7 +3286,7 @@ export const DEFAULT_BRANDING: Branding = {
   loginTitle: "Iniciar sesión", showLoginTitle: true,
   loginWelcome: "Entra con la cuenta que te asignó el advisor de tu empresa.", showLoginWelcome: true,
   loginSupport: "Soporte: soporte@algoritmot.com", showLoginSupport: false,
-  heroTitle: "Plataforma de gestión estratégica de Algoritmo T", showHeroTitle: true,
+  heroTitle: "Plataforma de gestión estratégica de 4Shine Empresas", showHeroTitle: true,
   heroMessages: [], showHeroMessages: true,
   heroSupport: "", showHeroSupport: false,
   overlayColor: "#0d1830", overlayOpacity: 55,

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlgoritmoMark } from "@/components/logo";
 import { LogIn, Loader2 } from "lucide-react";
+import { MarcaGE } from "@/components/logo";
 
 type Branding = {
   platformName: string; showPlatformName: boolean;
@@ -119,7 +120,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
         ) : (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ge-logo-blanco.png" alt="Gestión estratégica" className="h-8 object-contain" />
+            <MarcaGE oscura alto="32px" />
           </>
         )}
         {b?.showPlatformName && !b?.logoDark && !b?.logoLight && b.platformName !== "Gestión estratégica" && (
@@ -133,7 +134,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           <h1 className="mt-4 max-w-[20ch] text-[34px] font-extrabold leading-[1.15] tracking-tight text-white">
             {b ? b.heroTitle : (
               <>Plataforma de gestión estratégica{" "}
-                <span style={{ color: "#F1BA5B" }}>de Algoritmo T</span></>
+                <span style={{ color: "#F1BA5B" }}>de 4Shine Empresas</span></>
             )}
           </h1>
         )}
@@ -160,7 +161,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
         ) : (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ge-logo-negro.png" alt="Gestión estratégica" className="h-8 object-contain" />
+            <MarcaGE oscura={false} alto="32px" />
             {b?.showPlatformName && b.platformName !== "Gestión estratégica" && (
               <span className="text-[15px] font-extrabold text-ink">{b.platformName}</span>
             )}

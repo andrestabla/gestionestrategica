@@ -37,6 +37,7 @@ import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
   AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText, RefreshCw,
 } from "lucide-react";
+import { MarcaGE } from "@/components/logo";
 
 type Tab = "resumen" | "capacidad" | "dimension" | "test" | "autoevaluacion" | "brechas" | "captura" | "informe";
 
@@ -1037,7 +1038,7 @@ function InformeTest({ id }: { id: string }) {
             <div className="text-[12px] text-muted">{String(resp.meta.cargo ?? "")} · {fecha.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ge-logo-negro.png" alt="Gestión estratégica" className="h-7 object-contain" />
+          <MarcaGE oscura={false} alto="28px" />
         </div>
 
         <div className="mt-4 grid gap-5 md:grid-cols-2">
@@ -1109,7 +1110,7 @@ function InformeDiagnostico() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><div className="kicker">Diagnóstico de capacidades · {label}</div><h2 className="text-[20px] font-extrabold tracking-tight text-ink">{v.catalog.company.name}</h2><div className="text-[12px] text-muted">{C.f1n} autoevaluaciones · {C.f2n} respuestas de equipos{C.okF2 ? "" : " (muestra insuficiente)"} · evidencia {C.hasF3 ? "registrada" : "pendiente"}</div></div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ge-logo-negro.png" alt="Gestión estratégica" className="h-7 object-contain" />
+          <MarcaGE oscura={false} alto="28px" />
         </div>
         {head(1, "Radar de las cuatro capacidades", "lectura ejecutiva con el umbral de brecha y el titular del patrón")}
         <div className="grid gap-5 md:grid-cols-[300px_1fr] md:items-center">
@@ -1349,7 +1350,7 @@ function InformeCta({ kind, email, completa, href }: { kind: "f1" | "consolidado
           </div>
         </div>
         <span className="flex flex-wrap items-center gap-2">
-          {kind === "consolidado" && canAll && data?.disponible && (!data.informe || data.desactualizado) && <button type="button" onClick={() => void generar()} disabled={busy} className="btn-ghost btn-sm">{busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {data.informe ? "Actualizar lectura" : "Generar lectura"}</button>}
+          {kind === "consolidado" && canAll && data?.disponible && <button type="button" onClick={() => void generar()} disabled={busy} className="btn-ghost btn-sm">{busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {data.informe ? "Actualizar lectura" : "Generar lectura"}</button>}
           <Link href={href} className="btn-primary btn-sm">Abrir informe <ArrowRight size={13} /></Link>
         </span>
       </div>

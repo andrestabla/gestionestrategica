@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Maximize2, Minimize2, Keyboard } from "lucide-react";
+import { MarcaGE } from "@/components/logo";
 
 /** Pide la pantalla completa del navegador: solo funciona dentro de un gesto del usuario (clic). */
 export function pedirPantallaCompleta() {
@@ -93,7 +94,7 @@ export function ModoFocal({ kicker, title, color, progress, status, extra, onExi
         <div className="mx-auto flex h-[56px] max-w-[1080px] items-center gap-3 px-4 sm:px-6">
           {marca ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <><img src="/ge-logo-negro.png" alt="Gestión estratégica" className="focal-logo-claro h-6 shrink-0 object-contain" /><img src="/ge-logo-blanco.png" alt="" aria-hidden className="focal-logo-oscuro hidden h-6 shrink-0 object-contain" /></>
+            <><span className="focal-logo-claro shrink-0"><MarcaGE oscura={false} alto="24px" /></span><span className="focal-logo-oscuro hidden shrink-0"><MarcaGE oscura alto="24px" /></span></>
           ) : onExit ? (
             <button type="button" onClick={exit} className="btn-ghost btn-sm shrink-0" title="Guarda lo respondido y vuelve (Esc)"><ArrowLeft size={14} /> <span className="hidden sm:inline">{exitLabel}</span></button>
           ) : null}

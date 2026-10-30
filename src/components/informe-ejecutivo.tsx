@@ -10,6 +10,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { MiniRadar } from "@/components/charts";
+import { MarcaGE } from "@/components/logo";
 import { avisar } from "@/components/feedback";
 import { CAPS, LEVELS, THRESHOLD, levelOf, levelName } from "@/data/mapa";
 import type { InformeIA, InformeKind } from "@/lib/informe-ia";
@@ -157,7 +158,7 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
           <span className="flex items-center gap-1.5">
             <button type="button" onClick={() => setGuia((g) => !g)} className={`btn-ghost btn-sm !px-2.5 ${guia ? "!text-gold-text" : ""}`} title="Cómo recorrer este informe" aria-expanded={guia}><Compass size={14} /></button>
             {estado === "desactualizado" && <span className="chip chip-warn hidden lg:inline-flex"><AlertTriangle size={11} /> Respuestas nuevas</span>}
-            {canRegen && onRegen && (estado === "desactualizado" || estado === "pendiente") && <button type="button" onClick={onRegen} disabled={busy} className="btn-ghost btn-sm !px-2.5" title={informe ? "Actualizar análisis" : "Generar análisis"}>{busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>}
+            {canRegen && onRegen && (kind === "consolidado" || estado === "desactualizado" || estado === "pendiente") && <button type="button" onClick={onRegen} disabled={busy} className="btn-ghost btn-sm !px-2.5" title={informe ? "Actualizar análisis con IA" : "Generar análisis con IA"}>{busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>}
             {shareUrl && <button type="button" onClick={compartir} className="btn-ghost btn-sm !px-2.5" title="Compartir enlace"><Link2 size={14} /></button>}
             <button type="button" onClick={() => window.print()} className="btn-primary btn-sm" title="Se abre el diálogo de impresión: elige «Guardar como PDF»"><Printer size={13} /> <span className="hidden sm:inline">PDF</span></button>
           </span>
@@ -520,20 +521,6 @@ function InformeImpreso({ kind, empresa, sujeto, fecha, datos, informe, titulo, 
 }
 
 /* ═══ Piezas compartidas ═══ */
-
-/** Marca de la plataforma para el PDF: isotipo + nombre y, de momento, «4Shine Empresas» como firma. */
-function MarcaGE({ oscura, alto }: { oscura: boolean; alto: string }) {
-  return (
-    <span className="inline-flex items-center gap-2" style={{ height: alto }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/ge-isotipo.png" alt="" className="h-full w-auto object-contain" />
-      <span className="leading-none normal-case tracking-normal">
-        <span className={`block font-extrabold ${oscura ? "text-white" : "text-ink"}`} style={{ fontSize: `calc(${alto} * 0.42)` }}>Gestión estratégica</span>
-        <span className={`block font-semibold uppercase ${oscura ? "text-white/55" : "text-faint"}`} style={{ fontSize: `calc(${alto} * 0.24)`, letterSpacing: "0.16em", marginTop: `calc(${alto} * 0.06)` }}>4Shine Empresas</span>
-      </span>
-    </span>
-  );
-}
 
 function Prioridades({ informe, impreso }: { informe: InformeIA; impreso?: boolean }) {
   return (
