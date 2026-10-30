@@ -363,7 +363,7 @@ function Hoja({ n, seccion, children, oscura, empresa, kind, fecha, pagina }: { 
       {!oscura && (
         <div className="mb-[8mm] flex items-end justify-between border-b border-line pb-[3mm]">
           <div className="flex items-baseline gap-3"><span className="num text-[18pt] font-extrabold leading-none text-gold">{n}</span><span className="text-[9pt] font-bold uppercase tracking-[0.2em] text-ink">{seccion}</span></div>
-          <div className="text-[8pt] uppercase tracking-[0.16em] text-faint">{empresa} · Informe ejecutivo</div>
+          <div className="flex items-center gap-3 text-[8pt] uppercase tracking-[0.16em] text-faint"><span>{empresa} · Informe ejecutivo</span><MarcaGE oscura={false} alto="5.5mm" /></div>
         </div>
       )}
       <div className="flex-1">{children}</div>
@@ -386,6 +386,7 @@ function InformeImpreso({ kind, empresa, sujeto, fecha, datos, informe, titulo, 
       <Hoja {...H} n="" seccion="" oscura pagina={sig()}>
         <div className="flex h-full flex-col justify-between py-[10mm]">
           <div>
+            <div className="mb-6"><MarcaGE oscura alto="10mm" /></div>
             <div className="text-[9pt] font-bold uppercase tracking-[0.24em] text-cyan-fill">Informe ejecutivo · {kind === "f1" ? "Autoevaluación directiva · Fuente 1" : "Consolidado del comité · Fuente 1"}</div>
             <div className="mt-2 text-[12pt] font-semibold text-white/70">{empresa}</div>
           </div>
@@ -510,7 +511,7 @@ function InformeImpreso({ kind, empresa, sujeto, fecha, datos, informe, titulo, 
             <p className="mt-2 text-[9.5pt] leading-[1.55] text-ink-soft">{textoMetodo(kind)}</p>
             {informe?.nota_metodologica && <p className="mt-3 border-l-[3px] border-line pl-3 text-[9pt] italic leading-[1.5] text-muted">{informe.nota_metodologica}</p>}
             {meta && <p className="mt-4 text-[8pt] text-faint">{meta}</p>}
-            <p className="mt-6 text-[8pt] leading-snug text-faint">Método 4Shine Empresas · plataforma Gestión estratégica de Algoritmo T. Las cifras provienen de las respuestas guardadas en la plataforma; la lectura cualitativa la escribe un modelo de lenguaje a partir del método y de los datos de la empresa, y la revisa el advisor en la devolución.</p>
+            <p className="mt-6 text-[8pt] leading-snug text-faint">Método 4Shine Empresas · plataforma Gestión estratégica de 4Shine Empresas. Las cifras provienen de las respuestas guardadas en la plataforma; la lectura cualitativa la escribe un modelo de lenguaje a partir del método y de los datos de la empresa, y la revisa el advisor en la devolución.</p>
           </div>
         </div>
       </Hoja>
@@ -519,6 +520,20 @@ function InformeImpreso({ kind, empresa, sujeto, fecha, datos, informe, titulo, 
 }
 
 /* ═══ Piezas compartidas ═══ */
+
+/** Marca de la plataforma para el PDF: isotipo + nombre y, de momento, «4Shine Empresas» como firma. */
+function MarcaGE({ oscura, alto }: { oscura: boolean; alto: string }) {
+  return (
+    <span className="inline-flex items-center gap-2" style={{ height: alto }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/ge-isotipo.png" alt="" className="h-full w-auto object-contain" />
+      <span className="leading-none normal-case tracking-normal">
+        <span className={`block font-extrabold ${oscura ? "text-white" : "text-ink"}`} style={{ fontSize: `calc(${alto} * 0.42)` }}>Gestión estratégica</span>
+        <span className={`block font-semibold uppercase ${oscura ? "text-white/55" : "text-faint"}`} style={{ fontSize: `calc(${alto} * 0.24)`, letterSpacing: "0.16em", marginTop: `calc(${alto} * 0.06)` }}>4Shine Empresas</span>
+      </span>
+    </span>
+  );
+}
 
 function Prioridades({ informe, impreso }: { informe: InformeIA; impreso?: boolean }) {
   return (
