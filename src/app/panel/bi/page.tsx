@@ -19,6 +19,7 @@ import { CO_POPULATION, CO_POPULATION_SOURCE } from "@/data/demanda-co";
 import { demandByTerritory, coverage, openMarkets, competitorsByTerritory } from "@/lib/demanda";
 import { baseDe, type Tema } from "@/data/conocimiento-sector";
 import { Database, Users, ShieldCheck, FlaskConical, Landmark, ExternalLink, Scale, Award, BookOpen } from "lucide-react";
+import { MapaSector, Dispersion, RankingActividad, comparables, CanalesBarra, RadarAtc, Productos } from "@/components/inteligencia-graficos";
 
 const PRESENCE_LABEL = { sede: "Sede", cobertura: "Cobertura", oportunidad: "Oportunidad", ninguna: "Sin presencia" } as const;
 const PRESENCE_CLS = { sede: "chip chip-cyan", cobertura: "chip chip-ok", oportunidad: "chip chip-gold", ninguna: "chip" } as const;
@@ -71,6 +72,14 @@ export default function BiPage() {
   const demand = demandAll.filter((d, i) => i < 12 || d.presence !== "ninguna" || d.companies > 0).slice(0, 18);
   const competition = competitorsByTerritory(s.peers, v.catalog.territories, 3).filter((c) => c.count > 0);
 
+  // mapa: sedes declaradas y domicilio según Supersociedades; comparables: fabricantes presentes en Supersociedades e INVIMA
+  const home = v.catalog.territories.filter((t) => t.presence === "sede").map((t) => t.name);
+  const domicilio = selfPeer?.dept ?? null;
+  const ciiuFoco = selfPeer?.ciiu ?? (intel ? "C2100" : null);
+  const peersFoco = ciiuFoco ? s.peers.filter((p) => p.ciiu === ciiuFoco) : s.peers;
+  const comps = comparables(s, intel, selfPeer, titular, ciiuFoco, 8);
+  const pctC = (a: number, c: { institucional: number; comercial: number; muestraMedica: number }) => { const t = c.institucional + c.comercial + c.muestraMedica; return t ? Math.round((a / t) * 1000) / 10 : 0; };
+
   // hechos con fuente, por tema
   const kb = baseDe(company);
   const grupos = kb ? TEMAS.map((t) => ({ ...t, hechos: kb.hechos.filter((h) => h.temas[0] === t.id) })).filter((g) => g.hechos.length) : [];
@@ -101,6 +110,53 @@ export default function BiPage() {
           </div>
         </Card>
       )}
+
+      {/* ── mapa y dispersión ── */}
+      <div className="mb-5 grid gap-5 lg:grid-cols-2">
+        <Card className="rise rise-1">
+          <CardHeader title={`${isEC ? "Ecuador" : "Colombia"}: sector, población y competencia`} sub={`tres lentes sobre el mismo mapa · ${domicilio ? `domicilio de la empresa en ${domicilio}` : "sin domicilio identificado"}${home.length ? ` · sedes declaradas: ${home.join(", ")}` : " · la empresa aún no declara sedes ni cobertura"}`} />
+          <MapaSector s={s} demand={demandAll} home={home} domicilio={domicilio} country={isEC ? "EC" : "CO"} unitName={unitName} peers={s.peers} />
+        </Card>
+        <Card className="rise rise-2">
+          <CardHeader title="Crecimiento frente a margen operacional" sub={`las ${s.peers.length} mayores del sector en ${year}; tamaño del punto según ingresos · ${ciiuFoco ? `en color, las de la actividad ${ciiuFoco}` : ""}`} />
+          <div className="px-4 pb-3"><Dispersion s={s} selfNit={selfPeer?.nit ?? null} ciiuFoco={ciiuFoco} /></div>
+          <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Arriba a la derecha crecen por encima de la mediana con más margen que la mediana; abajo a la izquierda, lo contrario. {selfPeer ? `${company.shortName || company.name} aparece en dorado.` : "La empresa aparecerá en dorado cuando su razón social figure en la ficha."} Valores extremos recortados a los bordes.</p>
+        </Card>
+      </div>
+
+      {/* ── ranking de la actividad y comparativo de laboratorios ── */}
+      <div className="mb-5 grid gap-5 lg:grid-cols-[380px_1fr]">
+        <Card className="rise rise-2">
+          <CardHeader title={ciiuFoco ? `Ranking ${ciiuFoco}` : "Ranking del sector"} sub={`${peersFoco.length} sociedades de ${s.byCiiu.find((c) => c.code === ciiuFoco)?.name?.split(",")[0].toLowerCase() ?? "la actividad"} por ingresos ${year} · crecimiento y margen al lado · miles de millones`} />
+          <div className="px-5 pb-5"><RankingActividad peers={peersFoco} selfNit={selfPeer?.nit ?? null} /></div>
+        </Card>
+        <Card className="rise rise-3">
+          <CardHeader title="Comparativo de laboratorios" sub="las sociedades de la actividad que también están entre los titulares con más registros: finanzas (Supersociedades) y portafolio regulatorio (INVIMA · CNPMDM) en una sola fila" />
+          {comps.length ? (
+            <div className="overflow-x-auto px-2 pb-3">
+              <table className="w-full min-w-[720px] text-[12px]">
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Laboratorio</th><th className="px-2 py-2 text-right">Ingresos</th><th className="px-2 py-2 text-right">Crec.</th><th className="px-2 py-2 text-right">Margen op.</th><th className="px-2 py-2 text-right">Registros</th><th className="px-2 py-2 text-right">CUM</th><th className="px-2 py-2 text-right">Regulados</th><th className="px-2 py-2 text-right">Institucional</th><th className="px-2 py-2 text-right">Muestras</th></tr></thead>
+                <tbody>
+                  {comps.map((c) => (
+                    <tr key={c.nombre} className={`border-t border-line ${c.self ? "bg-gold-wash/40" : ""}`}>
+                      <td className={`px-3 py-2 ${c.self ? "font-extrabold text-ink" : "font-semibold text-ink"}`} title={c.nombre}>{shortName(c.nombre, 3)}{c.self && <span className="chip chip-gold ml-2 !py-0 text-[11px]">tu empresa</span>}</td>
+                      <td className="num px-2 py-2 text-right font-bold text-ink">{c.peer ? fmtNum(c.peer.revenue, 0) : "—"}</td>
+                      <td className="num px-2 py-2 text-right" style={{ color: (c.peer?.growth ?? 0) >= 0 ? "var(--ok)" : "var(--bad)" }}>{c.peer?.growth != null ? `${fmtNum(c.peer.growth, 1)} %` : "—"}</td>
+                      <td className="num px-2 py-2 text-right text-muted">{c.peer?.opMargin != null ? `${fmtNum(c.peer.opMargin, 1)} %` : "—"}</td>
+                      <td className="num px-2 py-2 text-right text-ink">{c.titular?.registros ?? "—"}</td>
+                      <td className="num px-2 py-2 text-right text-muted">{c.titular ? fmtNum(c.titular.cums, 0) : "—"}</td>
+                      <td className="num px-2 py-2 text-right text-muted">{c.titular ? `${fmtNum(c.titular.regulados.share, 1)} %` : "—"}</td>
+                      <td className="num px-2 py-2 text-right text-muted">{c.titular ? `${fmtNum(pctC(c.titular.canales.institucional, c.titular.canales), 1)} %` : "—"}</td>
+                      <td className="num px-2 py-2 text-right text-muted">{c.titular ? `${fmtNum(pctC(c.titular.canales.muestraMedica, c.titular.canales), 1)} %` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="px-5 pb-5 text-[12.5px] text-muted">Sin inteligencia regulatoria para este sector: el comparativo cruza Supersociedades con el INVIMA.</p>}
+          <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Institucional: presentaciones cuya descripción comercial declara uso institucional u hospitalario; muestras: presentaciones marcadas como muestra médica (proxy de intensidad promocional con el cuerpo médico). El resto es canal comercial. Un laboratorio con menos exposición a precios regulados y más canal comercial compite por marca y prescripción; uno con mucha presentación institucional, por licitaciones y precio.</p>
+        </Card>
+      </div>
 
       <div className="mb-5 grid gap-5 lg:grid-cols-3">
         <Card className="rise rise-1">
@@ -254,6 +310,37 @@ export default function BiPage() {
             </Card>
           </div>
         </>
+      )}
+
+      {intel && (
+        <div className="mb-5 grid gap-5 lg:grid-cols-3">
+          <Card className="rise rise-1">
+            <CardHeader title="Canales por presentación" sub="comercial, institucional y muestra médica · INVIMA (descripción comercial del CUM)" />
+            <div className="space-y-3 px-5 pb-4">
+              <CanalesBarra c={intel.invima.canalesMercado} label="Todo el mercado" />
+              {titular && <CanalesBarra c={titular.canales} label={company.shortName || company.name} self />}
+              {comps.filter((c) => !c.self && c.titular).slice(0, 5).map((c) => <CanalesBarra key={c.nombre} c={c.titular!.canales} label={shortName(c.nombre, 2)} />)}
+              <div className="flex flex-wrap gap-3 pt-1 text-[11.5px] text-faint"><span><i className="mr-1 inline-block h-2 w-2 rounded-sm" style={{ background: "var(--cyan-deep)" }} />comercial</span><span><i className="mr-1 inline-block h-2 w-2 rounded-sm" style={{ background: "var(--navy)" }} />institucional</span><span><i className="mr-1 inline-block h-2 w-2 rounded-sm" style={{ background: "var(--gold)" }} />muestra médica</span></div>
+            </div>
+          </Card>
+          {titular ? (
+            <>
+              <Card className="rise rise-2">
+                <CardHeader title="Mezcla terapéutica" sub={`${company.shortName || company.name} (dorado) frente al mercado (gris) · % de registros por grupo ATC`} />
+                <div className="px-4 pb-4"><RadarAtc titular={titular} intel={intel} /></div>
+              </Card>
+              <Card className="rise rise-3">
+                <CardHeader title={`Marcas de ${company.shortName || company.name}`} sub={`${titular.productos.length} marcas con más presentaciones vigentes, por grupo terapéutico · INVIMA`} />
+                <div className="px-5 pb-5"><Productos titular={titular} /></div>
+              </Card>
+            </>
+          ) : (
+            <Card className="rise rise-2 lg:col-span-2">
+              <CardHeader title="Portafolio y marcas" sub="se muestran cuando la empresa está entre los titulares con más registros" />
+              <p className="px-5 pb-5 text-[12.5px] text-muted">Con la razón social en la ficha de la empresa, la plataforma ubica su portafolio en el INVIMA: marcas, grupos terapéuticos, canales y exposición a precios regulados.</p>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* ── demanda y competencia por territorio ── */}

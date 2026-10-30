@@ -15,11 +15,14 @@ export type TitularDetalle = {
   vencimientos: { en12m: number; en36m: number; porAno: { ano: number; n: number }[] };
   regulados: { expedientes: number; share: number; mercadosRelevantes: number };
   modalidades: { modalidad: string; n: number }[];
+  canales: Canales;                                   // presentaciones por canal (proxy desde la descripción comercial del CUM)
+  productos: { nombre: string; presentaciones: number; atc2: string }[];   // marcas con más presentaciones
 };
+export type Canales = { institucional: number; comercial: number; muestraMedica: number; activas?: number };
 export type Inteligencia = {
   key: string; fetchedAt: string;
   fuentes: { id: string; name: string; url: string; note: string }[];
-  invima: { registros: number; titulares: number; cums: number; titularesAgrupados: number; atcMercado: AtcCount[]; top: TitularDetalle[] };
+  invima: { registros: number; titulares: number; cums: number; titularesAgrupados: number; atcMercado: AtcCount[]; canalesMercado: Canales; top: TitularDetalle[] };
   regulados: { presentaciones: number; mercadosRelevantes: number; expedientes: number; circularPrincipal: string; vigenciaDesde: string };
   trm: { valor: number; fecha: string; hace12m: number; fecha12m: string; variacion12m: number };
 };

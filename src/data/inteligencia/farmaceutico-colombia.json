@@ -1,6 +1,6 @@
 {
  "key": "farmaceutico-colombia",
- "fetchedAt": "2026-10-30T16:26:20.009Z",
+ "fetchedAt": "2026-10-30T16:44:05.921Z",
  "fuentes": [
   {
    "id": "invima-cum",
@@ -112,6 +112,11 @@
     "share": 2.1
    }
   ],
+  "canalesMercado": {
+   "institucional": 10745,
+   "comercial": 110028,
+   "muestraMedica": 36140
+  },
   "top": [
    {
     "rank": 1,
@@ -287,6 +292,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 9
+     }
+    ],
+    "canales": {
+     "institucional": 1625,
+     "comercial": 8489,
+     "muestraMedica": 3697,
+     "activas": 8685
+    },
+    "productos": [
+     {
+      "nombre": "HIDRAPLUS CON",
+      "presentaciones": 2215,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "NORAVER CÁPSULAS",
+      "presentaciones": 1224,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "NORAVER NF",
+      "presentaciones": 408,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "NORAVER DIA",
+      "presentaciones": 405,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "BIOCALCIUM PLUS",
+      "presentaciones": 364,
+      "atc2": "A12"
+     },
+     {
+      "nombre": "DUO-DECADRON",
+      "presentaciones": 312,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "DUODECADRON SUSPENSIÓN",
+      "presentaciones": 300,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "DURAFLEX ADVANCE.",
+      "presentaciones": 282,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 279,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "NORAVER NOCHE",
+      "presentaciones": 276,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ACETAMINOFEN +",
+      "presentaciones": 240,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "CLINDAMICINA /",
+      "presentaciones": 236,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "ETORICOXIB",
+      "presentaciones": 222,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "NORAVER CÁPSULA",
+      "presentaciones": 216,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "VALSARTAN/AMLODIPINO",
+      "presentaciones": 204,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "TRIMEBUTINA200MG +",
+      "presentaciones": 200,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "IBUFLASH MIGRAN",
+      "presentaciones": 195,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DECADRON MG/2",
+      "presentaciones": 174,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "ACETAMINOFEN/CODEINA MG/30",
+      "presentaciones": 172,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "LEVOTIROXINA",
+      "presentaciones": 163,
+      "atc2": "H03"
+     },
+     {
+      "nombre": "MIRTAZAPINA",
+      "presentaciones": 156,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "FENALGEX",
+      "presentaciones": 144,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "VALACICLOVIR",
+      "presentaciones": 133,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "CANDESARTAN /",
+      "presentaciones": 126,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "CANDESARTAN",
+      "presentaciones": 118,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "Z-FULL MK",
+      "presentaciones": 117,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "LOSARTAN/ HIDROCLOROTIAZIDA",
+      "presentaciones": 114,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "TELMISARTAN",
+      "presentaciones": 110,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ALERFAST",
+      "presentaciones": 98,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "VALSARTAN/ AMLODIPINO",
+      "presentaciones": 98,
+      "atc2": "C09"
      }
     ]
    },
@@ -467,6 +630,164 @@
      {
       "modalidad": "FABRICAR Y EXPORTAR",
       "n": 1
+     }
+    ],
+    "canales": {
+     "institucional": 233,
+     "comercial": 2285,
+     "muestraMedica": 376,
+     "activas": 2340
+    },
+    "productos": [
+     {
+      "nombre": "GRIPTOTAL",
+      "presentaciones": 171,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ETORICOXIB RECUBIERTAS.",
+      "presentaciones": 145,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "TRIMETAZIDINA DICLORHIDRATO",
+      "presentaciones": 128,
+      "atc2": "C01"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 101,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DROSPIRENONA +",
+      "presentaciones": 80,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "IBUPROFENO",
+      "presentaciones": 79,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "METFORMINA CLORHIDRATO",
+      "presentaciones": 74,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "DEXAMETASONA FOSFATO",
+      "presentaciones": 54,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "TADALAFILO",
+      "presentaciones": 53,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "AMOXICILINA +",
+      "presentaciones": 48,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "OMEPRAZOL",
+      "presentaciones": 48,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 48,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ETORICOXIB MG.",
+      "presentaciones": 39,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ROSUVASTATINA",
+      "presentaciones": 38,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "CELECOXIB",
+      "presentaciones": 38,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "NAPROXENO250 COMPRIMIDOS",
+      "presentaciones": 36,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "AMLODIPINO",
+      "presentaciones": 35,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "QUETIAPINA",
+      "presentaciones": 34,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "GEMFIBROZILO",
+      "presentaciones": 34,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "TRAMADOL MG/ML",
+      "presentaciones": 33,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ESOMEPRAZOL ENTERICAS",
+      "presentaciones": 33,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "NEBIVOLOL TABLETAS.",
+      "presentaciones": 33,
+      "atc2": "C07"
+     },
+     {
+      "nombre": "BETAMETASONA MG/",
+      "presentaciones": 32,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "TRIMETOPRIM SULFAMETOXAZOL-F",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BETAHISTINA DICLORHIDRATO",
+      "presentaciones": 30,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "COMPLEJO B",
+      "presentaciones": 28,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "MONTELUKAST",
+      "presentaciones": 28,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "BETAMETASONA INYECTABLEX",
+      "presentaciones": 26,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "LOSARTAN",
+      "presentaciones": 26,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "SIMVASTATINA",
+      "presentaciones": 26,
+      "atc2": "C10"
      }
     ]
    },
@@ -653,6 +974,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 4
      }
+    ],
+    "canales": {
+     "institucional": 49,
+     "comercial": 1488,
+     "muestraMedica": 1580,
+     "activas": 2523
+    },
+    "productos": [
+     {
+      "nombre": "ALACIR",
+      "presentaciones": 136,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "DORIXINA RELAX",
+      "presentaciones": 128,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "SERTAL COMPUESTO",
+      "presentaciones": 96,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "DUOLIP",
+      "presentaciones": 88,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "NEO ZENTIUS",
+      "presentaciones": 76,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ERITROPOYETINA",
+      "presentaciones": 68,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "ERITROPOYETINA SOLUCIÓN",
+      "presentaciones": 64,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "CEUMID",
+      "presentaciones": 62,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "CEUMID COMPRIMIDOS",
+      "presentaciones": 58,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "GLICIRON PLUS",
+      "presentaciones": 56,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "ARAMAX",
+      "presentaciones": 54,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ZUDENINA PLUS",
+      "presentaciones": 52,
+      "atc2": "D10"
+     },
+     {
+      "nombre": "MIGRADORIXINA COMPRIMIDOS",
+      "presentaciones": 52,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DEXLANZOPRAL",
+      "presentaciones": 50,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ALGI -",
+      "presentaciones": 48,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "BROMUX D",
+      "presentaciones": 48,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "DAVINTEX COMPRIMIDOS",
+      "presentaciones": 48,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "IRBEPREX A",
+      "presentaciones": 46,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "FILGRASTIM MCG/ML",
+      "presentaciones": 44,
+      "atc2": "L03"
+     },
+     {
+      "nombre": "IRBEPREX H",
+      "presentaciones": 44,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "VIROSUPRIL",
+      "presentaciones": 42,
+      "atc2": "D06"
+     },
+     {
+      "nombre": "ACSODIX",
+      "presentaciones": 40,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ITZAL",
+      "presentaciones": 40,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "SERTAL COMPRIMIDOS",
+      "presentaciones": 36,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "DEXLANZOPRAL DR",
+      "presentaciones": 36,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "GLAUCOTENSIL T",
+      "presentaciones": 36,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "ENDIAL",
+      "presentaciones": 36,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "TRACTAL",
+      "presentaciones": 36,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ESOMAX",
+      "presentaciones": 36,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CANDEPREX",
+      "presentaciones": 35,
+      "atc2": "C09"
+     }
     ]
    },
    {
@@ -823,6 +1302,164 @@
      {
       "modalidad": "IMPORTAR. ENVASAR Y VENDER",
       "n": 3
+     }
+    ],
+    "canales": {
+     "institucional": 2453,
+     "comercial": 4587,
+     "muestraMedica": 1608,
+     "activas": 7548
+    },
+    "productos": [
+     {
+      "nombre": "FLEXTRIL C",
+      "presentaciones": 576,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "APRIX-F",
+      "presentaciones": 328,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "SERECOR FORTE",
+      "presentaciones": 320,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "APRIX",
+      "presentaciones": 232,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DESLODEX DUO",
+      "presentaciones": 216,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "DOLORSIN COMPLEX",
+      "presentaciones": 210,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "FERRIMED PLUS",
+      "presentaciones": 192,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "CONGESTEX GRANULADO",
+      "presentaciones": 168,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "ESOMED20",
+      "presentaciones": 158,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "TAMSECOX DE",
+      "presentaciones": 152,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "LOWCOL",
+      "presentaciones": 152,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "COLTRIM",
+      "presentaciones": 148,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "FERBIN C.L.",
+      "presentaciones": 144,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "PRAZED CÁPSULAS",
+      "presentaciones": 138,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DIMOFLAX ENZIMATICO",
+      "presentaciones": 126,
+      "atc2": "A09"
+     },
+     {
+      "nombre": "FLECTADOL",
+      "presentaciones": 124,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "COLTRIM PLUS",
+      "presentaciones": 122,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "IBUPROFENO",
+      "presentaciones": 116,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "TENSOFAR",
+      "presentaciones": 113,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "AEROVIAL CÁPSULA",
+      "presentaciones": 112,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CRONOFEN",
+      "presentaciones": 111,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "NAPROZOL",
+      "presentaciones": 106,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "LORDINEX JARABE.",
+      "presentaciones": 106,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "ALIDONA IR",
+      "presentaciones": 104,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "VICITRA500",
+      "presentaciones": 104,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "SUPREFLUX FORTE",
+      "presentaciones": 99,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DOLORSINFORTE",
+      "presentaciones": 98,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ETORIMED",
+      "presentaciones": 90,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "TENSOFAR H",
+      "presentaciones": 88,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "NOVASLEEP",
+      "presentaciones": 88,
+      "atc2": "N05"
      }
     ]
    },
@@ -1005,6 +1642,164 @@
       "modalidad": "FABRICAR Y EXPORTAR",
       "n": 1
      }
+    ],
+    "canales": {
+     "institucional": 96,
+     "comercial": 1122,
+     "muestraMedica": 366,
+     "activas": 1357
+    },
+    "productos": [
+     {
+      "nombre": "DAGMINA",
+      "presentaciones": 128,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "BIAXAL",
+      "presentaciones": 96,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "TAGLIP",
+      "presentaciones": 80,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "GLUCOSAMINASULFATO +",
+      "presentaciones": 48,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "VITAMINA C",
+      "presentaciones": 44,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "N- ACETILCISTEINA",
+      "presentaciones": 42,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "ESOMEPRAZOL DE",
+      "presentaciones": 37,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "OMEPRAZOL CÁPSULAS",
+      "presentaciones": 36,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ZYRISP",
+      "presentaciones": 36,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ETANAR POLVO",
+      "presentaciones": 34,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "JULITAM",
+      "presentaciones": 32,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "TOMZY",
+      "presentaciones": 32,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "LANSOPRAZOL DE",
+      "presentaciones": 28,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CIPROFLOXACINO",
+      "presentaciones": 27,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ESOMEPRAZOL MGCÁPSULAS",
+      "presentaciones": 27,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "AMOXICILINA",
+      "presentaciones": 27,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ESOMEPRAZOL CÁPSULAS",
+      "presentaciones": 27,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "IBUPROFENO",
+      "presentaciones": 24,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "VENLAFAXINA DE",
+      "presentaciones": 24,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "IDIOPANIB",
+      "presentaciones": 24,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "LENIZAD200",
+      "presentaciones": 20,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "GADVIX",
+      "presentaciones": 20,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 19,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "CARVEDILOL",
+      "presentaciones": 19,
+      "atc2": "C07"
+     },
+     {
+      "nombre": "GLUCOSAMINASULFATOSOBRE GRANULADO",
+      "presentaciones": 18,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "MONTELUKAST MASTICABLE",
+      "presentaciones": 17,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CLOTRIMAZOL DERMATOLOGICA",
+      "presentaciones": 16,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "IRBESARTAN",
+      "presentaciones": 16,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ORLISTAT",
+      "presentaciones": 16,
+      "atc2": "A08"
+     },
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 15,
+      "atc2": "N02"
+     }
     ]
    },
    {
@@ -1182,6 +1977,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 7
      }
+    ],
+    "canales": {
+     "institucional": 4,
+     "comercial": 2578,
+     "muestraMedica": 1268,
+     "activas": 3272
+    },
+    "productos": [
+     {
+      "nombre": "SYNTHROID",
+      "presentaciones": 234,
+      "atc2": "H03"
+     },
+     {
+      "nombre": "VALCOTE ER",
+      "presentaciones": 176,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "SEVEDOL",
+      "presentaciones": 168,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "RYTMONORM",
+      "presentaciones": 145,
+      "atc2": "C01"
+     },
+     {
+      "nombre": "COLIK FORTE",
+      "presentaciones": 144,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "CANDAM",
+      "presentaciones": 128,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "BETASERC",
+      "presentaciones": 96,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "DICETEL",
+      "presentaciones": 84,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "DICETEL DUO",
+      "presentaciones": 78,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "CREON DE",
+      "presentaciones": 78,
+      "atc2": "A09"
+     },
+     {
+      "nombre": "NOFERTYL",
+      "presentaciones": 76,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "STAFEN135 /",
+      "presentaciones": 76,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "SAMEXID",
+      "presentaciones": 72,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "STAFEN /",
+      "presentaciones": 68,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "ANTISS D",
+      "presentaciones": 68,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "DUPHALAC ORAL",
+      "presentaciones": 63,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "CREON CÁPSULAS",
+      "presentaciones": 60,
+      "atc2": "A09"
+     },
+     {
+      "nombre": "FLEXIMAX ACE",
+      "presentaciones": 60,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ATTENTHO",
+      "presentaciones": 59,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "SEVEDOL EXTRAFUERTE",
+      "presentaciones": 58,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "BROCRIPTIN MG/",
+      "presentaciones": 56,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SEVEDOL GRIPA",
+      "presentaciones": 54,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "KLARICID UD",
+      "presentaciones": 54,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CETIRAX-D ORAL",
+      "presentaciones": 52,
+      "atc2": "C01"
+     },
+     {
+      "nombre": "SINOIMPLANT",
+      "presentaciones": 46,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "LUVOX",
+      "presentaciones": 45,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "NEDOX",
+      "presentaciones": 44,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "BROCRIPTIN",
+      "presentaciones": 42,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "FEMOSTON CONTI",
+      "presentaciones": 42,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "ATTENTHO25",
+      "presentaciones": 41,
+      "atc2": "N06"
+     }
     ]
    },
    {
@@ -1357,6 +2310,164 @@
      {
       "modalidad": "IMPORTAR. ENVASAR Y VENDER",
       "n": 1
+     }
+    ],
+    "canales": {
+     "institucional": 160,
+     "comercial": 2142,
+     "muestraMedica": 847,
+     "activas": 2631
+    },
+    "productos": [
+     {
+      "nombre": "TIROXIN",
+      "presentaciones": 263,
+      "atc2": "H03"
+     },
+     {
+      "nombre": "DIMETAPP GRIPA",
+      "presentaciones": 216,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DIMETAPP GARGANTA",
+      "presentaciones": 114,
+      "atc2": "R02"
+     },
+     {
+      "nombre": "ROGASTRIL PLUS",
+      "presentaciones": 104,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "FASTFEN",
+      "presentaciones": 86,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ALGIMIDE H",
+      "presentaciones": 80,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "NOXPIRIN QUICKGELS",
+      "presentaciones": 68,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "TREX",
+      "presentaciones": 60,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "COMPLEGEL NF",
+      "presentaciones": 58,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ALGIMIDE F",
+      "presentaciones": 56,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "BACTRIM",
+      "presentaciones": 56,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "NOXPIRIN CALIENTE",
+      "presentaciones": 54,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "SOSSER",
+      "presentaciones": 52,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ALGIMIDE",
+      "presentaciones": 52,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "OMNIDOL",
+      "presentaciones": 48,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ADOREM GRIPA",
+      "presentaciones": 48,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DOCEFAL",
+      "presentaciones": 48,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "PARKEN",
+      "presentaciones": 46,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "DORMICUM AMPOLLAS",
+      "presentaciones": 40,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "NOXPIRIN JUNIOR",
+      "presentaciones": 39,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "LIPONTAL CÁPSULAS",
+      "presentaciones": 36,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DOBRIX MIGRA",
+      "presentaciones": 36,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "AMOXICLIN DUO",
+      "presentaciones": 36,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "S-ORIPOL NF",
+      "presentaciones": 34,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "MEFLAX",
+      "presentaciones": 33,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "BACTRIM F",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LIFERTRON E",
+      "presentaciones": 32,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "ADOREM PLUS",
+      "presentaciones": 32,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "MOVILIUM-S SIEGFRIED",
+      "presentaciones": 32,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "ACEMUK",
+      "presentaciones": 30,
+      "atc2": "R05"
      }
     ]
    },
@@ -1539,6 +2650,164 @@
       "modalidad": "IMPORTAR. ENVASAR Y VENDER",
       "n": 2
      }
+    ],
+    "canales": {
+     "institucional": 155,
+     "comercial": 2938,
+     "muestraMedica": 901,
+     "activas": 3128
+    },
+    "productos": [
+     {
+      "nombre": "CLENOX",
+      "presentaciones": 310,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "BETADUO",
+      "presentaciones": 242,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "GESTAVIT DHA",
+      "presentaciones": 224,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "VARTERAL NF",
+      "presentaciones": 186,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "LEMOVITC",
+      "presentaciones": 186,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "VITAMINA E",
+      "presentaciones": 177,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "PROLEVO",
+      "presentaciones": 168,
+      "atc2": "H03"
+     },
+     {
+      "nombre": "VARTERAL HCT",
+      "presentaciones": 150,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ALERCET D",
+      "presentaciones": 150,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "REFLUYET",
+      "presentaciones": 96,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ROVARIL",
+      "presentaciones": 62,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DOLOFEN GRIPA",
+      "presentaciones": 57,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "EZOLIUM",
+      "presentaciones": 56,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DOLOFEN FORTE",
+      "presentaciones": 54,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ESOMEPRAZOL",
+      "presentaciones": 54,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ALERCET",
+      "presentaciones": 48,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "TAPECTAM",
+      "presentaciones": 48,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ENITRAX",
+      "presentaciones": 48,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "JARIT",
+      "presentaciones": 42,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "B-VIT HT",
+      "presentaciones": 40,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "B-VIT",
+      "presentaciones": 40,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "DORZOPT",
+      "presentaciones": 40,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "MUVETT FLORA",
+      "presentaciones": 39,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "CLOPERAX",
+      "presentaciones": 39,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "G-MET G-TABS",
+      "presentaciones": 38,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "LEVOTIROXINA SODICA",
+      "presentaciones": 37,
+      "atc2": "H03"
+     },
+     {
+      "nombre": "MUVETT",
+      "presentaciones": 37,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "BETAHISTINA CLORHIDRATO",
+      "presentaciones": 36,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "PEDIAVIT ZINC",
+      "presentaciones": 33,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "DOLOFEN MG.",
+      "presentaciones": 33,
+      "atc2": "N02"
+     }
     ]
    },
    {
@@ -1697,6 +2966,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 147
+     }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 905,
+     "muestraMedica": 557,
+     "activas": 1285
+    },
+    "productos": [
+     {
+      "nombre": "TIQUEPIN",
+      "presentaciones": 81,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ALVIRET",
+      "presentaciones": 50,
+      "atc2": "D06"
+     },
+     {
+      "nombre": "OLMEDOXTAN A",
+      "presentaciones": 44,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "DUXETERO DE",
+      "presentaciones": 40,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "EZIT-ST",
+      "presentaciones": 40,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "EZIT -",
+      "presentaciones": 40,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "ESZOPILO",
+      "presentaciones": 36,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "IRBIGEN-H",
+      "presentaciones": 32,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "VALATREN /",
+      "presentaciones": 32,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ZEBELOL",
+      "presentaciones": 30,
+      "atc2": "C07"
+     },
+     {
+      "nombre": "AMIGARD",
+      "presentaciones": 30,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "ROTAVIN",
+      "presentaciones": 30,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "CEFPODOXIME PROXETIL",
+      "presentaciones": 28,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "FEXOFENADINA CLORHIDRATO",
+      "presentaciones": 28,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "TEMILTAR",
+      "presentaciones": 28,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "TOLDY",
+      "presentaciones": 28,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "LINDEZIP",
+      "presentaciones": 28,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "TIQUEPIN25MG",
+      "presentaciones": 24,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "TADET",
+      "presentaciones": 24,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "LINAGLIPTINA +",
+      "presentaciones": 24,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "LANGENIX DE",
+      "presentaciones": 20,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "STROZOVEN",
+      "presentaciones": 20,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "OLMEDOXTAN",
+      "presentaciones": 20,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "VALATRIL",
+      "presentaciones": 18,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "HETVOLOL TABLETAS.",
+      "presentaciones": 18,
+      "atc2": "C07"
+     },
+     {
+      "nombre": "ROTAVIN-EZTABLETAS",
+      "presentaciones": 16,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "SERTRALINA",
+      "presentaciones": 16,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "IRBIGEN H",
+      "presentaciones": 16,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "TEMILTAR H",
+      "presentaciones": 16,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "CETRILEV",
+      "presentaciones": 15,
+      "atc2": "R06"
      }
     ]
    },
@@ -1869,6 +3296,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 3
+     }
+    ],
+    "canales": {
+     "institucional": 338,
+     "comercial": 1515,
+     "muestraMedica": 863,
+     "activas": 1271
+    },
+    "productos": [
+     {
+      "nombre": "PANCREAFAST +",
+      "presentaciones": 204,
+      "atc2": "A09"
+     },
+     {
+      "nombre": "FEXOFENADINA",
+      "presentaciones": 132,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "CEFADROXILO",
+      "presentaciones": 129,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "TADALAFILO",
+      "presentaciones": 110,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "DULOXETINA",
+      "presentaciones": 108,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "PANTOPRAZOL",
+      "presentaciones": 88,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CARVEDILOL",
+      "presentaciones": 87,
+      "atc2": "C07"
+     },
+     {
+      "nombre": "CABERGOLINA",
+      "presentaciones": 84,
+      "atc2": "G02"
+     },
+     {
+      "nombre": "FLUCONAZOL+SECNIDAZOL",
+      "presentaciones": 76,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "FLUENZ T",
+      "presentaciones": 76,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "EZETIMIBE/ATORVASTATINA",
+      "presentaciones": 72,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "METOCARBAMOL +",
+      "presentaciones": 72,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ETOFENAMATO",
+      "presentaciones": 70,
+      "atc2": "M02"
+     },
+     {
+      "nombre": "ANEXIA",
+      "presentaciones": 69,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DESVENLAFAXINA",
+      "presentaciones": 69,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "MEMANTINA",
+      "presentaciones": 49,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ESCITALOPRAM",
+      "presentaciones": 49,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ESPIRONOLACTONA100 MG.",
+      "presentaciones": 34,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "ANEXIA60",
+      "presentaciones": 34,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ESPIRONOLACTONA",
+      "presentaciones": 34,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "VITA E",
+      "presentaciones": 30,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "VALSARAMLO H",
+      "presentaciones": 30,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "DEXAPRON",
+      "presentaciones": 28,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "PREGABALINA",
+      "presentaciones": 26,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "METFORMINA +",
+      "presentaciones": 24,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "TELMISARTAN AMLODIPINO",
+      "presentaciones": 24,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ACETAMINOFEN +",
+      "presentaciones": 24,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "IRBESARTÁN /",
+      "presentaciones": 24,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ASA CON",
+      "presentaciones": 24,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "METFORMINA CLORHIDRATO",
+      "presentaciones": 24,
+      "atc2": "A10"
      }
     ]
    },
@@ -2050,6 +3635,164 @@
       "modalidad": "IMPORTAR. ENVASAR Y VENDER",
       "n": 2
      }
+    ],
+    "canales": {
+     "institucional": 1366,
+     "comercial": 1941,
+     "muestraMedica": 744,
+     "activas": 2624
+    },
+    "productos": [
+     {
+      "nombre": "ESOPRAX",
+      "presentaciones": 891,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ROSUVINA LEGRAND",
+      "presentaciones": 483,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "CARDIK",
+      "presentaciones": 422,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "RUMONAL PRO",
+      "presentaciones": 126,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DOLOFF RECUBIERTAS.",
+      "presentaciones": 120,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DOLOFF5-325",
+      "presentaciones": 120,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "CARDIOCAP",
+      "presentaciones": 114,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ROSUFEN",
+      "presentaciones": 112,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "CARDIK A",
+      "presentaciones": 108,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "CARDIOCAP A80/10",
+      "presentaciones": 102,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "LEGABIN",
+      "presentaciones": 97,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "CARDIOCAP A",
+      "presentaciones": 96,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "SENIDOL",
+      "presentaciones": 76,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "NEVOLAC",
+      "presentaciones": 66,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "NOVAFLEX DE",
+      "presentaciones": 52,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "PARALGEN MAX",
+      "presentaciones": 52,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "PRAMIXOLE ER",
+      "presentaciones": 50,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "PARALGEN PLUS",
+      "presentaciones": 50,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "METAGLICOZ XR",
+      "presentaciones": 49,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "DOVIR",
+      "presentaciones": 44,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ADIX",
+      "presentaciones": 40,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "METAGLICOZ XR500",
+      "presentaciones": 34,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "DEMULIN ER",
+      "presentaciones": 32,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "TYROCET",
+      "presentaciones": 32,
+      "atc2": "H05"
+     },
+     {
+      "nombre": "PEXIVAN",
+      "presentaciones": 32,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "EXTANO",
+      "presentaciones": 30,
+      "atc2": "L02"
+     },
+     {
+      "nombre": "DOXCEF",
+      "presentaciones": 26,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "PARALGEN",
+      "presentaciones": 25,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "ANIME",
+      "presentaciones": 24,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "SUMIROL",
+      "presentaciones": 24,
+      "atc2": "L01"
+     }
     ]
    },
    {
@@ -2225,6 +3968,164 @@
      {
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 5
+     }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 761,
+     "muestraMedica": 25,
+     "activas": 653
+    },
+    "productos": [
+     {
+      "nombre": "DUONAZOL",
+      "presentaciones": 148,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "LEGRIP PLUS",
+      "presentaciones": 72,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DOLIVIUM FLASH",
+      "presentaciones": 50,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CATALAC",
+      "presentaciones": 48,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "AMZOL FEM",
+      "presentaciones": 44,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "DOLIVIUM FORTE",
+      "presentaciones": 28,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ESOMEPRAZOL CÁPSULA",
+      "presentaciones": 28,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "HIDRASOL MEQ",
+      "presentaciones": 25,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "HIDRASOL CON",
+      "presentaciones": 25,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "UCEPRAZOL DE",
+      "presentaciones": 16,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DOLIVIUM MAX",
+      "presentaciones": 16,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "GASLID PLUS",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "AINEDAP FORTE",
+      "presentaciones": 10,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CAFETRIN",
+      "presentaciones": 9,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DOLIVIUM",
+      "presentaciones": 9,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CLORITIMICOTIN",
+      "presentaciones": 8,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "CONALIV",
+      "presentaciones": 8,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "RELAXMET PLUS",
+      "presentaciones": 6,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "DOLIVIUM PLUS",
+      "presentaciones": 6,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "SITONID MG.",
+      "presentaciones": 6,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "FITTUDERM PLUS",
+      "presentaciones": 6,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "LOSTIN",
+      "presentaciones": 6,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "LEGRIPJARABE",
+      "presentaciones": 6,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "LOSAN",
+      "presentaciones": 6,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "CINEPRIDE",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ALERCLAR",
+      "presentaciones": 6,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "SUERO FISIOLOGICO",
+      "presentaciones": 6,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "NAPROXENO",
+      "presentaciones": 5,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "TRAMADOL CLORHIDRATO",
+      "presentaciones": 5,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "BIFLACE50MG",
+      "presentaciones": 5,
+      "atc2": "G04"
      }
     ]
    },
@@ -2403,6 +4304,164 @@
       "modalidad": "IMPORTAR. ENVASAR Y VENDER",
       "n": 10
      }
+    ],
+    "canales": {
+     "institucional": 9,
+     "comercial": 1305,
+     "muestraMedica": 712,
+     "activas": 1849
+    },
+    "productos": [
+     {
+      "nombre": "PAX FORTE",
+      "presentaciones": 192,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ACI-BIOGEL",
+      "presentaciones": 108,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DESVE",
+      "presentaciones": 76,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "VASCOR MR",
+      "presentaciones": 68,
+      "atc2": "C01"
+     },
+     {
+      "nombre": "NAIRE",
+      "presentaciones": 56,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "BICERTO (75",
+      "presentaciones": 56,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "KOMENCY",
+      "presentaciones": 52,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ESIO",
+      "presentaciones": 51,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CLINDAMIZOL",
+      "presentaciones": 48,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "PROLANZ",
+      "presentaciones": 44,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "BEZART H150",
+      "presentaciones": 40,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "BETATREINTA",
+      "presentaciones": 40,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "BEZART H",
+      "presentaciones": 40,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ALZIT",
+      "presentaciones": 38,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "DUOMO",
+      "presentaciones": 36,
+      "atc2": "C02"
+     },
+     {
+      "nombre": "VIREX MG.",
+      "presentaciones": 36,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "TAKINOX",
+      "presentaciones": 34,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "ATAK CLAV",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LAMOLET DE",
+      "presentaciones": 32,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "DITOPAX F",
+      "presentaciones": 32,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "RIBEX",
+      "presentaciones": 31,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "FLUNAZOL",
+      "presentaciones": 28,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "HISTIVERT",
+      "presentaciones": 28,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "SUGANON",
+      "presentaciones": 26,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "ZOLNOX",
+      "presentaciones": 24,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "LAMOLETLEVETIRACETAM DE",
+      "presentaciones": 24,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "PREDIS /MLJARABE",
+      "presentaciones": 24,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "BONSONO",
+      "presentaciones": 24,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "WINADEINE F-TABLETAS",
+      "presentaciones": 24,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "AZIBIOTRIM",
+      "presentaciones": 21,
+      "atc2": "J01"
+     }
     ]
    },
    {
@@ -2574,6 +4633,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 2
      }
+    ],
+    "canales": {
+     "institucional": 16,
+     "comercial": 750,
+     "muestraMedica": 27,
+     "activas": 750
+    },
+    "productos": [
+     {
+      "nombre": "LIDAL",
+      "presentaciones": 44,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "GIFARIL",
+      "presentaciones": 36,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "POSTCOID",
+      "presentaciones": 34,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "GASDOL SUSPENSIÓN",
+      "presentaciones": 30,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "GIMEDOL EXTRA",
+      "presentaciones": 30,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ALCADOL",
+      "presentaciones": 24,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "SINMARET",
+      "presentaciones": 21,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "CARBAREL RELAX",
+      "presentaciones": 20,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "MULTIFUNGUIN",
+      "presentaciones": 20,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "FENACLIDE",
+      "presentaciones": 17,
+      "atc2": "D11"
+     },
+     {
+      "nombre": "VIROXIL",
+      "presentaciones": 17,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "MEDIPRIM F",
+      "presentaciones": 16,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "TORFAN-EX",
+      "presentaciones": 16,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "FROBEN",
+      "presentaciones": 16,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "WINTREX500",
+      "presentaciones": 15,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "HIDRAPLEN",
+      "presentaciones": 14,
+      "atc2": "B05"
+     },
+     {
+      "nombre": "NIVOX",
+      "presentaciones": 14,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "ALGISIL FORTE",
+      "presentaciones": 12,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ANFORAL",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "HISMANAL",
+      "presentaciones": 12,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "ORAZIT CUBIERTA",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "AMOXERYL POLVO",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "HIDRAPLEN ULTRA",
+      "presentaciones": 10,
+      "atc2": "B05"
+     },
+     {
+      "nombre": "HIDRAPLEN MAX",
+      "presentaciones": 10,
+      "atc2": "B05"
+     },
+     {
+      "nombre": "NAPROXENO",
+      "presentaciones": 10,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ALGISIL SOFTGEL",
+      "presentaciones": 10,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "FLECHSEX20",
+      "presentaciones": 10,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "ALGISIL",
+      "presentaciones": 9,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "TIACEF CAPSULA.",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "AMOXEM /5",
+      "presentaciones": 8,
+      "atc2": "J01"
+     }
     ]
    },
    {
@@ -2732,6 +4949,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 2
+     }
+    ],
+    "canales": {
+     "institucional": 213,
+     "comercial": 1054,
+     "muestraMedica": 273,
+     "activas": 1196
+    },
+    "productos": [
+     {
+      "nombre": "MOVIPREN",
+      "presentaciones": 112,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "MOVIPREN ULTRA",
+      "presentaciones": 80,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "CIGRAM",
+      "presentaciones": 60,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ORAZOLE",
+      "presentaciones": 60,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ESOZ DE",
+      "presentaciones": 59,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ORAZOLE MICROGRÁNULOS",
+      "presentaciones": 54,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "SATOREN H",
+      "presentaciones": 52,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "OCAM PROTECT",
+      "presentaciones": 48,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DORMEBEN EZ",
+      "presentaciones": 46,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "DERMA Q",
+      "presentaciones": 36,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "ESOZ",
+      "presentaciones": 36,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ASMONT MASTICABLES",
+      "presentaciones": 30,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "BATEN",
+      "presentaciones": 30,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "SULAMP DUO",
+      "presentaciones": 28,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CREMOQUINONA",
+      "presentaciones": 28,
+      "atc2": "D11"
+     },
+     {
+      "nombre": "MOXAR",
+      "presentaciones": 25,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "DUXETINA CÁPSULAS",
+      "presentaciones": 24,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "TREDA",
+      "presentaciones": 24,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "RIFAXIGAL",
+      "presentaciones": 22,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "TIOCOLFEN CÁPSULA",
+      "presentaciones": 22,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ORAZOLE POLVO",
+      "presentaciones": 22,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DUXETINA DE",
+      "presentaciones": 21,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "DESLER-M",
+      "presentaciones": 20,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SULAMP",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "MOLTOBEN",
+      "presentaciones": 20,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "MOLTOBEN MG.",
+      "presentaciones": 19,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "REX",
+      "presentaciones": 19,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "TRIFAST",
+      "presentaciones": 18,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "PLASIL",
+      "presentaciones": 16,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "TIOCOLSID MGTABLETAS",
+      "presentaciones": 16,
+      "atc2": "M03"
      }
     ]
    },
@@ -2900,6 +5275,164 @@
       "modalidad": "IMPORTAR Y VENDER",
       "n": 109
      }
+    ],
+    "canales": {
+     "institucional": 4,
+     "comercial": 1466,
+     "muestraMedica": 1248,
+     "activas": 2279
+    },
+    "productos": [
+     {
+      "nombre": "PRISTIQ DE",
+      "presentaciones": 176,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "PREVENARVACUNACONJUGADA NEUMOCOCICA.",
+      "presentaciones": 168,
+      "atc2": "J07"
+     },
+     {
+      "nombre": "INLYTA",
+      "presentaciones": 140,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "ENBREL PARA",
+      "presentaciones": 126,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "SUTENT",
+      "presentaciones": 100,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "REAMPLA",
+      "presentaciones": 96,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "ELIQUIS",
+      "presentaciones": 91,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "RAPAMUNE GRAGEAS",
+      "presentaciones": 82,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "UNASYN",
+      "presentaciones": 78,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DALACIN C",
+      "presentaciones": 64,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BENEFIX U.I.",
+      "presentaciones": 62,
+      "atc2": "B02"
+     },
+     {
+      "nombre": "VFEND",
+      "presentaciones": 60,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "XELJANZ5MG",
+      "presentaciones": 60,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "XALKORI",
+      "presentaciones": 60,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "MOTRIN",
+      "presentaciones": 60,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "XALKORI250 CÁPSULAS",
+      "presentaciones": 60,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "ALDACTONE",
+      "presentaciones": 60,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "FRAGMIN",
+      "presentaciones": 56,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "TALZENNA CÁPSULAS",
+      "presentaciones": 52,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "LOPID",
+      "presentaciones": 48,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "PREVENAR VACUNA",
+      "presentaciones": 48,
+      "atc2": "J07"
+     },
+     {
+      "nombre": "BOSULIF RECUBIERTAS.",
+      "presentaciones": 42,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "BOSULIF100 MGTABLETAS",
+      "presentaciones": 42,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "NIMENRIX",
+      "presentaciones": 40,
+      "atc2": "J07"
+     },
+     {
+      "nombre": "MEDROL",
+      "presentaciones": 40,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "MEDROL4",
+      "presentaciones": 38,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "ABRILADA",
+      "presentaciones": 32,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "GENOTROPIN (36",
+      "presentaciones": 32,
+      "atc2": "H01"
+     },
+     {
+      "nombre": "AROMASIN25",
+      "presentaciones": 32,
+      "atc2": "L02"
+     },
+     {
+      "nombre": "XELJANZ XR",
+      "presentaciones": 30,
+      "atc2": "L04"
+     }
     ]
    },
    {
@@ -3058,6 +5591,164 @@
      {
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 3
+     }
+    ],
+    "canales": {
+     "institucional": 20,
+     "comercial": 348,
+     "muestraMedica": 4,
+     "activas": 257
+    },
+    "productos": [
+     {
+      "nombre": "DICLOFENACO SODICO",
+      "presentaciones": 26,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "IBUPROFENO",
+      "presentaciones": 25,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 16,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "GLIBENCLAMIDA5",
+      "presentaciones": 15,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "NAPROXENO",
+      "presentaciones": 13,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "TRIMETROPRIMA160 MGSULFAMETOXAZOL",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DICLOXACILINA",
+      "presentaciones": 9,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "HIDROXIDO DE",
+      "presentaciones": 9,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "TADALAFILO RECUBIERTAS.",
+      "presentaciones": 9,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "BETAMETASONA0.1%CREMA.",
+      "presentaciones": 8,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "PREDNISOLONA",
+      "presentaciones": 8,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "AMOXICILINA CÁPSULAS",
+      "presentaciones": 7,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 7,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "SERTRALINA",
+      "presentaciones": 7,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "PAMOATO DE",
+      "presentaciones": 6,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "CLARITROMICINA",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ZYRFAR",
+      "presentaciones": 6,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "AMPICILINA",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "MELOXICAM",
+      "presentaciones": 6,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ENALAPRIL MALEATO",
+      "presentaciones": 5,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "DESLORATADINA",
+      "presentaciones": 5,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "AMLODIPINO TABLETAS.",
+      "presentaciones": 5,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "SULFADIAZINA DE",
+      "presentaciones": 5,
+      "atc2": "D06"
+     },
+     {
+      "nombre": "AMLODIPINO",
+      "presentaciones": 5,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "HIDROCORTISONA",
+      "presentaciones": 4,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "SALES DE",
+      "presentaciones": 4,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "COLCHICINA MG.",
+      "presentaciones": 4,
+      "atc2": "M04"
+     },
+     {
+      "nombre": "ACETAMINOFEN +",
+      "presentaciones": 4,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ALBENDAZOL200",
+      "presentaciones": 4,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "LORATADINA",
+      "presentaciones": 4,
+      "atc2": "R06"
      }
     ]
    },
@@ -3222,6 +5913,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 2
      }
+    ],
+    "canales": {
+     "institucional": 31,
+     "comercial": 1441,
+     "muestraMedica": 389,
+     "activas": 1371
+    },
+    "productos": [
+     {
+      "nombre": "NORAVER P",
+      "presentaciones": 406,
+      "atc2": "R02"
+     },
+     {
+      "nombre": "MK DOSS",
+      "presentaciones": 207,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "SAL DE",
+      "presentaciones": 186,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "GASTROFAST ADVANCE",
+      "presentaciones": 132,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "BONFIEST",
+      "presentaciones": 38,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "N. ORIGINAL.",
+      "presentaciones": 37,
+      "atc2": "D02"
+     },
+     {
+      "nombre": "CYTIL V",
+      "presentaciones": 37,
+      "atc2": "G02"
+     },
+     {
+      "nombre": "DERMOCUAD",
+      "presentaciones": 36,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "NORAVER",
+      "presentaciones": 34,
+      "atc2": "R02"
+     },
+     {
+      "nombre": "N°. MEDICADA",
+      "presentaciones": 32,
+      "atc2": "D02"
+     },
+     {
+      "nombre": "CARMELUB PLUS",
+      "presentaciones": 26,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "BETAMETASONA",
+      "presentaciones": 26,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "WASSERTROL OFTALMICA",
+      "presentaciones": 24,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "TQ OFTAMOX",
+      "presentaciones": 24,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "UNGÜENTO MENTOL",
+      "presentaciones": 21,
+      "atc2": "D11"
+     },
+     {
+      "nombre": "YODORA",
+      "presentaciones": 20,
+      "atc2": "D08"
+     },
+     {
+      "nombre": "MAGNESIA",
+      "presentaciones": 19,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "BONVENT",
+      "presentaciones": 17,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "IBANDRONATO",
+      "presentaciones": 16,
+      "atc2": "M05"
+     },
+     {
+      "nombre": "MEJORALULTRA",
+      "presentaciones": 16,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "FIXAMICIN DOL",
+      "presentaciones": 16,
+      "atc2": "S03"
+     },
+     {
+      "nombre": "ALCOHOL ANTISEPTICO",
+      "presentaciones": 16,
+      "atc2": "D08"
+     },
+     {
+      "nombre": "ILOTICINA PLUS",
+      "presentaciones": 16,
+      "atc2": "D10"
+     },
+     {
+      "nombre": "HEMOCYTON ELIXIR",
+      "presentaciones": 15,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "NORAVERNTF",
+      "presentaciones": 15,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "ANTIALGINA",
+      "presentaciones": 15,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "FERROVITAL NF",
+      "presentaciones": 15,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "ALERFAST D",
+      "presentaciones": 14,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "TRIMETOPRIM SULFA",
+      "presentaciones": 14,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "FERROKIDS",
+      "presentaciones": 12,
+      "atc2": "B03"
+     }
     ]
    },
    {
@@ -3385,6 +6234,164 @@
       "modalidad": "IMPORTAR Y VENDER",
       "n": 2
      }
+    ],
+    "canales": {
+     "institucional": 114,
+     "comercial": 613,
+     "muestraMedica": 8,
+     "activas": 489
+    },
+    "productos": [
+     {
+      "nombre": "IBUPROFENO",
+      "presentaciones": 96,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 49,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "NAPROXENO",
+      "presentaciones": 30,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "AMLODIPINO",
+      "presentaciones": 28,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "METOCARBAMOL",
+      "presentaciones": 21,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "COMPLEJO B",
+      "presentaciones": 20,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "CIPROFLOXACINA MGTABLETA",
+      "presentaciones": 18,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DESLORATADINA RECUBIERTAS5",
+      "presentaciones": 16,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "IOFI CUBIERTAS",
+      "presentaciones": 15,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 14,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "ACICLOVIR",
+      "presentaciones": 14,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "LOSARTAN POTASICO",
+      "presentaciones": 13,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "PREDNISOLONA",
+      "presentaciones": 13,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "SULFATO FERROSO",
+      "presentaciones": 12,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "LORATADINA",
+      "presentaciones": 12,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "RANITIDINA",
+      "presentaciones": 10,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "GLIBENCLAMIDA",
+      "presentaciones": 10,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "ROSUVASTATINA",
+      "presentaciones": 10,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "HIOSCINA N-BUTILBROMURO",
+      "presentaciones": 10,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "FOLIC PREVENT",
+      "presentaciones": 9,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "ACIDO FOLICO",
+      "presentaciones": 9,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "CARBAMAZEPINA",
+      "presentaciones": 9,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "AMITRIPTILINA CLORHIDRATO",
+      "presentaciones": 9,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "AZITROMICINA",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ESOMEPRAZOL CON",
+      "presentaciones": 8,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "LEVOFLOXACINA",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CLOPIDOGREL",
+      "presentaciones": 8,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "FEXOFENADINA CLORHIDRATO",
+      "presentaciones": 8,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "HIDROCLOROTIAZIDA",
+      "presentaciones": 8,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "METOCLOPRAMIDA10",
+      "presentaciones": 7,
+      "atc2": "A03"
+     }
     ]
    },
    {
@@ -3535,6 +6542,164 @@
      {
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 5
+     }
+    ],
+    "canales": {
+     "institucional": 46,
+     "comercial": 412,
+     "muestraMedica": 5,
+     "activas": 407
+    },
+    "productos": [
+     {
+      "nombre": "SUPRIBAC SIMPLE",
+      "presentaciones": 16,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "FINAPAR",
+      "presentaciones": 16,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "PROZIDEXCAPSULAS",
+      "presentaciones": 15,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "WARFAR5 MG.",
+      "presentaciones": 14,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "SEAMIB",
+      "presentaciones": 13,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "BACMICINE",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ULPIGAS",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DIEXSOPRAZOL",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DEXACORT /2",
+      "presentaciones": 12,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "FLATUCID",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "PERCLUSONE /",
+      "presentaciones": 10,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ASMIKET",
+      "presentaciones": 10,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "DIZMOPRAZ CAPSULAS.",
+      "presentaciones": 9,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "GLUCONITRIN F",
+      "presentaciones": 9,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "MIORELAX",
+      "presentaciones": 9,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "CINDIMIZOL",
+      "presentaciones": 8,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "CEFAFLEX",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ZIFLUVIS",
+      "presentaciones": 8,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "CLOXIDIN",
+      "presentaciones": 7,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LOZARTEN",
+      "presentaciones": 7,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "EUTARPAN",
+      "presentaciones": 7,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "ECTASIL",
+      "presentaciones": 7,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "LOZARTEN /",
+      "presentaciones": 7,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "CARBEPIL2 %SUSPENSION",
+      "presentaciones": 6,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "DONAPRIL",
+      "presentaciones": 6,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "SUPRIBAC F",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BIOQUIFLOX",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "VIGRADINA",
+      "presentaciones": 6,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "OSTEOSAN CÁPSULAS",
+      "presentaciones": 6,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ZERIDIL MG/5",
+      "presentaciones": 6,
+      "atc2": "R06"
      }
     ]
    },
@@ -3699,6 +6864,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 3
      }
+    ],
+    "canales": {
+     "institucional": 152,
+     "comercial": 2286,
+     "muestraMedica": 19,
+     "activas": 2082
+    },
+    "productos": [
+     {
+      "nombre": "VICAL MASTICABLES",
+      "presentaciones": 520,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "COMPLEJO B",
+      "presentaciones": 164,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "PASEDOL",
+      "presentaciones": 107,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "ROSUVASTATINA",
+      "presentaciones": 103,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "TRIMETOPRIMA SULFAMETOXAZOL",
+      "presentaciones": 90,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LUDIKA",
+      "presentaciones": 78,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "ACIDO FOLICO",
+      "presentaciones": 72,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "VITAMINA K1",
+      "presentaciones": 72,
+      "atc2": "B02"
+     },
+     {
+      "nombre": "VITAMINA B12",
+      "presentaciones": 58,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "ADRENALINAINYECTABLE",
+      "presentaciones": 56,
+      "atc2": "C01"
+     },
+     {
+      "nombre": "SERTRALINA",
+      "presentaciones": 49,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "LOSARTAN +",
+      "presentaciones": 40,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "FEXOFENADINA",
+      "presentaciones": 40,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "TRIMETOPRIM SULFA",
+      "presentaciones": 38,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "PREGABALINA CÁPSULAS",
+      "presentaciones": 38,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "AMLODIPINO",
+      "presentaciones": 38,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "TRAMADOL CLORHIDRATO",
+      "presentaciones": 37,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "LOSARTAN",
+      "presentaciones": 36,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "RIFAXIMINA",
+      "presentaciones": 33,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "RIFAXIMINA MG.",
+      "presentaciones": 32,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "SULFATO FERROSO",
+      "presentaciones": 31,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 30,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "FARMALAX POLVO",
+      "presentaciones": 30,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "PIRIDOXINA",
+      "presentaciones": 29,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "DIPIRONA /",
+      "presentaciones": 28,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "VITAMINA C",
+      "presentaciones": 27,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "IRBESARTAN",
+      "presentaciones": 25,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "IRBESARTAN TAB",
+      "presentaciones": 25,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "TIAMINA",
+      "presentaciones": 25,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "PREGABALINA",
+      "presentaciones": 23,
+      "atc2": "N03"
+     }
     ]
    },
    {
@@ -3858,6 +7181,164 @@
       "modalidad": "FABRICAR Y VENDER",
       "n": 97
      }
+    ],
+    "canales": {
+     "institucional": 9,
+     "comercial": 607,
+     "muestraMedica": 105,
+     "activas": 616
+    },
+    "productos": [
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 38,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ASHAR",
+      "presentaciones": 28,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "AMLODIPINO",
+      "presentaciones": 25,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "TRIMETOPRIMA SULFA",
+      "presentaciones": 24,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CLINDAMICINA300",
+      "presentaciones": 24,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LORATADINA",
+      "presentaciones": 23,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "ORTOFLEX",
+      "presentaciones": 21,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "TINIDAZOL",
+      "presentaciones": 21,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "SILDENAFILO",
+      "presentaciones": 21,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "METOCARBAMOL",
+      "presentaciones": 20,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "MELOXICAM",
+      "presentaciones": 20,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "AMOXICILINA /",
+      "presentaciones": 18,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ALOPURINOL",
+      "presentaciones": 18,
+      "atc2": "M04"
+     },
+     {
+      "nombre": "CETIRIZINA10",
+      "presentaciones": 16,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "TRAMADOLCAPSULAS",
+      "presentaciones": 16,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "IBUPROFENO +",
+      "presentaciones": 16,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "DICLOFENACO SODICO",
+      "presentaciones": 16,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ALENDRONATO",
+      "presentaciones": 14,
+      "atc2": "M05"
+     },
+     {
+      "nombre": "TRIMEBUTINA MALEATO",
+      "presentaciones": 13,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "ACYCLOVIR",
+      "presentaciones": 13,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "CETIRIZINA",
+      "presentaciones": 13,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "CIPROFLOXACINO",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LOSARTAN",
+      "presentaciones": 12,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "BETAMETASONA %",
+      "presentaciones": 12,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "CLOPIDOGREL",
+      "presentaciones": 12,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "METRONIDAZOL",
+      "presentaciones": 11,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "ATORVASTATINA MG.",
+      "presentaciones": 11,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "HIOSCINA N-BUTIL",
+      "presentaciones": 10,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "METOPROLOL TARTRATO",
+      "presentaciones": 10,
+      "atc2": "C07"
+     },
+     {
+      "nombre": "FLUNARIZINA TABLETAS.",
+      "presentaciones": 10,
+      "atc2": "N07"
+     }
     ]
    },
    {
@@ -4011,6 +7492,164 @@
      {
       "modalidad": "FABRICAR Y EXPORTAR",
       "n": 1
+     }
+    ],
+    "canales": {
+     "institucional": 290,
+     "comercial": 1785,
+     "muestraMedica": 33,
+     "activas": 1399
+    },
+    "productos": [
+     {
+      "nombre": "TRAMADOL CLORHIDRATO",
+      "presentaciones": 117,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "HIOSCINA N-BUTIL",
+      "presentaciones": 106,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "FENTANILO MCG/10",
+      "presentaciones": 72,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "AMPICILINA +",
+      "presentaciones": 72,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "GENTAMICINA MG/1ML",
+      "presentaciones": 69,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "PENICILINA SODICA",
+      "presentaciones": 64,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CLINDAMICINA /",
+      "presentaciones": 62,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "METILPREDNISOLONA",
+      "presentaciones": 60,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "CEFAZOLINA",
+      "presentaciones": 52,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "AGUA ESTERIL",
+      "presentaciones": 50,
+      "atc2": "V07"
+     },
+     {
+      "nombre": "OXACILINA",
+      "presentaciones": 48,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "HIDROCORTISONA",
+      "presentaciones": 46,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "LIDOJECT VIAL",
+      "presentaciones": 40,
+      "atc2": "N01"
+     },
+     {
+      "nombre": "AMIKACINA /",
+      "presentaciones": 40,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "GENTAMICINA /",
+      "presentaciones": 38,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "MEROPENEM POLVO",
+      "presentaciones": 38,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CEFEPIMA",
+      "presentaciones": 38,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "PENICILINA PROCAINICA",
+      "presentaciones": 37,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DICLOFENACO SODICO",
+      "presentaciones": 36,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CEFTRIAXONA",
+      "presentaciones": 34,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DEXAMETASONAFOSFATO4 MG/ML",
+      "presentaciones": 34,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "VECURONIO BROMURO",
+      "presentaciones": 33,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "LINCOMICINA MG/2",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DIPIRONA MAGNESICA",
+      "presentaciones": 32,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "AMPICILINA G.",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "IMIPENEM +",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "VITATRIOL (NEOMICINA",
+      "presentaciones": 30,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "BETAMETASONA MG/ML",
+      "presentaciones": 30,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "PIPERACILINA +",
+      "presentaciones": 30,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "NEOSTIGMINA METILSULFATO0.5",
+      "presentaciones": 28,
+      "atc2": "N07"
      }
     ]
    },
@@ -4169,6 +7808,164 @@
      {
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 3
+     }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 247,
+     "muestraMedica": 11,
+     "activas": 181
+    },
+    "productos": [
+     {
+      "nombre": "DECASULF FORTE",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "HIDROSIN PLUS",
+      "presentaciones": 16,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ZAS",
+      "presentaciones": 12,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "HIDROSIN ORAL",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "BETAGEN TOPICA",
+      "presentaciones": 9,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "TAROFIL",
+      "presentaciones": 9,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "COLINDCREMA",
+      "presentaciones": 8,
+      "atc2": "D02"
+     },
+     {
+      "nombre": "RELADOL",
+      "presentaciones": 8,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "PIRE-FEN",
+      "presentaciones": 7,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "HISTAPEN",
+      "presentaciones": 6,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "MESALITSOLUCIONTOPICA",
+      "presentaciones": 6,
+      "atc2": "D10"
+     },
+     {
+      "nombre": "PROPISOL DURAS",
+      "presentaciones": 6,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "PENFLUZ",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "VENISCIN UNGÜENTO",
+      "presentaciones": 4,
+      "atc2": "N01"
+     },
+     {
+      "nombre": "CIRIDAC MG.",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DECAFLUSAN",
+      "presentaciones": 4,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "MIKOPENT",
+      "presentaciones": 4,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "ADIPINA",
+      "presentaciones": 4,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DECACILIN",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "PAMOXPEN ORAL",
+      "presentaciones": 4,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "OXIVATE MG.",
+      "presentaciones": 4,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "IMPROSTAN",
+      "presentaciones": 4,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "GASTRIDINA",
+      "presentaciones": 4,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CEFAGRAM",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DECACILIN250 /5ML",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BUCO-FAR GARGANTA",
+      "presentaciones": 4,
+      "atc2": "R02"
+     },
+     {
+      "nombre": "INDOLGIN",
+      "presentaciones": 4,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "CORTIDRON SUSPENSIÓN",
+      "presentaciones": 3,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "ECANON OFTALMICA",
+      "presentaciones": 3,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "DRECADEN",
+      "presentaciones": 3,
+      "atc2": "N06"
      }
     ]
    },
@@ -4347,6 +8144,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 1
      }
+    ],
+    "canales": {
+     "institucional": 35,
+     "comercial": 990,
+     "muestraMedica": 113,
+     "activas": 916
+    },
+    "productos": [
+     {
+      "nombre": "OMEPRAZOL20MG DURA",
+      "presentaciones": 177,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "VITAMINA C",
+      "presentaciones": 130,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "BETAMETASONA DIPROPIONATO+BETAMETASONA",
+      "presentaciones": 60,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "VITAMINA D3",
+      "presentaciones": 42,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "DOLOFEN-E",
+      "presentaciones": 33,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "METFORMINA CLORHIDRATO",
+      "presentaciones": 32,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "BETAMETASONA DIPROPIONATO",
+      "presentaciones": 30,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "TRAMADOL CLORHIDRATO",
+      "presentaciones": 29,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "GLUCOSAMINA SULFATO",
+      "presentaciones": 25,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "COMPLEJO B",
+      "presentaciones": 24,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "METRONIST",
+      "presentaciones": 22,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "PANTOPRAZOL",
+      "presentaciones": 22,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CETIRIZINA DICLORHIDRATO",
+      "presentaciones": 22,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "VITAMINA A",
+      "presentaciones": 20,
+      "atc2": "V04"
+     },
+     {
+      "nombre": "QUETIAPINA",
+      "presentaciones": 20,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "TRAMADOL MG+",
+      "presentaciones": 20,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "PENEGRA BLANDA",
+      "presentaciones": 17,
+      "atc2": "M04"
+     },
+     {
+      "nombre": "ISOTRETINOINA",
+      "presentaciones": 16,
+      "atc2": "D10"
+     },
+     {
+      "nombre": "OMEPRAZOL",
+      "presentaciones": 16,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ROSUVASTATINA",
+      "presentaciones": 16,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "RETIBLAN",
+      "presentaciones": 15,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "VITAMINA E",
+      "presentaciones": 15,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "NISTATINA +",
+      "presentaciones": 14,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "DICLOFEN MAX",
+      "presentaciones": 14,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "PIPERACILINA +",
+      "presentaciones": 14,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BROMURO DE",
+      "presentaciones": 14,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "MEROPENEM",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "GENTAMICINA",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "NAPROXENO",
+      "presentaciones": 12,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "SULPITAM",
+      "presentaciones": 12,
+      "atc2": "J01"
+     }
     ]
    },
    {
@@ -4496,6 +8451,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 81
+     }
+    ],
+    "canales": {
+     "institucional": 44,
+     "comercial": 686,
+     "muestraMedica": 386,
+     "activas": 1016
+    },
+    "productos": [
+     {
+      "nombre": "CORASTATIN",
+      "presentaciones": 96,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "RENANGIO",
+      "presentaciones": 42,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "RENANGIO80",
+      "presentaciones": 40,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "METSAFE",
+      "presentaciones": 36,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "RENANGIO PLUS80",
+      "presentaciones": 36,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "RENANGIO PLUS",
+      "presentaciones": 36,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "EREPGRO",
+      "presentaciones": 32,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "ELHIST",
+      "presentaciones": 32,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "LONGRIDE",
+      "presentaciones": 32,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "SILOTRIF4",
+      "presentaciones": 30,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "RIOCI",
+      "presentaciones": 30,
+      "atc2": "C02"
+     },
+     {
+      "nombre": "FERASIRO DISPERSABLE",
+      "presentaciones": 28,
+      "atc2": "V03"
+     },
+     {
+      "nombre": "BREATHEZY -",
+      "presentaciones": 28,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "EPIBALIN",
+      "presentaciones": 28,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "LEUTRIEN",
+      "presentaciones": 28,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "EPNONE",
+      "presentaciones": 28,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "STAROLMI",
+      "presentaciones": 28,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "LEUTRIEN MG.",
+      "presentaciones": 26,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "THALADEF",
+      "presentaciones": 24,
+      "atc2": "V03"
+     },
+     {
+      "nombre": "CYTOBLOC",
+      "presentaciones": 24,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "SAFEBO",
+      "presentaciones": 24,
+      "atc2": "C02"
+     },
+     {
+      "nombre": "SILOTRIF",
+      "presentaciones": 24,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "OXIFLED400",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BACTROSAFE500 RECUBIETAS",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BLACIDEC",
+      "presentaciones": 20,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "ARTAMLO",
+      "presentaciones": 18,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "VIOLEPSIN",
+      "presentaciones": 18,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "SEPAG",
+      "presentaciones": 18,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "VILACRET",
+      "presentaciones": 16,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "FEBUDAY",
+      "presentaciones": 16,
+      "atc2": "M04"
      }
     ]
    },
@@ -4655,6 +8768,164 @@
       "modalidad": "IMPORTAR Y VENDER",
       "n": 1
      }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 397,
+     "muestraMedica": 81,
+     "activas": 414
+    },
+    "productos": [
+     {
+      "nombre": "DOLICOX GRIP",
+      "presentaciones": 68,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DOLICOX GRIPNOCHE",
+      "presentaciones": 36,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "DOLICOX FORTE",
+      "presentaciones": 33,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DERMASKIN",
+      "presentaciones": 24,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "GASTROFULL MAX",
+      "presentaciones": 16,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "LITORVAS RECUBIERTAS.",
+      "presentaciones": 16,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DOLICOX",
+      "presentaciones": 15,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "GASTROFULL SUSPENSIÓN",
+      "presentaciones": 15,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "GASTROFULL DOBLE",
+      "presentaciones": 15,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CEVIMAX MASTICABLES",
+      "presentaciones": 12,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "TRIMESULF -",
+      "presentaciones": 10,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "KROMICIN MG/5ML",
+      "presentaciones": 9,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CLOFENIL /",
+      "presentaciones": 9,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ULCEPAR",
+      "presentaciones": 9,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CERROKAST MASTICABLES",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CLOFENIL",
+      "presentaciones": 8,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "LEXIB",
+      "presentaciones": 8,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "KRODEX F",
+      "presentaciones": 8,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "TAFYN",
+      "presentaciones": 8,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "FARMALIP",
+      "presentaciones": 7,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "LAMICOL",
+      "presentaciones": 7,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "MARE-OFF",
+      "presentaciones": 6,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "NELIND",
+      "presentaciones": 6,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "ZYRFAR",
+      "presentaciones": 6,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "LANSODEX DE",
+      "presentaciones": 6,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "PRESUREN",
+      "presentaciones": 6,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "DESLAIR -",
+      "presentaciones": 6,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "DESLAIR %",
+      "presentaciones": 5,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "FARZUL CÁPSULAS",
+      "presentaciones": 5,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "LOSARTAN POTASICO",
+      "presentaciones": 5,
+      "atc2": "C09"
+     }
     ]
    },
    {
@@ -4813,6 +9084,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 2
      }
+    ],
+    "canales": {
+     "institucional": 2,
+     "comercial": 475,
+     "muestraMedica": 2,
+     "activas": 384
+    },
+    "productos": [
+     {
+      "nombre": "CALYMAG",
+      "presentaciones": 120,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "MIGRACEF",
+      "presentaciones": 63,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "AMETREX",
+      "presentaciones": 22,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "VERAN D",
+      "presentaciones": 15,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "SUPRIM-D",
+      "presentaciones": 14,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CLINDACIL",
+      "presentaciones": 13,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "TRINSICON TOPICA",
+      "presentaciones": 12,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "ENALAPRIL",
+      "presentaciones": 10,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "CLONIDINA CLORHIDRATO",
+      "presentaciones": 10,
+      "atc2": "C02"
+     },
+     {
+      "nombre": "METFORMINA CLORHIDRATO",
+      "presentaciones": 10,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "LORIGAL",
+      "presentaciones": 8,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "EVADINEX",
+      "presentaciones": 8,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ALBENDAZOL",
+      "presentaciones": 8,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "BISALAX",
+      "presentaciones": 7,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "MUCOTROP ADULTOS",
+      "presentaciones": 6,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "MEVICAN",
+      "presentaciones": 6,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CLOTRIMAZOL VAGINALES",
+      "presentaciones": 6,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "METOCARBAMOL",
+      "presentaciones": 6,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "TENSYPRES- K",
+      "presentaciones": 6,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "MIDOL",
+      "presentaciones": 6,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "SILDENAFIL TABLETAS.",
+      "presentaciones": 6,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "PIREL DE",
+      "presentaciones": 6,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "TRIPSOPEN",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "HIDROXICINA HCL",
+      "presentaciones": 6,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ESPIRONOLACTONA",
+      "presentaciones": 5,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "TEOLIXIR RETARD",
+      "presentaciones": 5,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "FLUPAR",
+      "presentaciones": 4,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "PIREL AL",
+      "presentaciones": 4,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "HISTADINE",
+      "presentaciones": 4,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "MUCOTROP NIÑOS",
+      "presentaciones": 4,
+      "atc2": "R05"
+     }
     ]
    },
    {
@@ -4964,6 +9393,164 @@
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 3
      }
+    ],
+    "canales": {
+     "institucional": 6,
+     "comercial": 566,
+     "muestraMedica": 60,
+     "activas": 464
+    },
+    "productos": [
+     {
+      "nombre": "MOVIDOL",
+      "presentaciones": 171,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "MOVIDOL M",
+      "presentaciones": 42,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ACETAMINOFEN",
+      "presentaciones": 36,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "LOSARTAN POTASICO",
+      "presentaciones": 28,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "DICLOFENACORETARD",
+      "presentaciones": 24,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CIPROFLOXACINO MG.",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "FLUOXETINA",
+      "presentaciones": 19,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ROSUVASTATINA RECUBIERTAS.",
+      "presentaciones": 18,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "LOSARTAN",
+      "presentaciones": 17,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "DESLORATADINA",
+      "presentaciones": 13,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "MONTELUKAST",
+      "presentaciones": 13,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CETIRIZINA DICLORHIDRATO",
+      "presentaciones": 10,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "TIZANIDINA",
+      "presentaciones": 10,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "ESOMEPRAZOL20",
+      "presentaciones": 9,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ROSUVASTATINA",
+      "presentaciones": 9,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "MELOXICAM",
+      "presentaciones": 9,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "IBUPROFENO",
+      "presentaciones": 9,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "ESOMEPRAZOL",
+      "presentaciones": 8,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "ALBENDAZOL",
+      "presentaciones": 8,
+      "atc2": "P02"
+     },
+     {
+      "nombre": "GEMFIBROZILO",
+      "presentaciones": 8,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "FEXOFENADINA180",
+      "presentaciones": 8,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "NAPROXENO",
+      "presentaciones": 7,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "LORATADINA",
+      "presentaciones": 7,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "SILDENAFIL MGTABLETAS",
+      "presentaciones": 7,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 6,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "BETAMETASONA/CLOTRIMAZOL/NEOMICINA",
+      "presentaciones": 6,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "FUROSEMIDA",
+      "presentaciones": 6,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "FEXOFENADINA",
+      "presentaciones": 6,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "CLOTRIMAZOL",
+      "presentaciones": 6,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "NITAZOXANIDA",
+      "presentaciones": 6,
+      "atc2": "P01"
+     }
     ]
    },
    {
@@ -5109,6 +9696,164 @@
       "modalidad": "FABRICAR Y EXPORTAR",
       "n": 7
      }
+    ],
+    "canales": {
+     "institucional": 13,
+     "comercial": 368,
+     "muestraMedica": 123,
+     "activas": 405
+    },
+    "productos": [
+     {
+      "nombre": "CHALVER FLUZETRIN",
+      "presentaciones": 33,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "VAGINSOL F",
+      "presentaciones": 32,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "MULTIDOLULTRA.",
+      "presentaciones": 32,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DESCONGEL GRIPA",
+      "presentaciones": 30,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "FLUTURAN",
+      "presentaciones": 27,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CHALVER HEMATIN",
+      "presentaciones": 24,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "TRIGENTAX",
+      "presentaciones": 21,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "CHALVER FLUZETRINF",
+      "presentaciones": 18,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "HEMATIN PLUS",
+      "presentaciones": 15,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "FLUTURAN SUSPENSIÓN",
+      "presentaciones": 15,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "DECAL",
+      "presentaciones": 12,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "NEUROPRON",
+      "presentaciones": 12,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "DESCONGELITOF GRIPAGOTAS",
+      "presentaciones": 12,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DUOPAS",
+      "presentaciones": 12,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "TRIGENTAX LOCIÓN",
+      "presentaciones": 12,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "MULTIDOL",
+      "presentaciones": 10,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "CHALVER-HEMATINPLUS",
+      "presentaciones": 10,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "FLUZETRIN F",
+      "presentaciones": 9,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DESLORAN",
+      "presentaciones": 9,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "DESCONGEL F",
+      "presentaciones": 9,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "MULTIDOL EXPRESS400",
+      "presentaciones": 9,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "TEREX-3",
+      "presentaciones": 8,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "BUSTEROLINHALADOR",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "ESTERMAX",
+      "presentaciones": 8,
+      "atc2": "G03"
+     },
+     {
+      "nombre": "NABUMEXINHALADOR DOSIS",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CHALVER CETRINE",
+      "presentaciones": 8,
+      "atc2": "R06"
+     },
+     {
+      "nombre": "HYGIENEX PIRETRO",
+      "presentaciones": 7,
+      "atc2": "P03"
+     },
+     {
+      "nombre": "NABUMEX INHALADOR250",
+      "presentaciones": 7,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "KERADOL INY",
+      "presentaciones": 6,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "FEMTRIOL",
+      "presentaciones": 6,
+      "atc2": "G03"
+     }
     ]
    },
    {
@@ -5252,6 +9997,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 58
+     }
+    ],
+    "canales": {
+     "institucional": 78,
+     "comercial": 845,
+     "muestraMedica": 554,
+     "activas": 1059
+    },
+    "productos": [
+     {
+      "nombre": "VALSARVITAE PLUS",
+      "presentaciones": 216,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "PAZOVITAE",
+      "presentaciones": 128,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "IRBEVITAE PLUS",
+      "presentaciones": 96,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "ROSUVITAE PLUS",
+      "presentaciones": 72,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "LEVEVITAE",
+      "presentaciones": 69,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "CITIVITAE1000 SOLUCIÓN",
+      "presentaciones": 69,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ARIVITAE",
+      "presentaciones": 66,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ESCITAVITAE",
+      "presentaciones": 64,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "SITAVITAE",
+      "presentaciones": 51,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "DEXKETOVITAE COMPRIMIDOS",
+      "presentaciones": 36,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "QUETIVITAE",
+      "presentaciones": 36,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "PREGAVITAE",
+      "presentaciones": 36,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "ROSUVITAE COMPRIMIDO",
+      "presentaciones": 33,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "ROSUVITAE COMPRIMIDOS",
+      "presentaciones": 33,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "IRBEVITAE COMPRIMIDOS",
+      "presentaciones": 33,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "RIVOXVITAE",
+      "presentaciones": 32,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "VALSARVITAE COMPRIMIDOS",
+      "presentaciones": 30,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "TADAVITAE",
+      "presentaciones": 30,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "DUTAMVITAE +",
+      "presentaciones": 30,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "SUNIVITAE CÁPSULAS",
+      "presentaciones": 30,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "CILOSVITAE",
+      "presentaciones": 28,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "OLANZAVITAE COMPRIMIDOS",
+      "presentaciones": 25,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "IRBEVITAE",
+      "presentaciones": 24,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "MEMANVITAE",
+      "presentaciones": 24,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "IBRUVITAE",
+      "presentaciones": 22,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "VILDAVITAE COMPRIMIDOS",
+      "presentaciones": 21,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "ROSUVITAE",
+      "presentaciones": 18,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "IPAXVITAE",
+      "presentaciones": 16,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "ONDANVITAE ODT",
+      "presentaciones": 16,
+      "atc2": "A04"
+     },
+     {
+      "nombre": "DEXKETOVITAE MG/10ML",
+      "presentaciones": 15,
+      "atc2": "M01"
      }
     ]
    },
@@ -5407,6 +10310,164 @@
       "modalidad": "IMPORTAR. ENVASAR Y VENDER",
       "n": 1
      }
+    ],
+    "canales": {
+     "institucional": 41,
+     "comercial": 565,
+     "muestraMedica": 430,
+     "activas": 942
+    },
+    "productos": [
+     {
+      "nombre": "CALCIBON D",
+      "presentaciones": 128,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "KIDCAL",
+      "presentaciones": 120,
+      "atc2": "A12"
+     },
+     {
+      "nombre": "MILPAXNF",
+      "presentaciones": 72,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "FARMA D",
+      "presentaciones": 58,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "BRASARTAN CTDN",
+      "presentaciones": 52,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "HERREX FOL",
+      "presentaciones": 46,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "ARANDA MG/",
+      "presentaciones": 36,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "STAMYL FORTE",
+      "presentaciones": 36,
+      "atc2": "A09"
+     },
+     {
+      "nombre": "ARANDA",
+      "presentaciones": 36,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "STAMYL",
+      "presentaciones": 32,
+      "atc2": "A09"
+     },
+     {
+      "nombre": "MILPAX",
+      "presentaciones": 30,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "COLYPAN DE",
+      "presentaciones": 29,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "GYNOPLUS OVULOS",
+      "presentaciones": 28,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "KEFLEX",
+      "presentaciones": 27,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "COLYPAN PLUSTABLETAS",
+      "presentaciones": 26,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "COLYPAN",
+      "presentaciones": 23,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "FULREST",
+      "presentaciones": 22,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "HIDROTEN",
+      "presentaciones": 20,
+      "atc2": "C03"
+     },
+     {
+      "nombre": "CALCIBON NATAL",
+      "presentaciones": 20,
+      "atc2": "A12"
+     },
+     {
+      "nombre": "EVALAX POLVO",
+      "presentaciones": 19,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "MILPAX PLUS",
+      "presentaciones": 16,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "MILPAX MASTICABLE",
+      "presentaciones": 16,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "CELECTAN",
+      "presentaciones": 14,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "SENNAX PLUS",
+      "presentaciones": 14,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "MILPAXNF FRASCO",
+      "presentaciones": 12,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "VONAU FLASH",
+      "presentaciones": 12,
+      "atc2": "A04"
+     },
+     {
+      "nombre": "PRIDOT",
+      "presentaciones": 12,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "SENNAX",
+      "presentaciones": 11,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "HERREX",
+      "presentaciones": 10,
+      "atc2": "B03"
+     },
+     {
+      "nombre": "DERMATREX",
+      "presentaciones": 9,
+      "atc2": "D07"
+     }
     ]
    },
    {
@@ -5556,6 +10617,164 @@
       "modalidad": "IMPORTAR Y VENDER",
       "n": 5
      }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 252,
+     "muestraMedica": 120,
+     "activas": 326
+    },
+    "productos": [
+     {
+      "nombre": "JAQUEDOL",
+      "presentaciones": 28,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "NAFAZOL NASAL",
+      "presentaciones": 18,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "NIXODERM UNGUENTO",
+      "presentaciones": 18,
+      "atc2": "D02"
+     },
+     {
+      "nombre": "SILIGAS MASTICABLES",
+      "presentaciones": 14,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "OFTALMOTRIALERSOLUCION OFTALMICA",
+      "presentaciones": 12,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "TUSSYL",
+      "presentaciones": 12,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "NEUROBASAL",
+      "presentaciones": 12,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "CORASAN",
+      "presentaciones": 12,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "DORZOTRISOL T",
+      "presentaciones": 12,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "OFTALMOTRISOLSOLUCION OFTALMICA",
+      "presentaciones": 12,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "DEPRALIN",
+      "presentaciones": 11,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "DOLUMBAR FORTE",
+      "presentaciones": 10,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "OFTALMOTRILUB OFTALMICA",
+      "presentaciones": 10,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "BROXOL D",
+      "presentaciones": 10,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "CLOBAK",
+      "presentaciones": 10,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "OFTALMOTRIMAX SOLUCIÓN",
+      "presentaciones": 9,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "TOBRAMISOL D",
+      "presentaciones": 8,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "TUSSYL MIEL",
+      "presentaciones": 8,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "DOLUMBAR",
+      "presentaciones": 8,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "NECROXIL",
+      "presentaciones": 8,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "FURODERM TOPICA",
+      "presentaciones": 7,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "SILIGAS",
+      "presentaciones": 7,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "BACKPAIN",
+      "presentaciones": 6,
+      "atc2": "M02"
+     },
+     {
+      "nombre": "ALBISAN",
+      "presentaciones": 6,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "BROXOL F",
+      "presentaciones": 6,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "DORZOTRISOL SOLUCIÓN",
+      "presentaciones": 6,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "VOXAMIN",
+      "presentaciones": 6,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "BRIMOTRISOL",
+      "presentaciones": 6,
+      "atc2": "S01"
+     },
+     {
+      "nombre": "BETAMETASONA DIPROPIONATO",
+      "presentaciones": 6,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "GLIVILDAX",
+      "presentaciones": 6,
+      "atc2": "A10"
+     }
     ]
    },
    {
@@ -5696,6 +10915,164 @@
       "modalidad": "IMPORTAR Y VENDER",
       "n": 54
      }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 239,
+     "muestraMedica": 42,
+     "activas": 195
+    },
+    "productos": [
+     {
+      "nombre": "SEROHALE CIPHALER",
+      "presentaciones": 24,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SEROHALE CAPSUBRRISS",
+      "presentaciones": 16,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SEROHALE",
+      "presentaciones": 16,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "FORACORT",
+      "presentaciones": 16,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SEROHALE SYNCHROBREATHE",
+      "presentaciones": 16,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CIPDIAPTIN M",
+      "presentaciones": 16,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "VILDIACIP M",
+      "presentaciones": 16,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "LINOID",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "SYTREHA",
+      "presentaciones": 10,
+      "atc2": "B06"
+     },
+     {
+      "nombre": "TRIPZOL",
+      "presentaciones": 8,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "TIOZIDE",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "TIOZIDE CAPSUBRRISS",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "LENOSIDE",
+      "presentaciones": 8,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "CONTIVIR",
+      "presentaciones": 8,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "CICLOVENT",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "ENDOBLOC",
+      "presentaciones": 8,
+      "atc2": "C02"
+     },
+     {
+      "nombre": "SINPLAMAX DURA",
+      "presentaciones": 8,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "TENOMUNE",
+      "presentaciones": 6,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "TOLAMID",
+      "presentaciones": 4,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "IMUDAY",
+      "presentaciones": 4,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "ZENTAIR",
+      "presentaciones": 4,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "CIPLAXEL",
+      "presentaciones": 4,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "ESTASIN",
+      "presentaciones": 4,
+      "atc2": "J02"
+     },
+     {
+      "nombre": "AZACTICIP /",
+      "presentaciones": 4,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "XBIRA",
+      "presentaciones": 4,
+      "atc2": "L02"
+     },
+     {
+      "nombre": "DIDIVIR",
+      "presentaciones": 4,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "FLOHALE",
+      "presentaciones": 4,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "DUTASTERIDE",
+      "presentaciones": 4,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "CIPDIAPTIN",
+      "presentaciones": 4,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "VILDIACIP",
+      "presentaciones": 4,
+      "atc2": "A10"
+     }
     ]
    },
    {
@@ -5826,6 +11203,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 52
+     }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 434,
+     "muestraMedica": 326,
+     "activas": 471
+    },
+    "productos": [
+     {
+      "nombre": "CLAVULIN ES",
+      "presentaciones": 84,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LAMICTAL DISPERSABLES",
+      "presentaciones": 60,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "SERETIDE DISKUS",
+      "presentaciones": 60,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "CLAVULIN JUNIOR",
+      "presentaciones": 60,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DUODART",
+      "presentaciones": 40,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "RELVAR ELLIPTA",
+      "presentaciones": 36,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SEROXAT CR",
+      "presentaciones": 36,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "CLAVULIN",
+      "presentaciones": 32,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "SEROXAT TABLETAS.",
+      "presentaciones": 30,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "NARAMIG",
+      "presentaciones": 22,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "LAMICTAL DISPERSABLES.",
+      "presentaciones": 20,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "AMOXAL",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "TRELEGY ELLIPTA",
+      "presentaciones": 18,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "ANORO ELLIPTA",
+      "presentaciones": 18,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "TRIUMEQ /",
+      "presentaciones": 18,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "CELSENTRI",
+      "presentaciones": 15,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "AVAMYSSPRAY NASAL",
+      "presentaciones": 15,
+      "atc2": "R01"
+     },
+     {
+      "nombre": "BENLYSTA POLVO",
+      "presentaciones": 12,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "LAMICTAL DISPERSABLE",
+      "presentaciones": 10,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "DERMOVATE",
+      "presentaciones": 10,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "ZEJULA",
+      "presentaciones": 10,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "INCRUSE ELLIPTA",
+      "presentaciones": 9,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "WELLBUTRIN XL",
+      "presentaciones": 9,
+      "atc2": "N07"
+     },
+     {
+      "nombre": "AVODART0.5",
+      "presentaciones": 8,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "NUCALA",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SERETIDE EVOHALER",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "APRETUDE MG/ML",
+      "presentaciones": 8,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "DERMOVATEUNGÜENTO",
+      "presentaciones": 8,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "SERETIDE 'OSP'",
+      "presentaciones": 8,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "SERETIDE EVOHALER25/250",
+      "presentaciones": 8,
+      "atc2": "R03"
      }
     ]
    },
@@ -5968,6 +11503,164 @@
      {
       "modalidad": "FABRICAR Y VENDER",
       "n": 52
+     }
+    ],
+    "canales": {
+     "institucional": 24,
+     "comercial": 351,
+     "muestraMedica": 8,
+     "activas": 296
+    },
+    "productos": [
+     {
+      "nombre": "TRICLIMBAC OTICA",
+      "presentaciones": 36,
+      "atc2": "S02"
+     },
+     {
+      "nombre": "TRIATUSIC",
+      "presentaciones": 24,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "RESFRYGRIP CÁPSULAS",
+      "presentaciones": 24,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "BUPROFEN",
+      "presentaciones": 21,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DOSALDIN",
+      "presentaciones": 18,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "LIRODERM LOCION",
+      "presentaciones": 14,
+      "atc2": "P03"
+     },
+     {
+      "nombre": "DEUCILINA",
+      "presentaciones": 13,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ABALPIN",
+      "presentaciones": 13,
+      "atc2": "C08"
+     },
+     {
+      "nombre": "TUSSIONEX DUO",
+      "presentaciones": 12,
+      "atc2": "R05"
+     },
+     {
+      "nombre": "DEVIT-C",
+      "presentaciones": 12,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "ZIVICAL D",
+      "presentaciones": 12,
+      "atc2": "A12"
+     },
+     {
+      "nombre": "CLINBAC",
+      "presentaciones": 10,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "RESFRYGRIPPLUS",
+      "presentaciones": 9,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "ACTIVIRAL",
+      "presentaciones": 9,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "TUDERMIFAR",
+      "presentaciones": 9,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "BUPIRIDOL",
+      "presentaciones": 8,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "BENERVA",
+      "presentaciones": 8,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "CORTISOLONA LOCION",
+      "presentaciones": 8,
+      "atc2": "D07"
+     },
+     {
+      "nombre": "ESPASMYDOL",
+      "presentaciones": 8,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "SALYDRAT POLVO",
+      "presentaciones": 8,
+      "atc2": "A07"
+     },
+     {
+      "nombre": "TRAMYDOL",
+      "presentaciones": 8,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "TRAMYDOL COMPUESTO",
+      "presentaciones": 8,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "MEBICITROF",
+      "presentaciones": 8,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "MACROMYCIN",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "FIREXIFEN",
+      "presentaciones": 7,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "MICLOTRIM AL",
+      "presentaciones": 6,
+      "atc2": "G01"
+     },
+     {
+      "nombre": "DERMIQUEM",
+      "presentaciones": 6,
+      "atc2": "D06"
+     },
+     {
+      "nombre": "OSTICALCIN",
+      "presentaciones": 5,
+      "atc2": "M05"
+     },
+     {
+      "nombre": "SPABOLAZ POLVO",
+      "presentaciones": 5,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "NAUSYVOM",
+      "presentaciones": 4,
+      "atc2": "R06"
      }
     ]
    },
@@ -6115,6 +11808,164 @@
      {
       "modalidad": "FABRICAR Y VENDER",
       "n": 11
+     }
+    ],
+    "canales": {
+     "institucional": 67,
+     "comercial": 405,
+     "muestraMedica": 163,
+     "activas": 446
+    },
+    "productos": [
+     {
+      "nombre": "ROVEZIX +",
+      "presentaciones": 80,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "PROCLOR",
+      "presentaciones": 58,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "ACIZAN",
+      "presentaciones": 40,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "ROVEZIX",
+      "presentaciones": 40,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "ALISINORM PLUS",
+      "presentaciones": 36,
+      "atc2": "C09"
+     },
+     {
+      "nombre": "PRAZENTOL",
+      "presentaciones": 34,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "VITADRONIC +",
+      "presentaciones": 32,
+      "atc2": "M05"
+     },
+     {
+      "nombre": "PRAVAFEN",
+      "presentaciones": 24,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DESFATIGAN TABLETAS.",
+      "presentaciones": 24,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "RIVARTE",
+      "presentaciones": 22,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "APICLOT",
+      "presentaciones": 20,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "LUROTAX",
+      "presentaciones": 18,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ALTACHIS NOCHE",
+      "presentaciones": 18,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DESFATIGAN",
+      "presentaciones": 16,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ALTACOR",
+      "presentaciones": 16,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "COXETOR",
+      "presentaciones": 15,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "DINIVE",
+      "presentaciones": 13,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "EPILFARMO",
+      "presentaciones": 12,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "RIVARTE15MG",
+      "presentaciones": 12,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "ALTACHIS DIA",
+      "presentaciones": 12,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "MILEDON DURAS",
+      "presentaciones": 10,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "DINIVE RECUBIERTAS.",
+      "presentaciones": 10,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "LEVOCINA",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "ALTACOR1",
+      "presentaciones": 8,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "LERADA",
+      "presentaciones": 8,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "SURTINIK DURAS",
+      "presentaciones": 8,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "RASANDAR",
+      "presentaciones": 8,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "BRULIVA MG/ML",
+      "presentaciones": 7,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "MILEDON DURA",
+      "presentaciones": 6,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "FEMTAX",
+      "presentaciones": 6,
+      "atc2": "N02"
      }
     ]
    },
@@ -6269,6 +12120,164 @@
      {
       "modalidad": "IMPORTAR Y VENDER",
       "n": 51
+     }
+    ],
+    "canales": {
+     "institucional": 528,
+     "comercial": 906,
+     "muestraMedica": 236,
+     "activas": 1552
+    },
+    "productos": [
+     {
+      "nombre": "ENOXAPARINA SODICA",
+      "presentaciones": 1158,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "ENOXAPARINASODICA JERINGAS",
+      "presentaciones": 228,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "AMPIDELT",
+      "presentaciones": 36,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CEFTRIDELT",
+      "presentaciones": 24,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "BENZATIDELT POLVO",
+      "presentaciones": 20,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DELBACTAM",
+      "presentaciones": 18,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "OXACIDELT",
+      "presentaciones": 16,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "AMOXICLADELT",
+      "presentaciones": 16,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CEFDELTIME",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CEFAZIDELT POLVO",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "TAZODELT",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DELTRIANOLONA SUSPENSIÓN",
+      "presentaciones": 8,
+      "atc2": "H02"
+     },
+     {
+      "nombre": "DELTGLIPTINA",
+      "presentaciones": 8,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "K- DELPRAZOL",
+      "presentaciones": 6,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "VACUNA CONTRA",
+      "presentaciones": 6,
+      "atc2": "J07"
+     },
+     {
+      "nombre": "RIVADELT",
+      "presentaciones": 6,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "DELTPOLIM",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "DELTAZITROM",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CEFALODELT",
+      "presentaciones": 6,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "VACUNA ADSORBIDA",
+      "presentaciones": 6,
+      "atc2": "J07"
+     },
+     {
+      "nombre": "DELTODELT DEXMEDETOMIDINA",
+      "presentaciones": 4,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "DELTODELT MG/ML",
+      "presentaciones": 4,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "BRIDELT",
+      "presentaciones": 4,
+      "atc2": "C02"
+     },
+     {
+      "nombre": "ACETAMINODELT",
+      "presentaciones": 4,
+      "atc2": "N02"
+     },
+     {
+      "nombre": "DELTPIXABAN",
+      "presentaciones": 4,
+      "atc2": "B01"
+     },
+     {
+      "nombre": "FOSAPREPIDELT POLVO",
+      "presentaciones": 4,
+      "atc2": "A04"
+     },
+     {
+      "nombre": "DELSOMEP",
+      "presentaciones": 4,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "DELTKACINA MG/2ML",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "LINCODELT",
+      "presentaciones": 4,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "V- DELTRACITRAM",
+      "presentaciones": 4,
+      "atc2": "N03"
      }
     ]
    },
@@ -6429,6 +12438,164 @@
       "modalidad": "IMPORTAR Y VENDER",
       "n": 50
      }
+    ],
+    "canales": {
+     "institucional": 0,
+     "comercial": 542,
+     "muestraMedica": 242,
+     "activas": 729
+    },
+    "productos": [
+     {
+      "nombre": "KASTAMON MASTICABLES",
+      "presentaciones": 96,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "KASTAMON",
+      "presentaciones": 72,
+      "atc2": "R03"
+     },
+     {
+      "nombre": "PANTOPRAZOL GASTRORESISTENTES",
+      "presentaciones": 72,
+      "atc2": "A02"
+     },
+     {
+      "nombre": "STALEVO CON",
+      "presentaciones": 72,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "ZARZIO MU/0.5",
+      "presentaciones": 48,
+      "atc2": "L03"
+     },
+     {
+      "nombre": "ANIMAXEN10",
+      "presentaciones": 32,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "TACROLIMUS MGCAPSULAS",
+      "presentaciones": 32,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "STALEVO COMPRIMIDOCON",
+      "presentaciones": 30,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "STALEVO COMPRIMIDOSCON",
+      "presentaciones": 30,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "ANASTROZOL",
+      "presentaciones": 26,
+      "atc2": "L02"
+     },
+     {
+      "nombre": "MICOFENOLATO MOFETILO",
+      "presentaciones": 24,
+      "atc2": "L04"
+     },
+     {
+      "nombre": "DIAPAGLIF MET",
+      "presentaciones": 24,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "ANIMAXEN",
+      "presentaciones": 24,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ATORVASTATINA",
+      "presentaciones": 24,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DIAPAGLIF",
+      "presentaciones": 16,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "GLAPRIXA DUO",
+      "presentaciones": 12,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "OMNITROPE EN",
+      "presentaciones": 12,
+      "atc2": "H01"
+     },
+     {
+      "nombre": "SIRDALUD",
+      "presentaciones": 12,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "CURAM",
+      "presentaciones": 12,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "RIXATHON MG/ML",
+      "presentaciones": 12,
+      "atc2": "L01"
+     },
+     {
+      "nombre": "MIRTAZAPINA",
+      "presentaciones": 12,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ZINNAT MG/5",
+      "presentaciones": 9,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "CURAM MG/5",
+      "presentaciones": 8,
+      "atc2": "J01"
+     },
+     {
+      "nombre": "SUGAMMADEX",
+      "presentaciones": 8,
+      "atc2": "V03"
+     },
+     {
+      "nombre": "ATORVASTATINA SANDOZ",
+      "presentaciones": 8,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "DUTASTERIDE +",
+      "presentaciones": 8,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "GLAPRIXA",
+      "presentaciones": 6,
+      "atc2": "A10"
+     },
+     {
+      "nombre": "TADALAFILO",
+      "presentaciones": 6,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "TAMSULOSINA CLORHIDRATO",
+      "presentaciones": 6,
+      "atc2": "G04"
+     },
+     {
+      "nombre": "ABIRATERONA",
+      "presentaciones": 6,
+      "atc2": "L02"
+     }
     ]
    },
    {
@@ -6576,6 +12743,164 @@
      {
       "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
       "n": 1
+     }
+    ],
+    "canales": {
+     "institucional": 78,
+     "comercial": 481,
+     "muestraMedica": 396,
+     "activas": 693
+    },
+    "productos": [
+     {
+      "nombre": "ASTIGMIN MG/24H",
+      "presentaciones": 128,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "LEVOCAPONE RECUBIERTA.",
+      "presentaciones": 108,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "RUVAX",
+      "presentaciones": 105,
+      "atc2": "C10"
+     },
+     {
+      "nombre": "CONTROLURA20",
+      "presentaciones": 48,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "QUEPINA",
+      "presentaciones": 48,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "ASTIGMIN27 PARCHES",
+      "presentaciones": 48,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ALIZAPRIDA MG/",
+      "presentaciones": 36,
+      "atc2": "A03"
+     },
+     {
+      "nombre": "SULZINC",
+      "presentaciones": 36,
+      "atc2": "A12"
+     },
+     {
+      "nombre": "LEVOCAPONE (100/25/200)",
+      "presentaciones": 36,
+      "atc2": "N04"
+     },
+     {
+      "nombre": "NAPROFEN",
+      "presentaciones": 28,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "LAMOTRIGINA",
+      "presentaciones": 27,
+      "atc2": "N03"
+     },
+     {
+      "nombre": "FIBRILOK",
+      "presentaciones": 24,
+      "atc2": "B02"
+     },
+     {
+      "nombre": "TERBINAFINA",
+      "presentaciones": 24,
+      "atc2": "D01"
+     },
+     {
+      "nombre": "DOLOCODONA",
+      "presentaciones": 24,
+      "atc2": "M01"
+     },
+     {
+      "nombre": "BEDOYECTA",
+      "presentaciones": 24,
+      "atc2": "A11"
+     },
+     {
+      "nombre": "NEURONOX",
+      "presentaciones": 24,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "CLOZAPINA",
+      "presentaciones": 20,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "MIRTAZAPINA HUMAX",
+      "presentaciones": 17,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "ZOPICLONA",
+      "presentaciones": 17,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "NEURONOX200 U",
+      "presentaciones": 16,
+      "atc2": "M03"
+     },
+     {
+      "nombre": "CONTROLURA",
+      "presentaciones": 12,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "SULZINC -",
+      "presentaciones": 12,
+      "atc2": "A12"
+     },
+     {
+      "nombre": "CONSTILAX ORAL",
+      "presentaciones": 10,
+      "atc2": "A06"
+     },
+     {
+      "nombre": "LEVOMEPROMAZINA TABLETAS25",
+      "presentaciones": 10,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "IMIPRAMINA CLORHIDRATO",
+      "presentaciones": 9,
+      "atc2": "N06"
+     },
+     {
+      "nombre": "HALOPERIDOL ORAL2",
+      "presentaciones": 8,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "CLOROQUINA FOSFATO",
+      "presentaciones": 8,
+      "atc2": "P01"
+     },
+     {
+      "nombre": "ZIDOVUDINA ORAL",
+      "presentaciones": 8,
+      "atc2": "J05"
+     },
+     {
+      "nombre": "HALOPERIDOL",
+      "presentaciones": 7,
+      "atc2": "N05"
+     },
+     {
+      "nombre": "QUEPINA RECUBIERTAS.",
+      "presentaciones": 6,
+      "atc2": "N05"
      }
     ]
    }

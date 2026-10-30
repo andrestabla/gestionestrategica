@@ -101,9 +101,11 @@ async function main() {
   console.error(`INVIMA · detalle de ${detalle.length} titulares…`);
   const variantes = detalle.flatMap((t) => t.variantes);
   const filas: Row[] = [];
+  const cums: Row[] = [];   // una fila por presentación comercial: producto, descripción, muestra médica
   for (let i = 0; i < variantes.length; i += 40) {
     const lote = variantes.slice(i, i + 40);
     filas.push(...await soql(DS.cum, { $select: "titular,expediente,atc,descripcionatc,fechavencimiento,fechaexpedicion,modalidad", $where: `estadoregistro='Vigente' AND titular in (${lote.map(q).join(",")})`, $group: "titular,expediente,atc,descripcionatc,fechavencimiento,fechaexpedicion,modalidad" }));
+    cums.push(...await soql(DS.cum, { $select: "titular,expediente,producto,descripcioncomercial,muestramedica,estadocum", $where: `estadoregistro='Vigente' AND titular in (${lote.map(q).join(",")})` }));
     process.stderr.write(".");
   }
   console.error("");
@@ -123,6 +125,24 @@ async function main() {
     const reg = [...expedientes.keys()].filter((e) => regPorExpediente.has(e));
     const mercados = new Set(reg.flatMap((e) => [...regPorExpediente.get(e)!]));
     const modalidades = new Map<string, number>(); for (const f of expedientes.values()) { const m = (f.modalidad ?? "").trim(); if (m) modalidades.set(m, (modalidades.get(m) ?? 0) + 1); }
+    // presentaciones comerciales del titular: canal (institucional / comercial / muestra médica) y marcas
+    const misCums = cums.filter((c) => norm(c.titular ?? "") === t.key);
+    const canales = { institucional: 0, comercial: 0, muestraMedica: 0, activas: 0 };
+    for (const c of misCums) {
+      if ((c.estadocum ?? "").toLowerCase().startsWith("activo")) canales.activas++;
+      if ((c.muestramedica ?? "").toLowerCase().startsWith("s")) canales.muestraMedica++;
+      else if (/INSTITUCIONAL|HOSPITALARI/i.test(c.descripcioncomercial ?? "")) canales.institucional++;
+      else canales.comercial++;
+    }
+    const marca = (p: string) => (p ?? "").replace(/[®™]/g, "").replace(/\s+/g, " ").trim().split(/\s+/).filter((w) => !/^\d|^(MG|ML|G|MCG|UI|X|POR|TABLETAS?|CAPSULAS?|JARABE|SOLUCION|CREMA|GEL|SUSPENSION|INYECTABLE|GOTAS|TABLETA|CAPSULA|RECUBIERTA|RECUBIERTAS)$/i.test(w)).slice(0, 2).join(" ").toUpperCase();
+    const marcas = new Map<string, { n: number; atc2: Map<string, number> }>();
+    for (const c of misCums) {
+      const m = marca(c.producto); if (!m) continue;
+      const e = marcas.get(m) ?? { n: 0, atc2: new Map() }; e.n++;
+      const f = expedientes.get(c.expediente); const k2 = (f?.atc ?? "").trim().toUpperCase().slice(0, 3); if (k2) e.atc2.set(k2, (e.atc2.get(k2) ?? 0) + 1);
+      marcas.set(m, e);
+    }
+    const productos = [...marcas].map(([nombre, e]) => ({ nombre, presentaciones: e.n, atc2: [...e.atc2].sort((x, y) => y[1] - x[1])[0]?.[0] ?? "" })).sort((x, y) => y.presentaciones - x.presentaciones).slice(0, 30);
     return {
       rank: i + 1, key: t.key, nombre: t.nombre, registros: t.registros, cums: t.cums,
       atc1: [...atc1].map(([code, n]) => ({ code, name: ATC1[code] ?? code, n })).sort((a, b) => b.n - a.n),
@@ -130,8 +150,18 @@ async function main() {
       vencimientos: { en12m: venc.filter((d) => d <= en(12)).length, en36m: venc.filter((d) => d <= en(36)).length, porAno: [...porAno].sort((a, b) => a[0] - b[0]).map(([ano, n]) => ({ ano, n })) },
       regulados: { expedientes: reg.length, share: expedientes.size ? Math.round((reg.length / expedientes.size) * 1000) / 10 : 0, mercadosRelevantes: mercados.size },
       modalidades: [...modalidades].map(([modalidad, n]) => ({ modalidad, n })).sort((a, b) => b.n - a.n),
+      canales, productos,
     };
   });
+
+  // 4b) canales del mercado: presentaciones institucionales, comerciales y muestras médicas (todas las vigentes)
+  console.error("INVIMA · canales del mercado…");
+  const mm = await soql(DS.cum, { $select: "muestramedica,count(*) as n", $where: "estadoregistro='Vigente'", $group: "muestramedica" });
+  const inst = await soql(DS.cum, { $select: "count(*) as n", $where: "estadoregistro='Vigente' AND (upper(descripcioncomercial) like '%INSTITUCIONAL%' OR upper(descripcioncomercial) like '%HOSPITALARI%') AND muestramedica not in ('Si','SI','si')" });
+  const totalCum = Number(totales.cums);
+  const muestra = mm.filter((r) => (r.muestramedica ?? "").toLowerCase().startsWith("s")).reduce((a, r) => a + Number(r.n), 0);
+  const institucional = Number(inst[0]?.n ?? 0);
+  const canalesMercado = { institucional, comercial: Math.max(0, totalCum - institucional - muestra), muestraMedica: muestra };
 
   // 5) TRM: vigente y hace doce meses
   console.error("Banco de la República · TRM…");
@@ -147,7 +177,7 @@ async function main() {
       { id: "cnpmdm-precios", name: "Comisión Nacional de Precios de Medicamentos · precio máximo de venta por presentación", url: "https://www.datos.gov.co/Salud-y-Protecci-n-Social/Precio-m-ximo-de-venta-de-los-medicamentos-por-pre/nauz-qkjw", note: "Presentaciones bajo control directo de precios por mercado relevante y circular." },
       { id: "banrep-trm", name: "Banco de la República · Tasa representativa del mercado", url: "https://www.datos.gov.co/Econom-a-y-Finanzas/Tasa-de-Cambio-Representativa-del-Mercado-TRM/32sa-8pi3", note: "TRM diaria publicada por la Superintendencia Financiera." },
     ],
-    invima: { registros: Number(totales.reg), titulares: Number(totales.tit), cums: Number(totales.cums), titularesAgrupados: ranking.length, atcMercado, top: titulares },
+    invima: { registros: Number(totales.reg), titulares: Number(totales.tit), cums: Number(totales.cums), titularesAgrupados: ranking.length, atcMercado, canalesMercado, top: titulares },
     regulados, trm,
   };
   const file = resolve(process.cwd(), "src/data/inteligencia", `${key}.json`);
