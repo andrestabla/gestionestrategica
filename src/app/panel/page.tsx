@@ -20,6 +20,7 @@ import { buildAlerts, executiveSummary } from "@/lib/logic";
 import { useMaturity } from "@/lib/use-maturity";
 import { ArrowRight, ShieldAlert, AlertTriangle, Info, CheckCircle2, Circle } from "lucide-react";
 import { hasInstrument } from "@/lib/instrumentos";
+import { moduleEnabled, type ModuleId } from "@/lib/modulos";
 
 /** «3 objetivos», «1 objetivo»: conteo con su sustantivo. */
 const cuenta = (n: number, singular: string, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
@@ -74,6 +75,8 @@ function PanelHome() {
   const roadmap = horizons.length > 1 ? `${horizons[0].label} → ${horizons[horizons.length - 1].label}` : horizons[0].label;
   const serie = summary.maturity.history.map((h) => h.institution.toFixed(2).replace(".", ",")).join(" → ");
 
+  // tarjetas de módulos apagados por el administrador: fuera de la portada
+  const on = (id: ModuleId) => moduleEnabled(v.catalog.company, id);
   return (
     <>
       <PageHeader
@@ -196,51 +199,51 @@ function PanelHome() {
         <div className="kicker mb-4">Módulos de la plataforma</div>
         {acomp ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
+          {on("diagnostico") && <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
             desc="Autoevaluación directiva y lectura de las capacidades: perfil, dimensiones y qué mirar primero."
-            tags={[cuenta(DIMS.length, "dimensión", "dimensiones")]} />
-          <ModuleCard href={estrategiaHref(v.catalog.company, "prioridades", base)} code="PE" title={V.tabs.prioridades}
+            tags={[cuenta(DIMS.length, "dimensión", "dimensiones")]} />}
+          {on("prioridades") && <ModuleCard href={estrategiaHref(v.catalog.company, "prioridades", base)} code="PE" title={V.tabs.prioridades}
             desc="Las prioridades 3 a 5 años con su sponsor, su indicador y su descripción: ordenan todo lo demás."
-            tags={[cuenta(levers.length, "prioridad", "prioridades")]} />
-          <ModuleCard href={estrategiaHref(v.catalog.company, "direccion", base)} code="OD" title={V.tabs.direccion}
+            tags={[cuenta(levers.length, "prioridad", "prioridades")]} />}
+          {on("direccion") && <ModuleCard href={estrategiaHref(v.catalog.company, "direccion", base)} code="OD" title={V.tabs.direccion}
             desc="Objetivos del cuadro de mando por prioridad estratégica y horizonte."
-            tags={[cuenta(v.catalog.objectives.length, "objetivo")]} />
-          <ModuleCard href={estrategiaHref(v.catalog.company, "okr", base)} code="KR" title={V.tabs.okr}
+            tags={[cuenta(v.catalog.objectives.length, "objetivo")]} />}
+          {on("okr") && <ModuleCard href={estrategiaHref(v.catalog.company, "okr", base)} code="KR" title={V.tabs.okr}
             desc="Cada objetivo con sus resultados clave: definición, línea base, meta, dueño y plazo."
-            tags={[cuenta(v.kpis.length, "resultado clave", "resultados clave")]} />
-          <ModuleCard href={estrategiaHref(v.catalog.company, "iniciativas", base)} code="IN" title={V.tabs.iniciativas}
+            tags={[cuenta(v.kpis.length, "resultado clave", "resultados clave")]} />}
+          {on("iniciativas") && <ModuleCard href={estrategiaHref(v.catalog.company, "iniciativas", base)} code="IN" title={V.tabs.iniciativas}
             desc="Las iniciativas del plan, vinculadas al resultado clave que mueven."
-            tags={[cuenta(initiatives.length, "iniciativa")]} />
-          <ModuleCard href={estrategiaHref(v.catalog.company, "priorizacion", base)} code="PR" title={V.tabs.priorizacion}
+            tags={[cuenta(initiatives.length, "iniciativa")]} />}
+          {on("priorizacion") && <ModuleCard href={estrategiaHref(v.catalog.company, "priorizacion", base)} code="PR" title={V.tabs.priorizacion}
             desc="Calificación con la matriz D·E·M·L por sesión de prioridad, ranking y trimestre de inicio."
-            tags={["Matriz D·E·M·L"]} />
-          <ModuleCard href={estrategiaHref(v.catalog.company, "portafolio", base)} code="PO" title={V.tabs.portafolio}
+            tags={["Matriz D·E·M·L"]} />}
+          {on("portafolio") && <ModuleCard href={estrategiaHref(v.catalog.company, "portafolio", base)} code="PO" title={V.tabs.portafolio}
             desc="Decisión de tiempo por iniciativa y portafolio por prioridad estratégica."
-            tags={[roadmap]} />
-          <ModuleCard href={`${base}/panel/bi`} code="M7" title="Inteligencia"
+            tags={[roadmap]} />}
+          {on("inteligencia") && <ModuleCard href={`${base}/panel/bi`} code="M7" title="Inteligencia"
             desc="Contexto del sector con datos reales y lectura territorial."
-            tags={[v.catalog.company.sector || "Sector"]} />
+            tags={[v.catalog.company.sector || "Sector"]} />}
         </div>
         ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
+          {on("diagnostico") && <ModuleCard href={`${base}/panel/diagnostico`} code="M1" title="Diagnóstico de capacidades"
             desc={`Radar de capacidades, mapa de calor de las ${DIMS.length} dimensiones, evidencia por práctica y serie de mediciones.`}
-            tags={[cuenta(DIMS.length, "dimensión", "dimensiones"), cuenta(PRACTICES.length, "evidencia")]} />
-          <ModuleCard href={`${base}/panel/benchmark`} code="M2" title="Benchmark"
+            tags={[cuenta(DIMS.length, "dimensión", "dimensiones"), cuenta(PRACTICES.length, "evidencia")]} />}
+          {on("benchmark") && <ModuleCard href={`${base}/panel/benchmark`} code="M2" title="Benchmark"
             desc="Posición sectorial frente a pares comparables y presencia territorial por departamento."
-            tags={[v.catalog.company.sector || "Sector", cuenta(v.catalog.territories?.length ?? 0, "departamento")]} />
-          <ModuleCard href={`${base}/panel/estrategia`} code="M3" title="Estrategia · cuadro de mando y OKR"
+            tags={[v.catalog.company.sector || "Sector", cuenta(v.catalog.territories?.length ?? 0, "departamento")]} />}
+          {on("estrategia") && <ModuleCard href={`${base}/panel/estrategia`} code="M3" title="Estrategia · cuadro de mando y OKR"
             desc="Objetivo, resultados clave, dimensión que instala e iniciativa: la trazabilidad completa, navegable."
-            tags={[cuenta(PERSPECTIVES.length, "perspectiva"), cuenta(v.catalog.objectives.length, "objetivo")]} />
-          <ModuleCard href={`${base}/panel/kpi`} code="M4" title="Indicadores"
+            tags={[cuenta(PERSPECTIVES.length, "perspectiva"), cuenta(v.catalog.objectives.length, "objetivo")]} />}
+          {on("kpi") && <ModuleCard href={`${base}/panel/kpi`} code="M4" title="Indicadores"
             desc="Batería de KPI con dueño, fuente, periodicidad, serie histórica y semáforo frente a meta."
-            tags={[cuenta(v.kpis.length, "indicador", "indicadores")]} />
-          <ModuleCard href={`${base}/panel/ruta`} code="M5" title="Mapa de ruta"
+            tags={[cuenta(v.kpis.length, "indicador", "indicadores")]} />}
+          {on("ruta") && <ModuleCard href={`${base}/panel/ruta`} code="M5" title="Mapa de ruta"
             desc="Roadmap por horizontes con Gantt y la matriz de priorización (D·E·M·L)."
-            tags={[roadmap, cuenta(initiatives.length, "iniciativa")]} />
-          <ModuleCard href={`${base}/panel/iniciativas`} code="M6" title="Seguimiento de iniciativas"
+            tags={[roadmap, cuenta(initiatives.length, "iniciativa")]} />}
+          {on("seguimiento") && <ModuleCard href={`${base}/panel/iniciativas`} code="M6" title="Seguimiento de iniciativas"
             desc="Avance, presupuesto en tres estados y factores críticos de éxito en semáforo."
-            tags={[fmtCOP(budget.planned)]} />
+            tags={[fmtCOP(budget.planned)]} />}
         </div>
         )}
       </div>
@@ -272,15 +275,17 @@ function ArranqueCard() {
   const levers = leversOf(c.company);
   // Orden del método: primero la autoevaluación directiva (la lectura de la empresa), después la cadena
   // estratégica de prioridades a portafolio.
+  // en acompañamiento cada sección es un módulo; en los demás modos la cadena vive en Convención
+  const mod = (id: ModuleId): ModuleId => (V.modo === "acompanamiento" ? id : "convencion");
   const pasos = [
-    { label: f1On ? "Autoevaluación directiva" : "Test de capacidad empresarial", n: respuestas ?? 0, meta: respuestas === null ? "…" : cuenta(respuestas, "respuesta"), href: `${base}/panel/diagnostico/${f1On ? "autoevaluacion" : "test"}` },
-    { label: V.tabs.prioridades, n: levers.length, meta: `${levers.length} de hasta 8`, href: t(V.modo === "acompanamiento" ? "prioridades" : "direccion") },
-    { label: V.tabs.direccion, n: c.objectives.length, meta: cuenta(c.objectives.length, "objetivo"), href: t("direccion") },
-    { label: V.tabs.okr, n: v.kpis.length, meta: cuenta(v.kpis.length, "resultado clave", "resultados clave"), href: t("okr") },
-    { label: V.tabs.iniciativas, n: v.initiatives.length, meta: cuenta(v.initiatives.length, "iniciativa"), href: t("iniciativas") },
-    { label: V.tabs.priorizacion, n: prio?.evaluadas ?? 0, meta: prio === null ? "…" : `${cuenta(prio.evaluadas, "iniciativa evaluada", "iniciativas evaluadas")}`, href: t("priorizacion") },
-    { label: V.tabs.portafolio, n: prio?.portafolio ?? 0, meta: prio === null ? "…" : `${cuenta(prio.portafolio, "iniciativa decidida", "iniciativas decididas")}`, href: t("portafolio") },
-  ];
+    { mod: "diagnostico" as ModuleId, label: f1On ? "Autoevaluación directiva" : "Test de capacidad empresarial", n: respuestas ?? 0, meta: respuestas === null ? "…" : cuenta(respuestas, "respuesta"), href: `${base}/panel/diagnostico/${f1On ? "autoevaluacion" : "test"}` },
+    { mod: mod("prioridades"), label: V.tabs.prioridades, n: levers.length, meta: `${levers.length} de hasta 8`, href: t(V.modo === "acompanamiento" ? "prioridades" : "direccion") },
+    { mod: mod("direccion"), label: V.tabs.direccion, n: c.objectives.length, meta: cuenta(c.objectives.length, "objetivo"), href: t("direccion") },
+    { mod: mod("okr"), label: V.tabs.okr, n: v.kpis.length, meta: cuenta(v.kpis.length, "resultado clave", "resultados clave"), href: t("okr") },
+    { mod: mod("iniciativas"), label: V.tabs.iniciativas, n: v.initiatives.length, meta: cuenta(v.initiatives.length, "iniciativa"), href: t("iniciativas") },
+    { mod: mod("priorizacion"), label: V.tabs.priorizacion, n: prio?.evaluadas ?? 0, meta: prio === null ? "…" : `${cuenta(prio.evaluadas, "iniciativa evaluada", "iniciativas evaluadas")}`, href: t("priorizacion") },
+    { mod: mod("portafolio"), label: V.tabs.portafolio, n: prio?.portafolio ?? 0, meta: prio === null ? "…" : `${cuenta(prio.portafolio, "iniciativa decidida", "iniciativas decididas")}`, href: t("portafolio") },
+  ].filter((p) => moduleEnabled(c.company, p.mod));
   const hechos = pasos.filter((p) => p.n > 0).length;
   if (hechos === pasos.length) return null;
   return (

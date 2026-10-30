@@ -23,6 +23,7 @@ import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
+import { isModule, moduleEnabled } from "@/lib/modulos";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
@@ -62,7 +63,8 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
   const v = useCatalog();
   const V = vocabOf(v.catalog.company);
   const acomp = isAcompanamiento(v.catalog.company);
-  const TABS = tabsFor(V, acomp);
+  // las secciones apagadas por el administrador no se muestran como pestañas (la ruta las bloquea el shell)
+  const TABS = tabsFor(V, acomp).filter((t) => !isModule(t.id) || moduleEnabled(v.catalog.company, t.id));
   const refetch = useCatalogRefetch();
   const base = useBase();
   const canEdit = useCan("manage_catalog");

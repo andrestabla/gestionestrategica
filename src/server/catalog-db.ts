@@ -25,6 +25,7 @@ export function companyRow(c: CompanyInfo) {
     prioSessions: (c.prioSessions && Object.keys(c.prioSessions).length ? c.prioSessions : null) as never,
     mode: c.mode ?? "completa",
     instruments: (c.instruments?.length ? c.instruments : null) as never,
+    modulesOff: (c.modulesOff?.length ? c.modulesOff : null) as never,
     access: (c.access && Object.keys(c.access).length ? c.access : null) as never,
     itinerary: (c.itinerary ?? null) as never,
     active: c.active, createdBy: c.createdBy ?? null,

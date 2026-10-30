@@ -40,7 +40,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
     <UserProvider user={user}>
       <CatalogProvider initial={view ?? emptyView()}>
         <FeedbackProvider>
-        <AppShell user={user} companies={companies} mode={company?.mode ?? "completa"}>
+        <AppShell user={user} companies={companies} mode={company?.mode ?? "completa"} modulesOff={company?.modulesOff ?? []}>
           {noCompany && user.role !== "ADMIN" ? (
             <p className="rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
               Tu cuenta no tiene una empresa activa asignada. Pide al administrador de la plataforma que te asigne una.

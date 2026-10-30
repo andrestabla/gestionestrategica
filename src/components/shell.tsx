@@ -11,10 +11,11 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun } from "lucide-react"
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
 import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
+import { moduleOfRoute, moduleLabel, type ModuleId } from "@/lib/modulos";
 const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
 import { CommandPalette, SearchButton } from "@/components/command-palette";
 import type { SessionUser } from "@/lib/session";
@@ -163,18 +164,18 @@ function NotificationsBell() {
 }
 
 const NAV = [
-  { href: "/panel", label: "Panel", icon: LayoutDashboard },
-  { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" },
-  { href: "/panel/benchmark", label: "Benchmark", icon: Globe2, code: "M2" },
-  { href: "/panel/estrategia", label: "Estrategia", icon: Network, code: "M3" },
-  { href: "/panel/kpi", label: "Indicadores", icon: Gauge, code: "M4" },
-  { href: "/panel/ruta", label: "Ruta", icon: MapIcon, code: "M5" },
-  { href: "/panel/iniciativas", label: "Iniciativas", icon: ListChecks, code: "M6" },
-  { href: "/panel/convencion", label: "Convención", icon: Presentation, code: "CV" },
-  { href: "/panel/proyectos", label: "Proyectos", icon: KanbanSquare, code: "GP" },
-  { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" },
-  { href: "/panel/informe", label: "Informe", icon: FileText },
-  { href: "/panel/metodologia", label: "Metodología", icon: BookOpen },
+  { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined, mod: undefined as ModuleId | undefined },
+  { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1", mod: "diagnostico" as ModuleId | undefined },
+  { href: "/panel/benchmark", label: "Benchmark", icon: Globe2, code: "M2", mod: "benchmark" as ModuleId | undefined },
+  { href: "/panel/estrategia", label: "Estrategia", icon: Network, code: "M3", mod: "estrategia" as ModuleId | undefined },
+  { href: "/panel/kpi", label: "Indicadores", icon: Gauge, code: "M4", mod: "kpi" as ModuleId | undefined },
+  { href: "/panel/ruta", label: "Ruta", icon: MapIcon, code: "M5", mod: "ruta" as ModuleId | undefined },
+  { href: "/panel/iniciativas", label: "Iniciativas", icon: ListChecks, code: "M6", mod: "seguimiento" as ModuleId | undefined },
+  { href: "/panel/convencion", label: "Convención", icon: Presentation, code: "CV", mod: "convencion" as ModuleId | undefined },
+  { href: "/panel/proyectos", label: "Proyectos", icon: KanbanSquare, code: "GP", mod: "proyectos" as ModuleId | undefined },
+  { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7", mod: "inteligencia" as ModuleId | undefined },
+  { href: "/panel/informe", label: "Informe", icon: FileText, mod: "informe" as ModuleId | undefined },
+  { href: "/panel/metodologia", label: "Metodología", icon: BookOpen, mod: "metodologia" as ModuleId | undefined },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -188,11 +189,12 @@ const ROLE_LABEL: Record<string, string> = {
 const RAIL_W = 232;
 const RAIL_W_MIN = 76;
 
-export function AppShell({ children, user, companies = [], mode = "completa" }: {
+export function AppShell({ children, user, companies = [], mode = "completa", modulesOff = [] }: {
   children: ReactNode;
   user: SessionUser;
   companies?: { slug: string; name: string; shortName: string; active: boolean }[];
   mode?: CompanyMode;
+  modulesOff?: ModuleId[];   // módulos apagados por el administrador para esta empresa
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -239,22 +241,23 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
   };
 
   // modo convención: solo las cinco secciones (y Administración para quien administra)
-  const NAV_CV = [{ href: "/panel/convencion?t=itinerario", label: "Itinerario", icon: CalendarDays, code: undefined as string | undefined }, { href: "/panel/convencion?t=guia", label: "Guía del día 2", icon: BookOpen, code: undefined as string | undefined }, ...ACCESS_TABS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined }))];
+  const NAV_CV = [{ href: "/panel/convencion?t=itinerario", label: "Itinerario", icon: CalendarDays, code: undefined as string | undefined, mod: "itinerario" as ModuleId | undefined }, { href: "/panel/convencion?t=guia", label: "Guía del día 2", icon: BookOpen, code: undefined as string | undefined, mod: "guia" as ModuleId | undefined }, ...ACCESS_TABS.map((s) => ({ href: `/panel/convencion?t=${s.id}`, label: s.label, icon: CV_ICON[s.id], code: undefined as string | undefined, mod: s.id as ModuleId | undefined }))];
   // modo acompañamiento: diagnóstico y la ruta de estrategia con el vocabulario de la empresa (prioridades y sponsors), sin QR ni itinerario
   const NAV_AC = [
-    { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined },
-    { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" as string | undefined },
-    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.prioridades}`, label: V.tabs.prioridades, icon: Target, code: undefined as string | undefined },
-    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.direccion}`, label: V.tabs.direccion, icon: Network, code: undefined as string | undefined },
-    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.okr}`, label: V.tabs.okr, icon: Gauge, code: undefined as string | undefined },
-    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.iniciativas}`, label: V.tabs.iniciativas, icon: Rocket, code: undefined as string | undefined },
-    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.priorizacion}`, label: V.tabs.priorizacion, icon: Scale, code: undefined as string | undefined },
-    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.portafolio}`, label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined },
-    { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined },
+    { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined, mod: undefined as ModuleId | undefined },
+    { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" as string | undefined, mod: "diagnostico" as ModuleId | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.prioridades}`, label: V.tabs.prioridades, icon: Target, code: undefined as string | undefined, mod: "prioridades" as ModuleId | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.direccion}`, label: V.tabs.direccion, icon: Network, code: undefined as string | undefined, mod: "direccion" as ModuleId | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.okr}`, label: V.tabs.okr, icon: Gauge, code: undefined as string | undefined, mod: "okr" as ModuleId | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.iniciativas}`, label: V.tabs.iniciativas, icon: Rocket, code: undefined as string | undefined, mod: "iniciativas" as ModuleId | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.priorizacion}`, label: V.tabs.priorizacion, icon: Scale, code: undefined as string | undefined, mod: "priorizacion" as ModuleId | undefined },
+    { href: `/panel/estrategia/${ESTRATEGIA_SLUG.portafolio}`, label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined, mod: "portafolio" as ModuleId | undefined },
+    { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined, mod: "inteligencia" as ModuleId | undefined },
   ];
-  const baseNav = convencion ? NAV_CV : acomp ? NAV_AC : NAV;
+  // los módulos apagados por el administrador no aparecen en el menú de nadie (admin y advisor los abren con aviso)
+  const baseNav = (convencion ? NAV_CV : acomp ? NAV_AC : NAV).filter((n) => !n.mod || !modulesOff.includes(n.mod));
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
-    ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2 }]
+    ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2, code: undefined as string | undefined, mod: undefined as ModuleId | undefined }]
     : baseNav;
   const isActive = (href: string) => {
     if (href.includes("?t=")) return path.startsWith("/panel/convencion") && (searchParams.get("t") ?? (acomp ? "prioridades" : "direccion")) === href.split("?t=")[1];
@@ -426,7 +429,7 @@ export function AppShell({ children, user, companies = [], mode = "completa" }: 
           </div>
         </header>
 
-        <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none">{children}</main>
+        <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none"><ModuloGuard path={path} t={searchParams.get("t")} mode={mode} modulesOff={modulesOff} base={base} gestiona={user.role === "ADMIN" || user.role === "CONSULTOR"}>{children}</ModuloGuard></main>
 
         <footer className="px-8 pb-6 pt-2 text-[12px] font-medium uppercase tracking-[0.14em] text-faint/70">
           Gestión estratégica · plataforma de 4Shine Empresas
@@ -453,5 +456,35 @@ function ThemeToggle() {
       className="grid h-9 w-9 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-ink">
       {dark ? <Sun size={16} /> : <Moon size={16} />}
     </button>
+  );
+}
+
+
+/* ═══ Guarda de módulos: lo que el administrador apagó para la empresa no se abre por la URL. La gente de la
+   empresa ve un aviso con vuelta al panel; el admin y el advisor ven el módulo con una franja de aviso. ═══ */
+function ModuloGuard({ children, path, t, mode, modulesOff, base, gestiona }: {
+  children: ReactNode; path: string; t: string | null; mode: CompanyMode; modulesOff: ModuleId[]; base: string; gestiona: boolean;
+}) {
+  const id = moduleOfRoute(path, t, mode);
+  if (!id || !modulesOff.includes(id)) return <>{children}</>;
+  const label = moduleLabel(id, mode);
+  if (gestiona) {
+    return (
+      <>
+        <div className="no-print mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3 text-[12.5px] leading-snug text-ink-soft" style={{ background: "var(--gold-wash)" }}>
+          <EyeOff size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold-text)" }} />
+          <span><b className="text-ink">Módulo apagado para la empresa.</b> «{label}» no aparece en el menú de sus usuarios ni pueden abrirlo; tú lo ves para preparar los datos. Se enciende en <Link href={`${base}/panel/admin`} className="font-semibold text-cyan-deep hover:underline">Administración → Empresas</Link>.</span>
+        </div>
+        {children}
+      </>
+    );
+  }
+  return (
+    <div className="panel mx-auto max-w-[560px] px-6 py-8 text-center">
+      <EyeOff size={22} className="mx-auto text-faint" />
+      <h2 className="mt-3 text-[17px] font-extrabold text-ink">«{label}» no está habilitado para tu empresa</h2>
+      <p className="mt-2 text-[13px] leading-relaxed text-muted">Este módulo no hace parte del alcance actual del acompañamiento. Si lo necesitas, pídelo al advisor o al administrador de la plataforma.</p>
+      <Link href={`${base}/panel`} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px]">Volver al panel</Link>
+    </div>
   );
 }

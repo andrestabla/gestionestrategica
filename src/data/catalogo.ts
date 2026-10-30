@@ -11,6 +11,7 @@ import type { KrTemplate } from "@/lib/okr-plantillas";
 import type { PrioSessions } from "@/lib/priorizacion-sesion";
 import type { AccessConfig, CompanyMode } from "@/lib/acceso";
 import type { Instrument } from "@/lib/instrumentos";
+import type { ModuleId } from "@/lib/modulos";
 import type { Itinerary } from "@/lib/itinerario";
 import {
   RESPONSIBLES, CMI_OBJECTIVES, KPI_CATALOG, EVIDENCE_CATALOG, INITIATIVES_FULL, SCORES_HISTORY,
@@ -43,6 +44,7 @@ export type CompanyInfo = {
   prioSessions?: PrioSessions; // sesión de calificación por tribu en la priorización en vivo (abierta, en revisión, guardada; orden del líder)
   mode?: CompanyMode;       // completa (todos los módulos) o convencion (solo Dirección, OKR, Iniciativas → KR, Priorización y Portafolio)
   instruments?: Instrument[]; // instrumentos del diagnóstico habilitados (vacío = todos)
+  modulesOff?: ModuleId[];  // módulos apagados para la empresa (vacío = todos encendidos)
   access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
   itinerary?: Itinerary;    // itinerario de la convención (momentos, publicación y enlace público)
   active: boolean;
