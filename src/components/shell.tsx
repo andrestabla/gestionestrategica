@@ -11,11 +11,11 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff } from "lucide-react"
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
 import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
-import { moduleOfRoute, moduleLabel, type ModuleId } from "@/lib/modulos";
+import { moduleOfRoute, moduleLabel, moduleState, type ModuleId, type ModuleState } from "@/lib/modulos";
 const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
 import { CommandPalette, SearchButton } from "@/components/command-palette";
 import type { SessionUser } from "@/lib/session";
@@ -189,12 +189,13 @@ const ROLE_LABEL: Record<string, string> = {
 const RAIL_W = 232;
 const RAIL_W_MIN = 76;
 
-export function AppShell({ children, user, companies = [], mode = "completa", modulesOff = [] }: {
+export function AppShell({ children, user, companies = [], mode = "completa", modulesOff = [], modulesPending = [] }: {
   children: ReactNode;
   user: SessionUser;
   companies?: { slug: string; name: string; shortName: string; active: boolean }[];
   mode?: CompanyMode;
-  modulesOff?: ModuleId[];   // módulos apagados por el administrador para esta empresa
+  modulesOff?: ModuleId[];   // módulos fuera del alcance de esta empresa (no aparecen)
+  modulesPending?: ModuleId[]; // módulos del alcance aún no habilitados (aparecen atenuados)
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -254,8 +255,11 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.portafolio}`, label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined, mod: "portafolio" as ModuleId | undefined },
     { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined, mod: "inteligencia" as ModuleId | undefined },
   ];
-  // los módulos apagados por el administrador no aparecen en el menú de nadie (admin y advisor los abren con aviso)
-  const baseNav = (convencion ? NAV_CV : acomp ? NAV_AC : NAV).filter((n) => !n.mod || !modulesOff.includes(n.mod));
+  // los módulos fuera del alcance no aparecen en el menú de nadie (admin y advisor los abren por la URL con aviso);
+  // los pendientes aparecen atenuados, con candado, para que la empresa sepa qué viene
+  const modCfg = { modulesOff, modulesPending };
+  const estado = (id: ModuleId | undefined): ModuleState => (id ? moduleState(modCfg, id) : "on");
+  const baseNav = (convencion ? NAV_CV : acomp ? NAV_AC : NAV).filter((n) => estado(n.mod) !== "off");
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
     ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2, code: undefined as string | undefined, mod: undefined as ModuleId | undefined }]
     : baseNav;
@@ -285,6 +289,17 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
       {!mini && <div className="label mb-1 px-3 !text-white/30">{convencion ? "Convención" : "Módulos"}</div>}
       {navList.map((item) => {
         const active = isActive(item.href);
+        if (estado(item.mod) === "pendiente") {
+          return (
+            <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
+              title={`${item.label} · hace parte del alcance, aún no habilitado`}
+              className={`group relative flex items-center rounded-xl text-[13px] font-medium text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/50 ${mini ? "justify-center px-0 py-[10px]" : "gap-3 px-3 py-[9px]"}`}>
+              <item.icon size={mini ? 18 : 16} strokeWidth={1.9} />
+              {!mini && <span className="flex-1">{item.label}</span>}
+              <Lock size={mini ? 10 : 12} className={mini ? "absolute right-1.5 top-1.5" : "opacity-70"} />
+            </Link>
+          );
+        }
         return (
           <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
             title={item.code ? `${item.label} · ${item.code}` : mini ? item.label : undefined}
@@ -429,7 +444,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
           </div>
         </header>
 
-        <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none"><ModuloGuard path={path} t={searchParams.get("t")} mode={mode} modulesOff={modulesOff} base={base} gestiona={user.role === "ADMIN" || user.role === "CONSULTOR"}>{children}</ModuloGuard></main>
+        <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none"><ModuloGuard path={path} t={searchParams.get("t")} mode={mode} modulesOff={modulesOff} modulesPending={modulesPending} base={base} gestiona={user.role === "ADMIN" || user.role === "CONSULTOR"}>{children}</ModuloGuard></main>
 
         <footer className="px-8 pb-6 pt-2 text-[12px] font-medium uppercase tracking-[0.14em] text-faint/70">
           Gestión estratégica · plataforma de 4Shine Empresas
@@ -462,18 +477,26 @@ function ThemeToggle() {
 
 /* ═══ Guarda de módulos: lo que el administrador apagó para la empresa no se abre por la URL. La gente de la
    empresa ve un aviso con vuelta al panel; el admin y el advisor ven el módulo con una franja de aviso. ═══ */
-function ModuloGuard({ children, path, t, mode, modulesOff, base, gestiona }: {
-  children: ReactNode; path: string; t: string | null; mode: CompanyMode; modulesOff: ModuleId[]; base: string; gestiona: boolean;
+function ModuloGuard({ children, path, t, mode, modulesOff, modulesPending, base, gestiona }: {
+  children: ReactNode; path: string; t: string | null; mode: CompanyMode; modulesOff: ModuleId[]; modulesPending: ModuleId[]; base: string; gestiona: boolean;
 }) {
   const id = moduleOfRoute(path, t, mode);
-  if (!id || !modulesOff.includes(id)) return <>{children}</>;
+  const st = id ? moduleState({ modulesOff, modulesPending }, id) : "on";
+  if (!id || st === "on") return <>{children}</>;
   const label = moduleLabel(id, mode);
+  const pendiente = st === "pendiente";
   if (gestiona) {
     return (
       <>
         <div className="no-print mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3 text-[12.5px] leading-snug text-ink-soft" style={{ background: "var(--gold-wash)" }}>
-          <EyeOff size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold-text)" }} />
-          <span><b className="text-ink">Módulo apagado para la empresa.</b> «{label}» no aparece en el menú de sus usuarios ni pueden abrirlo; tú lo ves para preparar los datos. Se enciende en <Link href={`${base}/panel/admin`} className="font-semibold text-cyan-deep hover:underline">Administración → Empresas</Link>.</span>
+          {pendiente ? <Lock size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold-text)" }} /> : <EyeOff size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold-text)" }} />}
+          <span>
+            <b className="text-ink">{pendiente ? "Módulo pendiente para la empresa." : "Módulo fuera del alcance de la empresa."}</b>{" "}
+            {pendiente
+              ? <>«{label}» hace parte del alcance acordado pero aún no está habilitado: sus usuarios lo ven atenuado en el menú y, si lo abren, se les explica que llegará después. Tú lo ves para preparar los datos.</>
+              : <>«{label}» no aparece en el menú de sus usuarios ni pueden abrirlo; tú lo ves para preparar los datos.</>}
+            {" "}Se cambia en <Link href={`${base}/panel/admin`} className="font-semibold text-cyan-deep hover:underline">Administración → Empresas</Link>.
+          </span>
         </div>
         {children}
       </>
@@ -481,9 +504,13 @@ function ModuloGuard({ children, path, t, mode, modulesOff, base, gestiona }: {
   }
   return (
     <div className="panel mx-auto max-w-[560px] px-6 py-8 text-center">
-      <EyeOff size={22} className="mx-auto text-faint" />
-      <h2 className="mt-3 text-[17px] font-extrabold text-ink">«{label}» no está habilitado para tu empresa</h2>
-      <p className="mt-2 text-[13px] leading-relaxed text-muted">Este módulo no hace parte del alcance actual del acompañamiento. Si lo necesitas, pídelo al advisor o al administrador de la plataforma.</p>
+      {pendiente ? <Lock size={22} className="mx-auto text-faint" /> : <EyeOff size={22} className="mx-auto text-faint" />}
+      <h2 className="mt-3 text-[17px] font-extrabold text-ink">{pendiente ? <>«{label}» aún no está habilitado</> : <>«{label}» no está habilitado para tu empresa</>}</h2>
+      <p className="mt-2 text-[13px] leading-relaxed text-muted">
+        {pendiente
+          ? "Este módulo hace parte del alcance del acompañamiento y se habilitará en una etapa posterior, cuando el trabajo previo esté listo. El advisor avisará en el momento de abrirlo."
+          : "Este módulo no hace parte del alcance actual del acompañamiento. Si lo necesitas, pídelo al advisor o al administrador de la plataforma."}
+      </p>
       <Link href={`${base}/panel`} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px]">Volver al panel</Link>
     </div>
   );

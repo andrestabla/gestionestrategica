@@ -6,7 +6,9 @@
 // así un módulo nuevo nace encendido. El menú oculta lo apagado y la ruta
 // se bloquea para los usuarios de la empresa; el admin y el advisor siguen
 // viendo el módulo con un aviso, para preparar datos antes de encenderlo.
-// Panel y Administración no se apagan.
+// Un módulo puede estar «pendiente»: hace parte del alcance acordado pero aún
+// no se habilita (se muestra en el menú, atenuado, y la ruta lo explica), o
+// «fuera» del alcance (no aparece). Panel y Administración no se apagan.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { CompanyMode } from "@/lib/acceso";
@@ -50,8 +52,35 @@ export function parseModulesOff(input: unknown): { ok: true; modulesOff?: Module
   return { ok: true, modulesOff: out.length ? out : undefined };
 }
 
-export const modulesOffOf = (c: { modulesOff?: ModuleId[] } | null | undefined): ModuleId[] => c?.modulesOff ?? [];
-export const moduleEnabled = (c: { modulesOff?: ModuleId[] } | null | undefined, id: ModuleId): boolean => !modulesOffOf(c).includes(id);
+export type ModuleState = "on" | "pendiente" | "off";
+export type ModulesConfig = { modulesOff?: ModuleId[]; modulesPending?: ModuleId[] };
+export const MODULE_STATES: { id: ModuleState; label: string; desc: string }[] = [
+  { id: "on", label: "Encendido", desc: "Disponible para la gente de la empresa." },
+  { id: "pendiente", label: "Pendiente", desc: "Hace parte del alcance acordado, pero aún no se habilita: se muestra atenuado en el menú y la ruta lo explica." },
+  { id: "off", label: "Fuera del alcance", desc: "No aplica para esta empresa: no aparece en el menú ni se abre." },
+];
+export const modulesOffOf = (c: ModulesConfig | null | undefined): ModuleId[] => c?.modulesOff ?? [];
+export const modulesPendingOf = (c: ModulesConfig | null | undefined): ModuleId[] => c?.modulesPending ?? [];
+export const moduleState = (c: ModulesConfig | null | undefined, id: ModuleId): ModuleState =>
+  modulesOffOf(c).includes(id) ? "off" : modulesPendingOf(c).includes(id) ? "pendiente" : "on";
+export const moduleEnabled = (c: ModulesConfig | null | undefined, id: ModuleId): boolean => moduleState(c, id) === "on";
+
+/** Valor guardado en la columna JSON de la empresa: lista (solo apagados, formato anterior) u objeto
+    {off, pending}. Devuelve las dos listas validadas; lo que no se entiende se ignora. */
+export function parseModulesStored(json: unknown): ModulesConfig {
+  if (Array.isArray(json)) { const r = parseModulesOff(json); return r.ok ? { modulesOff: r.modulesOff } : {}; }
+  if (json && typeof json === "object") {
+    const o = json as { off?: unknown; pending?: unknown };
+    const off = parseModulesOff(o.off), pen = parseModulesOff(o.pending);
+    return { modulesOff: off.ok ? off.modulesOff : undefined, modulesPending: pen.ok ? pen.modulesOff : undefined };
+  }
+  return {};
+}
+/** Lo que se guarda en la columna: nulo si todo está encendido. Un módulo no puede estar en las dos listas: gana «fuera». */
+export function modulesStored(c: ModulesConfig): { off: ModuleId[]; pending: ModuleId[] } | null {
+  const off = modulesOffOf(c), pending = modulesPendingOf(c).filter((m) => !off.includes(m));
+  return off.length || pending.length ? { off, pending } : null;
+}
 
 /** Nombre del módulo con el vocabulario del modo (las secciones de estrategia cambian de nombre). */
 export function moduleLabel(id: ModuleId, mode: CompanyMode): string {

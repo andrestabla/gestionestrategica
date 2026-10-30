@@ -8,11 +8,11 @@ import { useState } from "react";
 import { Modal, Field } from "@/components/ui";
 import { Loader2, Save, Building2, X } from "lucide-react";
 import { INSTRUMENTS, ALL_INSTRUMENTS } from "@/lib/instrumentos";
-import { modulesForMode, moduleLabel, type ModuleId } from "@/lib/modulos";
+import { modulesForMode, moduleLabel, MODULE_STATES, type ModuleId, type ModuleState } from "@/lib/modulos";
 import type { CompanyMode } from "@/lib/acceso";
 
 export type HorizonLite = { id: string; label: string; months: number };
-export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion" | "acompanamiento"; instruments?: string[]; modulesOff?: string[] };
+export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion" | "acompanamiento"; instruments?: string[]; modulesOff?: string[]; modulesPending?: string[] };
 export const DEFAULT_HZ: HorizonLite[] = [{ id: "CORTO", label: "Corto plazo", months: 12 }, { id: "MEDIANO", label: "Mediano plazo", months: 36 }];
 
 /** Horizontes de planeación de la empresa (ordenan el roadmap y la priorización). */
@@ -57,9 +57,14 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
   // instrumentos del diagnóstico habilitados: sin configuración, todos
   const [instruments, setInstruments] = useState<string[]>(initial?.instruments?.length ? initial.instruments : [...ALL_INSTRUMENTS]);
   const toggleInstrument = (id: string) => setInstruments((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  // módulos apagados para la empresa: sin configuración, todos encendidos
+  // estado de cada módulo: encendido (por defecto), pendiente (del alcance, aún no habilitado) o fuera del alcance
   const [modulesOff, setModulesOff] = useState<string[]>(initial?.modulesOff ?? []);
-  const toggleModule = (id: string) => setModulesOff((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const [modulesPending, setModulesPending] = useState<string[]>(initial?.modulesPending ?? []);
+  const stateOf = (id: string): ModuleState => modulesOff.includes(id) ? "off" : modulesPending.includes(id) ? "pendiente" : "on";
+  const setModuleState = (id: string, st: ModuleState) => {
+    setModulesOff((prev) => st === "off" ? [...new Set([...prev, id])] : prev.filter((x) => x !== id));
+    setModulesPending((prev) => st === "pendiente" ? [...new Set([...prev, id])] : prev.filter((x) => x !== id));
+  };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <Modal title={initial ? `Editar · ${initial.name}` : "Nueva empresa"} sub={initial ? "identidad, sector y horizontes de planeación" : "nace activa; elige si parte vacía o de la plantilla demo"} onClose={onCancel}
@@ -68,7 +73,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
         <button type="button" onClick={async () => {
             const { slug: slugField, typeRule, ...rest } = f;
             const tr = typeRule === "propia" ? undefined : typeRule;   // «propia» (regla definida por API) se conserva tal cual
-            const input = initial ? { ...rest, horizons, instruments, modulesOff, ...(tr ? { typeRule: tr } : {}), newSlug: slugField } : { ...rest, horizons, instruments, modulesOff, typeRule: tr ?? "4shine", slug: slugField || undefined };
+            const input = initial ? { ...rest, horizons, instruments, modulesOff, modulesPending, ...(tr ? { typeRule: tr } : {}), newSlug: slugField } : { ...rest, horizons, instruments, modulesOff, modulesPending, typeRule: tr ?? "4shine", slug: slugField || undefined };
             if (await onSubmit(input) && !initial) setF({ ...f, name: "", shortName: "", city: "", department: "", sector: "", size: "", ciiu: "", slug: "" });
           }}
           disabled={saving || f.name.trim().length < 3 || instruments.length === 0}
@@ -117,19 +122,27 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
           <p className="mt-1 text-[12px] leading-snug text-faint">Lo no habilitado no aparece en el módulo de diagnóstico ni acepta respuestas. Al menos uno.</p>
         </div>
         <div className="rounded-xl border border-line px-3 py-2.5">
-          <span className="label !text-[11px]">Módulos encendidos para la empresa</span>
-          <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+          <span className="label !text-[11px]">Módulos de la empresa</span>
+          <div className="mt-1.5 divide-y divide-line">
             {modulesForMode(f.mode as CompanyMode).map((m) => {
-              const on = !modulesOff.includes(m.id);
+              const st = stateOf(m.id);
+              const nombre = moduleLabel(m.id as ModuleId, f.mode as CompanyMode);
               return (
-                <label key={m.id} className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] hover:bg-surface-2" title={m.desc}>
-                  <input type="checkbox" checked={on} onChange={() => toggleModule(m.id)} className="mt-0.5" />
-                  <span className={on ? "text-ink" : "text-muted line-through"}>{moduleLabel(m.id as ModuleId, f.mode as CompanyMode)}</span>
-                </label>
+                <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5 text-[12px]" title={m.desc}>
+                  <span className={st === "on" ? "font-semibold text-ink" : st === "pendiente" ? "font-semibold text-ink-soft" : "text-muted line-through"}>{nombre}</span>
+                  <div role="radiogroup" aria-label={`Estado de ${nombre}`} className="flex rounded-lg bg-surface-2 p-0.5">
+                    {MODULE_STATES.map((s) => (
+                      <button key={s.id} type="button" role="radio" aria-checked={st === s.id} title={s.desc} onClick={() => setModuleState(m.id, s.id)}
+                        className={`rounded-md px-2 py-1 text-[11.5px] font-bold transition-colors ${st === s.id ? (s.id === "on" ? "bg-surface text-ok shadow-sm" : s.id === "pendiente" ? "bg-surface text-gold-text shadow-sm" : "bg-surface text-bad shadow-sm") : "text-faint hover:text-ink"}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               );
             })}
           </div>
-          <p className="mt-1 text-[12px] leading-snug text-faint">Lo apagado desaparece del menú y de la ruta para la gente de la empresa; el administrador y el advisor lo siguen viendo con un aviso, para preparar datos antes de encenderlo. Panel y Administración siempre están. Los módulos listados dependen del modo elegido abajo.</p>
+          <p className="mt-1.5 text-[12px] leading-snug text-faint"><b className="text-ink-soft">Encendido</b>: disponible. <b className="text-ink-soft">Pendiente</b>: hace parte del alcance acordado pero aún no se habilita; la gente de la empresa lo ve atenuado en el menú y, si lo abre, sabe que llegará en una etapa posterior. <b className="text-ink-soft">Fuera del alcance</b>: no aplica para esta empresa y no aparece. El administrador y el advisor ven todo, con una franja de aviso. Panel y Administración siempre están. La lista depende del modo elegido abajo.</p>
         </div>
         <div>
           <select value={f.mode} onChange={set("mode")} className="input !py-2 text-[12px]" title="Qué ve el menú de la empresa">

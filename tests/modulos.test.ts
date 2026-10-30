@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
 import { createCompany, updateCompany, resetStore, catalog } from "../src/server/store";
-import { parseModulesOff, moduleEnabled, moduleOfRoute, moduleLabel, modulesForMode, ALL_MODULES } from "../src/lib/modulos";
+import { parseModulesOff, moduleEnabled, moduleState, moduleOfRoute, moduleLabel, modulesForMode, parseModulesStored, modulesStored, ALL_MODULES } from "../src/lib/modulos";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
@@ -19,6 +19,19 @@ test("módulos: nulo o vacío = todos encendidos; desconocidos se rechazan; se n
   assert.equal(moduleEnabled({}, "benchmark"), true);
   assert.equal(moduleEnabled({ modulesOff: ["benchmark"] }, "benchmark"), false);
   assert.ok(ALL_MODULES.length >= 15);
+});
+
+test("módulos: tres estados; el valor guardado admite la lista anterior y el objeto {off, pending}; «fuera» gana a «pendiente»", () => {
+  assert.deepEqual(parseModulesStored(["benchmark"]), { modulesOff: ["benchmark"] });
+  assert.deepEqual(parseModulesStored({ off: ["benchmark"], pending: ["portafolio", "okr"] }), { modulesOff: ["benchmark"], modulesPending: ["okr", "portafolio"] });
+  assert.deepEqual(parseModulesStored("x"), {});
+  const c = { modulesOff: ["benchmark" as const], modulesPending: ["portafolio" as const] };
+  assert.equal(moduleState(c, "benchmark"), "off");
+  assert.equal(moduleState(c, "portafolio"), "pendiente");
+  assert.equal(moduleState(c, "diagnostico"), "on");
+  assert.equal(moduleEnabled(c, "portafolio"), false);
+  assert.deepEqual(modulesStored({ modulesOff: ["okr"], modulesPending: ["okr", "portafolio"] }), { off: ["okr"], pending: ["portafolio"] });
+  assert.equal(modulesStored({}), null);
 });
 
 test("módulos: cada modo lista los suyos y los nombra con su vocabulario", () => {
@@ -46,13 +59,15 @@ test("módulos: la ruta se resuelve al módulo según el modo; panel y administr
 
 test("módulos: la empresa guarda los apagados y los puede volver a encender", async () => {
   resetStore();
-  assert.ok((await createCompany(admin, { name: "Solo Diagnóstico SA", template: "vacia", mode: "acompanamiento", modulesOff: ["inteligencia", "portafolio"] })).ok);
+  assert.ok((await createCompany(admin, { name: "Solo Diagnóstico SA", template: "vacia", mode: "acompanamiento", modulesOff: ["inteligencia", "portafolio"], modulesPending: ["priorizacion", "portafolio"] })).ok);
   assert.equal((await updateCompany(admin, "solo-diagnostico-sa", { modulesOff: ["x"] })).ok, false);
   await runWithTenant("solo-diagnostico-sa", async () => {
     assert.deepEqual(catalog().company.modulesOff, ["portafolio", "inteligencia"]);
+    assert.deepEqual(catalog().company.modulesPending, ["priorizacion"]);
+    assert.equal(moduleState(catalog().company, "priorizacion"), "pendiente");
     assert.equal(moduleEnabled(catalog().company, "portafolio"), false);
     assert.equal(moduleEnabled(catalog().company, "diagnostico"), true);
   });
-  assert.ok((await updateCompany(admin, "solo-diagnostico-sa", { modulesOff: [] })).ok);
-  await runWithTenant("solo-diagnostico-sa", async () => { assert.equal(catalog().company.modulesOff, undefined); });
+  assert.ok((await updateCompany(admin, "solo-diagnostico-sa", { modulesOff: [], modulesPending: [] })).ok);
+  await runWithTenant("solo-diagnostico-sa", async () => { assert.equal(catalog().company.modulesOff, undefined); assert.equal(catalog().company.modulesPending, undefined); });
 });

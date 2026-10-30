@@ -30,7 +30,7 @@ import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, t
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
 import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
-import { parseModulesOff } from "@/lib/modulos";
+import { parseModulesOff, parseModulesStored } from "@/lib/modulos";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
@@ -337,7 +337,7 @@ export async function hydrateCompanies() {
         prioSessions: (() => { const r = parsePrioSessions(c.prioSessions); return r.ok ? r.sessions : undefined; })(),
         mode: isCompanyMode(c.mode) ? c.mode : "completa",
         instruments: (() => { const r = parseInstruments(c.instruments); return r.ok ? r.instruments : undefined; })(),
-        modulesOff: (() => { const r = parseModulesOff(c.modulesOff); return r.ok ? r.modulesOff : undefined; })(),
+        ...parseModulesStored(c.modulesOff),
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
@@ -539,7 +539,8 @@ export type CompanyInput = {
   typeRule?: unknown;   // "4shine" | "cresio" | {criteria: [{key, name, strategic, tactical}], min} · regla estratégica/táctica
   mode?: unknown;       // "completa" | "convencion" · menú completo o solo las cinco secciones de la convención
   instruments?: unknown; // ["test","f1","f2","captura"] · instrumentos del diagnóstico habilitados (nulo = todos)
-  modulesOff?: unknown;  // ["benchmark","proyectos",…] · módulos apagados para la empresa (nulo = todos encendidos)
+  modulesOff?: unknown;  // ["benchmark","proyectos",…] · módulos fuera del alcance de la empresa (nulo = ninguno)
+  modulesPending?: unknown; // ["portafolio",…] · módulos del alcance aún no habilitados (nulo = ninguno)
   krTemplates?: unknown; // [{oe, code, name, unit, …}] · plantillas de KR por objetivo (lista vacía = sin biblioteca)
   newSlug?: string;     // solo al editar: nuevo identificador de la URL (/empresa/…)
 };
@@ -668,6 +669,9 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const mo = parseModulesOff(input.modulesOff);
   if (!mo.ok) return { ok: false, status: 422, error: mo.error };
   if (mo.modulesOff) info.modulesOff = mo.modulesOff;
+  const mp = parseModulesOff(input.modulesPending);
+  if (!mp.ok) return { ok: false, status: 422, error: mp.error };
+  if (mp.modulesOff) { const pen = mp.modulesOff.filter((m) => !info.modulesOff?.includes(m)); if (pen.length) info.modulesPending = pen; }
   const catalog = template === "demo" ? catalogFromTemplate(info) : emptyCatalog(info);
   const rec: CompanyRecord = { ...info, dbId: null };
   if (hasDb()) {
@@ -750,7 +754,14 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
     const mo = parseModulesOff(patch.modulesOff);
     if (!mo.ok) return { ok: false, status: 422, error: mo.error };
     c.modulesOff = mo.modulesOff;
-    audit(actor, "task", `empresa:${c.slug}`, `módulos apagados: ${mo.modulesOff?.join(", ") ?? "ninguno"}`);
+    audit(actor, "task", `empresa:${c.slug}`, `módulos fuera del alcance: ${mo.modulesOff?.join(", ") ?? "ninguno"}`);
+  }
+  if (patch.modulesPending !== undefined) {
+    const mp = parseModulesOff(patch.modulesPending);
+    if (!mp.ok) return { ok: false, status: 422, error: mp.error };
+    const pen = (mp.modulesOff ?? []).filter((m) => !c.modulesOff?.includes(m));
+    c.modulesPending = pen.length ? pen : undefined;
+    audit(actor, "task", `empresa:${c.slug}`, `módulos pendientes: ${c.modulesPending?.join(", ") ?? "ninguno"}`);
   }
   if (patch.active !== undefined) c.active = patch.active;
   const t = g.tenants.get(c.slug);
