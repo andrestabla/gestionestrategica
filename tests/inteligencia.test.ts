@@ -12,6 +12,10 @@ test("sector: la ficha manda; sin ficha, el CIIU o el texto farmacéutico llevan
   assert.equal(sectorKeyDe({ sectorKey: DEFAULT_SECTOR_KEY, sector: "Farmacias", country: "EC" }), "farmacias-ecuador");
   assert.equal(sectorKeyDe({ sectorKey: DEFAULT_SECTOR_KEY, ciiu: "G4659", sector: "Distribución de suministros industriales" }), DEFAULT_SECTOR_KEY);
   assert.equal(sectorKeyDe({ sectorKey: "no-existe" }), DEFAULT_SECTOR_KEY);
+  // ficha vacía: la razón social ubica a la empresa entre las sociedades del sector farmacéutico
+  assert.equal(sectorKeyDe({ sectorKey: DEFAULT_SECTOR_KEY, name: "Siegfried", shortName: "Siegfried", country: "CO" }), "farmaceutico-colombia");
+  assert.equal(sectorKeyDe({ sectorKey: DEFAULT_SECTOR_KEY, name: "Empresa Vacía", shortName: "Vacía", country: "CO" }), DEFAULT_SECTOR_KEY);
+  assert.equal(sectorKeyDe({ sectorKey: DEFAULT_SECTOR_KEY, name: "Andina Suministros", shortName: "Andina", ciiu: "G4659", sector: "Distribución", country: "CO" }), DEFAULT_SECTOR_KEY);
   assert.ok(SECTOR_OPTIONS.every((o) => SECTORS[o.key]));
   assert.equal(SECTORS["farmaceutico-colombia"].byCiiu.length, 2);
 });

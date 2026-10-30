@@ -11,6 +11,7 @@ import suministros from "./sector/suministros-industriales.json";
 import farmaciasEc from "./sector/farmacias-ecuador.json";
 import farmaCo from "./sector/farmaceutico-colombia.json";
 import type { Catalog, Financials } from "@/data/catalogo";
+import { coincideEmpresa } from "@/data/inteligencia";
 
 export type Quantiles = { n: number; p10: number | null; p25: number | null; p50: number | null; p75: number | null; p90: number | null };
 export type SectorPeer = {
@@ -58,12 +59,20 @@ export const DEFAULT_SECTOR_KEY = "suministros-industriales";
     defecto; si no, se infiere del CIIU o del texto del sector (farmacéutico → Colombia o Ecuador según el país);
     en último término, el sector por defecto. Así una empresa recién creada sin ficha completa no lee datos de
     otra industria. */
-export function sectorKeyDe(c: { sectorKey?: string; ciiu?: string; sector?: string; country?: string } | null | undefined): string {
+export function sectorKeyDe(c: { sectorKey?: string; ciiu?: string; sector?: string; country?: string; name?: string; shortName?: string } | null | undefined): string {
   if (!c) return DEFAULT_SECTOR_KEY;
   if (c.sectorKey && SECTORS[c.sectorKey] && c.sectorKey !== DEFAULT_SECTOR_KEY) return c.sectorKey;
   const ciiu = (c.ciiu ?? "").toUpperCase().replace(/\s+/g, "");
   const farma = /^C21|^G4645|^G4773|^2100|^4645|^4773/.test(ciiu) || /farmac|medicament|laborator|drogu/i.test(c.sector ?? "");
   if (farma) return c.country === "EC" ? "farmacias-ecuador" : "farmaceutico-colombia";
+  // ficha sin CIIU ni sector: la razón social decide si figura entre las sociedades de un sector con datos
+  if (!ciiu && !(c.sector ?? "").trim() && (c.name || c.shortName)) {
+    for (const [key, data] of Object.entries(SECTORS)) {
+      if (key === DEFAULT_SECTOR_KEY) continue;
+      if (c.country && (key === "farmacias-ecuador") !== (c.country === "EC")) continue;
+      if (data.peers.some((p) => coincideEmpresa({ name: c.name ?? "", shortName: c.shortName }, p.name))) return key;
+    }
+  }
   return SECTORS[c.sectorKey ?? ""] ? (c.sectorKey as string) : DEFAULT_SECTOR_KEY;
 }
 
