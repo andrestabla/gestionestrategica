@@ -113,8 +113,8 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
   const [tab, setTab] = useState<SeccionId>("resumen");
   const [sel, setSel] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
-  const [guia, setGuia] = useState(() => { try { return localStorage.getItem("ge-informe-guia") !== "ok"; } catch { return true; } });
-  const cerrarGuia = () => { setGuia(false); try { localStorage.setItem("ge-informe-guia", "ok"); } catch { /* nada */ } };
+  const [guia, setGuia] = useState(false);
+  const cerrarGuia = () => setGuia(false);
   const cifras = resumenCifras(datos);
   const lecturaDim = (code: string) => informe?.dimensiones?.find((x) => x.dimension.startsWith(code))?.lectura;
   const lecturaCap = (name: string) => informe?.capacidades.find((c) => c.capacidad.toLowerCase().startsWith(name.toLowerCase().slice(0, 5)));
@@ -132,30 +132,40 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
     <article className="informe mx-auto max-w-[1040px]">
       {/* ─── pantalla ─── */}
       <div className="informe-pantalla">
-        <div className="sticky top-[54px] z-20 -mx-1 mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-line/70 bg-surface/90 px-3 py-2 backdrop-blur-xl">
-          {volverHref && <Link href={volverHref} className="btn-ghost btn-sm"><ArrowLeft size={13} /> Volver</Link>}
-          <span className="ml-auto flex flex-wrap items-center gap-2">
-            {estado === "desactualizado" && <span className="chip chip-warn"><AlertTriangle size={11} /> Hay respuestas nuevas</span>}
-            {canRegen && onRegen && (estado === "desactualizado" || estado === "pendiente") && <button type="button" onClick={onRegen} disabled={busy} className="btn-ghost btn-sm">{busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {informe ? "Actualizar análisis" : "Generar análisis"}</button>}
-            {shareUrl && <button type="button" onClick={compartir} className="btn-ghost btn-sm"><Link2 size={13} /> Compartir</button>}
-            <button type="button" onClick={() => window.print()} className="btn-primary btn-sm" title="Se abre el diálogo de impresión: elige «Guardar como PDF»"><Printer size={13} /> Descargar PDF</button>
-          </span>
-        </div>
-
-        {/* cabecera compacta */}
-        <header className="relative mb-4 overflow-hidden rounded-3xl px-6 py-6 text-white sm:px-8" style={{ background: "var(--grad-deep)" }}>
-          <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(520px 260px at 100% 0%, rgb(241 186 91 / 0.16), transparent 60%)" }} />
-          <div className="relative">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-fill">Informe ejecutivo · {kind === "f1" ? "Autoevaluación directiva · Fuente 1" : "Consolidado del comité · Fuente 1"} · {empresa}</div>
-            <h1 className="mt-2 max-w-[26ch] text-[24px] font-extrabold leading-[1.12] tracking-tight sm:text-[30px]">{titulo}</h1>
-            <p className="mt-2 max-w-[70ch] text-[13.5px] leading-relaxed text-white/80">{hipotesis}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-white/70"><span>{sujeto}</span><span>·</span><span>{fecha}</span><span>·</span><span>{datos.answered} de {datos.total} afirmaciones{datos.personas && datos.personas > 1 ? " por persona" : ""}</span></div>
+        {/* franja de identidad, compacta */}
+        <header className="relative mb-2 overflow-hidden rounded-2xl px-5 py-3 text-white" style={{ background: "var(--grad-deep)" }}>
+          <div className="relative flex flex-wrap items-center gap-x-5 gap-y-1">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Informe ejecutivo · {kind === "f1" ? "Autoevaluación directiva · Fuente 1" : "Consolidado del comité · Fuente 1"} · {empresa}</div>
+              <h1 className="mt-0.5 truncate text-[17px] font-extrabold leading-tight tracking-tight sm:text-[19px]" title={titulo}>{titulo}</h1>
+            </div>
+            <div className="text-[11.5px] text-white/70 sm:text-right"><div>{sujeto}</div><div>{fecha} · {datos.answered} de {datos.total} afirmaciones{datos.personas && datos.personas > 1 ? " por persona" : ""}</div></div>
           </div>
         </header>
 
+        {/* pestañas y acciones: una sola fila, siempre visible */}
+        <div className="sticky top-[54px] z-20 -mx-1 mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-line/70 bg-surface/92 px-2 py-1.5 backdrop-blur-xl">
+          {volverHref && <Link href={volverHref} className="btn-ghost btn-sm !px-2.5" title="Volver"><ArrowLeft size={14} /></Link>}
+          <nav className="flex min-w-0 flex-1 flex-wrap items-center gap-1" aria-label="Secciones del informe" role="tablist">
+            {SECCIONES.map((sx) => { const on = sx.id === tab; return (
+              <button key={sx.id} type="button" role="tab" aria-selected={on} onClick={() => ir(sx.id)} title={sx.desc}
+                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[12.5px] font-bold transition-all ${on ? "bg-navy text-white shadow-sm" : "text-muted hover:bg-surface-2 hover:text-ink"}`} style={on ? { background: "var(--navy)" } : undefined}>
+                <span className={`num text-[10px] ${on ? "text-cyan-fill" : "text-gold-text"}`}>{sx.n}</span><sx.icon size={13} /> <span className="hidden xl:inline">{sx.label}</span>
+              </button>
+            ); })}
+          </nav>
+          <span className="flex items-center gap-1.5">
+            <button type="button" onClick={() => setGuia((g) => !g)} className={`btn-ghost btn-sm !px-2.5 ${guia ? "!text-gold-text" : ""}`} title="Cómo recorrer este informe" aria-expanded={guia}><Compass size={14} /></button>
+            {estado === "desactualizado" && <span className="chip chip-warn hidden lg:inline-flex"><AlertTriangle size={11} /> Respuestas nuevas</span>}
+            {canRegen && onRegen && (estado === "desactualizado" || estado === "pendiente") && <button type="button" onClick={onRegen} disabled={busy} className="btn-ghost btn-sm !px-2.5" title={informe ? "Actualizar análisis" : "Generar análisis"}>{busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>}
+            {shareUrl && <button type="button" onClick={compartir} className="btn-ghost btn-sm !px-2.5" title="Compartir enlace"><Link2 size={14} /></button>}
+            <button type="button" onClick={() => window.print()} className="btn-primary btn-sm" title="Se abre el diálogo de impresión: elige «Guardar como PDF»"><Printer size={13} /> <span className="hidden sm:inline">PDF</span></button>
+          </span>
+        </div>
+
         {/* estado del análisis */}
         {estado !== "listo" && estado !== "desactualizado" && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-line bg-surface px-5 py-4 text-[13px]">
+          <div className="mb-3 flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-[12.5px]">
             {estado === "generando" ? <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-cyan-deep" /> : estado === "pendiente" ? <Sparkles size={16} className="mt-0.5 shrink-0 text-gold" /> : <AlertTriangle size={16} className="mt-0.5 shrink-0 text-bad" />}
             <div className="text-ink-soft">
               {estado === "generando" && <><b className="text-ink">El advisor virtual está escribiendo la lectura.</b> Tarda menos de un minuto; las cifras ya están y los textos aparecen solos cuando termine.</>}
@@ -185,20 +195,12 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
           </div>
         )}
 
-        {/* pestañas */}
-        <nav className="mb-5 grid grid-cols-3 gap-1.5 rounded-2xl bg-surface-2 p-1.5 sm:grid-cols-6" aria-label="Secciones del informe" role="tablist">
-          {SECCIONES.map((s) => { const on = s.id === tab; return (
-            <button key={s.id} type="button" role="tab" aria-selected={on} onClick={() => ir(s.id)} title={s.desc}
-              className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[12.5px] font-bold transition-all ${on ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
-              <span className="num text-[10px] text-gold-text">{s.n}</span><s.icon size={13} className={on ? "text-cyan-deep" : ""} /> {s.label}
-            </button>
-          ); })}
-        </nav>
-        {!guia && <p className="mb-3 -mt-3 text-[11.5px] text-faint"><MousePointerClick size={11} className="mr-1 inline" />{SECCIONES[idx].desc}. <button type="button" onClick={() => setGuia(true)} className="font-bold text-cyan-deep hover:underline">Ver la guía</button></p>}
+        <p className="mb-3 text-[11.5px] text-faint"><MousePointerClick size={11} className="mr-1 inline" />{SECCIONES[idx].n} · {SECCIONES[idx].desc}.</p>
 
         {/* ─ 01 Resumen ─ */}
         {tab === "resumen" && (
           <section className="rise space-y-4" aria-label="Resumen">
+            <blockquote className="rounded-2xl border-l-4 border-gold bg-surface px-5 py-4 text-[15px] font-semibold leading-relaxed text-ink shadow-sm"><span className="mr-2 text-[10.5px] font-bold uppercase tracking-[0.18em] text-gold-text">Hipótesis central</span>{hipotesis}</blockquote>
             <div className="grid gap-3 sm:grid-cols-4">
               {cifras.map((x) => <div key={x.k} className="panel px-4 py-3"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">{x.k}</div><div className="num mt-1 text-[26px] font-extrabold leading-none text-ink">{x.v}</div><div className="mt-1 text-[12px] text-muted">{x.s}</div></div>)}
             </div>

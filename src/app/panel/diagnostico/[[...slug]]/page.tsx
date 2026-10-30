@@ -101,9 +101,12 @@ export default function DiagnosticoPage() {
     return publishedCut;
   }, [eff, od, hasCurso, publishedCut, v]);
 
+  // el informe ejecutivo ocupa la pantalla: solo una miga de pan, sin la cabecera ni las pestañas del diagnóstico
+  const informeFocal = tab === "autoevaluacion" && arg === "INFORME";
   return (
     <CutCtx.Provider value={cut}>
-      <div className="no-print">
+      {informeFocal && <div className="no-print mb-3 flex items-center gap-1.5 text-[12px] text-muted"><Link href="/panel/diagnostico" className="font-semibold text-cyan-deep hover:underline">Diagnóstico</Link><span>›</span><Link href="/panel/diagnostico/autoevaluacion" className="font-semibold text-cyan-deep hover:underline">Autoevaluación</Link><span>›</span><span className="font-semibold text-ink">Informe ejecutivo</span></div>}
+      {!informeFocal && <div className="no-print">
       <PageHeader kicker="M1 · Diagnóstico de capacidades" title="Capacidad organizacional de la empresa"
         crumbs={tab === "resumen" ? undefined : [{ label: "Diagnóstico", href: "/panel/diagnostico" }, { label: TABS.find((t) => t.id === tab)?.label ?? (tab === "dimension" ? "Dimensión" : tab), href: TABS.find((t) => t.id === tab)?.href }, ...(arg ? [{ label: arg === "RESPONDER" ? "Responder" : arg === "RESULTADO" ? "Lectura" : arg === "INFORME" ? "Informe" : arg }] : [])]}
         desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico de tres fuentes sobre las 68 prácticas del mapa."
@@ -130,7 +133,7 @@ export default function DiagnosticoPage() {
           </div>
         )}
       </div>
-      </div>
+      </div>}
       {cut.src === "curso" && (
         <div className="no-print mb-4 rounded-xl px-4 py-2.5 text-[12px]" style={{ background: "var(--gold-wash)", color: "var(--gold-text)" }}>
           <b>{cut.label}.</b> {cut.C.f1n} autoevaluaciones, {cut.C.f2n} respuestas de equipos y evidencia {cut.C.hasF3 ? "registrada" : "pendiente"}; las dimensiones sin dato quedan en blanco. {od?.published ? "Es la medición vigente." : "No es la medición vigente hasta que el advisor publique el corte."}
