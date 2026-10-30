@@ -64,7 +64,9 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
   const V = vocabOf(v.catalog.company);
   const acomp = isAcompanamiento(v.catalog.company);
   // las secciones apagadas por el administrador no se muestran como pestañas (la ruta las bloquea el shell)
-  const TABS = tabsFor(V, acomp).filter((t) => !isModule(t.id) || moduleEnabled(v.catalog.company, t.id));
+  // todas las secciones para resolver la activa (la guarda del shell bloquea las apagadas); solo las encendidas como pestañas
+  const TABS_ALL = tabsFor(V, acomp);
+  const TABS = TABS_ALL.filter((t) => !isModule(t.id) || moduleEnabled(v.catalog.company, t.id));
   const refetch = useCatalogRefetch();
   const base = useBase();
   const canEdit = useCan("manage_catalog");
@@ -81,7 +83,8 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
   const searchParams = useSearchParams();
   // la sección vive en la URL (?t=okr): el menú lateral en modo convención y los enlaces QR apuntan a ella
   const tParam = searchParams.get("t");
-  const tab: Tab = seccion ?? (TABS.some((x) => x.id === tParam) ? (tParam as Tab) : acomp ? "prioridades" : "direccion");
+  const tab: Tab = seccion ?? (TABS_ALL.some((x) => x.id === tParam) ? (tParam as Tab) : acomp ? "prioridades" : "direccion");
+  const tabDef: TabDef = TABS_ALL.find((x) => x.id === tab) ?? TABS_ALL[0];
   const esEstrategia = (t: Tab): t is EstrategiaTab => t in ESTRATEGIA_SLUG;
   const setTab = (t: Tab) => router.replace(acomp && esEstrategia(t) ? estrategiaHref(v.catalog.company, t, base) : `${pathname}?t=${t}`);
   // acompañamiento: la URL de la convención (?t=) pasa a la ruta semántica
@@ -130,7 +133,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
       {/* en móvil la lámina de sección reemplaza la descripción larga del encabezado */}
       {convencion ? (
         <div className="rise mb-5 flex items-center gap-2 text-[12.5px] text-muted">
-          {(() => { const t = TABS.find((x) => x.id === tab)!; return <><t.icon size={14} className="text-cyan-deep" /><b className="text-ink">{t.label}</b><span>· {agendaOf(t)}</span></>; })()}
+          <tabDef.icon size={14} className="text-cyan-deep" /><b className="text-ink">{tabDef.label}</b><span>· {agendaOf(tabDef)}</span>
         </div>
       ) : (
       <div className="rise mb-5 flex flex-wrap items-center gap-1.5 rounded-2xl bg-surface-2 p-1.5">
@@ -140,7 +143,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
             <t.icon size={13} className={tab === t.id ? "text-cyan-deep" : ""} /> {t.label}
           </button>
         ))}
-        <span className="ml-auto hidden text-[12px] text-faint sm:block">{agendaOf(TABS.find((t) => t.id === tab)!)}</span>
+        <span className="ml-auto hidden text-[12px] text-faint sm:block">{agendaOf(tabDef)}</span>
       </div>
       )}
 
