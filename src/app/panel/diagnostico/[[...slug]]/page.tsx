@@ -25,7 +25,7 @@ import {
 import { scoresOf, responsible } from "@/lib/vista";
 import { consolidate, readTest, recommend, testContrast, avg, sdev, rangeText, type DimResult, type Consolidated } from "@/lib/od";
 import { useMaturity } from "@/lib/use-maturity";
-import { hasInstrument, instrumentLabel, type Instrument } from "@/lib/instrumentos";
+import { hasInstrument, instrumentLabel, instrumentsOf, INSTRUMENTS, ALL_INSTRUMENTS, type Instrument } from "@/lib/instrumentos";
 import type { VariableCapture, TestResponse, TestNotes, F1Response } from "@/server/store";
 import type { Response } from "@/lib/od";
 import { lecturaF1 } from "@/lib/f1";
@@ -35,7 +35,7 @@ import { ModoFocal, pedirPantallaCompleta, teclaNumero, irAlSiguientePendiente, 
 import { UnaAUna, SelectorVista, useVista, type Pantalla } from "@/components/una-a-una";
 import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
-  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText, RefreshCw,
+  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText, RefreshCw, Circle,
 } from "lucide-react";
 import { MarcaGE } from "@/components/logo";
 
@@ -110,7 +110,7 @@ export default function DiagnosticoPage() {
       {!informeFocal && <div className="no-print">
       <PageHeader kicker="M1 · Diagnóstico de capacidades" title="Capacidad organizacional de la empresa"
         crumbs={tab === "resumen" ? undefined : [{ label: "Diagnóstico", href: "/panel/diagnostico" }, { label: TABS.find((t) => t.id === tab)?.label ?? (tab === "dimension" ? "Dimensión" : tab), href: TABS.find((t) => t.id === tab)?.href }, ...(arg ? [{ label: arg === "RESPONDER" ? "Responder" : arg === "RESULTADO" ? "Lectura" : arg === "INFORME" ? "Informe" : arg }] : [])]}
-        desc="Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico de tres fuentes sobre las 68 prácticas del mapa."
+        desc={instrumentsOf(v.catalog.company).length === ALL_INSTRUMENTS.length ? "Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico de tres fuentes sobre las 68 prácticas del mapa." : instrumentsOf(v.catalog.company).join() === "f1" ? "En este caso, la autoevaluación directiva: la lectura que el equipo directivo hace de su empresa sobre las 68 prácticas del mapa, en hipótesis para contrastar. La evaluación completa suma otras fuentes y procedimientos." : `En este caso se aplica ${instrumentsOf(v.catalog.company).map(instrumentLabel).join(", ")}. La evaluación completa suma otras fuentes y procedimientos.`}
         actions={<AccessChip module="madurez" />} />
       <details className="rise mb-4 rounded-xl bg-surface-2/70 px-4 py-2 text-[12.5px] text-ink-soft">
         <summary className="cursor-pointer select-none font-semibold text-ink">¿Cómo se calcula la madurez?</summary>
@@ -155,6 +155,62 @@ export default function DiagnosticoPage() {
 
 /* ═══ Resumen ═══ */
 
+/* ═══ Alcance del diagnóstico: cuando la empresa no aplica todos los instrumentos, se le explica al
+   líder, la junta o el directivo que la evaluación completa de la capacidad organizacional se compone de
+   varias fuentes y procedimientos, cuáles se aplican en este caso y que los demás pueden abrirse después. ═══ */
+function AlcanceDiagnostico({ compacto = false }: { compacto?: boolean }) {
+  const v = useCatalog();
+  const activos = instrumentsOf(v.catalog.company);
+  if (activos.length === ALL_INSTRUMENTS.length) return null;
+  const soloF1 = activos.length === 1 && activos[0] === "f1";
+  const pendientes = INSTRUMENTS.filter((i) => !activos.includes(i.id));
+  const aplicados = INSTRUMENTS.filter((i) => activos.includes(i.id));
+  if (compacto) {
+    return (
+      <div className="no-print mb-4 flex items-start gap-2.5 rounded-xl px-4 py-3 text-[12.5px] leading-snug text-ink-soft" style={{ background: "var(--gold-wash)" }}>
+        <Info size={15} className="mt-0.5 shrink-0" style={{ color: "var(--gold-text)" }} />
+        <span><b className="text-ink">Alcance.</b> En este caso se aplica {soloF1 ? "únicamente la autoevaluación directiva" : `solo ${aplicados.map((i) => i.label).join(", ")}`}. La madurez triangulada, las brechas y el nivel de acompañamiento necesitan también {pendientes.map((i) => i.label.replace(/ \(Fuente \d\)| · evidencia y nivel/g, "")).join(", ")}: mientras no se apliquen, estas lecturas quedan como hipótesis del comité, con tope 2,9 y la marca «No verificada». <Link href="/panel/diagnostico" className="font-semibold text-cyan-deep hover:underline">Ver el alcance completo</Link>.</span>
+      </div>
+    );
+  }
+  return (
+    <Card className="rise mb-5">
+      <div className="grid gap-5 px-5 py-5 lg:grid-cols-[1fr_360px]">
+        <div>
+          <div className="kicker">Alcance de este diagnóstico</div>
+          <h2 className="mt-1 text-[18px] font-extrabold leading-snug tracking-tight text-ink">{soloF1 ? "En este caso se aplica únicamente la autoevaluación directiva" : "En este caso se aplica una parte del diagnóstico completo"}</h2>
+          <p className="mt-2 max-w-[72ch] text-[13.5px] leading-relaxed text-ink-soft">
+            La evaluación completa de la capacidad organizacional de la empresa se compone de diversas fuentes y procedimientos: el test de capacidad empresarial como puerta de entrada, la autoevaluación directiva (Fuente 1), la percepción de los equipos por encuesta anónima (Fuente 2) y la verificación de evidencia y nivel por parte del advisor (Fuente 3), que publica el corte. Las tres fuentes se triangulan para obtener la madurez de cada dimensión, las brechas y el nivel de acompañamiento.
+          </p>
+          <p className="mt-2 max-w-[72ch] text-[13.5px] leading-relaxed text-ink-soft">
+            {soloF1
+              ? <>Aquí se aplica <b className="text-ink">solo la autoevaluación directiva</b>: la lectura que el equipo directivo hace de su propia empresa, en hipótesis para contrastar entre pares. Los resultados, los gráficos y el informe de esta pestaña se construyen únicamente con esa fuente. Se invita a abrir otros espacios, con el acompañamiento del advisor, para realizar lo demás y completar la evaluación.</>
+              : <>Aquí se aplican <b className="text-ink">{aplicados.map((i) => i.label).join(", ")}</b>. Los resultados se construyen con esas fuentes. Se invita a abrir otros espacios, con el acompañamiento del advisor, para realizar lo demás y completar la evaluación.</>}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {hasInstrument(v.catalog.company, "f1") && <Link href="/panel/diagnostico/autoevaluacion" className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]"><ClipboardCheck size={14} /> Ir a la autoevaluación directiva</Link>}
+            {hasInstrument(v.catalog.company, "test") && <Link href="/panel/diagnostico/test" className="btn-ghost inline-flex items-center gap-1.5 text-[12.5px]"><ClipboardList size={14} /> Ir al test</Link>}
+          </div>
+        </div>
+        <div className="rounded-xl bg-surface-2/70 px-4 py-3.5">
+          <div className="label mb-2">Fuentes y procedimientos</div>
+          <ul className="space-y-2">
+            {INSTRUMENTS.map((i) => {
+              const on = activos.includes(i.id);
+              return (
+                <li key={i.id} className="flex items-start gap-2.5 text-[12.5px] leading-snug">
+                  {on ? <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-ok" /> : <Circle size={15} className="mt-0.5 shrink-0 text-faint" />}
+                  <span><b className={on ? "text-ink" : "text-muted"}>{i.label}</b>{" "}<span className={`chip !py-0 ${on ? "chip-ok" : ""}`}>{on ? "se aplica" : "pendiente"}</span><div className="mt-0.5 text-[12px] text-muted">{i.desc}</div></span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function Resumen() {
   const v = useCatalog();
   const { scores: pubScores, data } = useMaturity();
@@ -168,6 +224,7 @@ function Resumen() {
   const belowCaps = C.caps.filter((c) => (c.m ?? 5) < THRESHOLD);
   return (
     <>
+      <AlcanceDiagnostico />
       <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Madurez de la empresa" value={avg(C.caps.map((c) => c.m)) ?? 0} decimals={1} foot={sinDato ? "sin medición todavía" : "promedio de las cuatro capacidades"} />
         <StatCard label="Capacidades en brecha" value={belowCaps.length} foot={belowCaps.length ? belowCaps.map((c) => c.name).join(", ") : "ninguna bajo 3,0"} good={belowCaps.length === 0} />
@@ -1127,6 +1184,7 @@ function InformeDiagnostico() {
   const head = (n: number, t: string, sub: string) => <div className="mb-3 flex items-baseline gap-3 border-b border-line pb-2"><span className="num text-[22px] font-extrabold text-cyan-deep">{n}</span><div><div className="text-[15px] font-extrabold text-ink">{t}</div><div className="text-[12px] text-muted">{sub}</div></div></div>;
   return (
     <>
+      <AlcanceDiagnostico compacto />
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[12.5px] text-muted">Las cinco salidas del diagnóstico completo sobre <b className="text-ink">{label}</b>, listas para la devolución de 90 minutos. El navegador las guarda en PDF.</p>
         <button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button>
@@ -1207,6 +1265,7 @@ function Brechas() {
   };
   return (
     <>
+      <AlcanceDiagnostico compacto />
       <div className="rise mb-5 rounded-2xl px-6 py-5 text-white" style={{ background: "var(--grad-deep)" }}>
         <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Nivel de acompañamiento recomendado</div>
         <div className="mt-1 text-[26px] font-extrabold tracking-tight">{R.level}</div>
