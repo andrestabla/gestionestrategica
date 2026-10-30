@@ -142,7 +142,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
               );
             })}
           </div>
-          <p className="mt-1.5 text-[12px] leading-snug text-faint"><b className="text-ink-soft">Encendido</b>: disponible. <b className="text-ink-soft">Pendiente</b>: hace parte del alcance acordado pero aún no se habilita; la gente de la empresa lo ve atenuado en el menú y, si lo abre, sabe que llegará en una etapa posterior. <b className="text-ink-soft">Fuera del alcance</b>: no aplica para esta empresa y no aparece. El administrador y el advisor ven todo, con una franja de aviso. Panel y Administración siempre están. La lista depende del modo elegido abajo.</p>
+          <p className="mt-1.5 text-[12px] leading-snug text-faint"><b className="text-ink-soft">Encendido</b>: disponible. <b className="text-ink-soft">Pendiente</b>: hace parte del alcance acordado pero aún no se habilita; la gente de la empresa lo ve atenuado en el menú y, si lo abre, lee «Próximamente encontrarás esta sección habilitada, conforme avance el proceso de acompañamiento». <b className="text-ink-soft">Fuera del alcance</b>: no aplica para esta empresa y no aparece. El administrador y el advisor ven todo, con una franja de aviso. Panel y Administración siempre están. La lista depende del modo elegido abajo.</p>
         </div>
         <div>
           <select value={f.mode} onChange={set("mode")} className="input !py-2 text-[12px]" title="Qué ve el menú de la empresa">

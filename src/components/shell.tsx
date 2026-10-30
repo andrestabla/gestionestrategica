@@ -292,7 +292,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
         if (estado(item.mod) === "pendiente") {
           return (
             <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
-              title={`${item.label} · hace parte del alcance, aún no habilitado`}
+              title={`${item.label} · próximamente, conforme avance el acompañamiento`}
               className={`group relative flex items-center rounded-xl text-[13px] font-medium text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/50 ${mini ? "justify-center px-0 py-[10px]" : "gap-3 px-3 py-[9px]"}`}>
               <item.icon size={mini ? 18 : 16} strokeWidth={1.9} />
               {!mini && <span className="flex-1">{item.label}</span>}
@@ -493,7 +493,7 @@ function ModuloGuard({ children, path, t, mode, modulesOff, modulesPending, base
           <span>
             <b className="text-ink">{pendiente ? "Módulo pendiente para la empresa." : "Módulo fuera del alcance de la empresa."}</b>{" "}
             {pendiente
-              ? <>«{label}» hace parte del alcance acordado pero aún no está habilitado: sus usuarios lo ven atenuado en el menú y, si lo abren, se les explica que llegará después. Tú lo ves para preparar los datos.</>
+              ? <>«{label}» hace parte del alcance acordado pero aún no está habilitado: sus usuarios lo ven atenuado en el menú y, si lo abren, leen «Próximamente encontrarás esta sección habilitada, conforme avance el proceso de acompañamiento». Tú lo ves para preparar los datos.</>
               : <>«{label}» no aparece en el menú de sus usuarios ni pueden abrirlo; tú lo ves para preparar los datos.</>}
             {" "}Se cambia en <Link href={`${base}/panel/admin`} className="font-semibold text-cyan-deep hover:underline">Administración → Empresas</Link>.
           </span>
@@ -505,10 +505,10 @@ function ModuloGuard({ children, path, t, mode, modulesOff, modulesPending, base
   return (
     <div className="panel mx-auto max-w-[560px] px-6 py-8 text-center">
       {pendiente ? <Lock size={22} className="mx-auto text-faint" /> : <EyeOff size={22} className="mx-auto text-faint" />}
-      <h2 className="mt-3 text-[17px] font-extrabold text-ink">{pendiente ? <>«{label}» aún no está habilitado</> : <>«{label}» no está habilitado para tu empresa</>}</h2>
+      <h2 className="mt-3 text-[17px] font-extrabold text-ink">{pendiente ? <>«{label}» · próximamente</> : <>«{label}» no está habilitado para tu empresa</>}</h2>
       <p className="mt-2 text-[13px] leading-relaxed text-muted">
         {pendiente
-          ? "Este módulo hace parte del alcance del acompañamiento y se habilitará en una etapa posterior, cuando el trabajo previo esté listo. El advisor avisará en el momento de abrirlo."
+          ? "Próximamente encontrarás esta sección habilitada, conforme avance el proceso de acompañamiento."
           : "Este módulo no hace parte del alcance actual del acompañamiento. Si lo necesitas, pídelo al advisor o al administrador de la plataforma."}
       </p>
       <Link href={`${base}/panel`} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px]">Volver al panel</Link>
