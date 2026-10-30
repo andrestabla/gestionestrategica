@@ -18,9 +18,9 @@ import { LINES, fmtCOP } from "@/data/demo";
 import { prevScores } from "@/lib/vista";
 import { buildAlerts, executiveSummary } from "@/lib/logic";
 import { useMaturity } from "@/lib/use-maturity";
-import { ArrowRight, ShieldAlert, AlertTriangle, Info, CheckCircle2, Circle } from "lucide-react";
+import { ArrowRight, ShieldAlert, AlertTriangle, Info, CheckCircle2, Circle, Lock } from "lucide-react";
 import { hasInstrument } from "@/lib/instrumentos";
-import { moduleEnabled, type ModuleId } from "@/lib/modulos";
+import { moduleState, moduleEnabled, type ModuleId } from "@/lib/modulos";
 
 /** «3 objetivos», «1 objetivo»: conteo con su sustantivo. */
 const cuenta = (n: number, singular: string, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
@@ -285,20 +285,29 @@ function ArranqueCard() {
     { mod: mod("iniciativas"), label: V.tabs.iniciativas, n: v.initiatives.length, meta: cuenta(v.initiatives.length, "iniciativa"), href: t("iniciativas") },
     { mod: mod("priorizacion"), label: V.tabs.priorizacion, n: prio?.evaluadas ?? 0, meta: prio === null ? "…" : `${cuenta(prio.evaluadas, "iniciativa evaluada", "iniciativas evaluadas")}`, href: t("priorizacion") },
     { mod: mod("portafolio"), label: V.tabs.portafolio, n: prio?.portafolio ?? 0, meta: prio === null ? "…" : `${cuenta(prio.portafolio, "iniciativa decidida", "iniciativas decididas")}`, href: t("portafolio") },
-  ].filter((p) => moduleEnabled(c.company, p.mod));
-  const hechos = pasos.filter((p) => p.n > 0).length;
+  ].map((p) => ({ ...p, estado: moduleState(c.company, p.mod) })).filter((p) => p.estado !== "off");   // fuera del alcance: no se muestra; pendiente: se muestra con candado
+  const pendientes = pasos.filter((p) => p.estado === "pendiente").length;
+  const hechos = pasos.filter((p) => p.estado === "on" && p.n > 0).length;   // lo pendiente no cuenta como hecho aunque tenga datos cargados
   if (hechos === pasos.length) return null;
   return (
     <Card className="rise mb-5">
-      <CardHeader title="Lista de arranque" sub={`${hechos} de ${pasos.length} pasos con información · el panel se llena a medida que avanza el método`} />
+      <CardHeader title="Lista de arranque" sub={`${hechos} de ${pasos.length - pendientes} pasos habilitados con información${pendientes ? ` · ${pendientes} aún no habilitado${pendientes === 1 ? "" : "s"} en la plataforma` : ""} · el panel se llena a medida que avanza el método`} />
       <ol className="grid gap-2 px-5 pb-5 sm:grid-cols-4 xl:grid-cols-7">
         {pasos.map((p, i) => (
           <li key={p.label}>
+            {p.estado === "pendiente" ? (
+              <div title="Hace parte del alcance; se habilitará conforme avance el acompañamiento" className="flex h-full flex-col gap-1.5 rounded-xl border border-dashed border-line px-3.5 py-3 opacity-70">
+                <span className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-faint"><Lock size={14} /> Paso {i + 1}</span>
+                <span className="text-[13.5px] font-bold leading-snug text-ink-soft">{p.label}</span>
+                <span className="mt-auto text-[12px] italic text-faint">aún no habilitado en la plataforma</span>
+              </div>
+            ) : (
             <Link href={p.href} className={`group flex h-full flex-col gap-1.5 rounded-xl border px-3.5 py-3 transition-colors ${p.n > 0 ? "border-line bg-surface-2/60" : "border-dashed border-line-strong hover:border-gold hover:bg-gold-wash/40"}`}>
               <span className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-faint">{p.n > 0 ? <CheckCircle2 size={14} className="text-ok" /> : <Circle size={14} />} Paso {i + 1}</span>
               <span className="text-[13.5px] font-bold leading-snug text-ink group-hover:text-cyan-deep">{p.label}</span>
-              <span className="num mt-auto text-[12px] text-muted">{p.meta}</span>
+              <span className="num mt-auto text-[12px] text-muted">{p.n > 0 ? `realizado · ${p.meta}` : p.meta}</span>
             </Link>
+            )}
           </li>
         ))}
       </ol>
