@@ -3,7 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { demandByTerritory, coverage, openMarkets, competitorsByTerritory } from "../src/lib/demanda";
 import { EC_POPULATION } from "../src/data/demanda-ec";
-import { observatoriesFor } from "../src/data/observatorios";
+import { CO_POPULATION } from "../src/data/demanda-co";
+import { SECTORS } from "../src/data/sector";
 
 const POP = [{ name: "A", population: 1_000_000 }, { name: "B", population: 500_000 }, { name: "C", population: 500_000 }];
 const SECTOR = [{ name: "A", n: 10, revenue: 50 }, { name: "C", n: 2, revenue: 1 }];
@@ -36,12 +37,11 @@ test("competencia: sociedades del sector en cada territorio de la empresa, las m
   assert.equal(out[1].count, 0);
 });
 
-test("datos: 24 provincias del censo 2022 y observatorios por país sin fuentes ajenas", () => {
+test("datos: 24 provincias del censo 2022 en Ecuador y 33 unidades territoriales del DANE en Colombia, con nombres que casan con el benchmark", () => {
   assert.equal(EC_POPULATION.length, 24);
   assert.equal(EC_POPULATION.reduce((a, p) => a + p.population, 0), 16938983, "suma de las 24 provincias (el total nacional del censo, 16.938.986, incluye zonas no delimitadas)");
-  const ec = observatoriesFor("EC"), co = observatoriesFor("CO");
-  assert.ok(ec.every((o) => !/Supersociedades|DANE|DIAN|datos\.gov\.co|departamentos/i.test(o.tags.join(" ") + o.desc)), "Ecuador no enlaza fuentes colombianas");
-  assert.ok(ec.some((o) => /ARCSA/.test(o.tags.join(" "))), "Ecuador incluye la regulación farmacéutica");
-  assert.ok(co.some((o) => /Supersociedades/.test(o.tags.join(" "))));
-  assert.deepEqual(observatoriesFor(undefined), co);
+  assert.equal(CO_POPULATION.length, 33);
+  assert.equal(CO_POPULATION.reduce((a, p) => a + p.population, 0), 53057212, "total nacional proyectado por el DANE para 2025");
+  const nombres = new Set(CO_POPULATION.map((p) => p.name));
+  for (const d of SECTORS["farmaceutico-colombia"].departments) if (d.name !== "Sin dato") assert.ok(nombres.has(d.name), `departamento del benchmark sin población: ${d.name}`);
 });

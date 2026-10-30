@@ -9,6 +9,7 @@ import { Modal, Field } from "@/components/ui";
 import { Loader2, Save, Building2, X } from "lucide-react";
 import { INSTRUMENTS, ALL_INSTRUMENTS } from "@/lib/instrumentos";
 import { modulesForMode, moduleLabel, MODULE_STATES, type ModuleId, type ModuleState } from "@/lib/modulos";
+import { SECTOR_OPTIONS } from "@/data/sector";
 import type { CompanyMode } from "@/lib/acceso";
 
 export type HorizonLite = { id: string; label: string; months: number };
@@ -107,6 +108,11 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
           </select></Field>
         </div>
         <Field label="Sector"><input value={f.sector} onChange={set("sector")} placeholder="p. ej. Distribución de suministros industriales" className="input !py-2 text-[12px]" /></Field>
+        <Field label="Sector de referencia (Benchmark e Inteligencia)" help="Con qué industria se compara la empresa: datos reales de Supersociedades o de la SCVS. Si se deja el de suministros y el CIIU o el sector dicen farmacéutico, la plataforma usa el farmacéutico.">
+          <select value={f.sectorKey} onChange={set("sectorKey")} className="input !py-2 text-[12px]">
+            {SECTOR_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        </Field>
         <Field label="Tamaño"><input value={f.size} onChange={set("size")} placeholder="p. ej. 85 colaboradores · 3 sedes" className="input !py-2 text-[12px]" /></Field>
         <HorizonsEditor value={horizons} onChange={setHorizons} />
         <div className="rounded-xl border border-line px-3 py-2.5">

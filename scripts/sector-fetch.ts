@@ -99,6 +99,8 @@ const CIIU_NAMES: Record<string, string> = {
   G4665: "Comercio al por mayor de desperdicios, desechos y chatarra",
   G4669: "Comercio al por mayor de otros productos n.c.p.",
   G4690: "Comercio al por mayor no especializado",
+  C2100: "Fabricación de productos farmacéuticos, sustancias químicas medicinales y productos botánicos de uso farmacéutico",
+  G4773: "Comercio al por menor de productos farmacéuticos y medicinales, cosméticos y artículos de tocador en establecimientos especializados",
 };
 
 const A = "�"; // carácter con el que el portal almacena las vocales con tilde

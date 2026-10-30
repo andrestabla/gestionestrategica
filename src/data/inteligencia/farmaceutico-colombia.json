@@ -1,0 +1,6598 @@
+{
+ "key": "farmaceutico-colombia",
+ "fetchedAt": "2026-10-30T16:26:20.009Z",
+ "fuentes": [
+  {
+   "id": "invima-cum",
+   "name": "INVIMA · Código Único de Medicamentos vigentes",
+   "url": "https://www.datos.gov.co/Salud-y-Protecci-n-Social/C-DIGO-NICO-DE-MEDICAMENTOS-VIGENTES/i7cb-raxc",
+   "note": "Registros sanitarios vigentes y sus presentaciones (CUM), con titular, ATC, modalidad y vencimiento."
+  },
+  {
+   "id": "cnpmdm-precios",
+   "name": "Comisión Nacional de Precios de Medicamentos · precio máximo de venta por presentación",
+   "url": "https://www.datos.gov.co/Salud-y-Protecci-n-Social/Precio-m-ximo-de-venta-de-los-medicamentos-por-pre/nauz-qkjw",
+   "note": "Presentaciones bajo control directo de precios por mercado relevante y circular."
+  },
+  {
+   "id": "banrep-trm",
+   "name": "Banco de la República · Tasa representativa del mercado",
+   "url": "https://www.datos.gov.co/Econom-a-y-Finanzas/Tasa-de-Cambio-Representativa-del-Mercado-TRM/32sa-8pi3",
+   "note": "TRM diaria publicada por la Superintendencia Financiera."
+  }
+ ],
+ "invima": {
+  "registros": 9559,
+  "titulares": 1186,
+  "cums": 156913,
+  "titularesAgrupados": 899,
+  "atcMercado": [
+   {
+    "code": "N",
+    "name": "Sistema nervioso",
+    "n": 1377,
+    "share": 14.3
+   },
+   {
+    "code": "A",
+    "name": "Tracto alimentario y metabolismo",
+    "n": 1151,
+    "share": 11.9
+   },
+   {
+    "code": "J",
+    "name": "Antiinfecciosos de uso sistémico",
+    "n": 1145,
+    "share": 11.9
+   },
+   {
+    "code": "C",
+    "name": "Sistema cardiovascular",
+    "n": 956,
+    "share": 9.9
+   },
+   {
+    "code": "L",
+    "name": "Antineoplásicos e inmunomoduladores",
+    "n": 867,
+    "share": 9
+   },
+   {
+    "code": "R",
+    "name": "Sistema respiratorio",
+    "n": 791,
+    "share": 8.2
+   },
+   {
+    "code": "M",
+    "name": "Sistema musculoesquelético",
+    "n": 673,
+    "share": 7
+   },
+   {
+    "code": "D",
+    "name": "Dermatológicos",
+    "n": 624,
+    "share": 6.5
+   },
+   {
+    "code": "G",
+    "name": "Sistema genitourinario y hormonas sexuales",
+    "n": 529,
+    "share": 5.5
+   },
+   {
+    "code": "B",
+    "name": "Sangre y órganos hematopoyéticos",
+    "n": 526,
+    "share": 5.5
+   },
+   {
+    "code": "S",
+    "name": "Órganos de los sentidos",
+    "n": 351,
+    "share": 3.6
+   },
+   {
+    "code": "P",
+    "name": "Antiparasitarios",
+    "n": 228,
+    "share": 2.4
+   },
+   {
+    "code": "H",
+    "name": "Preparados hormonales sistémicos",
+    "n": 218,
+    "share": 2.3
+   },
+   {
+    "code": "V",
+    "name": "Varios",
+    "n": 204,
+    "share": 2.1
+   }
+  ],
+  "top": [
+   {
+    "rank": 1,
+    "key": "TECNOQUIMICAS",
+    "nombre": "TECNOQUIMICAS S.A.S.",
+    "registros": 327,
+    "cums": 13811,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 64
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 49
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 41
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 36
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 32
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 30
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 28
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 15
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 12
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 8
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 6
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 4
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 2
+     }
+    ],
+    "atc2": [
+     {
+      "code": "S01",
+      "name": "LAGRIMAS ARTIFICIALES Y OTRAS PREPARACIONES INDIFERENTES",
+      "n": 30
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 29
+     },
+     {
+      "code": "J01",
+      "name": "NORFLOXACINA",
+      "n": 28
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN",
+      "n": 23
+     },
+     {
+      "code": "N06",
+      "name": "PIRACETAM",
+      "n": 20
+     },
+     {
+      "code": "N02",
+      "name": "ACETILSALICILICO AACIDO COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 19
+     },
+     {
+      "code": "N05",
+      "name": "RISPERIDONA",
+      "n": 12
+     },
+     {
+      "code": "R01",
+      "name": "BECLOMETASONA",
+      "n": 9
+     },
+     {
+      "code": "R06",
+      "name": "LEVOCETIRIZINA",
+      "n": 8
+     },
+     {
+      "code": "N03",
+      "name": "OXCARBAZEPINA",
+      "n": 8
+     },
+     {
+      "code": "A11",
+      "name": "ACIDO ASCORBICO (VIT C)",
+      "n": 8
+     },
+     {
+      "code": "G04",
+      "name": "SILDENAFIL",
+      "n": 7
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 2
+      },
+      {
+       "ano": 2030,
+       "n": 10
+      },
+      {
+       "ano": 2031,
+       "n": 2
+      },
+      {
+       "ano": 3000,
+       "n": 28
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 71,
+     "share": 21.7,
+     "mercadosRelevantes": 47
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 295
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 23
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 9
+     }
+    ]
+   },
+   {
+    "rank": 2,
+    "key": "GENFAR",
+    "nombre": "GENFAR S.A.",
+    "registros": 270,
+    "cums": 2894,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 54
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 46
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 35
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 31
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 26
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 18
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 16
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 15
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 10
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 9
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 7
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 3
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "AMPICILINA",
+      "n": 28
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 24
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 18
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 17
+     },
+     {
+      "code": "N05",
+      "name": "BROMAZEPAM",
+      "n": 14
+     },
+     {
+      "code": "N06",
+      "name": "PAROXETINA",
+      "n": 10
+     },
+     {
+      "code": "A10",
+      "name": "METFORMINA",
+      "n": 9
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN Y DIURETICOS",
+      "n": 9
+     },
+     {
+      "code": "R06",
+      "name": "KETOTIFENO",
+      "n": 9
+     },
+     {
+      "code": "H02",
+      "name": "DEFLAZACORT",
+      "n": 8
+     },
+     {
+      "code": "N03",
+      "name": "LACOSAMIDA",
+      "n": 8
+     },
+     {
+      "code": "G04",
+      "name": "TADALAFIL",
+      "n": 8
+     }
+    ],
+    "vencimientos": {
+     "en12m": 1,
+     "en36m": 2,
+     "porAno": [
+      {
+       "ano": 1900,
+       "n": 1
+      },
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 12
+      },
+      {
+       "ano": 2031,
+       "n": 9
+      },
+      {
+       "ano": 3000,
+       "n": 40
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 64,
+     "share": 23.7,
+     "mercadosRelevantes": 43
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 231
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 27
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 11
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 3,
+    "key": "MEGALABS COLOMBIA",
+    "nombre": "MEGALABS COLOMBIA S.A.S.",
+    "registros": 190,
+    "cums": 3117,
+    "atc1": [
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 41
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 40
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 23
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 22
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 20
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 11
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 8
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 8
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 6
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 5
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 3
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 2
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "S01",
+      "name": "DEXAMETASONA Y ANTIINFECCIOSOS",
+      "n": 22
+     },
+     {
+      "code": "C09",
+      "name": "IRBESARTAN",
+      "n": 20
+     },
+     {
+      "code": "D07",
+      "name": "MOMETASONA",
+      "n": 15
+     },
+     {
+      "code": "D10",
+      "name": "CLINDAMICINA",
+      "n": 13
+     },
+     {
+      "code": "J01",
+      "name": "AMOXICILINA",
+      "n": 11
+     },
+     {
+      "code": "C10",
+      "name": "FENOFIBRATO",
+      "n": 10
+     },
+     {
+      "code": "N06",
+      "name": "VORTIOXETINA",
+      "n": 8
+     },
+     {
+      "code": "A03",
+      "name": "OTILONIO BROMURO",
+      "n": 8
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 6
+     },
+     {
+      "code": "N05",
+      "name": "ARIPIPRAZOL",
+      "n": 6
+     },
+     {
+      "code": "A02",
+      "name": "PANTOPRAZOL",
+      "n": 6
+     },
+     {
+      "code": "A10",
+      "name": "METFORMINA",
+      "n": 5
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 4,
+     "porAno": [
+      {
+       "ano": 2027,
+       "n": 1
+      },
+      {
+       "ano": 2029,
+       "n": 4
+      },
+      {
+       "ano": 2030,
+       "n": 14
+      },
+      {
+       "ano": 2031,
+       "n": 2
+      },
+      {
+       "ano": 2099,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 16
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 70,
+     "share": 36.8,
+     "mercadosRelevantes": 45
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 115
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 71
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 4
+     }
+    ]
+   },
+   {
+    "rank": 4,
+    "key": "NOVAMED",
+    "nombre": "NOVAMED S.A.S.",
+    "registros": 187,
+    "cums": 8648,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 48
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 36
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 28
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 24
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 23
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 9
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 6
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 5
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 5
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 2
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "M01",
+      "name": "ETORICOXIB",
+      "n": 24
+     },
+     {
+      "code": "R03",
+      "name": "FENOTEROL Y OTROS FARMACOS PARA ENFERMEDAD OBSTRUCTIVA DE LA VIA AEREA",
+      "n": 17
+     },
+     {
+      "code": "R06",
+      "name": "LORATADINA",
+      "n": 12
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 12
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN Y DIURETICOS",
+      "n": 11
+     },
+     {
+      "code": "R01",
+      "name": "FENILEFRINA COMBINACIONES",
+      "n": 10
+     },
+     {
+      "code": "A02",
+      "name": "ACIDO ALGINICO",
+      "n": 9
+     },
+     {
+      "code": "A11",
+      "name": "COLECALCIFEROL",
+      "n": 9
+     },
+     {
+      "code": "A03",
+      "name": "ALIZAPRIDA",
+      "n": 9
+     },
+     {
+      "code": "R05",
+      "name": "ACETILCISTEINA",
+      "n": 9
+     },
+     {
+      "code": "C10",
+      "name": "EZETIMIBE",
+      "n": 8
+     },
+     {
+      "code": "J01",
+      "name": "FOSFOMICINA",
+      "n": 7
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 8
+      },
+      {
+       "ano": 2031,
+       "n": 7
+      },
+      {
+       "ano": 3000,
+       "n": 21
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 33,
+     "share": 17.6,
+     "mercadosRelevantes": 23
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 171
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 9
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 4
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 3
+     }
+    ]
+   },
+   {
+    "rank": 5,
+    "key": "LABORATORIOS LA SANTE",
+    "nombre": "LABORATORIOS LA SANTE LTDA",
+    "registros": 177,
+    "cums": 1584,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 28
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 26
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 24
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 21
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 20
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 15
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 10
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 10
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 8
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 7
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "CLARITROMICINA",
+      "n": 23
+     },
+     {
+      "code": "M01",
+      "name": "MELOXICAM",
+      "n": 12
+     },
+     {
+      "code": "R06",
+      "name": "FEXOFENADINA",
+      "n": 11
+     },
+     {
+      "code": "S01",
+      "name": "KETOROLACO",
+      "n": 10
+     },
+     {
+      "code": "R05",
+      "name": "CARBOCISTEINA",
+      "n": 9
+     },
+     {
+      "code": "C10",
+      "name": "SIMVASTATINA",
+      "n": 9
+     },
+     {
+      "code": "A02",
+      "name": "ESOMEPRAZOL",
+      "n": 8
+     },
+     {
+      "code": "A10",
+      "name": "LINAGLIPTINA",
+      "n": 7
+     },
+     {
+      "code": "N05",
+      "name": "RISPERIDONA",
+      "n": 7
+     },
+     {
+      "code": "N06",
+      "name": "AMITRIPTILINA",
+      "n": 6
+     },
+     {
+      "code": "C09",
+      "name": "VALSARTAN",
+      "n": 5
+     },
+     {
+      "code": "N03",
+      "name": "TOPIRAMATO",
+      "n": 5
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 10
+      },
+      {
+       "ano": 2031,
+       "n": 8
+      },
+      {
+       "ano": 3000,
+       "n": 31
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 47,
+     "share": 26.6,
+     "mercadosRelevantes": 34
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 134
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 29
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 13
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 6,
+    "key": "LABORATORIO FRANCO COLOMBIANO LAFRANCOL",
+    "nombre": "LABORATORIO FRANCO COLOMBIANO - LAFRANCOL S.A.S.",
+    "registros": 169,
+    "cums": 3850,
+    "atc1": [
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 33
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 30
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 26
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 20
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 17
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 11
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 9
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 7
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 6
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 3
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 2
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "G03",
+      "name": "PROGESTERONA",
+      "n": 22
+     },
+     {
+      "code": "N02",
+      "name": "SUMATRIPTAN. COMBINACIONES",
+      "n": 14
+     },
+     {
+      "code": "J01",
+      "name": "CLARITROMICINA",
+      "n": 12
+     },
+     {
+      "code": "N06",
+      "name": "FLUVOXAMINA",
+      "n": 9
+     },
+     {
+      "code": "H03",
+      "name": "LEVOTIROXINA DE SODIO",
+      "n": 9
+     },
+     {
+      "code": "G04",
+      "name": "TADALAFIL",
+      "n": 7
+     },
+     {
+      "code": "A03",
+      "name": "MEBEVERINA",
+      "n": 7
+     },
+     {
+      "code": "A02",
+      "name": "ESOMEPRAZOL",
+      "n": 7
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 7
+     },
+     {
+      "code": "R06",
+      "name": "FEXOFENADINA",
+      "n": 6
+     },
+     {
+      "code": "M01",
+      "name": "NAPROXENO",
+      "n": 6
+     },
+     {
+      "code": "C09",
+      "name": "VALSARTAN Y DIURETICOS",
+      "n": 6
+     }
+    ],
+    "vencimientos": {
+     "en12m": 1,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 1900,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2036,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 32
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 43,
+     "share": 25.4,
+     "mercadosRelevantes": 29
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 114
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 48
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 7
+     }
+    ]
+   },
+   {
+    "rank": 7,
+    "key": "LABORATORIOS SIEGFRIED",
+    "nombre": "LABORATORIOS SIEGFRIED S.A.S.",
+    "registros": 168,
+    "cums": 3149,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 48
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 18
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 17
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 16
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 15
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 12
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 11
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 10
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 10
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 7
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 2
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 2
+     }
+    ],
+    "atc2": [
+     {
+      "code": "N02",
+      "name": "PARACETAMOL COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 23
+     },
+     {
+      "code": "J01",
+      "name": "SULFAMETIZOL",
+      "n": 16
+     },
+     {
+      "code": "H03",
+      "name": "PROPILTIOURACILO",
+      "n": 11
+     },
+     {
+      "code": "N05",
+      "name": "MIDAZOLAM",
+      "n": 11
+     },
+     {
+      "code": "N06",
+      "name": "ESCITALOPRAM",
+      "n": 9
+     },
+     {
+      "code": "R05",
+      "name": "ACETILCISTEINA",
+      "n": 8
+     },
+     {
+      "code": "M01",
+      "name": "MELOXICAM",
+      "n": 8
+     },
+     {
+      "code": "A03",
+      "name": "SIMETICONA. COMBINACIONES",
+      "n": 7
+     },
+     {
+      "code": "P01",
+      "name": "HIDROXICLOROQUINA",
+      "n": 7
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 7
+     },
+     {
+      "code": "A11",
+      "name": "TOCOFEROL (VIT E)",
+      "n": 5
+     },
+     {
+      "code": "R06",
+      "name": "LEVOCETIRIZINA",
+      "n": 4
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2031,
+       "n": 7
+      },
+      {
+       "ano": 3000,
+       "n": 25
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 16,
+     "share": 9.5,
+     "mercadosRelevantes": 10
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 125
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 34
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 6
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 2
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 8,
+    "key": "PROCAPS",
+    "nombre": "PROCAPS S.A.",
+    "registros": 165,
+    "cums": 3994,
+    "atc1": [
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 37
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 16
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 16
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 16
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 14
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 14
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 13
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 10
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 8
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 7
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 7
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 4
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 3
+     }
+    ],
+    "atc2": [
+     {
+      "code": "H03",
+      "name": "LEVOTIROXINA DE SODIO",
+      "n": 12
+     },
+     {
+      "code": "J01",
+      "name": "MEROPENEM",
+      "n": 12
+     },
+     {
+      "code": "A11",
+      "name": "TOCOFEROL (VIT E)",
+      "n": 12
+     },
+     {
+      "code": "R06",
+      "name": "LEVOCETIRIZINA",
+      "n": 10
+     },
+     {
+      "code": "A03",
+      "name": "DIMETILAMINOPROPIONILFENOTIAZINA",
+      "n": 9
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 8
+     },
+     {
+      "code": "S01",
+      "name": "TIMOLOL COMBINACIONES",
+      "n": 8
+     },
+     {
+      "code": "G03",
+      "name": "DROSPIRENONA Y ETINILESTRADIOL",
+      "n": 7
+     },
+     {
+      "code": "A02",
+      "name": "ESOMEPRAZOL",
+      "n": 6
+     },
+     {
+      "code": "C09",
+      "name": "VALSARTAN. AMLODIPINA E HIDROCLOROTIAZIDA.",
+      "n": 6
+     },
+     {
+      "code": "L04",
+      "name": "LENALIDOMIDA",
+      "n": 5
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 5
+     }
+    ],
+    "vencimientos": {
+     "en12m": 9,
+     "en36m": 9,
+     "porAno": [
+      {
+       "ano": 1000,
+       "n": 1
+      },
+      {
+       "ano": 1900,
+       "n": 8
+      },
+      {
+       "ano": 2031,
+       "n": 5
+      },
+      {
+       "ano": 3000,
+       "n": 150
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 36,
+     "share": 21.8,
+     "mercadosRelevantes": 30
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 141
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 15
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 7
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 9,
+    "key": "HETERO LABS",
+    "nombre": "HETERO LABS LIMITED",
+    "registros": 147,
+    "cums": 1462,
+    "atc1": [
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 39
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 36
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 23
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 18
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 8
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 8
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 3
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 3
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 2
+     }
+    ],
+    "atc2": [
+     {
+      "code": "L01",
+      "name": "GEMCITABINA",
+      "n": 24
+     },
+     {
+      "code": "C09",
+      "name": "OLMESARTAN MEDOXIMIL",
+      "n": 20
+     },
+     {
+      "code": "J05",
+      "name": "ABACAVIR",
+      "n": 14
+     },
+     {
+      "code": "N05",
+      "name": "ARIPIPRAZOL",
+      "n": 11
+     },
+     {
+      "code": "L04",
+      "name": "FINGOLIMOD",
+      "n": 11
+     },
+     {
+      "code": "C10",
+      "name": "SIMVASTATINA COMBINACIONES PAQUETES",
+      "n": 9
+     },
+     {
+      "code": "N03",
+      "name": "LEVETIRACETAM",
+      "n": 6
+     },
+     {
+      "code": "N06",
+      "name": "DULOXETINA",
+      "n": 6
+     },
+     {
+      "code": "A02",
+      "name": "LANSOPRAZOL",
+      "n": 6
+     },
+     {
+      "code": "R06",
+      "name": "LORATADINA",
+      "n": 5
+     },
+     {
+      "code": "J01",
+      "name": "CEFPODOXIMA",
+      "n": 4
+     },
+     {
+      "code": "C07",
+      "name": "BISOPROLOL",
+      "n": 4
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 4,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 4
+      },
+      {
+       "ano": 2030,
+       "n": 30
+      },
+      {
+       "ano": 2031,
+       "n": 14
+      },
+      {
+       "ano": 3000,
+       "n": 27
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 100,
+     "share": 68,
+     "mercadosRelevantes": 66
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 147
+     }
+    ]
+   },
+   {
+    "rank": 10,
+    "key": "LABORATORIOS MK",
+    "nombre": "LABORATORIOS MK S.A.S.",
+    "registros": 140,
+    "cums": 2716,
+    "atc1": [
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 30
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 26
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 19
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 16
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 14
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 11
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 8
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 6
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 3
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 3
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 3
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "CIPROFLOXACINA",
+      "n": 15
+     },
+     {
+      "code": "C09",
+      "name": "IRBESARTAN Y AMLODIPINO",
+      "n": 12
+     },
+     {
+      "code": "M01",
+      "name": "DEXKETOPROFENO",
+      "n": 12
+     },
+     {
+      "code": "C10",
+      "name": "SIMVASTATINA COMBINACIONES PAQUETES",
+      "n": 10
+     },
+     {
+      "code": "N03",
+      "name": "FENITOINA",
+      "n": 10
+     },
+     {
+      "code": "N06",
+      "name": "ESCITALOPRAM",
+      "n": 9
+     },
+     {
+      "code": "A10",
+      "name": "VILDAGLIPTINA",
+      "n": 7
+     },
+     {
+      "code": "C07",
+      "name": "BISOPROLOL",
+      "n": 6
+     },
+     {
+      "code": "R06",
+      "name": "LEVOCETIRIZINA",
+      "n": 5
+     },
+     {
+      "code": "B01",
+      "name": "CILOSTAZOL",
+      "n": 5
+     },
+     {
+      "code": "A07",
+      "name": "RIFAXIMINA",
+      "n": 4
+     },
+     {
+      "code": "N02",
+      "name": "ERGOTAMINA COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 4
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 12
+      },
+      {
+       "ano": 2031,
+       "n": 7
+      },
+      {
+       "ano": 3000,
+       "n": 27
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 43,
+     "share": 30.7,
+     "mercadosRelevantes": 26
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 123
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 14
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 3
+     }
+    ]
+   },
+   {
+    "rank": 11,
+    "key": "LABORATORIOS LEGRAND",
+    "nombre": "LABORATORIOS LEGRAND S.A.",
+    "registros": 128,
+    "cums": 4051,
+    "atc1": [
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 30
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 27
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 22
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 14
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 9
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 7
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 6
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 3
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 3
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 2
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "L01",
+      "name": "ERLOTINIB",
+      "n": 19
+     },
+     {
+      "code": "C09",
+      "name": "TELMISARTAN",
+      "n": 13
+     },
+     {
+      "code": "N03",
+      "name": "LACOSAMIDA",
+      "n": 10
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA Y EZETIMIBA",
+      "n": 8
+     },
+     {
+      "code": "J05",
+      "name": "DARUNAVIR Y COBICISTAT",
+      "n": 8
+     },
+     {
+      "code": "N02",
+      "name": "HIDROCODONA Y PARACETAMOL",
+      "n": 8
+     },
+     {
+      "code": "G04",
+      "name": "AVANAFIL",
+      "n": 7
+     },
+     {
+      "code": "N04",
+      "name": "SAFINAMIDA",
+      "n": 7
+     },
+     {
+      "code": "L02",
+      "name": "ANASTROZOL",
+      "n": 7
+     },
+     {
+      "code": "J01",
+      "name": "CEFPODOXIMA",
+      "n": 6
+     },
+     {
+      "code": "A10",
+      "name": "METFORMINA",
+      "n": 6
+     },
+     {
+      "code": "M01",
+      "name": "MELOXICAM Y COMBINACIONES",
+      "n": 5
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 4
+      },
+      {
+       "ano": 2030,
+       "n": 10
+      },
+      {
+       "ano": 2031,
+       "n": 4
+      },
+      {
+       "ano": 3000,
+       "n": 22
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 84,
+     "share": 65.6,
+     "mercadosRelevantes": 48
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 57
+     },
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 54
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 12
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 3
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 12,
+    "key": "COOPERATIVA NACIONAL DE DROGUISTAS DETALLISTAS COOPIDROGAS",
+    "nombre": "COOPERATIVA NACIONAL DE DROGUISTAS DETALLISTAS - COOPIDROGAS",
+    "registros": 123,
+    "cums": 786,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 19
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 17
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 16
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 15
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 14
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 14
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 8
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 6
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 5
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 5
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 14
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL",
+      "n": 13
+     },
+     {
+      "code": "J01",
+      "name": "CIPROFLOXACINA",
+      "n": 11
+     },
+     {
+      "code": "R06",
+      "name": "DIMENHIDRINATO",
+      "n": 10
+     },
+     {
+      "code": "S01",
+      "name": "LAGRIMAS ARTIFICIALES Y OTRAS PREPARACIONES INDIFERENTES",
+      "n": 6
+     },
+     {
+      "code": "R05",
+      "name": "DEXTROMETORFANO",
+      "n": 5
+     },
+     {
+      "code": "A02",
+      "name": "HIDROTALCITA",
+      "n": 5
+     },
+     {
+      "code": "P01",
+      "name": "NITAZOXANIDA",
+      "n": 4
+     },
+     {
+      "code": "G01",
+      "name": "CLOTRIMAZOL",
+      "n": 4
+     },
+     {
+      "code": "D01",
+      "name": "COMBINACIONES",
+      "n": 4
+     },
+     {
+      "code": "D07",
+      "name": "CLOBETASOL",
+      "n": 4
+     },
+     {
+      "code": "G04",
+      "name": "SILDENAFIL",
+      "n": 4
+     }
+    ],
+    "vencimientos": {
+     "en12m": 3,
+     "en36m": 3,
+     "porAno": [
+      {
+       "ano": 2026,
+       "n": 3
+      },
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2031,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 34
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 2,
+     "share": 1.6,
+     "mercadosRelevantes": 2
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 111
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 7
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 5
+     }
+    ]
+   },
+   {
+    "rank": 13,
+    "key": "EUROFARMA COLOMBIA",
+    "nombre": "EUROFARMA COLOMBIA S.A.S.",
+    "registros": 123,
+    "cums": 2026,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 28
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 16
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 14
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 13
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 12
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 8
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 8
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 8
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 7
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 5
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 2
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 1
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "AMOXICILINA",
+      "n": 11
+     },
+     {
+      "code": "N06",
+      "name": "DONEPEZIL",
+      "n": 11
+     },
+     {
+      "code": "A02",
+      "name": "COMBINACIONES DE SALES Y ANTIFLATULENTOS",
+      "n": 10
+     },
+     {
+      "code": "M01",
+      "name": "PIROXICAM",
+      "n": 9
+     },
+     {
+      "code": "N05",
+      "name": "OLANZAPINA",
+      "n": 8
+     },
+     {
+      "code": "R05",
+      "name": "ACETILCISTEINA",
+      "n": 6
+     },
+     {
+      "code": "B01",
+      "name": "INHIBIDORES DIRECTOS DEL FACTOR XA",
+      "n": 5
+     },
+     {
+      "code": "D06",
+      "name": "ACICLOVIR",
+      "n": 4
+     },
+     {
+      "code": "L01",
+      "name": "CAPECITABINA",
+      "n": 4
+     },
+     {
+      "code": "C09",
+      "name": "IRBESARTAN Y DIURETICOS",
+      "n": 4
+     },
+     {
+      "code": "G01",
+      "name": "FENTICONAZOL",
+      "n": 3
+     },
+     {
+      "code": "N03",
+      "name": "LEVETIRACETAM",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 26
+      },
+      {
+       "ano": 2031,
+       "n": 9
+      },
+      {
+       "ano": 3000,
+       "n": 20
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 33,
+     "share": 26.8,
+     "mercadosRelevantes": 23
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 61
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 52
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 10
+     }
+    ]
+   },
+   {
+    "rank": 14,
+    "key": "GLOBAL INTERNATIONAL MEDICINE GIMED",
+    "nombre": "GLOBAL INTERNATIONAL MEDICINE S.A.S. - GIMED S.A.S.",
+    "registros": 121,
+    "cums": 793,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 20
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 17
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 16
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 15
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 12
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 11
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 8
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 6
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 4
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 3
+     }
+    ],
+    "atc2": [
+     {
+      "code": "R06",
+      "name": "LORATADINA",
+      "n": 13
+     },
+     {
+      "code": "J01",
+      "name": "CIPROFLOXACINA",
+      "n": 13
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFEN COMBINACIONES",
+      "n": 11
+     },
+     {
+      "code": "S01",
+      "name": "NORFLOXACINO",
+      "n": 9
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL",
+      "n": 8
+     },
+     {
+      "code": "D07",
+      "name": "DEXAMETASONA Y ANTIBIOTICOS",
+      "n": 8
+     },
+     {
+      "code": "G01",
+      "name": "COMBINACIONES DE IMIDAZOL DERIVADOS",
+      "n": 6
+     },
+     {
+      "code": "R05",
+      "name": "COMBINACIONES",
+      "n": 5
+     },
+     {
+      "code": "G04",
+      "name": "SILDENAFIL",
+      "n": 4
+     },
+     {
+      "code": "A02",
+      "name": "COMBINACIONES DE SALES Y ANTIFLATULENTOS",
+      "n": 4
+     },
+     {
+      "code": "B05",
+      "name": "ELECTROLITOS CON CARBOHIDRATOS",
+      "n": 4
+     },
+     {
+      "code": "D01",
+      "name": "TERBINAFINA",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 5
+      },
+      {
+       "ano": 2031,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 11
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 5,
+     "share": 4.1,
+     "mercadosRelevantes": 5
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 112
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 4
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 3
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 15,
+    "key": "LABORATORIOS BUSSIE",
+    "nombre": "LABORATORIOS BUSSIÉ S.A.",
+    "registros": 109,
+    "cums": 1540,
+    "atc1": [
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 21
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 15
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 15
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 12
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 11
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 10
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 10
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 7
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 6
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 1
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "M01",
+      "name": "IBUPROFEN COMBINACIONES",
+      "n": 8
+     },
+     {
+      "code": "J01",
+      "name": "AZITROMICINA",
+      "n": 8
+     },
+     {
+      "code": "A03",
+      "name": "METOCLOPRAMIDA",
+      "n": 8
+     },
+     {
+      "code": "N06",
+      "name": "FLUOXETINA",
+      "n": 7
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN",
+      "n": 7
+     },
+     {
+      "code": "A02",
+      "name": "ESOMEPRAZOL",
+      "n": 6
+     },
+     {
+      "code": "G04",
+      "name": "TADALAFIL",
+      "n": 5
+     },
+     {
+      "code": "R06",
+      "name": "DESLORATADINA",
+      "n": 4
+     },
+     {
+      "code": "N05",
+      "name": "ZOPICLONA",
+      "n": 4
+     },
+     {
+      "code": "R03",
+      "name": "MONTELUKAST",
+      "n": 4
+     },
+     {
+      "code": "A07",
+      "name": "DIOSMECTITA",
+      "n": 4
+     },
+     {
+      "code": "M03",
+      "name": "TIOCOLCHICOSIDA",
+      "n": 4
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 3000,
+       "n": 17
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 11,
+     "share": 10.1,
+     "mercadosRelevantes": 7
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 97
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 8
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 2
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 16,
+    "key": "PFIZER",
+    "nombre": "PFIZER S.A.S.",
+    "registros": 109,
+    "cums": 2718,
+    "atc1": [
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 34
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 27
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 14
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 8
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 5
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 5
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 3
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 2
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 1
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "L01",
+      "name": "PALBOCICLIB",
+      "n": 26
+     },
+     {
+      "code": "J01",
+      "name": "CLINDAMICINA",
+      "n": 15
+     },
+     {
+      "code": "B02",
+      "name": "COAGULACION FACTORES VIII",
+      "n": 8
+     },
+     {
+      "code": "J02",
+      "name": "VORICONAZOL",
+      "n": 7
+     },
+     {
+      "code": "L04",
+      "name": "TOFACITINIB",
+      "n": 7
+     },
+     {
+      "code": "B01",
+      "name": "INHIBIDORES DIRECTOS DEL FACTOR XA",
+      "n": 6
+     },
+     {
+      "code": "H01",
+      "name": "PEGVISOMANT",
+      "n": 6
+     },
+     {
+      "code": "J07",
+      "name": "VACUNAS CONTRA EL VIRUS SINCITIAL RESPIRATORIO",
+      "n": 5
+     },
+     {
+      "code": "N05",
+      "name": "TRIAZOLAM",
+      "n": 4
+     },
+     {
+      "code": "H02",
+      "name": "METILPREDNISOLONA",
+      "n": 3
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 3
+     },
+     {
+      "code": "G03",
+      "name": "MEDROXIPROGESTERONA",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 1,
+     "en36m": 3,
+     "porAno": [
+      {
+       "ano": 1900,
+       "n": 1
+      },
+      {
+       "ano": 2029,
+       "n": 2
+      },
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2031,
+       "n": 2
+      },
+      {
+       "ano": 2036,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 27
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 66,
+     "share": 60.6,
+     "mercadosRelevantes": 40
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 109
+     }
+    ]
+   },
+   {
+    "rank": 17,
+    "key": "PENTACOOP",
+    "nombre": "PENTACOOP S.A..",
+    "registros": 106,
+    "cums": 372,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 24
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 16
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 13
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 10
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 10
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 8
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 8
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "SULTAMICILINA",
+      "n": 21
+     },
+     {
+      "code": "M01",
+      "name": "MELOXICAM",
+      "n": 13
+     },
+     {
+      "code": "R06",
+      "name": "KETOTIFENO",
+      "n": 7
+     },
+     {
+      "code": "P01",
+      "name": "SECNIDAZOL",
+      "n": 5
+     },
+     {
+      "code": "C10",
+      "name": "GEMFIBROZIL",
+      "n": 4
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL. COMBINACIONES CON PSICOLECTICOS",
+      "n": 4
+     },
+     {
+      "code": "A03",
+      "name": "METOCLOPRAMIDA",
+      "n": 4
+     },
+     {
+      "code": "P02",
+      "name": "PIRANTEL",
+      "n": 4
+     },
+     {
+      "code": "D06",
+      "name": "FUSIDICO ACIDO",
+      "n": 3
+     },
+     {
+      "code": "D07",
+      "name": "BETAMETASONA",
+      "n": 3
+     },
+     {
+      "code": "J02",
+      "name": "FLUCONAZOL",
+      "n": 2
+     },
+     {
+      "code": "D01",
+      "name": "CLOTRIMAZOL",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 1,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2026,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 2
+      },
+      {
+       "ano": 3000,
+       "n": 47
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 2,
+     "share": 1.9,
+     "mercadosRelevantes": 2
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 103
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 3
+     }
+    ]
+   },
+   {
+    "rank": 18,
+    "key": "TECNOFAR TQ",
+    "nombre": "TECNOFAR TQ S.A.S.",
+    "registros": 104,
+    "cums": 1861,
+    "atc1": [
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 28
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 24
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 14
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 10
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 9
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 8
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 4
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 3
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 2
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "S01",
+      "name": "HIALURONICO ACIDO",
+      "n": 9
+     },
+     {
+      "code": "R06",
+      "name": "LORATADINA",
+      "n": 8
+     },
+     {
+      "code": "R05",
+      "name": "BROMHEXINA",
+      "n": 7
+     },
+     {
+      "code": "A02",
+      "name": "ANTIACIDOS CON BICARBONATO DE SODIO",
+      "n": 7
+     },
+     {
+      "code": "D08",
+      "name": "TIOMERSAL",
+      "n": 6
+     },
+     {
+      "code": "D07",
+      "name": "MOMETASONA",
+      "n": 6
+     },
+     {
+      "code": "N02",
+      "name": "TRAMADOL",
+      "n": 6
+     },
+     {
+      "code": "D11",
+      "name": "MINOXIDIL",
+      "n": 5
+     },
+     {
+      "code": "D02",
+      "name": "CARBAMIDA",
+      "n": 4
+     },
+     {
+      "code": "A11",
+      "name": "COLECALCIFEROL",
+      "n": 4
+     },
+     {
+      "code": "R01",
+      "name": "MOMETASONA",
+      "n": 4
+     },
+     {
+      "code": "R02",
+      "name": "YODOPOVIDONA",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 2
+      },
+      {
+       "ano": 2031,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 7
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 8,
+     "share": 7.7,
+     "mercadosRelevantes": 6
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 102
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 19,
+    "key": "LABORATORIO PROFESIONAL FARMACEUTICO LABORATORIOS LAPROFF",
+    "nombre": "LABORATORIO PROFESIONAL FARMACEUTICO S.A.S. - LABORATORIOS LAPROFF S.A.S.",
+    "registros": 101,
+    "cums": 735,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 15
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 14
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 14
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 12
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 12
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 10
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 9
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 8
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 3
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "CIPROFLOXACINA",
+      "n": 10
+     },
+     {
+      "code": "R06",
+      "name": "CETIRIZINA",
+      "n": 8
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 6
+     },
+     {
+      "code": "B03",
+      "name": "FOLICO ACIDO",
+      "n": 6
+     },
+     {
+      "code": "C10",
+      "name": "GEMFIBROZIL",
+      "n": 6
+     },
+     {
+      "code": "N06",
+      "name": "AMITRIPTILINA",
+      "n": 5
+     },
+     {
+      "code": "D07",
+      "name": "CLOBETASOL",
+      "n": 5
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL",
+      "n": 4
+     },
+     {
+      "code": "A02",
+      "name": "RANITIDINA",
+      "n": 4
+     },
+     {
+      "code": "A03",
+      "name": "METOCLOPRAMIDA",
+      "n": 3
+     },
+     {
+      "code": "R05",
+      "name": "AMBROXOL",
+      "n": 3
+     },
+     {
+      "code": "N03",
+      "name": "CLONAZEPAM",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 2
+      },
+      {
+       "ano": 2031,
+       "n": 3
+      },
+      {
+       "ano": 3000,
+       "n": 11
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 9,
+     "share": 8.9,
+     "mercadosRelevantes": 8
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 91
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 8
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 20,
+    "key": "BIOQUIFAR PHARMACEUTICA",
+    "nombre": "BIOQUIFAR PHARMACEUTICA S.A.",
+    "registros": 100,
+    "cums": 463,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 25
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 15
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 14
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 12
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 11
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 7
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 7
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 2
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 2
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "AZITROMICINA",
+      "n": 22
+     },
+     {
+      "code": "M01",
+      "name": "GLUCOSAMINA SULFATO. CONDROITINA SULFATO Y METILSULFONILMETANO",
+      "n": 11
+     },
+     {
+      "code": "A02",
+      "name": "ALGINATO DE SODIO+BICARBONATO DE SODIO + CARBONATO DE CALCIO",
+      "n": 8
+     },
+     {
+      "code": "R06",
+      "name": "CETIRIZINA",
+      "n": 8
+     },
+     {
+      "code": "P01",
+      "name": "SECNIDAZOL",
+      "n": 5
+     },
+     {
+      "code": "N06",
+      "name": "SERTRALINA",
+      "n": 4
+     },
+     {
+      "code": "C10",
+      "name": "ATORVASTATIN",
+      "n": 4
+     },
+     {
+      "code": "R05",
+      "name": "ACETILCISTEINA",
+      "n": 3
+     },
+     {
+      "code": "C09",
+      "name": "ENALAPRIL",
+      "n": 3
+     },
+     {
+      "code": "J02",
+      "name": "FLUCONAZOL",
+      "n": 3
+     },
+     {
+      "code": "G04",
+      "name": "SILDENAFIL",
+      "n": 3
+     },
+     {
+      "code": "N02",
+      "name": "DIHIDROCODEINA",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 3000,
+       "n": 19
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 8,
+     "share": 8,
+     "mercadosRelevantes": 8
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 95
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 5
+     }
+    ]
+   },
+   {
+    "rank": 21,
+    "key": "LABORATORIOS ECAR",
+    "nombre": "LABORATORIOS ECAR S.A.",
+    "registros": 100,
+    "cums": 2457,
+    "atc1": [
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 20
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 16
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 14
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 13
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 10
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 8
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 7
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 5
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 4
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 2
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "A11",
+      "name": "COMPLEJO B",
+      "n": 12
+     },
+     {
+      "code": "R06",
+      "name": "CETIRIZINA",
+      "n": 10
+     },
+     {
+      "code": "B03",
+      "name": "FERROSO SULFATO",
+      "n": 9
+     },
+     {
+      "code": "M01",
+      "name": "DICLOFENACO",
+      "n": 7
+     },
+     {
+      "code": "J01",
+      "name": "SULFAMETOXAZOL Y TRIMETOPRIM",
+      "n": 7
+     },
+     {
+      "code": "N02",
+      "name": "METAMIZOL SODIO",
+      "n": 6
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN",
+      "n": 5
+     },
+     {
+      "code": "C10",
+      "name": "ATORVASTATIN",
+      "n": 5
+     },
+     {
+      "code": "A07",
+      "name": "MESALAZINA",
+      "n": 4
+     },
+     {
+      "code": "P01",
+      "name": "METRONIDAZOL",
+      "n": 4
+     },
+     {
+      "code": "N03",
+      "name": "PREGABALINA",
+      "n": 3
+     },
+     {
+      "code": "A06",
+      "name": "MACROGOL",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2031,
+       "n": 4
+      },
+      {
+       "ano": 3000,
+       "n": 7
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 8,
+     "share": 8,
+     "mercadosRelevantes": 5
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 93
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 4
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 3
+     }
+    ]
+   },
+   {
+    "rank": 22,
+    "key": "MEMPHIS PRODUCTS",
+    "nombre": "MEMPHIS PRODUCTS S.A.",
+    "registros": 97,
+    "cums": 721,
+    "atc1": [
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 15
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 14
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 14
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 13
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 12
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 11
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 7
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 5
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "R06",
+      "name": "CETIRIZINA",
+      "n": 11
+     },
+     {
+      "code": "J01",
+      "name": "CIPROFLOXACINA",
+      "n": 11
+     },
+     {
+      "code": "M01",
+      "name": "NAPROXENO",
+      "n": 7
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 6
+     },
+     {
+      "code": "P01",
+      "name": "SECNIDAZOL",
+      "n": 5
+     },
+     {
+      "code": "D07",
+      "name": "CLOBETASOL",
+      "n": 4
+     },
+     {
+      "code": "N06",
+      "name": "ESCITALOPRAM",
+      "n": 4
+     },
+     {
+      "code": "D01",
+      "name": "TERBINAFINA",
+      "n": 4
+     },
+     {
+      "code": "R05",
+      "name": "COMBINACIONES",
+      "n": 3
+     },
+     {
+      "code": "D06",
+      "name": "FUSIDICO ACIDO",
+      "n": 3
+     },
+     {
+      "code": "C07",
+      "name": "METOPROLOL",
+      "n": 3
+     },
+     {
+      "code": "M04",
+      "name": "COLCHICINA",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2031,
+       "n": 3
+      },
+      {
+       "ano": 3000,
+       "n": 6
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 4,
+     "share": 4.1,
+     "mercadosRelevantes": 3
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 97
+     }
+    ]
+   },
+   {
+    "rank": 23,
+    "key": "VITALIS C I",
+    "nombre": "VITALIS S.A. C.I.",
+    "registros": 93,
+    "cums": 2108,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 37
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 16
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 10
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 8
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 7
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 5
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 2
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 2
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 2
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "CEFTRIAXONA",
+      "n": 34
+     },
+     {
+      "code": "S01",
+      "name": "POLIMIXINA B",
+      "n": 10
+     },
+     {
+      "code": "H02",
+      "name": "HIDROCORTISONA",
+      "n": 6
+     },
+     {
+      "code": "N02",
+      "name": "METAMIZOL SODIO",
+      "n": 6
+     },
+     {
+      "code": "M03",
+      "name": "VECURONIO",
+      "n": 5
+     },
+     {
+      "code": "N05",
+      "name": "MIDAZOLAM",
+      "n": 4
+     },
+     {
+      "code": "N01",
+      "name": "KETAMINA",
+      "n": 4
+     },
+     {
+      "code": "A03",
+      "name": "METOCLOPRAMIDA",
+      "n": 3
+     },
+     {
+      "code": "C01",
+      "name": "LIDOCAINA",
+      "n": 3
+     },
+     {
+      "code": "M05",
+      "name": "IBANDRONICO ACIDO",
+      "n": 2
+     },
+     {
+      "code": "J05",
+      "name": "ACICLOVIR",
+      "n": 2
+     },
+     {
+      "code": "R01",
+      "name": "OXIMETAZOLINA",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2031,
+       "n": 6
+      },
+      {
+       "ano": 3000,
+       "n": 31
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 12,
+     "share": 12.9,
+     "mercadosRelevantes": 10
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 92
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 24,
+    "key": "INVERSIONES COMERFAR",
+    "nombre": "INVERSIONES COMERFAR LTDA.",
+    "registros": 85,
+    "cums": 258,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 18
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 12
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 11
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 11
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 10
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 7
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 2
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "CLARITROMICINA",
+      "n": 15
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFEN COMBINACIONES",
+      "n": 10
+     },
+     {
+      "code": "R05",
+      "name": "PREPARACIONES DE OTRAS COMBINACIONES PARA EL RESFRIADO COMÚN",
+      "n": 6
+     },
+     {
+      "code": "P02",
+      "name": "ALBENDAZOL",
+      "n": 4
+     },
+     {
+      "code": "P01",
+      "name": "SECNIDAZOL",
+      "n": 4
+     },
+     {
+      "code": "A02",
+      "name": "OMEPRAZOL",
+      "n": 4
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL",
+      "n": 4
+     },
+     {
+      "code": "D07",
+      "name": "CLOBETASOL",
+      "n": 3
+     },
+     {
+      "code": "A01",
+      "name": "BENZIDAMINA",
+      "n": 3
+     },
+     {
+      "code": "D06",
+      "name": "GENTAMICINA",
+      "n": 3
+     },
+     {
+      "code": "D01",
+      "name": "CLOTRIMAZOL",
+      "n": 2
+     },
+     {
+      "code": "A07",
+      "name": "KAOLIN",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 2
+      },
+      {
+       "ano": 2031,
+       "n": 3
+      },
+      {
+       "ano": 2050,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 23
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 3,
+     "share": 3.5,
+     "mercadosRelevantes": 3
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 82
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 3
+     }
+    ]
+   },
+   {
+    "rank": 25,
+    "key": "COLMED",
+    "nombre": "COLMED LTDA.",
+    "registros": 84,
+    "cums": 1138,
+    "atc1": [
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 24
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 11
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 9
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 8
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 6
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 6
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 5
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 4
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 3
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 3
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "A11",
+      "name": "COLECALCIFEROL",
+      "n": 10
+     },
+     {
+      "code": "J01",
+      "name": "GENTAMICINA",
+      "n": 9
+     },
+     {
+      "code": "A02",
+      "name": "PANTOPRAZOL",
+      "n": 7
+     },
+     {
+      "code": "M01",
+      "name": "MELOXICAM",
+      "n": 6
+     },
+     {
+      "code": "N02",
+      "name": "TRAMADOL",
+      "n": 5
+     },
+     {
+      "code": "G01",
+      "name": "CLOTRIMAZOL",
+      "n": 5
+     },
+     {
+      "code": "C10",
+      "name": "ATORVASTATIN",
+      "n": 4
+     },
+     {
+      "code": "A03",
+      "name": "SIMETICONA. COMBINACIONES",
+      "n": 4
+     },
+     {
+      "code": "P01",
+      "name": "METRONIDAZOL",
+      "n": 3
+     },
+     {
+      "code": "S01",
+      "name": "ACETAZOLAMIDA",
+      "n": 3
+     },
+     {
+      "code": "H02",
+      "name": "BETAMETASONA",
+      "n": 3
+     },
+     {
+      "code": "N05",
+      "name": "QUETIAPINA",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 4
+      },
+      {
+       "ano": 2031,
+       "n": 3
+      },
+      {
+       "ano": 3000,
+       "n": 16
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 6,
+     "share": 7.1,
+     "mercadosRelevantes": 5
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 77
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 5
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 1
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 26,
+    "key": "MSN LABORATORIES PRIVATE",
+    "nombre": "MSN LABORATORIES PRIVATE LIMITED",
+    "registros": 81,
+    "cums": 1116,
+    "atc1": [
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 20
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 16
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 10
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 7
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 6
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 5
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 5
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 5
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 4
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 3
+     }
+    ],
+    "atc2": [
+     {
+      "code": "L01",
+      "name": "CLOFARABINA",
+      "n": 10
+     },
+     {
+      "code": "C09",
+      "name": "TELMISARTAN Y DIURETICOS",
+      "n": 8
+     },
+     {
+      "code": "G04",
+      "name": "SILODOSINA",
+      "n": 6
+     },
+     {
+      "code": "C02",
+      "name": "RIOCIGUAT",
+      "n": 6
+     },
+     {
+      "code": "N03",
+      "name": "PREGABALINA",
+      "n": 6
+     },
+     {
+      "code": "V03",
+      "name": "DEFERASIROX",
+      "n": 5
+     },
+     {
+      "code": "B01",
+      "name": "TICAGRELOR",
+      "n": 5
+     },
+     {
+      "code": "L04",
+      "name": "POMALIDOMIDA",
+      "n": 4
+     },
+     {
+      "code": "J02",
+      "name": "CASPOFUNGIN",
+      "n": 4
+     },
+     {
+      "code": "R03",
+      "name": "MONTELUKAST",
+      "n": 3
+     },
+     {
+      "code": "N06",
+      "name": "VORTIOXETINA",
+      "n": 3
+     },
+     {
+      "code": "J01",
+      "name": "MOXIFLOXACINA",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 23
+      },
+      {
+       "ano": 2031,
+       "n": 8
+      },
+      {
+       "ano": 3000,
+       "n": 4
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 59,
+     "share": 72.8,
+     "mercadosRelevantes": 34
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 81
+     }
+    ]
+   },
+   {
+    "rank": 27,
+    "key": "PATMAR",
+    "nombre": "PATMAR S.A.",
+    "registros": 76,
+    "cums": 478,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 13
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 12
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 10
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 10
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 8
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 7
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 6
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 5
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 4
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "M01",
+      "name": "ETORICOXIB",
+      "n": 11
+     },
+     {
+      "code": "D07",
+      "name": "DESONIDA",
+      "n": 7
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 6
+     },
+     {
+      "code": "A02",
+      "name": "ACIDO ALGINICO",
+      "n": 6
+     },
+     {
+      "code": "J01",
+      "name": "SULFAMETOXAZOL Y TRIMETOPRIM",
+      "n": 6
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL. COMBINACIONES CON PSICOLECTICOS",
+      "n": 4
+     },
+     {
+      "code": "G01",
+      "name": "CLOTRIMAZOL",
+      "n": 4
+     },
+     {
+      "code": "P01",
+      "name": "TINIDAZOL",
+      "n": 4
+     },
+     {
+      "code": "R06",
+      "name": "CETIRIZINA",
+      "n": 4
+     },
+     {
+      "code": "R05",
+      "name": "COMBINACIONES",
+      "n": 3
+     },
+     {
+      "code": "R03",
+      "name": "MONTELUKAST",
+      "n": 3
+     },
+     {
+      "code": "R01",
+      "name": "FENILEFRINA - COMBINACIONES",
+      "n": 3
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 4
+      },
+      {
+       "ano": 2031,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 20
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 6,
+     "share": 7.9,
+     "mercadosRelevantes": 4
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 72
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 3
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 28,
+    "key": "ANGLOPHARMA",
+    "nombre": "ANGLOPHARMA S.A.",
+    "registros": 63,
+    "cums": 479,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 12
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 11
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 8
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 7
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 7
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 5
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 4
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 4
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "AMOXICILINA",
+      "n": 11
+     },
+     {
+      "code": "M01",
+      "name": "MELOXICAM",
+      "n": 9
+     },
+     {
+      "code": "D01",
+      "name": "KETOCONAZOL",
+      "n": 4
+     },
+     {
+      "code": "P02",
+      "name": "FLUBENDAZOL",
+      "n": 4
+     },
+     {
+      "code": "P01",
+      "name": "METRONIDAZOL",
+      "n": 3
+     },
+     {
+      "code": "R05",
+      "name": "BROMHEXINA",
+      "n": 2
+     },
+     {
+      "code": "N05",
+      "name": "HIDROXIZINA",
+      "n": 2
+     },
+     {
+      "code": "G04",
+      "name": "SILDENAFIL",
+      "n": 2
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN",
+      "n": 2
+     },
+     {
+      "code": "A10",
+      "name": "GLIBENCLAMIDA",
+      "n": 2
+     },
+     {
+      "code": "G01",
+      "name": "COMBINACIONES DE IMIDAZOL DERIVADOS",
+      "n": 2
+     },
+     {
+      "code": "M03",
+      "name": "COMBINACIONES TIOCOLCHICOSIDO",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 2,
+     "en36m": 3,
+     "porAno": [
+      {
+       "ano": 2021,
+       "n": 2
+      },
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2031,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 12
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 1,
+     "share": 1.6,
+     "mercadosRelevantes": 1
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 61
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 2
+     }
+    ]
+   },
+   {
+    "rank": 29,
+    "key": "AMERICAN GENERICS",
+    "nombre": "AMERICAN GENERICS S.A.S.",
+    "registros": 60,
+    "cums": 632,
+    "atc1": [
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 9
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 9
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 8
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 8
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 7
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 5
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 5
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 3
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 3
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 2
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 7
+     },
+     {
+      "code": "R06",
+      "name": "DESLORATADINA",
+      "n": 7
+     },
+     {
+      "code": "D07",
+      "name": "HIDROCORTISONA",
+      "n": 5
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 5
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL",
+      "n": 4
+     },
+     {
+      "code": "G04",
+      "name": "SILDENAFIL",
+      "n": 4
+     },
+     {
+      "code": "J01",
+      "name": "CIPROFLOXACINA",
+      "n": 4
+     },
+     {
+      "code": "N06",
+      "name": "PAROXETINA",
+      "n": 3
+     },
+     {
+      "code": "H02",
+      "name": "DEFLAZACORT",
+      "n": 2
+     },
+     {
+      "code": "M03",
+      "name": "TIZANIDINA",
+      "n": 2
+     },
+     {
+      "code": "R03",
+      "name": "MONTELUKAST",
+      "n": 2
+     },
+     {
+      "code": "A02",
+      "name": "ESOMEPRAZOL",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 3000,
+       "n": 16
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 6,
+     "share": 10,
+     "mercadosRelevantes": 4
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 57
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 3
+     }
+    ]
+   },
+   {
+    "rank": 30,
+    "key": "LABORATORIOS CHALVER DE COLOMBIA",
+    "nombre": "LABORATORIOS CHALVER DE COLOMBIA S.A.S.",
+    "registros": 60,
+    "cums": 504,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 13
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 10
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 9
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 6
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 6
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 3
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 3
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "D07",
+      "name": "CLOBETASONA",
+      "n": 7
+     },
+     {
+      "code": "R03",
+      "name": "IPATROPIO BROMURO",
+      "n": 7
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL COMBINACIONES EXCLUYENDO SICOLEPTICOS",
+      "n": 6
+     },
+     {
+      "code": "A11",
+      "name": "MULTIVITAMINAS MAS HIERRO",
+      "n": 6
+     },
+     {
+      "code": "R06",
+      "name": "CETIRIZINA",
+      "n": 5
+     },
+     {
+      "code": "G01",
+      "name": "CLOTRIMAZOL",
+      "n": 5
+     },
+     {
+      "code": "M01",
+      "name": "IBUPROFENO",
+      "n": 5
+     },
+     {
+      "code": "G03",
+      "name": "ESTRIOL",
+      "n": 4
+     },
+     {
+      "code": "J01",
+      "name": "DICLOXACILINA",
+      "n": 3
+     },
+     {
+      "code": "P02",
+      "name": "MEBENDAZOL",
+      "n": 2
+     },
+     {
+      "code": "A03",
+      "name": "BUTILESCOPOLAMINA Y ANALGESICOS",
+      "n": 2
+     },
+     {
+      "code": "G02",
+      "name": "ISOFLAVONAS",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2031,
+       "n": 3
+      },
+      {
+       "ano": 3000,
+       "n": 55
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 6,
+     "share": 10,
+     "mercadosRelevantes": 6
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 53
+     },
+     {
+      "modalidad": "FABRICAR Y EXPORTAR",
+      "n": 7
+     }
+    ]
+   },
+   {
+    "rank": 31,
+    "key": "GALENICUM HEALTH COLOMBIA",
+    "nombre": "GALENICUM HEALTH COLOMBIA S.A.S.",
+    "registros": 58,
+    "cums": 1477,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 15
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 14
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 9
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 7
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 6
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 2
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "C09",
+      "name": "IRBESARTAN Y DIURETICOS",
+      "n": 8
+     },
+     {
+      "code": "L01",
+      "name": "NILOTINIB",
+      "n": 8
+     },
+     {
+      "code": "B01",
+      "name": "RIVAROXABAN",
+      "n": 6
+     },
+     {
+      "code": "N05",
+      "name": "OLANZAPINA",
+      "n": 6
+     },
+     {
+      "code": "A10",
+      "name": "METFORMINA",
+      "n": 5
+     },
+     {
+      "code": "N06",
+      "name": "CITICOLINA",
+      "n": 5
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 5
+     },
+     {
+      "code": "N03",
+      "name": "PREGABALINA",
+      "n": 4
+     },
+     {
+      "code": "G04",
+      "name": "TAMSULOSINA Y DUTASTERIDA",
+      "n": 4
+     },
+     {
+      "code": "M01",
+      "name": "DEXKETOPROFENO",
+      "n": 2
+     },
+     {
+      "code": "A04",
+      "name": "ONDANSETRON",
+      "n": 2
+     },
+     {
+      "code": "L02",
+      "name": "EXEMESTANO",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 11
+      },
+      {
+       "ano": 2031,
+       "n": 10
+      },
+      {
+       "ano": 3000,
+       "n": 1
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 36,
+     "share": 62.1,
+     "mercadosRelevantes": 24
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 58
+     }
+    ]
+   },
+   {
+    "rank": 32,
+    "key": "FARMA DE COLOMBIA",
+    "nombre": "FARMA DE COLOMBIA S.A.S.",
+    "registros": 56,
+    "cums": 1036,
+    "atc1": [
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 29
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 8
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 4
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 3
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 3
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 2
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 1
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "A11",
+      "name": "COLECALCIFEROL",
+      "n": 8
+     },
+     {
+      "code": "C09",
+      "name": "LOSARTAN Y AMLODIPINO",
+      "n": 6
+     },
+     {
+      "code": "A02",
+      "name": "COMBINACIONES DE SALES Y ANTIFLATULENTOS",
+      "n": 5
+     },
+     {
+      "code": "A06",
+      "name": "SENNA GLICOSIDOS",
+      "n": 4
+     },
+     {
+      "code": "A03",
+      "name": "TRIMEBUTINA",
+      "n": 4
+     },
+     {
+      "code": "B03",
+      "name": "HIERRO-MULTIVITAMINAS Y ACIDO FOLICO",
+      "n": 4
+     },
+     {
+      "code": "J01",
+      "name": "CEFALEXINA",
+      "n": 3
+     },
+     {
+      "code": "A12",
+      "name": "CALCIO (DIFERENTES SALES EN COMBINACION)",
+      "n": 3
+     },
+     {
+      "code": "G04",
+      "name": "TADALAFIL",
+      "n": 2
+     },
+     {
+      "code": "C03",
+      "name": "CLORTALIDONA",
+      "n": 2
+     },
+     {
+      "code": "A04",
+      "name": "ONDANSETRON",
+      "n": 2
+     },
+     {
+      "code": "P01",
+      "name": "NITAZOXANIDA",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 3000,
+       "n": 5
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 3,
+     "share": 5.4,
+     "mercadosRelevantes": 2
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 47
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 7
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 1
+     },
+     {
+      "modalidad": "IMPORTAR. ENVASAR Y VENDER",
+      "n": 1
+     }
+    ]
+   },
+   {
+    "rank": 33,
+    "key": "LABORATORIOS INCOBRA",
+    "nombre": "LABORATORIOS INCOBRA S.A.",
+    "registros": 56,
+    "cums": 372,
+    "atc1": [
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 15
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 9
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 7
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 7
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 4
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 3
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 1
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "S01",
+      "name": "ANTIBIOTICOS EN COMBINACION CON OTROS F RMACOS",
+      "n": 15
+     },
+     {
+      "code": "N06",
+      "name": "PIRACETAM",
+      "n": 6
+     },
+     {
+      "code": "R05",
+      "name": "OPIO DERIVADOS Y EXPECTORANTES",
+      "n": 4
+     },
+     {
+      "code": "D07",
+      "name": "BETAMETASONA Y ANTIBIOTICOS",
+      "n": 4
+     },
+     {
+      "code": "H02",
+      "name": "DEFLAZACORT",
+      "n": 4
+     },
+     {
+      "code": "R01",
+      "name": "OXIMETAZOLINA",
+      "n": 3
+     },
+     {
+      "code": "A05",
+      "name": "SILIMARINA",
+      "n": 3
+     },
+     {
+      "code": "A02",
+      "name": "MAGNESIO HIDROXIDO",
+      "n": 2
+     },
+     {
+      "code": "M01",
+      "name": "NAPROXENO",
+      "n": 2
+     },
+     {
+      "code": "A03",
+      "name": "SILICONAS",
+      "n": 2
+     },
+     {
+      "code": "N07",
+      "name": "METADOXINA",
+      "n": 2
+     },
+     {
+      "code": "M02",
+      "name": "IBUPROFENO",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 3
+      },
+      {
+       "ano": 2031,
+       "n": 1
+      },
+      {
+       "ano": 3000,
+       "n": 9
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 9,
+     "share": 16.1,
+     "mercadosRelevantes": 7
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 51
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 5
+     }
+    ]
+   },
+   {
+    "rank": 34,
+    "key": "CIPLA LTD",
+    "nombre": "CIPLA LTD.",
+    "registros": 54,
+    "cums": 281,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 18
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 15
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 8
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 6
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 2
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 2
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 2
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "R03",
+      "name": "CICLESONIDA",
+      "n": 18
+     },
+     {
+      "code": "L01",
+      "name": "TEMOZOLOMIDA",
+      "n": 7
+     },
+     {
+      "code": "A10",
+      "name": "SITAGLIPTINA",
+      "n": 6
+     },
+     {
+      "code": "J05",
+      "name": "ATAZANAVIR + COMBINACION",
+      "n": 5
+     },
+     {
+      "code": "L04",
+      "name": "LENALIDOMIDA",
+      "n": 5
+     },
+     {
+      "code": "L02",
+      "name": "ABIRATERONA",
+      "n": 3
+     },
+     {
+      "code": "J02",
+      "name": "CASPOFUNGIN",
+      "n": 2
+     },
+     {
+      "code": "C02",
+      "name": "AMBRISENTAN",
+      "n": 2
+     },
+     {
+      "code": "G04",
+      "name": "DUTASTERIDA",
+      "n": 2
+     },
+     {
+      "code": "J01",
+      "name": "LINEZOLID",
+      "n": 1
+     },
+     {
+      "code": "B01",
+      "name": "RIVAROXABAN",
+      "n": 1
+     },
+     {
+      "code": "P02",
+      "name": "ALBENDAZOL",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 11
+      },
+      {
+       "ano": 3000,
+       "n": 10
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 46,
+     "share": 85.2,
+     "mercadosRelevantes": 35
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 54
+     }
+    ]
+   },
+   {
+    "rank": 35,
+    "key": "GLAXOSMITHKLINE COLOMBIA",
+    "nombre": "GLAXOSMITHKLINE COLOMBIA S.A.",
+    "registros": 52,
+    "cums": 760,
+    "atc1": [
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 17
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 12
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 12
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 4
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 4
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 2
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "R03",
+      "name": "SALMETEROL Y FLUTICASONA",
+      "n": 16
+     },
+     {
+      "code": "J05",
+      "name": "DOLUTEGRAVIR",
+      "n": 7
+     },
+     {
+      "code": "N03",
+      "name": "LAMOTRIGINA",
+      "n": 5
+     },
+     {
+      "code": "J01",
+      "name": "AMOXICILINA Y BETA-LACTAMASA INHIBIDOR",
+      "n": 5
+     },
+     {
+      "code": "D07",
+      "name": "CLOBETASOL",
+      "n": 4
+     },
+     {
+      "code": "N06",
+      "name": "PAROXETINA",
+      "n": 3
+     },
+     {
+      "code": "L01",
+      "name": "DOSTARLIMAB",
+      "n": 2
+     },
+     {
+      "code": "G04",
+      "name": "TAMSULOSINA Y DUTASTERIDA",
+      "n": 2
+     },
+     {
+      "code": "N02",
+      "name": "SUMATRIPTAN",
+      "n": 2
+     },
+     {
+      "code": "L04",
+      "name": "BELIMUMAB",
+      "n": 2
+     },
+     {
+      "code": "N07",
+      "name": "BUPROPION",
+      "n": 2
+     },
+     {
+      "code": "C02",
+      "name": "AMBRISENTAN",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2031,
+       "n": 2
+      },
+      {
+       "ano": 3000,
+       "n": 14
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 31,
+     "share": 59.6,
+     "mercadosRelevantes": 23
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 52
+     }
+    ]
+   },
+   {
+    "rank": 36,
+    "key": "LABQUIFAR",
+    "nombre": "LABQUIFAR LTDA.",
+    "registros": 52,
+    "cums": 383,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 10
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 10
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 8
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 7
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 6
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 4
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 3
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 2
+     },
+     {
+      "code": "S",
+      "name": "Órganos de los sentidos",
+      "n": 1
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "N02",
+      "name": "TRAMADOL",
+      "n": 10
+     },
+     {
+      "code": "J01",
+      "name": "DOXICICLINA",
+      "n": 7
+     },
+     {
+      "code": "M01",
+      "name": "ACECLOFENAC",
+      "n": 5
+     },
+     {
+      "code": "D07",
+      "name": "BETAMETASONA",
+      "n": 3
+     },
+     {
+      "code": "R05",
+      "name": "AMBROXOL",
+      "n": 2
+     },
+     {
+      "code": "A03",
+      "name": "BUTILESCOPOLAMINA",
+      "n": 2
+     },
+     {
+      "code": "D06",
+      "name": "SULFADIAZINA DE PLATA",
+      "n": 2
+     },
+     {
+      "code": "A07",
+      "name": "SULFASALAZINA",
+      "n": 2
+     },
+     {
+      "code": "A11",
+      "name": "ACIDO ASCORBICO (VIT C)",
+      "n": 2
+     },
+     {
+      "code": "P01",
+      "name": "METRONIDAZOL",
+      "n": 1
+     },
+     {
+      "code": "A01",
+      "name": "METRONIDAZOL",
+      "n": 1
+     },
+     {
+      "code": "S02",
+      "name": "LIDOCAINA",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 3000,
+       "n": 5
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 0,
+     "share": 0,
+     "mercadosRelevantes": 0
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 52
+     }
+    ]
+   },
+   {
+    "rank": 37,
+    "key": "ALTADIS FARMACEUTICA",
+    "nombre": "ALTADIS FARMACEUTICA S.A.S.",
+    "registros": 51,
+    "cums": 635,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 26
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 8
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 6
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 5
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 4
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 1
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "N06",
+      "name": "ESCITALOPRAM",
+      "n": 12
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA Y EZETIMIBA",
+      "n": 7
+     },
+     {
+      "code": "N05",
+      "name": "ARIPIPRAZOL",
+      "n": 6
+     },
+     {
+      "code": "B01",
+      "name": "INHIBIDORES DIRECTOS DEL FACTOR XA",
+      "n": 5
+     },
+     {
+      "code": "N03",
+      "name": "PREGABALINA",
+      "n": 4
+     },
+     {
+      "code": "L04",
+      "name": "LEFLUNOMIDE",
+      "n": 4
+     },
+     {
+      "code": "M01",
+      "name": "ETORICOXIB",
+      "n": 3
+     },
+     {
+      "code": "N02",
+      "name": "PARACETAMOL. COMBINACIONES CON PSICOLECTICOS",
+      "n": 3
+     },
+     {
+      "code": "L01",
+      "name": "SUNITINIB",
+      "n": 2
+     },
+     {
+      "code": "J01",
+      "name": "LEVOFLOXACINA",
+      "n": 1
+     },
+     {
+      "code": "M05",
+      "name": "ACIDO IBANDRONICO Y VITAMINA D3(COLECALCIFEROL)",
+      "n": 1
+     },
+     {
+      "code": "N04",
+      "name": "RASAGILINA",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 1,
+     "en36m": 1,
+     "porAno": [
+      {
+       "ano": 2026,
+       "n": 1
+      },
+      {
+       "ano": 2029,
+       "n": 3
+      },
+      {
+       "ano": 2030,
+       "n": 11
+      },
+      {
+       "ano": 2031,
+       "n": 12
+      },
+      {
+       "ano": 3000,
+       "n": 5
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 21,
+     "share": 41.2,
+     "mercadosRelevantes": 15
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 40
+     },
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 11
+     }
+    ]
+   },
+   {
+    "rank": 38,
+    "key": "LABORATORIOS DELTA",
+    "nombre": "LABORATORIOS DELTA S.A.S.",
+    "registros": 51,
+    "cums": 1670,
+    "atc1": [
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 23
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 9
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 6
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 5
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 2
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 2
+     },
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 1
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 1
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 1
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "J01",
+      "name": "POLIMIXINA B",
+      "n": 20
+     },
+     {
+      "code": "B01",
+      "name": "ENOXAPARINA",
+      "n": 8
+     },
+     {
+      "code": "A10",
+      "name": "SITAGLIPTINA",
+      "n": 3
+     },
+     {
+      "code": "A02",
+      "name": "OMEPRAZOL",
+      "n": 2
+     },
+     {
+      "code": "J07",
+      "name": "HEPATITIS B ANTIGENO PURIFICADO",
+      "n": 2
+     },
+     {
+      "code": "C02",
+      "name": "AMBRISENTAN",
+      "n": 2
+     },
+     {
+      "code": "N05",
+      "name": "DEXMEDETOMIDINA",
+      "n": 2
+     },
+     {
+      "code": "L02",
+      "name": "FLUVESTRANT",
+      "n": 1
+     },
+     {
+      "code": "N07",
+      "name": "BETAHISTINA",
+      "n": 1
+     },
+     {
+      "code": "N03",
+      "name": "LEVETIRACETAM",
+      "n": 1
+     },
+     {
+      "code": "J02",
+      "name": "CASPOFUNGIN",
+      "n": 1
+     },
+     {
+      "code": "A04",
+      "name": "APREPITANT",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 2
+      },
+      {
+       "ano": 2030,
+       "n": 14
+      },
+      {
+       "ano": 2031,
+       "n": 8
+      },
+      {
+       "ano": 3000,
+       "n": 8
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 18,
+     "share": 35.3,
+     "mercadosRelevantes": 12
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 51
+     }
+    ]
+   },
+   {
+    "rank": 39,
+    "key": "SANDOZ",
+    "nombre": "SANDOZ GMBH",
+    "registros": 50,
+    "cums": 784,
+    "atc1": [
+     {
+      "code": "L",
+      "name": "Antineoplásicos e inmunomoduladores",
+      "n": 11
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 9
+     },
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 7
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 7
+     },
+     {
+      "code": "G",
+      "name": "Sistema genitourinario y hormonas sexuales",
+      "n": 4
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 3
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 3
+     },
+     {
+      "code": "R",
+      "name": "Sistema respiratorio",
+      "n": 2
+     },
+     {
+      "code": "H",
+      "name": "Preparados hormonales sistémicos",
+      "n": 2
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     },
+     {
+      "code": "V",
+      "name": "Varios",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "A10",
+      "name": "LINAGLIPTINA",
+      "n": 7
+     },
+     {
+      "code": "L04",
+      "name": "TACROLIMUS",
+      "n": 5
+     },
+     {
+      "code": "J01",
+      "name": "LEVOFLOXACINA",
+      "n": 5
+     },
+     {
+      "code": "N04",
+      "name": "LEVODOPA E INHIBIDOR DE DECARBOXILASA",
+      "n": 4
+     },
+     {
+      "code": "G04",
+      "name": "TADALAFIL",
+      "n": 4
+     },
+     {
+      "code": "C10",
+      "name": "ATORVASTATIN",
+      "n": 3
+     },
+     {
+      "code": "L01",
+      "name": "SUNITINIB",
+      "n": 3
+     },
+     {
+      "code": "N06",
+      "name": "ESCITALOPRAM",
+      "n": 3
+     },
+     {
+      "code": "R03",
+      "name": "MONTELUKAST",
+      "n": 2
+     },
+     {
+      "code": "A02",
+      "name": "PANTOPRAZOL",
+      "n": 2
+     },
+     {
+      "code": "H01",
+      "name": "SOMATROPINA",
+      "n": 2
+     },
+     {
+      "code": "J02",
+      "name": "CASPOFUNGIN",
+      "n": 2
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2029,
+       "n": 1
+      },
+      {
+       "ano": 2030,
+       "n": 10
+      },
+      {
+       "ano": 2031,
+       "n": 7
+      },
+      {
+       "ano": 3000,
+       "n": 8
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 26,
+     "share": 52,
+     "mercadosRelevantes": 19
+    },
+    "modalidades": [
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 50
+     }
+    ]
+   },
+   {
+    "rank": 40,
+    "key": "HUMAX PHARMACEUTICAL",
+    "nombre": "HUMAX PHARMACEUTICAL S.A.",
+    "registros": 49,
+    "cums": 955,
+    "atc1": [
+     {
+      "code": "N",
+      "name": "Sistema nervioso",
+      "n": 28
+     },
+     {
+      "code": "A",
+      "name": "Tracto alimentario y metabolismo",
+      "n": 6
+     },
+     {
+      "code": "C",
+      "name": "Sistema cardiovascular",
+      "n": 4
+     },
+     {
+      "code": "M",
+      "name": "Sistema musculoesquelético",
+      "n": 4
+     },
+     {
+      "code": "J",
+      "name": "Antiinfecciosos de uso sistémico",
+      "n": 4
+     },
+     {
+      "code": "B",
+      "name": "Sangre y órganos hematopoyéticos",
+      "n": 1
+     },
+     {
+      "code": "P",
+      "name": "Antiparasitarios",
+      "n": 1
+     },
+     {
+      "code": "D",
+      "name": "Dermatológicos",
+      "n": 1
+     }
+    ],
+    "atc2": [
+     {
+      "code": "N05",
+      "name": "ZOPICLONA",
+      "n": 14
+     },
+     {
+      "code": "N06",
+      "name": "RIVASTIGMINA",
+      "n": 6
+     },
+     {
+      "code": "J05",
+      "name": "LAMIVUDINA",
+      "n": 4
+     },
+     {
+      "code": "N04",
+      "name": "LEVODOPA INHIBIDOR DE DECARBOXILASA E INHIBIDOR COMT",
+      "n": 4
+     },
+     {
+      "code": "N03",
+      "name": "CLONAZEPAM",
+      "n": 3
+     },
+     {
+      "code": "C10",
+      "name": "ROSUVASTATINA",
+      "n": 2
+     },
+     {
+      "code": "A12",
+      "name": "ZINC SULFATO",
+      "n": 2
+     },
+     {
+      "code": "M01",
+      "name": "NAPROXENO. COMBINACIONES",
+      "n": 2
+     },
+     {
+      "code": "A06",
+      "name": "BISACODIL",
+      "n": 2
+     },
+     {
+      "code": "M03",
+      "name": "TOXINA BOTULINICA",
+      "n": 2
+     },
+     {
+      "code": "B02",
+      "name": "TRANEXAMICO ACIDO",
+      "n": 1
+     },
+     {
+      "code": "C03",
+      "name": "ESPIRONOLACTONA",
+      "n": 1
+     }
+    ],
+    "vencimientos": {
+     "en12m": 0,
+     "en36m": 0,
+     "porAno": [
+      {
+       "ano": 2030,
+       "n": 1
+      },
+      {
+       "ano": 2031,
+       "n": 3
+      },
+      {
+       "ano": 3000,
+       "n": 16
+      }
+     ]
+    },
+    "regulados": {
+     "expedientes": 18,
+     "share": 36.7,
+     "mercadosRelevantes": 9
+    },
+    "modalidades": [
+     {
+      "modalidad": "FABRICAR Y VENDER",
+      "n": 39
+     },
+     {
+      "modalidad": "IMPORTAR Y VENDER",
+      "n": 9
+     },
+     {
+      "modalidad": "IMPORTAR. SEMIELABORAR Y VENDER",
+      "n": 1
+     }
+    ]
+   }
+  ]
+ },
+ "regulados": {
+  "presentaciones": 38998,
+  "mercadosRelevantes": 703,
+  "expedientes": 7544,
+  "circularPrincipal": "Circular 22 de 2026",
+  "vigenciaDesde": "2026-08-19"
+ },
+ "trm": {
+  "valor": 3166.91,
+  "fecha": "2026-10-30",
+  "hace12m": 3885.29,
+  "fecha12m": "2025-10-30",
+  "variacion12m": -18.5
+ }
+}

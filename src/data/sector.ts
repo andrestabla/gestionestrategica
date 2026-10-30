@@ -9,6 +9,7 @@
 
 import suministros from "./sector/suministros-industriales.json";
 import farmaciasEc from "./sector/farmacias-ecuador.json";
+import farmaCo from "./sector/farmaceutico-colombia.json";
 import type { Catalog, Financials } from "@/data/catalogo";
 
 export type Quantiles = { n: number; p10: number | null; p25: number | null; p50: number | null; p75: number | null; p90: number | null };
@@ -37,7 +38,15 @@ export type SectorData = {
 export const SECTORS: Record<string, SectorData> = {
   "suministros-industriales": suministros as SectorData,   // Colombia · Supersociedades
   "farmacias-ecuador": farmaciasEc as SectorData,            // Ecuador · Ranking SCVS
+  "farmaceutico-colombia": farmaCo as SectorData,            // Colombia · Supersociedades (C2100 + G4645)
 };
+
+/** Sectores para elegir en la ficha de la empresa (Administración). */
+export const SECTOR_OPTIONS: { key: string; label: string; country: "CO" | "EC" }[] = [
+  { key: "suministros-industriales", label: "Suministros industriales · Colombia (G4659, G4663, G4669)", country: "CO" },
+  { key: "farmaceutico-colombia", label: "Industria farmacéutica · Colombia (C2100 fabricación, G4645 comercio mayorista)", country: "CO" },
+  { key: "farmacias-ecuador", label: "Retail farmacéutico · Ecuador (SCVS)", country: "EC" },
+];
 
 export const sectorOf = (key: string): SectorData | null => SECTORS[key] ?? null;
 
@@ -45,9 +54,21 @@ export const sectorOf = (key: string): SectorData | null => SECTORS[key] ?? null
     tiene JSON cargado (hoy solo existe uno). */
 export const DEFAULT_SECTOR_KEY = "suministros-industriales";
 
-/** Sector de referencia de una empresa, según `company.sectorKey` de su catálogo. */
-export const sectorFor = (cat: Catalog): SectorData =>
-  SECTORS[cat.company.sectorKey] ?? SECTORS[DEFAULT_SECTOR_KEY];
+/** Clave del sector de referencia de una empresa: la asignada en su ficha si existe y no es el valor por
+    defecto; si no, se infiere del CIIU o del texto del sector (farmacéutico → Colombia o Ecuador según el país);
+    en último término, el sector por defecto. Así una empresa recién creada sin ficha completa no lee datos de
+    otra industria. */
+export function sectorKeyDe(c: { sectorKey?: string; ciiu?: string; sector?: string; country?: string } | null | undefined): string {
+  if (!c) return DEFAULT_SECTOR_KEY;
+  if (c.sectorKey && SECTORS[c.sectorKey] && c.sectorKey !== DEFAULT_SECTOR_KEY) return c.sectorKey;
+  const ciiu = (c.ciiu ?? "").toUpperCase().replace(/\s+/g, "");
+  const farma = /^C21|^G4645|^G4773|^2100|^4645|^4773/.test(ciiu) || /farmac|medicament|laborator|drogu/i.test(c.sector ?? "");
+  if (farma) return c.country === "EC" ? "farmacias-ecuador" : "farmaceutico-colombia";
+  return SECTORS[c.sectorKey ?? ""] ? (c.sectorKey as string) : DEFAULT_SECTOR_KEY;
+}
+
+/** Sector de referencia de una empresa, según su catálogo (ver `sectorKeyDe`). */
+export const sectorFor = (cat: Catalog): SectorData => SECTORS[sectorKeyDe(cat.company)] ?? SECTORS[DEFAULT_SECTOR_KEY];
 
 /** Posición de un valor dentro de la distribución (0..1), interpolando entre los
     percentiles publicados. Para métricas donde «menos es mejor» (endeudamiento)

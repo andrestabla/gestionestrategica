@@ -3,10 +3,13 @@
 // asistente de OKR: hechos con cifra, fecha y fuente verificable. Cada hecho
 // lleva temas; cada palanca de la empresa se asocia a temas, y el asistente
 // recibe solo los hechos pertinentes, numerados, para citarlos por número.
-// Hoy cubre el retail farmacéutico en Ecuador (Cresio); otras empresas quedan
-// sin base hasta que se cargue la suya. Revisión de fuentes: 18 de octubre de 2026.
+// Cubre el retail farmacéutico en Ecuador (Cresio) y la industria farmacéutica en
+// Colombia (Siegfried); otras empresas quedan sin base hasta que se cargue la suya.
+// Revisión de fuentes: 18 y 30 de octubre de 2026. El módulo de Inteligencia (M7)
+// muestra también estos hechos, agrupados por tema y con su fuente.
 // ─────────────────────────────────────────────────────────────────────────────
 import type { CompanyInfo, Lever } from "@/data/catalogo";
+import { sectorKeyDe } from "@/data/sector";
 
 export type TipoFuente = "oficial" | "empresa" | "prensa" | "consultora" | "academico";
 export type Fuente = { id: string; titulo: string; editor: string; fecha: string; url: string; tipo: TipoFuente };
@@ -90,15 +93,65 @@ const H: Hecho[] = [
   { id: "enps-perceptyx", temas: ["talento"], hecho: "El benchmark global de eNPS está en torno a 14-15 puntos y el comercio minorista suele reportar valores negativos (Perceptyx).", fuente: "perceptyx-enps" },
 ];
 
+
+// ── Industria farmacéutica · Colombia (fabricantes y comercializadores de medicamentos) ──
+const F_CO: Fuente[] = [
+  { id: "ssoc-farma-2025", titulo: "Estados financieros de fin de ejercicio 2025 de las sociedades con CIIU C2100 y G4645 (datos abiertos de la Superintendencia de Sociedades), agregados por la plataforma", editor: "Superintendencia de Sociedades · datos.gov.co", fecha: "corte 31 de diciembre de 2025", url: "https://www.datos.gov.co/Econom-a-y-Finanzas/Car-tula-Estados-Financieros-de-Fin-de-Ejercicio-N/6hqw-m3dm", tipo: "oficial" },
+  { id: "invima-cum-2026", titulo: "Código Único de Medicamentos vigentes (registros sanitarios y presentaciones por titular), agregado por la plataforma", editor: "INVIMA · datos.gov.co", fecha: "octubre de 2026", url: "https://www.datos.gov.co/Salud-y-Protecci-n-Social/C-DIGO-NICO-DE-MEDICAMENTOS-VIGENTES/i7cb-raxc", tipo: "oficial" },
+  { id: "cnpmdm-circular-22", titulo: "Precios de 528 medicamentos regulados bajan un 7,4 % tras nueva circular de la CNPMDM (Circular 22 de 2026)", editor: "Sectorial", fecha: "julio de 2026", url: "https://sectorial.co/informativa-farmaceutico/precios-528-medicamentos-regulados-bajan-tras-nueva-circular/", tipo: "prensa" },
+  { id: "minsalud-regulacion-precios", titulo: "Regulación de precios de medicamentos (Circular 22 de 2026: precios máximos vigentes desde el 19 de agosto de 2026)", editor: "Ministerio de Salud y Protección Social", fecha: "agosto de 2026", url: "https://www.minsalud.gov.co/salud/medicamentos-y-tecnologias/Paginas/medicamentos-regulacion-precios.aspx", tipo: "oficial" },
+  { id: "actualisalud-circular-22", titulo: "Circular 022 de 2026: nuevos precios máximos de venta para medicamentos en Colombia", editor: "Actualisalud", fecha: "2026", url: "https://actualisalud.com/circular-022-de-2026-nuevos-precios-maximos-de-venta-para-medicamentos-en-colombia/", tipo: "prensa" },
+  { id: "infobae-consejo-estado-2026", titulo: "Consejo de Estado ordenó formular una nueva política farmacéutica nacional para regular los precios de los medicamentos y garantizar su acceso", editor: "Infobae", fecha: "16 de octubre de 2026", url: "https://www.infobae.com/colombia/2026/10/16/consejo-de-estado-ordeno-formular-una-nueva-politica-farmaceutica-nacional-para-regular-los-precios-de-los-medicamentos-y-garantizar-su-acceso/", tipo: "prensa" },
+  { id: "dane-emmet-feb-2026", titulo: "Encuesta Mensual Manufacturera con Enfoque Territorial (EMMET) · boletín técnico de febrero de 2026", editor: "DANE", fecha: "16 de abril de 2026", url: "https://www.dane.gov.co/files/operaciones/EMMET/bol-EMMET-feb2026.pdf", tipo: "oficial" },
+  { id: "consultorsalud-ventas-2026", titulo: "Ventas farmacéuticas en Colombia crecieron 3,4 % en mayo (con datos de la Encuesta Mensual de Comercio del DANE)", editor: "Consultorsalud", fecha: "julio de 2026", url: "https://consultorsalud.com/ventas-productos-farmaceuticos-colombia-2026/", tipo: "prensa" },
+  { id: "semana-dependencia-2026", titulo: "El negocio farmacéutico en Colombia crece mientras aumenta la dependencia de medicamentos importados", editor: "Semana", fecha: "2026", url: "https://www.semana.com/economia/macroeconomia/articulo/el-negocio-farmaceutico-en-colombia-crece-mientras-aumenta-la-dependencia-de-medicamentos-importados/202626/", tipo: "prensa" },
+  { id: "procolombia-farma-2026", titulo: "Mercado farmacéutico colombiano abre espacio para nueva inversión extranjera en manufactura y biotecnología", editor: "ProColombia", fecha: "2026", url: "https://procolombia.co/sala-de-prensa/noticias/mercado-farmaceutico-colombiano-abre-espacio-para-nueva-inversion-extranjera-en-manufactura-y-biotecnologia", tipo: "oficial" },
+  { id: "ennuestrocampo-fitch-2026", titulo: "Mercado farmacéutico colombiano proyecta ventas de US$ 6.000 millones hacia 2026 (con estimaciones de Fitch Solutions · BMI)", editor: "En Nuestro Campo", fecha: "2025", url: "https://ennuestrocampo.co/mercado-farmaceutico-colombiano-proyecta-ventas-de-us6-000-millones-hacia-2026/", tipo: "prensa" },
+  { id: "acis-farmacias-barrio-2025", titulo: "¿Qué compran los colombianos en las farmacias de barrio? Las categorías más vendidas (con datos de IQVIA a febrero de 2025)", editor: "ACIS", fecha: "2025", url: "https://www.acis.org.co/blog/noticias-2/que-compran-los-colombianos-en-las-farmacias-de-barrio-estas-son-las-categorias-de-medicamentos-mas-vendidas-en-pais-537", tipo: "prensa" },
+  { id: "solunion-farma-2025", titulo: "Informe sectorial · sector farmacéutico (enero de 2025)", editor: "Solunion", fecha: "enero de 2025", url: "https://www.solunion.co/wp-content/uploads/2025/01/INFORME_SECTORIAL_SECTOR_FARMACEUTICO_ENERO_2025.pdf", tipo: "consultora" },
+  { id: "andi-observatorio-2024", titulo: "Observatorio farmacéutico · indicadores del sector (socialización, sin productos veterinarios)", editor: "ANDI · Cámara de la Industria Farmacéutica", fecha: "2024", url: "https://www.andi.com.co/Uploads/Observatorio%20farmac%C3%A9utico%2020240712%20-%20sin%20productos%20veterinarios%20-%20socializaci%C3%B3n_638671789370168827.pdf", tipo: "consultora" },
+  { id: "drugpatentwatch-co", titulo: "Colombia: these 14 drugs face patent expirations and generic entry from 2026-2027", editor: "DrugPatentWatch", fecha: "2025", url: "https://www.drugpatentwatch.com/p/expiring-drug-patents-generic-entry/Colombia", tipo: "consultora" },
+  { id: "saludyfarmacos-dolutegravir-2026", titulo: "Colombia obtiene fallo favorable en el Tribunal Andino por la licencia obligatoria del dolutegravir", editor: "Salud y Fármacos", fecha: "agosto de 2026", url: "https://www.saludyfarmacos.org/boletin-farmacos/boletines/ago202607/28_co/", tipo: "academico" },
+  { id: "banrep-trm", titulo: "Tasa representativa del mercado (TRM) · serie diaria", editor: "Banco de la República · Superintendencia Financiera (datos.gov.co)", fecha: "30 de octubre de 2026", url: "https://www.datos.gov.co/Econom-a-y-Finanzas/Tasa-de-Cambio-Representativa-del-Mercado-TRM/32sa-8pi3", tipo: "oficial" },
+];
+
+const H_CO: Hecho[] = [
+  // ── tamaño y estructura del sector
+  { id: "co-sector-tamano", temas: ["mercado", "margen"], hecho: "583 sociedades con CIIU de fabricación (C2100) o comercio mayorista farmacéutico (G4645) reportaron a Supersociedades en 2025: ingresos por $58,7 billones, crecimiento mediano de 8,5 % y margen operacional mediano de 8,5 %.", fuente: "ssoc-farma-2025" },
+  { id: "co-fabricacion-vs-comercio", temas: ["mercado", "margen"], hecho: "Los 153 fabricantes (C2100) facturaron $13,6 billones con crecimiento mediano de 9,6 % y margen operacional mediano de 13,0 %; los 430 comercializadores mayoristas (G4645), $45,1 billones con 7,8 % y 7,6 %. Fabricar deja más margen; distribuir mueve más volumen.", fuente: "ssoc-farma-2025" },
+  { id: "co-bogota", temas: ["mercado", "expansion", "demanda"], hecho: "Bogotá concentra 64,5 % de los ingresos del sector (283 sociedades); siguen Antioquia 7,9 %, Valle del Cauca 6,6 %, Atlántico 6,1 % y Santander 4,2 %.", fuente: "ssoc-farma-2025" },
+  { id: "co-mercado-usd", temas: ["mercado", "macro"], hecho: "Fitch Solutions (BMI) proyecta ventas del mercado farmacéutico colombiano cercanas a US$ 6.000 millones en 2026, con una expansión promedio de alrededor de 8 % anual desde 2014.", fuente: "ennuestrocampo-fitch-2026" },
+  { id: "co-pib-plantas", temas: ["mercado", "macro"], hecho: "El sector farmacéutico representa cerca de 11,1 % del PIB industrial; operan en Colombia 97 plantas farmacéuticas nacionales y 581 extranjeras.", fuente: "semana-dependencia-2026" },
+  { id: "co-retail-dane", temas: ["mercado", "demanda"], hecho: "Las ventas minoristas de productos farmacéuticos crecieron 3,4 % real en mayo de 2026 frente a mayo de 2025 y 2,9 % en el acumulado enero-mayo (Encuesta Mensual de Comercio, DANE).", fuente: "consultorsalud-ventas-2026" },
+  { id: "co-rx-droguerias", temas: ["mercado", "cliente", "demanda"], hecho: "En las droguerías independientes, los medicamentos de prescripción representaban 38,3 % de las ventas a febrero de 2025 y crecían 6,7 % en el año móvil (IQVIA).", fuente: "acis-farmacias-barrio-2025" },
+  { id: "co-lideres-2023", temas: ["mercado"], hecho: "Al cierre de 2023, Bayer vendió $1,65 billones y Abbott $1,04 billones en Colombia; en el canal, Droguerías Cafam facturó $1,13 billones.", fuente: "solunion-farma-2025", nota: "cifras de 2023, útiles como orden de magnitud de los líderes" },
+  // ── producción y comercio exterior
+  { id: "co-emmet-2026", temas: ["mercado", "macro"], hecho: "La producción real de la fabricación de productos farmacéuticos (CIIU 2100) creció 7,9 % en el año corrido a febrero de 2026 y 3,1 % en los últimos doce meses (EMMET, DANE), con meses muy volátiles en 2025.", fuente: "dane-emmet-feb-2026" },
+  { id: "co-importaciones", temas: ["macro", "margen", "mercado"], hecho: "Entre 2015 y 2025 las importaciones farmacéuticas pasaron de US$ 2.332 millones a US$ 3.950 millones, mientras las exportaciones cayeron de US$ 509 millones a US$ 416 millones: la dependencia de producto importado crece.", fuente: "semana-dependencia-2026" },
+  { id: "co-exportaciones-2025", temas: ["expansion", "mercado"], hecho: "Las exportaciones del sector farmacéutico sumaron US$ 388 millones en 2025 y más de 85 % tuvo como destino América Latina (ProColombia).", fuente: "procolombia-farma-2026", nota: "ProColombia y Semana difieren en la cifra de exportaciones de 2025 (US$ 388 frente a US$ 416 millones) por el alcance de las partidas" },
+  { id: "co-empleo-andi", temas: ["talento", "macro"], hecho: "El empleo de la industria farmacéutica decrecía 8,6 % a agosto de 2024 y las exportaciones de medicamentos en valor caían 9,9 % en el mismo periodo (Observatorio farmacéutico de la ANDI).", fuente: "andi-observatorio-2024" },
+  // ── regulación y precios
+  { id: "co-circular-22", temas: ["regulacion", "margen"], hecho: "La Circular 22 de 2026 de la Comisión Nacional de Precios incorporó por primera vez 33 mercados relevantes y 4 submercados al control directo, modificó 22 mercados y 10 submercados, y actualizó los topes de otros 528 mercados relevantes con un ajuste por tasa de cambio de -7,4 %.", fuente: "cnpmdm-circular-22" },
+  { id: "co-circular-22-vigencia", temas: ["regulacion", "margen"], hecho: "Los nuevos precios máximos de venta rigen desde el 19 de agosto de 2026; la Comisión fijó un margen de ajuste de 9,6 % a partir de los márgenes observados en los países de referencia.", fuente: "minsalud-regulacion-precios" },
+  { id: "co-regulados-cum", temas: ["regulacion", "margen"], hecho: "Están bajo control directo de precios 38.998 presentaciones comerciales (CUM) de 7.544 registros sanitarios, agrupadas en 703 mercados relevantes; casi todas bajo la Circular 22 de 2026.", fuente: "cnpmdm-circular-22", nota: "conteo de la plataforma sobre el dataset de precios máximos de la CNPMDM" },
+  { id: "co-politica-farmaceutica", temas: ["regulacion"], hecho: "En octubre de 2026 el Consejo de Estado ordenó conformar una mesa liderada por el Ministerio de Salud, la Comisión Nacional de Precios y el INVIMA para formular una nueva política farmacéutica nacional, con base en el artículo 23 de la Ley 1751 de 2015.", fuente: "infobae-consejo-estado-2026" },
+  { id: "co-registros-invima", temas: ["regulacion", "mercado"], hecho: "El INVIMA mantiene 9.559 registros sanitarios de medicamentos vigentes (156.913 presentaciones) de 1.186 titulares; Tecnoquímicas, Genfar, Megalabs, Novamed y La Santé encabezan por número de registros. El sistema nervioso (14,3 %), el tracto alimentario y metabolismo (11,9 %) y los antiinfecciosos (11,9 %) son los grupos terapéuticos con más registros.", fuente: "invima-cum-2026" },
+  { id: "co-patentes-2026", temas: ["mercado", "margen", "regulacion"], hecho: "Entre 2026 y 2027 se estiman vencimientos de patente y entrada de genéricos en Colombia para moléculas como dapagliflozina, ticagrelor, exenatida, daclatasvir y ruxolitinib; la excepción Bolar permite tener el registro listo antes de la expiración.", fuente: "drugpatentwatch-co", nota: "fechas estimadas; pueden subsistir otras patentes sobre la misma molécula" },
+  { id: "co-dolutegravir", temas: ["regulacion"], hecho: "La patente del principio activo dolutegravir expiró el 28 de abril de 2026 y Colombia obtuvo fallo favorable del Tribunal Andino sobre su licencia obligatoria, aunque otras patentes siguen vigentes.", fuente: "saludyfarmacos-dolutegravir-2026" },
+  // ── macro
+  { id: "co-trm", temas: ["macro", "margen"], hecho: "La TRM cerró octubre de 2026 en $3.166,91 por dólar, 18,5 % por debajo de un año atrás ($3.885,29): abarata el principio activo y el producto terminado importados y es la razón del ajuste de -7,4 % en los precios regulados.", fuente: "banrep-trm" },
+];
+
 export const BASES: BaseConocimiento[] = [
   { id: "farmacias-ecuador", nombre: "Retail farmacéutico · Ecuador", sectorKeys: ["farmacias-ecuador"], paises: ["EC"], fuentes: F, hechos: H },
+  { id: "farmaceutico-colombia", nombre: "Industria farmacéutica · Colombia", sectorKeys: ["farmaceutico-colombia"], paises: ["CO"], fuentes: F_CO, hechos: H_CO },
 ];
 
 /** Base aplicable a la empresa: por sector de referencia o, si el sector menciona farmacias, por país. */
-export function baseDe(c: Pick<CompanyInfo, "sectorKey" | "sector" | "country"> | null | undefined): BaseConocimiento | null {
+export function baseDe(c: (Pick<CompanyInfo, "sectorKey" | "sector" | "country"> & { ciiu?: string }) | null | undefined): BaseConocimiento | null {
   if (!c) return null;
-  const farma = /farmac|drogu|retail de salud/i.test(c.sector ?? "");
-  return BASES.find((b) => b.sectorKeys.includes(c.sectorKey ?? "") || (farma && c.country && b.paises.includes(c.country))) ?? null;
+  const key = sectorKeyDe(c);
+  return BASES.find((b) => b.sectorKeys.includes(key)) ?? null;
 }
 
 /** Temas que fundamentan cada palanca; se infieren del nombre (vale para cualquier empresa). */
