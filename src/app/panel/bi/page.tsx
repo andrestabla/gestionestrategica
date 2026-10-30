@@ -88,7 +88,7 @@ export default function BiPage() {
   return (
     <>
       <PageHeader kicker="M7 · Inteligencia" title={`Inteligencia del sector · ${s.label}`}
-        desc="El contexto que el diagnóstico no mide, con datos abiertos sistematizados: cómo se mueve el sector y quién lo concentra, dónde está la empresa frente a sus pares, qué portafolio y qué exposición regulatoria tiene cada competidor, dónde está la demanda y qué señales del entorno conviene vigilar. Cada cifra declara su fuente y su corte." />
+        desc="Los datos abiertos sistematizados complementan el diagnóstico con información sobre el contexto: la dinámica y concentración del sector, la posición de la empresa frente a sus pares, el portafolio y la exposición regulatoria de cada competidor, la distribución de la demanda y las señales del entorno que requieren seguimiento. Cada cifra indica su fuente y fecha de corte." />
 
       {/* ── el sector en cifras ── */}
       <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
