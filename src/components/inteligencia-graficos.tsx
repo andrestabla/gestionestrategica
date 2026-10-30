@@ -32,8 +32,8 @@ export function MapaSector({ s, demand, home, domicilio, country, unitName, peer
   const top = sel ? peers.filter((p) => p.dept === sel).slice(0, 4) : [];
   const marcas = [...new Set([...home, ...(domicilio ? [domicilio] : [])])];
   return (
-    <div className="grid gap-4 px-5 pb-5 md:grid-cols-[300px_1fr]">
-      <div>
+    <div className="grid gap-4 px-5 pb-5 sm:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
+      <div className="min-w-0">
         <div className="mb-2 flex flex-wrap gap-1">
           {([["sector", "Ingresos del sector"], ["poblacion", "Población"], ["competidores", "Sociedades"]] as [Lente, string][]).map(([id, l]) => (
             <button key={id} type="button" onClick={() => setLente(id)} className={`chip ${lente === id ? "chip-cyan" : ""}`}>{l}</button>
@@ -42,32 +42,32 @@ export function MapaSector({ s, demand, home, domicilio, country, unitName, peer
         <ColombiaImpactMap values={values} selected={sel} onSelect={setSel} home={marcas} unit={unit} country={country} />
         <p className="mt-1 text-[11.5px] leading-snug text-faint">Intensidad: {lente === "sector" ? "participación en los ingresos del sector" : lente === "poblacion" ? "población proyectada" : "sociedades del sector domiciliadas"} por {unitName}. Borde oscuro: {domicilio ? "domicilio de la empresa y sedes declaradas" : "sedes declaradas"}. Clic para leer el territorio.</p>
       </div>
-      <div>
+      <div className="min-w-0">
         {!sel && <p className="rounded-lg border border-dashed border-line-strong px-3 py-3 text-[12.5px] text-muted"><MapPin size={12} className="mr-1 inline text-faint" />Elige un {unitName} en el mapa para ver su población, las sociedades del sector domiciliadas allí y las mayores.</p>}
         {sel && (
-          <div className="rounded-xl bg-surface-2/60 px-4 py-3">
+          <div className="min-w-0 overflow-hidden rounded-xl bg-surface-2/60 px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[15px] font-extrabold text-ink">{sel}</span>
               {domicilio === sel && <span className="chip chip-gold !py-0 text-[11px]">domicilio de la empresa</span>}
               {d && d.presence !== "ninguna" && <span className="chip chip-cyan !py-0 text-[11px]">{PRESENCE_LABEL[d.presence]}</span>}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-              <div><div className="label">Población</div><div className="num text-[16px] font-extrabold leading-tight text-ink">{d ? fmtNum(d.population, 0) : "—"}</div><div className="text-[11.5px] text-faint">{d ? `${fmtNum(d.share, 1)} % del país` : ""}</div></div>
+              <div><div className="label">Población</div><div className="num truncate text-[16px] font-extrabold leading-tight text-ink">{d ? fmtNum(d.population, 0) : "—"}</div><div className="text-[11.5px] text-faint">{d ? `${fmtNum(d.share, 1)} % del país` : ""}</div></div>
               <div><div className="label">Sociedades</div><div className="num text-[17px] font-extrabold text-ink">{sd?.n ?? 0}</div><div className="text-[11.5px] text-faint">del sector domiciliadas</div></div>
               <div><div className="label">Ingresos</div><div className="num text-[17px] font-extrabold text-ink">{sd ? `${fmtNum(sd.share, 1)} %` : "—"}</div><div className="text-[11.5px] text-faint">{sd ? `${fmtNum(sd.revenue / 1e6, 2)} billones` : "del sector"}</div></div>
               <div><div className="label">Por habitante</div><div className="num text-[17px] font-extrabold text-ink">{d?.perCapita !== null && d?.perCapita !== undefined ? fmtNum(d.perCapita, 0) : "—"}</div><div className="text-[11.5px] text-faint">pesos facturados allí</div></div>
             </div>
             {top.length > 0 ? (
               <ul className="mt-3 space-y-1">
-                {top.map((p) => <li key={p.nit} className="flex items-center gap-2 text-[12px]"><Users size={10} className="shrink-0 text-faint" /><span className="truncate text-ink-soft" title={p.name}>{shortName(p.name, 3)}</span><span className="num ml-auto shrink-0 font-bold text-ink">{fmtNum(p.revenue, 0)}</span><span className="num w-12 shrink-0 text-right" style={{ color: (p.growth ?? 0) >= 0 ? "var(--ok)" : "var(--bad)" }}>{p.growth !== null ? `${fmtNum(p.growth, 0)} %` : "—"}</span></li>)}
+                {top.map((p) => <li key={p.nit} className="flex min-w-0 items-center gap-2 text-[12px]"><Users size={10} className="shrink-0 text-faint" /><span className="min-w-0 truncate text-ink-soft" title={p.name}>{shortName(p.name, 3)}</span><span className="num ml-auto shrink-0 font-bold text-ink">{fmtNum(p.revenue, 0)}</span><span className="num w-12 shrink-0 text-right" style={{ color: (p.growth ?? 0) >= 0 ? "var(--ok)" : "var(--bad)" }}>{p.growth !== null ? `${fmtNum(p.growth, 0)} %` : "—"}</span></li>)}
               </ul>
             ) : <p className="mt-3 text-[12px] italic text-faint">Ninguna de las sesenta mayores del sector tiene domicilio aquí: la demanda se atiende desde otros territorios.</p>}
           </div>
         )}
-        <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+        <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] lg:grid-cols-3">
           {demand.slice(0, 6).map((x) => (
-            <button key={x.name} type="button" onClick={() => setSel(x.name)} className={`rounded-lg px-3 py-2 text-left transition-colors ${sel === x.name ? "bg-surface-2" : "hover:bg-surface-2/60"}`}>
-              <div className="font-bold text-ink">{x.name}</div>
+            <button key={x.name} type="button" onClick={() => setSel(x.name)} className={`min-w-0 rounded-lg px-3 py-2 text-left transition-colors ${sel === x.name ? "bg-surface-2" : "hover:bg-surface-2/60"}`}>
+              <div className="truncate font-bold text-ink">{x.name}</div>
               <div className="num text-[11.5px] text-faint">{fmtNum(x.population / 1e6, 2)} M hab. · {x.companies} soc.</div>
             </button>
           ))}

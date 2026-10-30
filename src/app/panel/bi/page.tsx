@@ -112,7 +112,7 @@ export default function BiPage() {
       )}
 
       {/* ── mapa y dispersión ── */}
-      <div className="mb-5 grid gap-5 lg:grid-cols-2">
+      <div className="mb-5 grid gap-5 xl:grid-cols-2">
         <Card className="rise rise-1">
           <CardHeader title={`${isEC ? "Ecuador" : "Colombia"}: sector, población y competencia`} sub={`tres lentes sobre el mismo mapa · ${domicilio ? `domicilio de la empresa en ${domicilio}` : "sin domicilio identificado"}${home.length ? ` · sedes declaradas: ${home.join(", ")}` : " · la empresa aún no declara sedes ni cobertura"}`} />
           <MapaSector s={s} demand={demandAll} home={home} domicilio={domicilio} country={isEC ? "EC" : "CO"} unitName={unitName} peers={s.peers} />
@@ -125,7 +125,7 @@ export default function BiPage() {
       </div>
 
       {/* ── ranking de la actividad y comparativo de laboratorios ── */}
-      <div className="mb-5 grid gap-5 lg:grid-cols-[380px_1fr]">
+      <div className="mb-5 grid gap-5 xl:grid-cols-[380px_1fr]">
         <Card className="rise rise-2">
           <CardHeader title={ciiuFoco ? `Ranking ${ciiuFoco}` : "Ranking del sector"} sub={`${peersFoco.length} sociedades de ${s.byCiiu.find((c) => c.code === ciiuFoco)?.name?.split(",")[0].toLowerCase() ?? "la actividad"} por ingresos ${year} · crecimiento y margen al lado · miles de millones`} />
           <div className="px-5 pb-5"><RankingActividad peers={peersFoco} selfNit={selfPeer?.nit ?? null} /></div>
