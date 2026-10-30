@@ -258,25 +258,35 @@ function ArranqueCard() {
   const c = v.catalog;
   const f1On = hasInstrument(c.company, "f1");
   const [respuestas, setRespuestas] = useState<number | null>(null);
+  const [prio, setPrio] = useState<{ evaluadas: number; portafolio: number } | null>(null);
   useEffect(() => {
     const url = f1On ? "/api/td/f1" : "/api/td/test";
     fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => setRespuestas(j ? (j.responses?.length ?? 0) : 0)).catch(() => setRespuestas(0));
+    fetch("/api/td/priorizacion").then((r) => (r.ok ? r.json() : null)).then((j) => {
+      const evals = (j?.evaluations ?? []) as { iniId: string }[];
+      const decisions = (j?.decisions ?? {}) as Record<string, { decision?: string }>;
+      setPrio({ evaluadas: new Set(evals.map((e) => e.iniId)).size, portafolio: Object.values(decisions).filter((d) => d.decision === "IMPLEMENTAR" || d.decision === "PREPARAR").length });
+    }).catch(() => setPrio({ evaluadas: 0, portafolio: 0 }));
   }, [f1On]);
-  const t = (tab: "prioridades" | "direccion" | "okr" | "iniciativas") => estrategiaHref(c.company, tab, base);
+  const t = (tab: "prioridades" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio") => estrategiaHref(c.company, tab, base);
   const levers = leversOf(c.company);
+  // Orden del método: primero la autoevaluación directiva (la lectura de la empresa), después la cadena
+  // estratégica de prioridades a portafolio.
   const pasos = [
+    { label: f1On ? "Autoevaluación directiva" : "Test de capacidad empresarial", n: respuestas ?? 0, meta: respuestas === null ? "…" : cuenta(respuestas, "respuesta"), href: `${base}/panel/diagnostico/${f1On ? "autoevaluacion" : "test"}` },
     { label: V.tabs.prioridades, n: levers.length, meta: `${levers.length} de hasta 8`, href: t(V.modo === "acompanamiento" ? "prioridades" : "direccion") },
     { label: V.tabs.direccion, n: c.objectives.length, meta: cuenta(c.objectives.length, "objetivo"), href: t("direccion") },
     { label: V.tabs.okr, n: v.kpis.length, meta: cuenta(v.kpis.length, "resultado clave", "resultados clave"), href: t("okr") },
     { label: V.tabs.iniciativas, n: v.initiatives.length, meta: cuenta(v.initiatives.length, "iniciativa"), href: t("iniciativas") },
-    { label: f1On ? "Autoevaluación directiva" : "Test de capacidad empresarial", n: respuestas ?? 0, meta: respuestas === null ? "…" : cuenta(respuestas, "respuesta"), href: `${base}/panel/diagnostico/${f1On ? "autoevaluacion" : "test"}` },
+    { label: V.tabs.priorizacion, n: prio?.evaluadas ?? 0, meta: prio === null ? "…" : `${cuenta(prio.evaluadas, "iniciativa evaluada", "iniciativas evaluadas")}`, href: t("priorizacion") },
+    { label: V.tabs.portafolio, n: prio?.portafolio ?? 0, meta: prio === null ? "…" : `${cuenta(prio.portafolio, "iniciativa decidida", "iniciativas decididas")}`, href: t("portafolio") },
   ];
   const hechos = pasos.filter((p) => p.n > 0).length;
   if (hechos === pasos.length) return null;
   return (
     <Card className="rise mb-5">
       <CardHeader title="Lista de arranque" sub={`${hechos} de ${pasos.length} pasos con información · el panel se llena a medida que avanza el método`} />
-      <ol className="grid gap-2 px-5 pb-5 sm:grid-cols-5">
+      <ol className="grid gap-2 px-5 pb-5 sm:grid-cols-4 xl:grid-cols-7">
         {pasos.map((p, i) => (
           <li key={p.label}>
             <Link href={p.href} className={`group flex h-full flex-col gap-1.5 rounded-xl border px-3.5 py-3 transition-colors ${p.n > 0 ? "border-line bg-surface-2/60" : "border-dashed border-line-strong hover:border-gold hover:bg-gold-wash/40"}`}>
