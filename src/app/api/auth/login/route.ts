@@ -35,9 +35,11 @@ export async function POST(req: Request) {
   if (tenant && found.user.role !== "ADMIN" && found.company?.slug !== tenant) {
     return NextResponse.json({ error: "Esta cuenta no pertenece a esta empresa. Entra por el enlace de la tuya." }, { status: 401 });
   }
-  // el acceso genérico (/login) es solo del administrador de la plataforma
-  if (!tenant && found.user.role !== "ADMIN") {
-    return NextResponse.json({ error: `Este acceso es del administrador. Entra por el enlace de tu empresa${found.company ? ` (/${found.company.slug}/login)` : ""}.` }, { status: 401 });
+  // el acceso genérico (/login) también admite cuentas de empresa: entran con su
+  // propia empresa como contexto y el cliente las lleva a /<empresa>/panel. Lo
+  // ideal es el enlace de su empresa, pero no se les cierra la puerta por aquí.
+  if (!tenant && found.user.role !== "ADMIN" && !found.company) {
+    return NextResponse.json({ error: "Tu cuenta no está asociada a ninguna empresa. Pide al administrador que la asigne." }, { status: 403 });
   }
   // el admin de plataforma no tiene empresa propia: la elige en /empresas tras
   // entrar, o queda activa la de la URL por la que entró

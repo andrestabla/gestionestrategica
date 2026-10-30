@@ -234,7 +234,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       ) : null}
 
       {!tenant && (
-        <p className="mt-6 text-[12px] leading-snug text-faint">Acceso del administrador de la plataforma. Las cuentas de cada empresa entran por el enlace de su empresa (/empresa/login) o por el QR de su sección.</p>
+        <p className="mt-6 text-[12px] leading-snug text-faint">Puedes entrar aquí con cualquier cuenta: al ingresar, la plataforma te lleva al espacio de tu empresa. También puedes usar el enlace propio de tu empresa (/empresa/login) o el QR de su sección.</p>
       )}
       <div className="mt-4 text-[12px]">
         {!recover ? (
