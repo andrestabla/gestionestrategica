@@ -11,7 +11,7 @@
 
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
 import { avisar, confirmar } from "@/components/feedback";
 import { AccessChip, useCan } from "@/components/user-context";
@@ -789,8 +789,10 @@ function ResponderF1() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const router = useRouter();
+  const params = useSearchParams();
   const [vista, setVista] = useVista();
-  useEffect(() => { if (data && !loaded) { if (data.mine) { setR(data.mine.r); setCargo(data.mine.cargo ?? ""); } setLoaded(true); } }, [data, loaded]);
+  const [salto, setSalto] = useState<{ code: string; n: number } | null>(() => { const ir = params.get("ir"); return ir ? { code: ir.toUpperCase(), n: 1 } : null; });
+  useEffect(() => { if (data && !loaded) { if (data.mine) { setR(data.mine.r); setCargo(data.mine.cargo ?? ""); } const ir = params.get("ir"); const pr = ir ? PRACTICES.find((x) => x.code === ir.toUpperCase()) : null; if (pr) setStep(pr.line - 1); setLoaded(true); } }, [data, loaded, params]);
   const total = PRACTICES.length;
   const answered = Object.keys(r).length;
   const save = useCallback(async (silent: boolean) => {
@@ -816,7 +818,11 @@ function ResponderF1() {
   const dims = DIMS.filter((d) => d.cap === cap.name);
   const stepN = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).flatMap((d) => d.prac).filter((p) => r[p.code] != null).length;
   const stepTot = (c: (typeof CAPS)[number]) => DIMS.filter((d) => d.cap === c.name).reduce((a, d) => a + d.prac.length, 0);
-  const finish = async () => { const ok = await save(false); if (ok) { avisar("Autoevaluación guardada"); router.push("/panel/diagnostico/autoevaluacion/resultado"); } };
+  // cierre solo con las 68 respondidas: la lectura y el informe exigen el 100 %
+  const faltan = PRACTICES.filter((p) => r[p.code] == null);
+  const finish = async () => { if (faltan.length) { avisar(`Faltan ${faltan.length} afirmaciones por responder`, "warn"); return; } const ok = await save(false); if (ok) { avisar("Autoevaluación guardada"); router.push("/panel/diagnostico/autoevaluacion/resultado"); } };
+  // saltar a un ítem concreto (desde la lista de faltantes o desde ?ir=CODIGO en la URL)
+  const irAItem = (code: string) => { const pr = PRACTICES.find((x) => x.code === code); if (!pr) return; setStep(pr.line - 1); setSalto((s) => ({ code, n: (s?.n ?? 0) + 1 })); focalArriba(); };
   // responder una afirmación avanza a la siguiente pendiente; volver a pulsar el mismo número la desmarca
   const responder = (code: string, v: number) => { const cambia = r[code] !== v; set(code, v); if (cambia) irAlSiguientePendiente(code); };
   const salir = async () => { if (dirty) await save(true); router.push("/panel/diagnostico/autoevaluacion"); };
@@ -836,13 +842,21 @@ function ResponderF1() {
     ...(step === 0 ? [{ kind: "libre" as const, id: "intro", node: introF1 }] : []),
     ...dims.flatMap((d) => d.prac.map((p) => ({ kind: "item" as const, id: p.code, grupo: `${d.code} · ${d.name}`, grupoDesc: d.defn, code: p.code, texto: p.f1, niveles: MAPA.escalaF1.map((l, i) => ({ n: i + 1, name: l.name, desc: l.desc })), guia: GUIDES.f1[p.code], value: r[p.code], onSet: (v: number | string | undefined) => setValor(p.code, v) }))),
     { kind: "libre", id: "fin", node: (
-      <div className="panel rise p-6 text-center" style={{ borderTop: `3px solid ${cap.color}` }}>
-        <div className="text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: cap.color }}>Paso {step + 1} de 4 · {cap.name}</div>
-        <div className="mt-1 text-[18px] font-extrabold text-ink">{stepN(cap)} de {stepTot(cap)} afirmaciones respondidas</div>
-        <p className="mx-auto mt-2 max-w-[48ch] text-[13px] text-muted">{stepN(cap) < stepTot(cap) ? "Puedes dejar pendientes y volver después: el avance se guarda solo. Usa el mapa de puntos para ir a las que faltan." : ultimo ? "Completaste las cuatro capacidades. Guarda y mira tu lectura." : "Paso completo. Sigue con la siguiente capacidad."}</p>
-        {ultimo
-          ? <button type="button" onClick={finish} disabled={saving || answered === 0} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi lectura</button>
-          : <button type="button" onClick={() => irAlPaso(step + 1)} className="btn-primary mt-4 inline-flex items-center gap-1.5 text-[12.5px]">Paso {step + 2}: {CAPS[step + 1].name} <ArrowRight size={13} /></button>}
+      <div className="panel rise p-6" style={{ borderTop: `3px solid ${cap.color}` }}>
+        <div className="text-center">
+          <div className="text-[12px] font-bold uppercase tracking-[0.18em]" style={{ color: cap.color }}>Paso {step + 1} de 4 · {cap.name}</div>
+          <div className="mt-1 text-[18px] font-extrabold text-ink">{stepN(cap)} de {stepTot(cap)} afirmaciones respondidas{ultimo ? ` · ${answered} de ${total} en total` : ""}</div>
+        </div>
+        {ultimo && faltan.length > 0 ? (
+          <FaltantesF1 faltan={faltan} onIr={irAItem} />
+        ) : (
+          <p className="mx-auto mt-2 max-w-[52ch] text-center text-[13px] text-muted">{stepN(cap) < stepTot(cap) ? "Hay afirmaciones pendientes en este paso: la lectura solo se genera con las 68 respondidas. Usa el mapa de puntos para ir a las que faltan; el avance se guarda solo." : ultimo ? "Completaste las cuatro capacidades. Guarda y mira tu lectura." : "Paso completo. Sigue con la siguiente capacidad."}</p>
+        )}
+        <div className="mt-4 text-center">
+          {ultimo
+            ? <button type="button" onClick={finish} disabled={saving || faltan.length > 0} title={faltan.length ? `Faltan ${faltan.length} afirmaciones` : undefined} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {faltan.length ? `Faltan ${faltan.length} para ver mi lectura` : "Guardar y ver mi lectura"}</button>
+            : <button type="button" onClick={() => irAlPaso(step + 1)} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]">Paso {step + 2}: {CAPS[step + 1].name} <ArrowRight size={13} /></button>}
+        </div>
       </div>
     ) },
   ];
@@ -856,7 +870,7 @@ function ResponderF1() {
         <span className="hidden text-[12px] text-muted sm:inline">{stepN(cap)} de {stepTot(cap)} en este paso · puedes cerrar y seguir después.</span>
         {step < CAPS.length - 1
           ? <button type="button" onClick={() => irAlPaso(step + 1)} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]">Siguiente <ArrowRight size={13} /></button>
-          : <button type="button" onClick={finish} disabled={saving || answered === 0} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Guardar y ver mi lectura</button>}
+          : <button type="button" onClick={finish} disabled={saving || faltan.length > 0} title={faltan.length ? `Faltan ${faltan.length} afirmaciones: ${faltan.slice(0, 8).map((x) => x.code).join(", ")}${faltan.length > 8 ? "…" : ""}` : undefined} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-50">{saving ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {faltan.length ? `Faltan ${faltan.length} para ver mi lectura` : "Guardar y ver mi lectura"}</button>}
       </>}>
       <div className="mb-4 grid grid-cols-4 gap-1.5">
         {CAPS.map((c, i) => { const n = stepN(c), t = stepTot(c); const on = i === step; return (
@@ -905,7 +919,7 @@ function ResponderF1() {
           })}
         </div>
       ))}
-      </>) : <UnaAUna key={`${step}-${loaded ? 1 : 0}`} pantallas={pantallasF1} color={cap.color} />}
+      </>) : <UnaAUna key={`${step}-${loaded ? 1 : 0}-${salto?.n ?? 0}`} pantallas={pantallasF1} color={cap.color} inicio={salto ? (() => { const i = pantallasF1.findIndex((x) => x.id === salto.code); return i >= 0 ? i : undefined; })() : undefined} />}
       {msg && <div className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{msg}</div>}
     </ModoFocal>
   );
@@ -919,6 +933,17 @@ function ResultadoF1({ email }: { email: string | null }) {
   if (!data) return <Skeleton className="h-44" />;
   if (!f) return (
     <Card className="rise p-6"><div className="text-[13px] text-ink">{email && canAll ? "Esa persona no ha respondido la autoevaluación." : "Todavía no has respondido la autoevaluación."} <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></div></Card>
+  );
+  const faltanF = PRACTICES.filter((p) => f.r[p.code] == null);
+  const propia = f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase();
+  if (propia && faltanF.length > 0 && !data.closed) return (
+    <Card className="rise p-6">
+      <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-gold-text">Autoevaluación incompleta</div>
+      <div className="mt-1 text-[18px] font-extrabold text-ink">Te faltan {faltanF.length} de {total} afirmaciones</div>
+      <p className="mt-1 text-[13px] text-muted">La lectura y el informe se generan solo con las 68 respondidas. Toca una afirmación para ir directo a ella.</p>
+      <FaltantesF1 faltan={faltanF} href={(code) => `/panel/diagnostico/autoevaluacion/responder?ir=${encodeURIComponent(code)}`} />
+      <div className="mt-4"><Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]"><ClipboardCheck size={13} /> Continuar la autoevaluación</Link></div>
+    </Card>
   );
   const L = f1Lectura(f.r);
   return (
@@ -1344,14 +1369,16 @@ function InformeCta({ kind, email, completa, href }: { kind: "f1" | "consolidado
             {estado === "listo" && `Lectura con IA generada${data?.at ? ` el ${f1Fecha(data.at)}` : ""}. Gráficas por capacidad y dimensión, hallazgos y ruta de 90 días; descargable en PDF.`}
             {estado === "desactualizado" && "Hay respuestas nuevas desde el análisis guardado. El informe muestra las cifras vigentes; la lectura con IA puede actualizarse."}
             {estado === "generando" && (busy ? "El advisor virtual está escribiendo la lectura: tarda menos de un minuto." : "La lectura con IA se genera sola al abrir el informe.")}
-            {estado === "pendiente" && (kind === "f1" ? "La lectura con IA se genera automáticamente al completar las 68 afirmaciones. Mientras tanto puedes ver las cifras." : "Aún no se ha generado la lectura consolidada con IA.")}
+            {estado === "pendiente" && (kind === "f1" ? "El informe y la lectura con IA se generan solo con las 68 afirmaciones respondidas." : "Aún no se ha generado la lectura consolidada con IA.")}
             {estado === "no-disponible" && "El análisis con IA requiere la integración de OpenAI (Administración → Integraciones). Las cifras del informe están disponibles."}
             {error && <span className="text-bad-text"> {error}</span>}
           </div>
         </div>
         <span className="flex flex-wrap items-center gap-2">
           {kind === "consolidado" && canAll && data?.disponible && <button type="button" onClick={() => void generar()} disabled={busy} className="btn-ghost btn-sm">{busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {data.informe ? "Actualizar lectura" : "Generar lectura"}</button>}
-          <Link href={href} className="btn-primary btn-sm">Abrir informe <ArrowRight size={13} /></Link>
+          {kind === "f1" && !completa && !email
+            ? <Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="btn-primary btn-sm">Completar la autoevaluación <ArrowRight size={13} /></Link>
+            : <Link href={href} className="btn-primary btn-sm">Abrir informe <ArrowRight size={13} /></Link>}
         </span>
       </div>
     </Card>
@@ -1368,6 +1395,18 @@ function InformeF1({ email }: { email: string | null }) {
   const ia = useInformeIA(consolidado ? "consolidado" : "f1", consolidado ? null : f?.email ?? email, !consolidado && completa);
   if (!data) return <Skeleton className="h-64" />;
   if (consolidado && !canAll) return <Card className="rise p-6 text-[13px] text-ink">El consolidado lo ven el administrador y el advisor. <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></Card>;
+  if (!consolidado && f && !completa && f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() && !data.closed) {
+    const faltanF = PRACTICES.filter((p) => f.r[p.code] == null);
+    return (
+      <Card className="rise p-6">
+        <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-gold-text">Informe pendiente</div>
+        <div className="mt-1 text-[18px] font-extrabold text-ink">Te faltan {faltanF.length} de {PRACTICES.length} afirmaciones</div>
+        <p className="mt-1 text-[13px] text-muted">El informe y la lectura con IA se generan solo con las 68 respondidas. Toca una afirmación para ir directo a ella.</p>
+        <FaltantesF1 faltan={faltanF} href={(code) => `/panel/diagnostico/autoevaluacion/responder?ir=${encodeURIComponent(code)}`} />
+        <div className="mt-4"><Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]"><ClipboardCheck size={13} /> Continuar la autoevaluación</Link></div>
+      </Card>
+    );
+  }
   if (!consolidado && !f) return <Card className="rise p-6 text-[13px] text-ink">{email && canAll ? "Esa persona no ha respondido la autoevaluación." : "Todavía no has respondido la autoevaluación."} <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></Card>;
   let datos; let fecha: string; let persona: { nombre: string; cargo?: string } | undefined;
   if (consolidado) {
@@ -1385,5 +1424,23 @@ function InformeF1({ email }: { email: string | null }) {
     <InformeEjecutivo kind={consolidado ? "consolidado" : "f1"} empresa={cv.catalog.company.name} persona={persona} fecha={fecha} datos={datos} informe={d?.informe ?? null}
       estado={estado} meta={meta} shareUrl={consolidado ? d?.shareUrl : null} canRegen={canAll} onRegen={() => void ia.generar()} busy={ia.busy} error={ia.error}
       volverHref={consolidado ? "/panel/diagnostico/autoevaluacion" : `/panel/diagnostico/autoevaluacion/resultado${email && canAll && !consolidado ? `/${encodeURIComponent(email)}` : ""}`} />
+  );
+}
+
+/** Lista exacta de afirmaciones sin responder, agrupadas por capacidad; cada una lleva directo al ítem. */
+function FaltantesF1({ faltan, onIr, href }: { faltan: { code: string; f1: string; line: number }[]; onIr?: (code: string) => void; href?: (code: string) => string }) {
+  return (
+    <div className="mt-4 space-y-3 text-left">
+      {CAPS.map((c) => { const xs = faltan.filter((p) => p.line === c.n); if (!xs.length) return null; return (
+        <div key={c.code}>
+          <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[0.16em]" style={{ color: c.color }}><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />{c.name} · faltan {xs.length}</div>
+          <ul className="grid gap-1.5 sm:grid-cols-2">
+            {xs.map((p) => { const inner = <><span className="num shrink-0 rounded-md bg-surface-2 px-1.5 py-0.5 text-[11.5px] font-extrabold text-ink">{p.code}</span><span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-soft">{p.f1}</span><ArrowRight size={12} className="shrink-0 text-cyan-deep" /></>;
+              const cls = "flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left transition-all hover:border-gold hover:shadow-sm";
+              return <li key={p.code}>{href ? <Link href={href(p.code)} onClick={pedirPantallaCompleta} className={cls} title={p.f1}>{inner}</Link> : <button type="button" onClick={() => onIr?.(p.code)} className={cls} title={p.f1}>{inner}</button>}</li>; })}
+          </ul>
+        </div>
+      ); })}
+    </div>
   );
 }
