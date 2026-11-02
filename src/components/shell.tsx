@@ -11,7 +11,7 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock } from "lucide-react"
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock, UserCircle2 } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
 import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
@@ -366,6 +366,10 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
             {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
             {!collapsed && "Contraer menú"}
           </button>
+          <Link href={`${base}/panel/perfil`} title={collapsed ? "Mi perfil" : undefined} aria-label={collapsed ? "Mi perfil" : undefined}
+            className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium transition-colors hover:bg-white/[0.05] hover:text-white ${path.startsWith("/panel/perfil") ? "text-white" : "text-white/45"} ${collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
+            <UserCircle2 size={15} /> {!collapsed && "Mi perfil"}
+          </Link>
           <button onClick={logout}
             title={collapsed ? "Cerrar sesión" : undefined} aria-label={collapsed ? "Cerrar sesión" : undefined}
             className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white ${
@@ -401,6 +405,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
                 <div className="spine h-[2.5px]" />
                 <div className="px-4 py-3">{companyBlock}</div>
               </div>
+              <Link href={`${base}/panel/perfil`} onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white"><UserCircle2 size={15} /> Mi perfil</Link>
               <button onClick={logout} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white">
                 <LogOut size={14} /> Cerrar sesión
               </button>

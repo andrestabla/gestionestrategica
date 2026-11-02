@@ -1,9 +1,10 @@
 import { redirect, notFound } from "next/navigation";
+import { ConsentGate } from "@/components/consentimiento-gate";
 import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
-import { hydrateCompanies, companyBySlug, listCompanies, tenantView } from "@/server/store";
+import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPending } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { FeedbackProvider } from "@/components/feedback";
 import { CatalogProvider } from "@/components/catalog-context";
@@ -34,6 +35,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   const noCompany = !company || (!company.active && user.role !== "ADMIN");
   // la vista de la empresa activa, resuelta en el servidor para esta sesión
   const view = company ? await inTenant(company.slug, async () => tenantView()) : null;
+  // primer ingreso con cuenta: la política de tratamiento de datos se acepta antes de ver cualquier módulo
+  const pendienteConsentimiento = company ? await inTenant(company.slug, async () => consentPending(user)) : false;
   // el proveedor envuelve también al shell (buscador, notificaciones): sin
   // empresa activa, una vista vacía deja la interfaz utilizable para el admin
   return (
@@ -45,6 +48,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
             <p className="rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
               Tu cuenta no tiene una empresa activa asignada. Pide al administrador de la plataforma que te asigne una.
             </p>
+          ) : pendienteConsentimiento && company ? (
+            <ConsentGate company={company.name} country={company.country} nombre={user.name.split(" ")[0]} />
           ) : view ? children : (
             <p className="rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
               No hay empresas activas. Crea una en Administración → Empresas.

@@ -3016,20 +3016,139 @@ export async function setUserPassword(
   return { ok: true };
 }
 
-/** Elimina una cuenta de la empresa (no la propia). Sus calificaciones y su rastro en la actividad se conservan. */
+/** Borra toda la información de una cuenta en la empresa activa: la cuenta, sus respuestas de diagnóstico
+    (autoevaluación, test, notas), su análisis con IA, sus evaluaciones de iniciativas y sus notificaciones;
+    lo que es de la empresa y no se puede borrar sin romperla (decisiones, comentarios, auditoría, registro de
+    correos) se anonimiza. En memoria y en la base. */
+export const ANON = "Cuenta eliminada";
+function purgeUserData(email: string): { name: string } | null {
+  const key = email.trim().toLowerCase();
+  const u = users().find((x) => x.email.toLowerCase() === key) ?? null;
+  const name = u?.name ?? key;
+  if (u) users().splice(users().indexOf(u), 1);
+  notifRead().delete(email); notifRead().delete(key);
+  for (const k of [...f1Store().keys()]) if (k.toLowerCase() === key) f1Store().delete(k);
+  informes().delete(`f1|${key}`);
+  for (const k of [...testStore().keys()]) if (k.toLowerCase() === key) { testStore().delete(k); testNotes().delete(k); }
+  for (const [k, e] of [...evals().entries()]) if (e.by.toLowerCase() === key) evals().delete(k);
+  const decisionesTocadas: string[] = [];
+  for (const [k, d] of decisions()) if (d.by.toLowerCase() === key) { d.by = ANON; d.name = ANON; decisionesTocadas.push(k); }
+  const comentariosTocados: string[] = [];
+  for (const c of S().itinComments.values()) { const cc = c as unknown as { id: string; author?: string; email?: string }; if ((cc.email ?? "").toLowerCase() === key) { cc.author = ANON; delete cc.email; comentariosTocados.push(cc.id); } }
+  for (const a of auditLog()) if ((a.email ?? "").toLowerCase() === key) { a.actor = ANON; a.email = ""; }
+  for (const p of cat().people ?? []) if ((p.email ?? "").toLowerCase() === key) p.email = "";
+  void persist("cuenta eliminada", async (db) => {
+    const companyId = cid();
+    await db.user.deleteMany({ where: { email: key, companyId } });
+    await db.f1Response.deleteMany({ where: { companyId, email: key } });
+    await db.diagnosticReport.deleteMany({ where: { companyId, kind: "f1", subject: key } });
+    await db.testResponse.deleteMany({ where: { companyId, email: key } });
+    await db.testNote.deleteMany({ where: { companyId, participant: key } });
+    await db.initiativeEvaluation.deleteMany({ where: { companyId, by: key } });
+    await db.notifRead.deleteMany({ where: { companyId, email: key } });
+    for (const code of decisionesTocadas) { const d = decisions().get(code); if (d) await db.initiativeDecision.updateMany({ where: { companyId, code }, data: { data: d } }); }
+    for (const id of comentariosTocados) { const c = S().itinComments.get(id); if (c) await db.itineraryComment.updateMany({ where: { companyId, id }, data: { data: c } }); }
+    await db.auditEvent.updateMany({ where: { companyId, email: key }, data: { actor: ANON, email: "" } });
+    await db.person.updateMany({ where: { companyId, email: key }, data: { email: null } });
+    await db.mailLog.updateMany({ where: { to: key }, data: { to: ANON } });
+    await db.mailLog.updateMany({ where: { by: key }, data: { by: ANON } });
+  });
+  return u ? { name } : null;
+}
+
+/** Elimina una cuenta de la empresa (no la propia) con toda su información. */
 export function removeUser(actor: SessionUser, email: string): { ok: true } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   const key = email.trim().toLowerCase();
   const u = users().find((x) => x.email.toLowerCase() === key);
   if (!u) return { ok: false, status: 404, error: "El usuario no existe." };
-  if (key === actor.email.toLowerCase()) return { ok: false, status: 422, error: "No puedes eliminar tu propia cuenta." };
-  const i = users().indexOf(u); users().splice(i, 1);
-  notifRead().delete(u.email);
-  audit(actor, "task", u.email, `usuario eliminado (${u.name}, ${u.role})`);
-  void persist("usuario", async (db) => { await db.user.deleteMany({ where: { email: u.email, companyId: cid() } }); });
+  if (key === actor.email.toLowerCase()) return { ok: false, status: 422, error: "No puedes eliminar tu propia cuenta desde aquí: hazlo desde «Mi perfil»." };
+  const info = { name: u.name, role: u.role };
+  purgeUserData(key);
+  audit(actor, "task", key, `cuenta eliminada con toda su información (${info.name}, ${info.role})`);
   return { ok: true };
 }
 
+/* ═══ Perfil propio: datos básicos, contraseña, consentimiento y eliminación de la cuenta ═══ */
+
+const propio = (user: SessionUser): ManagedUser | null =>
+  (user.role === "ADMIN" ? g.platformUsers : users()).find((x) => x.email.toLowerCase() === user.email.toLowerCase()) ?? null;
+
+/** ¿Debe aceptar la política de tratamiento de datos antes de usar la plataforma? (todos menos el admin de plataforma y quien entró por QR, que ya la aceptó) */
+export function consentPending(user: SessionUser): boolean {
+  if (user.role === "ADMIN" || user.qr) return false;
+  const u = propio(user);
+  return !!u && !u.consentAt;
+}
+
+/** Registra la aceptación de la política de tratamiento de datos con fecha y versión. */
+export function acceptConsent(user: SessionUser): { ok: true; at: string } | { ok: false; status: number; error: string } {
+  const u = propio(user);
+  if (!u) return { ok: false, status: 404, error: "La cuenta no existe." };
+  const at = new Date().toISOString();
+  u.consentAt = at;
+  void persistQuiet("consentimiento", (db) => db.user.updateMany({ where: { email: u.email.toLowerCase() }, data: { consentAt: new Date(at), consentVersion: CONSENT_VERSION } }));
+  return { ok: true, at };
+}
+
+export function ownProfile(user: SessionUser): { email: string; name: string; role: SessionUser["role"]; consentAt: string | null; company: string | null } | null {
+  const u = propio(user);
+  return u ? { email: u.email, name: u.name, role: u.role, consentAt: u.consentAt ?? null, company: user.company?.name ?? null } : null;
+}
+
+/** La persona actualiza sus datos básicos (por ahora el nombre). */
+export function updateOwnProfile(user: SessionUser, patch: { name?: unknown }): { ok: true; name: string } | { ok: false; status: number; error: string } {
+  const u = propio(user);
+  if (!u) return { ok: false, status: 404, error: "La cuenta no existe." };
+  const name = String(patch.name ?? "").replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 80) return { ok: false, status: 422, error: "El nombre debe tener entre 2 y 80 caracteres." };
+  u.name = name;
+  for (const f of f1Store().values()) if (f.email.toLowerCase() === u.email.toLowerCase()) f.name = name;
+  audit(user, "task", u.email, "datos básicos del perfil actualizados");
+  void persist("perfil", (db) => db.user.updateMany({ where: { email: u.email.toLowerCase() }, data: { name } }));
+  return { ok: true, name };
+}
+
+/** ¿La cuenta tiene contraseña fijada? (las que entraron por QR o se crearon sin contraseña, no) */
+export async function hasPassword(email: string): Promise<boolean> {
+  if (!hasDb()) return false;
+  try { const db = await prisma(); const u = await db.user.findUnique({ where: { email: email.toLowerCase() }, select: { passwordHash: true } }); return Boolean(u?.passwordHash); } catch { return false; }
+}
+
+/** La persona cambia su contraseña: exige la actual si ya tiene una. */
+export async function changeOwnPassword(user: SessionUser, actual: unknown, nueva: unknown): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!hasDb()) return { ok: false, status: 422, error: "Cambiar la contraseña exige base de datos." };
+  if (typeof nueva !== "string" || nueva.length < 10 || nueva.length > 200) return { ok: false, status: 422, error: "La contraseña nueva debe tener al menos 10 caracteres." };
+  const tiene = await hasPassword(user.email);
+  if (tiene) {
+    const ok = await verifyPassword(user.email, String(actual ?? ""));
+    if (!ok) return { ok: false, status: 403, error: "La contraseña actual no es correcta." };
+    if (String(actual) === nueva) return { ok: false, status: 422, error: "La contraseña nueva debe ser distinta de la actual." };
+  }
+  const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
+  const hash = await (bcrypt.default ?? bcrypt).hash(nueva, 10);
+  const db = await prisma();
+  await db.user.update({ where: { email: user.email.toLowerCase() }, data: { passwordHash: hash, failedLogins: 0, lockedUntil: null, resetToken: null, resetExpires: null } });
+  audit(user, "task", user.email, "contraseña cambiada desde el perfil");
+  return { ok: true };
+}
+
+/** La persona elimina su propia cuenta y toda su información. Exige su contraseña (o la palabra ELIMINAR si no tiene). */
+export async function deleteOwnAccount(user: SessionUser, input: { password?: unknown; confirm?: unknown }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (user.role === "ADMIN") return { ok: false, status: 422, error: "La cuenta de administrador de la plataforma no se elimina desde el perfil." };
+  const u = propio(user);
+  if (!u) return { ok: false, status: 404, error: "La cuenta no existe." };
+  if (await hasPassword(user.email)) {
+    const ok = await verifyPassword(user.email, String(input.password ?? ""));
+    if (!ok) return { ok: false, status: 403, error: "La contraseña no es correcta." };
+  } else if (String(input.confirm ?? "").trim().toUpperCase() !== "ELIMINAR") {
+    return { ok: false, status: 422, error: "Escribe ELIMINAR para confirmar." };
+  }
+  const info = { name: u.name, role: u.role };
+  purgeUserData(u.email);
+  audit({ ...user, name: ANON, email: "" }, "task", "cuenta", `una cuenta ${info.role.toLowerCase()} eliminó su información a petición propia`);
+  return { ok: true };
+}
 export function updateUser(
   actor: SessionUser,
   email: string,
