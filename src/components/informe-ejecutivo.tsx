@@ -27,7 +27,8 @@ type Estado = "listo" | "generando" | "pendiente" | "no-disponible" | "desactual
 export type InformeApi = { disponible: boolean; informe: InformeIA | null; at: string | null; by: string | null; model: string | null; desactualizado: boolean; shareUrl?: string | null; sujeto?: string };
 
 /** Lee el análisis guardado y, si procede (auto y lectura completa), lo genera una sola vez. */
-export function useInformeIA(kind: InformeKind, email: string | null | undefined, auto: boolean) {
+/** `auto`: genera solo cuando no hay análisis; `autoRegen`: también cuando el guardado quedó desactualizado (respuestas o contexto nuevos). */
+export function useInformeIA(kind: InformeKind, email: string | null | undefined, auto: boolean, autoRegen = false) {
   const [data, setData] = useState<InformeApi | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +49,8 @@ export function useInformeIA(kind: InformeKind, email: string | null | undefined
       setData(j); if (!silencioso) avisar("Análisis actualizado"); setBusy(false); return true;
     } catch { setError("No se pudo conectar con el servidor."); setBusy(false); return false; }
   };
-  // generación automática y única: cuando el modelo está disponible y aún no hay análisis guardado
-  useEffect(() => { if (auto && data && data.disponible && !data.informe && !pedido.current) { pedido.current = true; void generar(true); } });
+  // generación automática y única por visita: sin análisis guardado o, si se permite, con el guardado desactualizado
+  useEffect(() => { if (auto && data && data.disponible && (!data.informe || (autoRegen && data.desactualizado)) && !pedido.current) { pedido.current = true; void generar(true); } });
   return { data, busy, error, generar };
 }
 
@@ -157,7 +158,7 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
           </nav>
           <span className="flex items-center gap-1.5">
             <button type="button" onClick={() => setGuia((g) => !g)} className={`btn-ghost btn-sm !px-2.5 ${guia ? "!text-gold-text" : ""}`} title="Cómo recorrer este informe" aria-expanded={guia}><Compass size={14} /></button>
-            {estado === "desactualizado" && <span className="chip chip-warn hidden lg:inline-flex"><AlertTriangle size={11} /> Respuestas nuevas</span>}
+            {estado === "desactualizado" && <span className="chip chip-warn hidden lg:inline-flex" title="Hay respuestas o contexto nuevos desde que se generó este análisis"><AlertTriangle size={11} /> Análisis desactualizado</span>}
             {canRegen && onRegen && (kind === "consolidado" || estado === "desactualizado" || estado === "pendiente") && <button type="button" onClick={onRegen} disabled={busy} className="btn-ghost btn-sm !px-2.5" title={informe ? "Actualizar análisis con IA" : "Generar análisis con IA"}>{busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>}
             {shareUrl && <button type="button" onClick={compartir} className="btn-ghost btn-sm !px-2.5" title="Compartir enlace"><Link2 size={14} /></button>}
             <button type="button" onClick={() => window.print()} className="btn-primary btn-sm" title="Se abre el diálogo de impresión: elige «Guardar como PDF»"><Printer size={13} /> <span className="hidden sm:inline">PDF</span></button>

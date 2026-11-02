@@ -1480,7 +1480,7 @@ function InformeF1({ email }: { email: string | null }) {
   const consolidado = email === "consolidado";
   const f = consolidado ? null : email && canAll ? (data?.responses.find((x) => x.email.toLowerCase() === email.toLowerCase()) ?? null) : data?.mine ?? null;
   const completa = !!f && Object.keys(f.r).length >= PRACTICES.length;
-  const ia = useInformeIA(consolidado ? "consolidado" : "f1", consolidado ? null : f?.email ?? email, !consolidado && completa);
+  const ia = useInformeIA(consolidado ? "consolidado" : "f1", consolidado ? null : f?.email ?? email, consolidado ? canAll : completa, true);
   if (!data) return <Skeleton className="h-64" />;
   if (consolidado && !canAll) return <Card className="rise p-6 text-[13px] text-ink">El consolidado lo ven el administrador y el advisor. <Link href="/panel/diagnostico/autoevaluacion" className="font-bold text-cyan-deep hover:underline">Volver</Link></Card>;
   if (!consolidado && f && !completa && f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() && !data.closed) {
@@ -1510,7 +1510,7 @@ function InformeF1({ email }: { email: string | null }) {
   const meta = d?.at ? `Lectura con IA generada el ${new Date(d.at).toLocaleString("es-CO", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}${d.model ? ` · modelo ${d.model}` : ""}.` : undefined;
   return (
     <InformeEjecutivo kind={consolidado ? "consolidado" : "f1"} empresa={cv.catalog.company.name} persona={persona} fecha={fecha} datos={datos} informe={d?.informe ?? null}
-      estado={estado} meta={meta} shareUrl={consolidado ? d?.shareUrl : null} canRegen={canAll} onRegen={() => void ia.generar()} busy={ia.busy} error={ia.error}
+      estado={estado} meta={meta} shareUrl={consolidado ? d?.shareUrl : null} canRegen={canAll || (!consolidado && !!f && !!data?.mine && f.email.toLowerCase() === data.mine.email.toLowerCase())} onRegen={() => void ia.generar()} busy={ia.busy} error={ia.error}
       volverHref={consolidado ? "/panel/diagnostico/autoevaluacion" : `/panel/diagnostico/autoevaluacion/resultado${email && canAll && !consolidado ? `/${encodeURIComponent(email)}` : ""}`} />
   );
 }
