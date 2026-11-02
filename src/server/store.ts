@@ -290,7 +290,10 @@ async function prisma(): Promise<AnyPrisma> {
     if (/^postgres(ql)?:\/\//.test(url)) {
       // PostgreSQL (Neon, Vercel Postgres, local): prisma/postgres/schema.prisma
       const { PrismaPg } = await serverImport("@prisma/adapter-pg") as AnyPrisma;
-      adapter = new PrismaPg({ connectionString: url });
+      // pool pequeño por instancia: en Vercel cada función es una instancia y Neon limita las conexiones; con el
+      // host «-pooler» de Neon (PgBouncer) veinte personas concurrentes caben de sobra. Tiempos acotados para que
+      // una conexión colgada no bloquee una petición.
+      adapter = new PrismaPg({ connectionString: url, max: Number(process.env.DB_POOL_MAX ?? 5), idleTimeoutMillis: 20_000, connectionTimeoutMillis: 10_000 });
     } else {
       // SQLite local; ruta absoluta porque el runtime de Next puede resolver ./ contra otro CWD
       const { PrismaBetterSqlite3 } = await serverImport("@prisma/adapter-better-sqlite3") as AnyPrisma;
@@ -1172,7 +1175,7 @@ export function attachEvidence(
     return { ok: false, status: 422, error: "La evidencia necesita un título descriptivo." };
   }
   const evidence: UploadedEvidence = {
-    id: `EV-U${String(uploads().length + 1).padStart(2, "0")}`,
+    id: `EV-U${String(uploads().length + 1).padStart(2, "0")}-${randomBytes(2).toString("hex")}`,
     taskId,
     title: meta.title.trim(),
     kind: meta.kind || "Documento",
@@ -1726,7 +1729,8 @@ export function saveF2Response(
   }
   const abierta = (input.abierta ?? "").trim().slice(0, 600);
   const response: F2Response = {
-    id: `F2-${String(f2Store().length + 1).padStart(4, "0")}`,
+    // id único también entre instancias (dos respuestas simultáneas en funciones distintas no deben chocar en la base)
+    id: `F2-${String(f2Store().length + 1).padStart(4, "0")}-${randomBytes(2).toString("hex")}`,
     at: new Date().toISOString(),
     area: (input.area ?? "").trim().slice(0, 60) || undefined,
     r, abierta: abierta || undefined,
