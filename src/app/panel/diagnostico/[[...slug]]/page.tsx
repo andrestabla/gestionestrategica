@@ -764,14 +764,16 @@ function AutoevaluacionTab() {
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-5 py-4 text-white" style={{ background: "var(--grad-deep)" }}>
         <div className="min-w-0 flex-1 basis-[280px]">
           <div className="text-[12px] font-bold uppercase tracking-[0.18em] text-cyan-fill">Fuente 1 · Autoevaluación directiva</div>
-          <div className="text-[15px] font-extrabold">{estado === "completa" ? "Ya respondiste la autoevaluación" : estado === "parcial" ? `Llevas ${myN} de ${total} afirmaciones` : "Responde la autoevaluación directiva"}</div>
+          <div className="text-[15px] font-extrabold">{canAll && !mine ? `${lista.length} ${lista.length === 1 ? "respuesta del comité" : "respuestas del comité"}` : estado === "completa" ? "Ya respondiste la autoevaluación" : estado === "parcial" ? `Llevas ${myN} de ${total} afirmaciones` : "Responde la autoevaluación directiva"}</div>
           <div className="text-[12px] text-white/75">
             {data?.closed ? "El corte ya se publicó: la autoevaluación está cerrada y tu lectura queda como quedó."
+              : canAll && !mine ? "Como advisor ves cada autoevaluación y el consolidado del comité más abajo. Responder la tuya es opcional."
               : estado === "pendiente" ? "68 afirmaciones, cuatro por dimensión, en la escala de 1 a 5. Entre 35 y 45 minutos; puedes parar y seguir después: el avance se guarda en la plataforma."
               : `Guardada el ${f1Fecha(mine!.at)}. Puedes corregir cualquier respuesta hasta que el advisor cierre el corte.`}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canAll && lista.length > 0 && <Link href="/panel/diagnostico/autoevaluacion/informe/consolidado" className="btn-on-dark text-[12px]"><FileText size={13} /> Consolidado del comité</Link>}
           {mine && <Link href="/panel/diagnostico/autoevaluacion/resultado" className="btn-on-dark text-[12px]"><FileText size={13} /> Mi lectura</Link>}
           {!data?.closed && <Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><ClipboardCheck size={13} /> {estado === "pendiente" ? "Responder" : estado === "parcial" ? "Continuar" : "Revisar mis respuestas"}</Link>}
         </div>
