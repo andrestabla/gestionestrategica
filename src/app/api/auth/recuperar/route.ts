@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requestPasswordReset, companyBySlug } from "@/server/store";
-import { resetLink, resetMail } from "@/lib/recuperacion";
+import { resetLink } from "@/lib/recuperacion";
+import { correoRestablecer } from "@/server/correos";
 import { sendMail } from "@/server/mail";
 import { originOf } from "@/app/api/td/convencion/acceso/route";
 
@@ -15,8 +16,8 @@ export async function POST(req: Request) {
   const r = await requestPasswordReset(parsed.data.email, parsed.data.tenant ?? null);
   if (r) {
     const link = resetLink(originOf(req), r.slug, r.token);
-    const m = resetMail(r.name, link, undefined, r.slug ? companyBySlug(r.slug)?.name : undefined);
-    const sent = await sendMail({ to: r.email, subject: m.subject, text: m.text, html: m.html });
+    const m = correoRestablecer(r.name, link, r.slug ? companyBySlug(r.slug)?.name : undefined);
+    const sent = await sendMail({ to: r.email, subject: m.subject, text: m.text, html: m.html }, { kind: "restablecer", by: "sistema", companySlug: r.slug });
     if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 503 });
   }
   return NextResponse.json({ ok: true, message: "Si el correo tiene una cuenta, recibirás un enlace para crear una contraseña nueva. Revisa también la carpeta de spam." });

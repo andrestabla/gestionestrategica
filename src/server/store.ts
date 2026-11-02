@@ -29,6 +29,7 @@ import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile, URL_RE } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
 import { can } from "@/lib/permissions";
+import { isMailTemplateKey, validarPlantilla, type MailTemplateKey } from "@/lib/plantillas-correo";
 import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
 import { parseModulesOff, parseModulesStored } from "@/lib/modulos";
 import { RESERVED } from "@/lib/tenant-url";
@@ -183,6 +184,8 @@ type Registry = {
   companies: Map<string, CompanyRecord>;   // por slug
   tenants: Map<string, TenantState>;
   platformUsers: ManagedUser[];            // admins de plataforma (sin empresa)
+  mailTemplates: Map<string, MailTemplateStored>; // plantillas de correo editadas (plataforma)
+  mailLog: MailLogEntry[];                  // últimos envíos (memoria; la base guarda todo)
   companiesHydrated: boolean;
   companiesHydratedAt: number;   // última lectura del registro (se refresca cada minuto: varias instancias)
 };
@@ -195,6 +198,8 @@ const g = (() => {
       tenants: new Map(),
       platformUsers: PLATFORM_USERS.map((u) => ({ email: u.email, name: u.name, role: u.role, active: true, seeded: true })),
       companiesHydrated: false,
+      mailTemplates: new Map(),
+      mailLog: [],
       companiesHydratedAt: 0,
     };
   }
@@ -355,6 +360,7 @@ export async function hydrateCompanies() {
       if (existing) { existing.name = u.name; existing.active = u.active; }
       else g.platformUsers.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], active: u.active, seeded: false, at: u.createdAt.toISOString() });
     }
+    try { for (const t of await db.mailTemplate.findMany()) g.mailTemplates.set(t.key, { key: t.key, subject: t.subject, title: t.title, body: t.body, updatedBy: t.updatedBy ?? undefined, at: t.at.toISOString() }); } catch (e) { console.warn("[4shine] plantillas de correo:", (e as Error).message); }
     g.companiesHydrated = true;
     g.companiesHydratedAt = Date.now();
   } catch (e) {
@@ -3492,3 +3498,49 @@ export function resetStore() {
 
 export { DEMO_TODAY };
 
+
+
+/* ═══ Correos salientes: plantillas parametrizables y registro de envíos (ámbito de plataforma) ═══ */
+
+export type MailTemplateStored = { key: string; subject: string; title: string; body: string; updatedBy?: string; at?: string };
+export type MailLogEntry = { id: string; at: string; by: string; companySlug: string | null; kind: string; to: string; subject: string; status: "enviado" | "error" | "sin-config"; error?: string; messageId?: string };
+
+export const getMailTemplateStored = (key: MailTemplateKey): MailTemplateStored | null => g.mailTemplates.get(key) ?? null;
+export const getMailTemplatesStored = (): MailTemplateStored[] => [...g.mailTemplates.values()];
+
+/** Guarda (o restaura, con `null`) una plantilla. Solo quien administra la plataforma. */
+export async function saveMailTemplate(actor: SessionUser, key: unknown, data: { subject: string; title: string; body: string } | null): Promise<{ ok: true; template: MailTemplateStored | null } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_platform")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma edita las plantillas de correo." };
+  if (!isMailTemplateKey(key)) return { ok: false, status: 400, error: "Plantilla desconocida." };
+  if (data === null) {
+    g.mailTemplates.delete(key);
+    await persistQuiet("plantilla-correo", (db) => db.mailTemplate.deleteMany({ where: { key } }));
+    return { ok: true, template: null };
+  }
+  const bad = validarPlantilla(data); if (bad) return { ok: false, status: 422, error: bad };
+  const t: MailTemplateStored = { key, subject: data.subject.trim(), title: data.title.trim(), body: data.body.replace(/\r\n/g, "\n").trim(), updatedBy: actor.email, at: new Date().toISOString() };
+  g.mailTemplates.set(key, t);
+  await persistQuiet("plantilla-correo", (db) => db.mailTemplate.upsert({ where: { key }, update: { subject: t.subject, title: t.title, body: t.body, updatedBy: t.updatedBy }, create: { key, subject: t.subject, title: t.title, body: t.body, updatedBy: t.updatedBy } }));
+  return { ok: true, template: t };
+}
+
+/** Registra un envío (o su fallo) en memoria y en la base. */
+export async function logMail(entry: Omit<MailLogEntry, "id" | "at">): Promise<MailLogEntry> {
+  const e: MailLogEntry = { id: `m_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, at: new Date().toISOString(), ...entry };
+  g.mailLog.unshift(e); if (g.mailLog.length > 500) g.mailLog.length = 500;
+  await persistQuiet("correo", (db) => db.mailLog.create({ data: { id: e.id, by: e.by, companySlug: e.companySlug, kind: e.kind, to: e.to, subject: e.subject, status: e.status, error: e.error ?? null, messageId: e.messageId ?? null } }));
+  return e;
+}
+
+/** Últimos envíos, opcionalmente de una empresa. Con base de datos, desde la base (todas las instancias). */
+export async function listMailLog(opts: { limit?: number; companySlug?: string | null } = {}): Promise<MailLogEntry[]> {
+  const limit = Math.min(500, Math.max(1, opts.limit ?? 200));
+  if (hasDb()) {
+    try {
+      const db = await prisma();
+      const rows = await db.mailLog.findMany({ where: opts.companySlug ? { companySlug: opts.companySlug } : undefined, orderBy: { at: "desc" }, take: limit });
+      return rows.map((r: { id: string; at: Date; by: string; companySlug: string | null; kind: string; to: string; subject: string; status: string; error: string | null; messageId: string | null }) => ({ id: r.id, at: r.at.toISOString(), by: r.by, companySlug: r.companySlug, kind: r.kind, to: r.to, subject: r.subject, status: r.status as MailLogEntry["status"], ...(r.error ? { error: r.error } : {}), ...(r.messageId ? { messageId: r.messageId } : {}) }));
+    } catch (e) { console.warn("[4shine] registro de correos:", (e as Error).message); }
+  }
+  return g.mailLog.filter((e) => !opts.companySlug || e.companySlug === opts.companySlug).slice(0, limit);
+}

@@ -6,6 +6,7 @@
 //   /panel/admin/catalogo       → catálogo de la empresa activa (manage_catalog): responsables,
 //                                 personas, objetivos, KPI, iniciativas, finanzas y territorio
 //   /panel/admin/permisos       → la matriz RBAC documentada
+//   /panel/admin/correos        → gestor de correos salientes: envíos directos o grupales, plantillas e historial
 //   /panel/admin/integraciones  → OpenAI · Cloudflare R2 · AWS SES
 //   /panel/admin/branding       → identidad de la plataforma (aplicada en vivo)
 
@@ -18,11 +19,12 @@ import { CompanyForm, type CompanyLite } from "@/components/company-form";
 import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
+import { CorreosTab } from "./correos-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar } from "@/components/feedback";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw } from "lucide-react"
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
 
@@ -83,13 +85,14 @@ function ActividadTab() {
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "empresas" | "usuarios" | "actividad" | "catalogo" | "permisos" | "integraciones" | "branding";
+type Tab = "empresas" | "usuarios" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
   { id: "actividad", label: "Actividad en vivo", icon: Activity },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "permisos", label: "Permisos de acceso", icon: KeyRound },
+  { id: "correos", label: "Correos", icon: Mail },
   { id: "integraciones", label: "Integraciones", icon: Plug },
   { id: "branding", label: "Branding", icon: Palette },
 ];
@@ -105,7 +108,7 @@ export default function AdminPage() {
 
   // el consultor administra usuarios, roles y el catálogo (también el líder); el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "usuarios" || t.id === "actividad" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
+    t.id === "usuarios" || t.id === "actividad" || t.id === "correos" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
@@ -143,6 +146,7 @@ export default function AdminPage() {
       {tab === "actividad" && <ActividadTab />}
       {tab === "catalogo" && <CatalogoTab />}
       {tab === "permisos" && <PermisosTab />}
+      {tab === "correos" && <CorreosTab />}
       {tab === "integraciones" && <IntegracionesTab />}
       {tab === "branding" && <BrandingTab />}
     </>

@@ -4,7 +4,8 @@ import { randomBytes } from "crypto";
 import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword, removeUser, flushOrError } from "@/server/store";
 import { can } from "@/lib/permissions";
 import { passwordOk } from "@/lib/recuperacion";
-import { welcomeMail, passwordFromBytes } from "@/lib/correos";
+import { passwordFromBytes } from "@/lib/correos";
+import { correoBienvenida } from "@/server/correos";
 import { sendMail, mailConfigured } from "@/server/mail";
 import { originOf } from "@/app/api/td/convencion/acceso/route";
 
@@ -36,8 +37,8 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   let mailed = false; let mailError: string | undefined;
   if (body.sendWelcome && password) {
     const slug = user.company?.slug ?? "";
-    const m = welcomeMail({ name: result.user.name, company: user.company?.name ?? "la empresa", loginLink: `${originOf(req)}${slug ? `/${slug}` : ""}/login`, email: result.user.email, password, by: user.name });
-    const sent = await sendMail({ to: result.user.email, subject: m.subject, text: m.text, html: m.html });
+    const m = correoBienvenida({ name: result.user.name, company: user.company?.name ?? "la empresa", loginLink: `${originOf(req)}${slug ? `/${slug}` : ""}/login`, email: result.user.email, password, by: user.name });
+    const sent = await sendMail({ to: result.user.email, subject: m.subject, text: m.text, html: m.html }, { kind: "bienvenida", by: user.email, companySlug: slug || null });
     mailed = sent.ok; if (!sent.ok) mailError = sent.error;
   }
   return NextResponse.json({ user: result.user, ...(generated ? { password } : {}), mailed, ...(mailError ? { mailError } : {}) }, { status: 201 });

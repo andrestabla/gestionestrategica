@@ -550,3 +550,28 @@ model AuditEvent {
 
   @@index([companyId, at])
 }
+
+// ─── Correos salientes (plataforma, sin empresa): plantillas parametrizables y registro de envíos ───
+model MailTemplate {
+  key       String   @id // bienvenida | restablecer
+  subject   String
+  title     String
+  body      String // texto con variables {{nombre}}, {{empresa}}, {{enlace}}…; [[Botón]] y líneas «> » para el recuadro
+  updatedBy String?
+  at        DateTime @updatedAt
+}
+
+model MailLog {
+  id          String   @id @default(cuid())
+  at          DateTime @default(now())
+  by          String // quién lo originó (correo del usuario o «sistema»)
+  companySlug String? // empresa del destinatario, si aplica
+  kind        String // bienvenida | restablecer | directo | grupal
+  to          String
+  subject     String
+  status      String // enviado | error | sin-config
+  error       String?
+  messageId   String?
+
+  @@index([at])
+}
