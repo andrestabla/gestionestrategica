@@ -12,6 +12,10 @@ import { leversOf } from "@/data/catalogo";
 import { DIMS } from "@/data/mapa";
 import { informeToken } from "@/lib/public-token";
 import { contextoEmpresa } from "@/server/contexto-empresa";
+import { sectorKeyDe, sectorOf } from "@/data/sector";
+
+// Versión del contexto que recibe el modelo: al cambiar, los análisis guardados se marcan desactualizados y se pueden regenerar.
+const CONTEXTO_VERSION = 2;
 
 // GET  /api/td/diagnostico/informe?kind=f1|consolidado[&email=] — el análisis guardado (si lo hay), si el
 //      modelo está disponible, si hay respuestas nuevas desde entonces y, para admin y advisor, el enlace para
@@ -26,7 +30,8 @@ function entrada(user: { email: string; role: string }, url: URL) {
   const kind = url.searchParams.get("kind") as InformeKind | null;
   if (kind !== "f1" && kind !== "consolidado") return { error: "Indica kind=f1 o kind=consolidado.", status: 400 } as const;
   const cat = catalog();
-  const empresa = { name: cat.company.name, sector: cat.company.sector, levers: leversOf(cat.company).map((l) => ({ name: l.name, desc: l.desc })), mode: cat.company.mode };
+  const sectorKey = sectorKeyDe(cat.company);
+  const empresa = { name: cat.company.name, sector: cat.company.sector?.trim() || sectorOf(sectorKey)?.label || "", levers: leversOf(cat.company).map((l) => ({ name: l.name, desc: l.desc })), mode: cat.company.mode };
   if (kind === "f1") {
     const pedido = url.searchParams.get("email")?.toLowerCase();
     const subject = pedido && F1_CAN_SEE_ALL(user as never) ? pedido : user.email.toLowerCase();
@@ -34,7 +39,7 @@ function entrada(user: { email: string; role: string }, url: URL) {
     const resp = getF1Responses(user as never).find((f) => f.email.toLowerCase() === subject);
     if (!resp) return { error: pedido ? "Esa persona no ha respondido la autoevaluación." : "Responde la autoevaluación antes de pedir el análisis.", status: 404 } as const;
     const lectura = lecturaF1(resp.r);
-    return { kind, subject, inputHash: hash({ r: resp.r, cargo: resp.cargo }), encargo: () => encargoF1({ empresa, contexto: contextoEmpresa(), persona: { nombre: resp.name, cargo: resp.cargo }, lectura, fecha: new Date(resp.at).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) }), share: false } as const;
+    return { kind, subject, inputHash: hash({ r: resp.r, cargo: resp.cargo, sectorKey, v: CONTEXTO_VERSION }), encargo: () => encargoF1({ empresa, contexto: contextoEmpresa(), persona: { nombre: resp.name, cargo: resp.cargo }, lectura, fecha: new Date(resp.at).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) }), share: false } as const;
   }
   if (!can(user as never, "view_f1_all")) return { error: "El consolidado lo ven el administrador y el advisor.", status: 403 } as const;
   const all = getF1Responses(user as never);
@@ -42,7 +47,7 @@ function entrada(user: { email: string; role: string }, url: URL) {
   const C = consolidate(platformResponses());
   const lecturas = all.map((f) => lecturaF1(f.r));
   const dispersion = DIMS.map((d, i) => ({ code: d.code, name: d.name, sd: sdev(lecturas.map((L) => L.dims[i].m).filter((m): m is number => m != null)) }));
-  return { kind, subject: "consolidado", inputHash: hash(all.map((f) => [f.email, f.r])), encargo: () => encargoConsolidado({ empresa, contexto: contextoEmpresa(), C, rec: recommend(C), n: all.length, dispersion, fecha: hoy(), cobertura: lecturas.map((L) => L.answered) }), share: true } as const;
+  return { kind, subject: "consolidado", inputHash: hash({ all: all.map((f) => [f.email, f.r]), sectorKey, v: CONTEXTO_VERSION }), encargo: () => encargoConsolidado({ empresa, contexto: contextoEmpresa(), C, rec: recommend(C), n: all.length, dispersion, fecha: hoy(), cobertura: lecturas.map((L) => L.answered) }), share: true } as const;
 }
 
 function respuesta(e: Exclude<ReturnType<typeof entrada>, { error: string }>, origin: string) {

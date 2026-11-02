@@ -6,7 +6,7 @@
 import { catalog, tenantView } from "@/server/store";
 import { leversOf, horizonsOf } from "@/data/catalogo";
 import { sectorOf, sectorKeyDe } from "@/data/sector";
-import { inteligenciaOf, titularDe } from "@/data/inteligencia";
+import { inteligenciaOf, titularDe, coincideEmpresa } from "@/data/inteligencia";
 import { executiveSummary } from "@/lib/logic";
 
 const n1 = (x: number | null | undefined) => (x == null ? "—" : x.toFixed(1).replace(".", ","));
@@ -31,7 +31,14 @@ export function contextoEmpresa(): string {
   // Inteligencia: benchmark del sector solo si la empresa tiene sector de referencia asignado
   const s = sectorOf(sectorKeyDe(c));
   if (s) {
+    out.push(`SECTOR DE REFERENCIA: ${s.label} (actividades ${s.ciiu.map((c) => `${c.code} ${c.name}`).join("; ")}).`);
     out.push(`INTELIGENCIA DEL SECTOR (${s.label}, ${s.source.name}, corte ${s.source.cut.slice(0, 4)}): ${s.n} sociedades; crecimiento mediano ${n1(s.dist.growth.p50)} % (cuartiles ${n1(s.dist.growth.p25)} a ${n1(s.dist.growth.p75)}); margen operacional mediano ${n1(s.dist.opMargin.p50)} %; margen bruto mediano ${n1(s.dist.grossMargin.p50)} %; las veinte mayores concentran ${n1(s.concentration.top20Share)} % de los ingresos (${s.concentration.top20Share >= 60 ? "sector concentrado" : "sector fragmentado"}); territorios con más peso: ${s.departments.slice(0, 3).map((d) => `${d.name} ${n1(d.share)} %`).join(", ")}.`);
+    // la empresa entre las sociedades del sector: su actividad propia (CIIU), su puesto y sus cifras frente a las medianas de esa actividad
+    const idx = s.peers.findIndex((p) => coincideEmpresa(c, p.name));
+    const propio = idx >= 0 ? s.peers[idx] : null;
+    const act = propio ? s.byCiiu.find((x) => x.code === propio.ciiu) : null;
+    if (act) out.push(`ACTIVIDAD PROPIA DE LA EMPRESA: ${act.code} ${act.name}: ${act.n} sociedades, crecimiento mediano ${n1(act.growthP50)} %, margen operacional mediano ${n1(act.opMarginP50)} %. Compara a la empresa con esta actividad, no con el sector completo.`);
+    if (propio) out.push(`POSICIÓN DE LA EMPRESA (${s.source.name}, ${s.source.cut.slice(0, 4)}): puesto ${idx + 1} de ${s.n} por ingresos${act ? ` y ${s.peers.filter((p) => p.ciiu === propio.ciiu).findIndex((p) => p.nit === propio.nit) + 1} de ${act.n} en su actividad` : ""}; ingresos ${Math.round(propio.revenue).toLocaleString("es-CO")} millones; crecimiento ${propio.growth == null ? "—" : n1(propio.growth) + " %"}; margen operacional ${propio.opMargin == null ? "—" : n1(propio.opMargin) + " %"}.`);
   } else {
     out.push("INTELIGENCIA DEL SECTOR: sin benchmark sectorial asignado a esta empresa todavía (no inventes cifras del sector).");
   }
