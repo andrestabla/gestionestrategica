@@ -19,7 +19,7 @@ test("perfil: consentimiento pendiente en el primer ingreso, datos básicos y pu
     // consentimiento
     assert.equal(consentPending(ana), true);
     assert.equal(consentPending(admin), false);
-    assert.ok(acceptConsent(ana).ok);
+    assert.ok((await acceptConsent(ana)).ok);
     assert.equal(consentPending(ana), false);
     assert.ok(ownProfile(ana)?.consentAt);
     // datos básicos

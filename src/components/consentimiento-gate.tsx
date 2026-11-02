@@ -21,7 +21,9 @@ export function ConsentGate({ company, country, nombre }: { company: string; cou
       const r = await fetch("/api/td/perfil/consentimiento", { method: "POST" });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError(j.error ?? `Error ${r.status}`); setBusy(false); return; }
-      router.refresh();
+      // recarga completa: el servidor vuelve a leer la aceptación desde la base
+      window.location.reload();
+      setTimeout(() => { setBusy(false); setError("La aceptación quedó registrada. Si sigues viendo esta pantalla, recarga la página."); }, 8000);
     } catch { setError("No se pudo conectar con el servidor."); setBusy(false); }
   };
   const salir = async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); router.refresh(); };

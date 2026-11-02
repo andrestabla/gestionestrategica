@@ -4,7 +4,7 @@ import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
-import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPending } from "@/server/store";
+import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPendingDb } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { FeedbackProvider } from "@/components/feedback";
 import { CatalogProvider } from "@/components/catalog-context";
@@ -36,7 +36,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   // la vista de la empresa activa, resuelta en el servidor para esta sesión
   const view = company ? await inTenant(company.slug, async () => tenantView()) : null;
   // primer ingreso con cuenta: la política de tratamiento de datos se acepta antes de ver cualquier módulo
-  const pendienteConsentimiento = company ? await inTenant(company.slug, async () => consentPending(user)) : false;
+  const pendienteConsentimiento = company ? await inTenant(company.slug, async () => consentPendingDb(user)) : false;
   // el proveedor envuelve también al shell (buscador, notificaciones): sin
   // empresa activa, una vista vacía deja la interfaz utilizable para el admin
   return (

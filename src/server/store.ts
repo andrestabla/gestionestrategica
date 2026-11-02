@@ -3081,13 +3081,32 @@ export function consentPending(user: SessionUser): boolean {
   return !!u && !u.consentAt;
 }
 
+/** Igual que `consentPending`, pero la respuesta la da la base cuando existe: en despliegues con varias
+    instancias la memoria de una puede no saber todavía que la persona ya aceptó. */
+export async function consentPendingDb(user: SessionUser): Promise<boolean> {
+  if (user.role === "ADMIN" || user.qr) return false;
+  if (hasDb()) {
+    try {
+      const db = await prisma();
+      const row = await db.user.findUnique({ where: { email: user.email.toLowerCase() }, select: { consentAt: true } });
+      if (row) { const u = propio(user); if (u && row.consentAt) u.consentAt = row.consentAt.toISOString(); return !row.consentAt; }
+    } catch (e) { console.warn("[4shine] consentimiento:", (e as Error).message); }
+  }
+  return consentPending(user);
+}
+
 /** Registra la aceptación de la política de tratamiento de datos con fecha y versión. */
-export function acceptConsent(user: SessionUser): { ok: true; at: string } | { ok: false; status: number; error: string } {
+export async function acceptConsent(user: SessionUser): Promise<{ ok: true; at: string } | { ok: false; status: number; error: string }> {
   const u = propio(user);
-  if (!u) return { ok: false, status: 404, error: "La cuenta no existe." };
   const at = new Date().toISOString();
-  u.consentAt = at;
-  void persistQuiet("consentimiento", (db) => db.user.updateMany({ where: { email: u.email.toLowerCase() }, data: { consentAt: new Date(at), consentVersion: CONSENT_VERSION } }));
+  if (u) u.consentAt = at;
+  if (hasDb()) {
+    try {
+      const db = await prisma();
+      const r = await db.user.updateMany({ where: { email: user.email.toLowerCase() }, data: { consentAt: new Date(at), consentVersion: CONSENT_VERSION } });
+      if (!r.count && !u) return { ok: false, status: 404, error: "La cuenta no existe." };
+    } catch (e) { return { ok: false, status: 500, error: `No se pudo registrar la aceptación: ${(e as Error).message}` }; }
+  } else if (!u) return { ok: false, status: 404, error: "La cuenta no existe." };
   return { ok: true, at };
 }
 
