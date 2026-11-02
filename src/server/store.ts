@@ -3544,3 +3544,103 @@ export async function listMailLog(opts: { limit?: number; companySlug?: string |
   }
   return g.mailLog.filter((e) => !opts.companySlug || e.companySlug === opts.companySlug).slice(0, limit);
 }
+
+
+/* ═══ Deshacer acciones de otros usuarios (solo el administrador de la plataforma, permiso undo_any) ═══
+   Cada función borra en memoria y en la base, deja rastro en la auditoría y devuelve 403 para quien no administra. */
+
+const puedeDeshacer = (actor: SessionUser): { ok: false; status: number; error: string } | null =>
+  can(actor, "undo_any") ? null : { ok: false, status: 403, error: "Solo el administrador de la plataforma deshace acciones de otros usuarios." };
+
+/** Borra la autoevaluación directiva de una persona y su análisis con IA; el consolidado queda desactualizado. */
+export function removeF1Response(actor: SessionUser, email: unknown): { ok: true } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const key = String(email ?? "").trim().toLowerCase();
+  const entry = [...f1Store().entries()].find(([k]) => k.toLowerCase() === key);
+  if (!entry) return { ok: false, status: 404, error: "Esa persona no tiene autoevaluación guardada." };
+  f1Store().delete(entry[0]);
+  informes().delete(`f1|${key}`);
+  audit(actor, "task", `f1:${entry[0]}`, `autoevaluación directiva eliminada por el administrador (${entry[1].name})`);
+  void persist("autoevaluación", async (db) => {
+    const companyId = cid();
+    await db.f1Response.deleteMany({ where: { companyId, email: entry[0] } });
+    await db.diagnosticReport.deleteMany({ where: { companyId, kind: "f1", subject: key } });
+  });
+  return { ok: true };
+}
+
+/** Borra la respuesta de una persona al test de capacidad empresarial (y sus notas de informe). */
+export function removeTestResponse(actor: SessionUser, email: unknown): { ok: true } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const key = String(email ?? "").trim().toLowerCase();
+  const entry = [...testStore().entries()].find(([k]) => k.toLowerCase() === key);
+  if (!entry) return { ok: false, status: 404, error: "Esa persona no tiene test guardado." };
+  testStore().delete(entry[0]);
+  testNotes().delete(entry[0]);
+  audit(actor, "task", `test:${entry[0]}`, `test de capacidad empresarial eliminado por el administrador (${entry[1].name})`);
+  void persist("test", async (db) => {
+    const companyId = cid();
+    await db.testResponse.deleteMany({ where: { companyId, email: entry[0] } });
+    await db.testNote.deleteMany({ where: { companyId, participant: entry[0] } });
+  });
+  return { ok: true };
+}
+
+/** Borra una respuesta anónima de la encuesta de equipos (por su id F2-0001…). */
+export function removeF2Response(actor: SessionUser, id: unknown): { ok: true; total: number } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const i = f2Store().findIndex((r) => r.id === String(id ?? ""));
+  if (i < 0) return { ok: false, status: 404, error: "Esa respuesta no existe." };
+  const [r] = f2Store().splice(i, 1);
+  audit(actor, "task", `f2:${r.id}`, "respuesta de la encuesta de equipos eliminada por el administrador");
+  void persist("fuente 2", (db) => db.teamResponse.deleteMany({ where: { companyId: cid(), id: r.id } }));
+  return { ok: true, total: f2Store().length };
+}
+
+/** Borra la evaluación de una persona sobre una iniciativa (matriz de priorización). */
+export function removeEvaluation(actor: SessionUser, iniId: unknown, by: unknown): { ok: true; consolidated: Consolidated } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const id = String(iniId ?? "").toLowerCase(), who = String(by ?? "").toLowerCase();
+  const key = `${id}|${who}`;
+  if (!evals().has(key)) return { ok: false, status: 404, error: "Esa evaluación no existe." };
+  evals().delete(key);
+  audit(actor, "task", id, `evaluación de ${who} eliminada por el administrador`);
+  void persist("evaluación", (db) => db.initiativeEvaluation.deleteMany({ where: { companyId: cid(), id: key } }));
+  return { ok: true, consolidated: consolidatedOf(id) };
+}
+
+/** Deja una iniciativa sin decisión de tiempo. */
+export function clearDecision(actor: SessionUser, iniId: unknown): { ok: true } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const id = String(iniId ?? "").toLowerCase();
+  if (!decisions().has(id)) return { ok: false, status: 404, error: "La iniciativa no tiene decisión registrada." };
+  decisions().delete(id);
+  audit(actor, "task", id, "decisión de tiempo deshecha por el administrador");
+  void persist("decisión", (db) => db.initiativeDecision.deleteMany({ where: { companyId: cid(), code: id } }));
+  return { ok: true };
+}
+
+/** Borra un valor de KPI reportado desde la plataforma (no toca la serie base). */
+export function removeKpiReport(actor: SessionUser, code: unknown, period: unknown): { ok: true; series: KpiFull["series"] } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const c = String(code ?? ""), p = String(period ?? "");
+  const list = kpiReports().get(c) ?? [];
+  const i = list.findIndex((r) => r.period === p);
+  if (i < 0) return { ok: false, status: 404, error: "No hay un valor reportado para ese indicador y periodo." };
+  list.splice(i, 1); kpiReports().set(c, list);
+  audit(actor, "task", `kpi:${c}`, `valor reportado del periodo ${p} eliminado por el administrador`);
+  void persist("kpi", (db) => db.kpiReport.deleteMany({ where: { companyId: cid(), code: c, period: p } }));
+  return { ok: true, series: effectiveKpiSeries(c) };
+}
+
+/** Borra la captura A3 de una práctica (autoevaluación, evidencia y nivel). */
+export function clearCapture(actor: SessionUser, varId: unknown): { ok: true } | { ok: false; status: number; error: string } {
+  const no = puedeDeshacer(actor); if (no) return no;
+  const v = String(varId ?? "");
+  if (!capture().has(v)) return { ok: false, status: 404, error: "Esa práctica no tiene captura." };
+  if (S().published) return { ok: false, status: 422, error: "El corte A3 ya está publicado: la captura no se modifica." };
+  capture().delete(v);
+  audit(actor, "task", `captura:${v}`, "captura A3 eliminada por el administrador");
+  void persist("captura", (db) => db.practiceCapture.deleteMany({ where: { companyId: cid(), cut: "A3", practice: v } }));
+  return { ok: true };
+}

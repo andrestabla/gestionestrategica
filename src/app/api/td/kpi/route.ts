@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { kpiHealth } from "@/lib/logic";
-import { effectiveKpis, reportKpi, getKpiReports, responsible } from "@/server/store";
+import { effectiveKpis, reportKpi, getKpiReports, responsible, removeKpiReport, flushOrError } from "@/server/store";
 
 // GET /api/td/kpi — indicadores con la serie EFECTIVA (seed + valores
 // reportados desde la plataforma) y su salud recalculada.
@@ -28,4 +28,13 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   return NextResponse.json({ report: result.report, series: result.series });
+});
+
+// DELETE /api/td/kpi { code, period } — el administrador borra un valor reportado desde la plataforma.
+export const DELETE = withTenant(async (req: Request, _ctx: unknown, user) => {
+  const body = await req.json().catch(() => null);
+  const r = removeKpiReport(user, body?.code, body?.period);
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
+  return NextResponse.json({ ok: true, series: r.series });
 });

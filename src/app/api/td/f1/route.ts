@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { getF1Responses, saveF1Response, f1Closed, F1_CAN_SEE_ALL, flushOrError } from "@/server/store";
+import { getF1Responses, saveF1Response, f1Closed, F1_CAN_SEE_ALL, flushOrError, removeF1Response } from "@/server/store";
 import { PRACTICES } from "@/data/mapa";
 
 // GET  /api/td/f1 — autoevaluación directiva (Fuente 1): todas las respuestas
@@ -28,4 +28,13 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const e = await flushOrError();
   if (e) return NextResponse.json({ error: e }, { status: 500 });
   return NextResponse.json({ response: result.response, answered: result.answered, total: PRACTICES.length });
+});
+
+// DELETE /api/td/f1?email= — el administrador borra la autoevaluación de una persona (y su análisis con IA).
+export const DELETE = withTenant(async (req: Request, _ctx: unknown, user) => {
+  const r = removeF1Response(user, new URL(req.url).searchParams.get("email"));
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const e = await flushOrError();
+  if (e) return NextResponse.json({ error: e }, { status: 500 });
+  return NextResponse.json({ ok: true });
 });

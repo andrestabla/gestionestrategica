@@ -21,6 +21,8 @@ import { CommandPalette, SearchButton } from "@/components/command-palette";
 import type { SessionUser } from "@/lib/session";
 import { applyTheme } from "@/lib/branding";
 
+const MOSTRAR_VISTA_PUBLICA = false;
+
 function PublicLinkButton() {
   const [state, setState] = useState<"idle" | "busy" | "copied">("idle");
   const share = async () => {
@@ -430,7 +432,8 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
             <NotificationsBell />
             <ThemeToggle />
             {/* la vista pública de la plataforma completa no aplica a la convención: se oculta en ese modo */}
-            {!convencion && <span className="hidden sm:inline-flex"><PublicLinkButton /></span>}
+            {/* la vista pública queda oculta en toda la plataforma (decisión del 2 de noviembre de 2026); el componente se conserva */}
+            {MOSTRAR_VISTA_PUBLICA && !convencion && <span className="hidden sm:inline-flex"><PublicLinkButton /></span>}
             <div className="flex items-center gap-2.5 pl-1">
               <div className="grid h-8 w-8 place-items-center rounded-full text-[12px] font-bold text-white shadow-md"
                 style={{ background: "linear-gradient(135deg, var(--cyan-deep), var(--navy))" }}>

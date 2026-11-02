@@ -49,3 +49,42 @@ test("instrumentos: la empresa con solo autoevaluación acepta la F1 y rechaza t
   });
   resetStore();
 });
+
+test("deshacer: solo el administrador borra autoevaluaciones, tests, encuestas, evaluaciones y decisiones; cada borrado deja rastro", async () => {
+  const { removeF1Response, removeTestResponse, removeF2Response, removeEvaluation, clearDecision, getF1Responses, getTestResponses, getF2Responses, getEvaluations, getDecision, evaluateInitiative, decideInitiative, getAudit } = await import("../src/server/store");
+  resetStore();
+  assert.ok((await createCompany(admin, { name: "Deshacer SA", template: "demo" })).ok);
+  await runWithTenant("deshacer-sa", async () => {
+    const lider: SessionUser = { email: "l@d.co", name: "Líder", role: "LIDER", company: { slug: "deshacer-sa", name: "Deshacer SA", shortName: "D" } };
+    assert.ok(saveF1Response(directivo, { r: Object.fromEntries(PRACTICES.map((p) => [p.code, 3])) }).ok);
+    assert.ok(saveTestResponse(directivo, { r: Object.fromEntries(Array.from({ length: 24 }, (_, i) => [String(i + 1), 3])) }).ok);
+    const codes = [...DIMS.flatMap((d) => d.f2.map((q) => q.code)), ...F2_GENERAL.map((q) => q.code)];
+    const f2 = saveF2Response({ r: Object.fromEntries(codes.map((c) => [c, 4])) }); assert.ok(f2.ok);
+    // el advisor no puede deshacer
+    assert.equal(removeF1Response(advisor, directivo.email).ok, false);
+    assert.equal(removeTestResponse(advisor, directivo.email).ok, false);
+    assert.equal(removeF2Response(advisor, f2.ok ? f2.response.id : "").ok, false);
+    // el administrador sí, y lo que no existe da 404
+    assert.ok(removeF1Response(admin, directivo.email.toUpperCase()).ok);
+    assert.equal(getF1Responses(admin).length, 0);
+    assert.equal((removeF1Response(admin, directivo.email) as { status?: number }).status, 404);
+    assert.ok(removeTestResponse(admin, directivo.email).ok);
+    assert.equal(getTestResponses(admin).length, 0);
+    assert.ok(removeF2Response(admin, f2.ok ? f2.response.id : "").ok);
+    assert.equal(getF2Responses().length, 0);
+    // evaluación y decisión sobre una iniciativa de la demo vinculada a un KR
+    const ini = catalog().initiatives.find((i) => i.kpi);
+    assert.ok(ini, "la demo trae iniciativas vinculadas");
+    const ev = evaluateInitiative(lider, ini!.id, { scores: { D: 3, E: 3, M: 3, L: 3 }, type: { contribucion: "ESTRATEGICO", profundidad: "ESTRATEGICO", alcance: "ESTRATEGICO", permanencia: "TACTICO" } });
+    assert.ok(ev.ok, (ev as { error?: string }).error);
+    assert.equal(removeEvaluation(advisor, ini!.id, lider.email).ok, false);
+    assert.ok(removeEvaluation(admin, ini!.id, lider.email).ok);
+    assert.ok(!getEvaluations(ini!.id).some((e) => e.by === lider.email), "la evaluación del líder desaparece (las de la demo siguen)");
+    const d = decideInitiative(lider, ini!.id, { decision: "BACKLOG", rationale: "después" });
+    assert.ok(d.ok, (d as { error?: string }).error);
+    assert.equal(clearDecision(advisor, ini!.id).ok, false);
+    assert.ok(clearDecision(admin, ini!.id).ok);
+    assert.equal(getDecision(ini!.id), null);
+    assert.ok(getAudit().some((a) => /eliminad|deshech/.test(a.change)), "la auditoría registra los borrados");
+  });
+});

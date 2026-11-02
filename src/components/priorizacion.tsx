@@ -16,7 +16,7 @@ import {
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
 } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
-import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2, Trash2 } from "lucide-react";
 import { confirmar, avisar } from "@/components/feedback";
 import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
@@ -96,6 +96,16 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const session = sessionOf(cv.catalog.company.prioSessions, ini?.ownerId);
   // en la convención el líder de tribu propone; decide y ratifica el directorio con gerencia y el advisor
   const canDecide = useCan("decide_initiatives") && !(cv.catalog.company.mode === "convencion" && user.role === "LIDER" && !!user.responsibleId);
+  const canUndo = useCan("undo_any");
+  // el administrador deshace: borra la evaluación de una persona o deja la iniciativa sin decisión
+  const deshacer = async (body: Record<string, unknown>, pregunta: string) => {
+    if (!(await confirmar(pregunta))) return;
+    setSaving(true); setError(null);
+    const res = await fetch("/api/td/priorizacion", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: iniId, ...body }) });
+    if (!res.ok) setError((await res.json()).error ?? "No se pudo deshacer");
+    else { await refetch(); avisar(body.decision ? "Decisión deshecha" : "Evaluación eliminada"); }
+    setSaving(false);
+  };
   const refetchCatalog = useCatalogRefetch();
   const { data, refetch } = usePriorizacion(iniId);
   // convención: trimestre de inicio (propuesto por la tribu, ratificado por el directorio) en lugar del horizonte
@@ -216,6 +226,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
                     <span className="chip !py-0 text-[11px]">{e.role.toLowerCase()}</span>
                     <span className="ml-auto text-[12px] text-faint">{e.type === "ESTRATEGICO" ? "estratégica" : "táctica"}</span>
                     <span className="num font-extrabold" style={{ color: SCORE_COLOR(e.score) }}>{e.score}</span>
+                    {canUndo && <button type="button" disabled={saving} onClick={() => deshacer({ by: e.by }, `¿Eliminar la evaluación de ${e.name}? Podrá calificar de nuevo.`)} title="Eliminar esta evaluación" aria-label="Eliminar esta evaluación" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-faint hover:bg-surface hover:text-bad-text disabled:opacity-40"><Trash2 size={12} /></button>}
                   </div>
                 ))}
               </div>
@@ -231,6 +242,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
                 <span className="text-[12px] text-faint">{decision.name} · {decision.at.slice(0, 10)}</span>
               </div>
               {decision.rationale && <p className="mt-1.5 text-[12px] leading-snug text-ink-soft">{decision.rationale}</p>}
+              {canUndo && <button type="button" disabled={saving} onClick={() => deshacer({ decision: true }, "¿Dejar la iniciativa sin decisión de tiempo? La gerencia o el advisor podrán decidir de nuevo.")} className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-faint hover:text-bad-text disabled:opacity-40"><Trash2 size={12} /> Deshacer decisión</button>}
             </div>
           ) : (
             <p className="text-[12px] italic text-faint">Sin decisión registrada.</p>

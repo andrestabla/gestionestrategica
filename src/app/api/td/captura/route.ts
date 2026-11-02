@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { captureVariable, captureProgress } from "@/server/store";
+import { captureVariable, captureProgress, clearCapture, flushOrError } from "@/server/store";
 
 // POST /api/td/captura — registra la captura de una práctica del corte A3:
 // autoevaluación (responsable de la capacidad o advisor), evidencia y nivel
@@ -16,4 +16,12 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
   return NextResponse.json({ capture: result.capture, progress: captureProgress() });
+});
+
+// DELETE /api/td/captura?var=DIR-1.1 — el administrador borra la captura A3 de una práctica.
+export const DELETE = withTenant(async (req: Request, _ctx: unknown, user) => {
+  const r = clearCapture(user, new URL(req.url).searchParams.get("var"));
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
+  return NextResponse.json({ ok: true, capture: { vars: {}, progress: captureProgress() } });
 });

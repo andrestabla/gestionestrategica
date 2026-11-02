@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
-import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError } from "@/server/store";
+import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError, removeEvaluation, clearDecision } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz de priorización, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
@@ -62,4 +62,15 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     return NextResponse.json({ horizon: r.horizon });
   }
   return NextResponse.json({ error: "Nada que registrar: envía evaluation, decision u horizon." }, { status: 400 });
+});
+
+// DELETE /api/td/priorizacion — el administrador deshace: { id, by } borra la evaluación de esa persona;
+// { id, decision: true } deja la iniciativa sin decisión de tiempo.
+export const DELETE = withTenant(async (req: Request, _ctx: unknown, user) => {
+  const body = await req.json().catch(() => null);
+  if (!body?.id) return NextResponse.json({ error: "Cuerpo inválido: falta id" }, { status: 400 });
+  const r = body.decision ? clearDecision(user, body.id) : removeEvaluation(user, body.id, body.by);
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
+  return NextResponse.json({ ok: true, ...("consolidated" in r ? { consolidated: r.consolidated } : {}) });
 });

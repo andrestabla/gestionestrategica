@@ -35,6 +35,7 @@ const ACTION_LABEL: Record<Action, string> = {
   manage_companies: "Crear, editar, desactivar y eliminar empresas",
   manage_catalog: "Editar el catálogo de la empresa (responsables, personas, objetivos, KPI, iniciativas, finanzas y territorio)",
   manage_platform: "Integraciones, branding y configuración",
+  undo_any: "Deshacer acciones de otros usuarios (solo administrador)",
 };
 const ROLES: { key: Role; label: string }[] = [
   { key: "ADMIN", label: "Admin" }, { key: "CONSULTOR", label: "Advisor" }, { key: "LIDER", label: "Líder" },

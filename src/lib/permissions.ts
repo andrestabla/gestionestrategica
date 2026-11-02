@@ -43,7 +43,8 @@ export type Action =
   | "manage_users"      // administrar usuarios y roles de la empresa
   | "manage_companies"  // crear, editar, desactivar y eliminar empresas (tenants)
   | "manage_catalog"    // editar el catálogo de la empresa: responsables, personas, objetivos, KPI, iniciativas, finanzas y territorio
-  | "manage_platform";  // integraciones, branding y configuración de la plataforma
+  | "manage_platform"   // integraciones, branding y configuración de la plataforma
+  | "undo_any";         // deshacer acciones de cualquier usuario: borrar intentos de diagnóstico, evaluaciones, decisiones, valores de KPI y capturas
 
 export type Role = SessionUser["role"];
 
@@ -83,6 +84,8 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
   manage_companies: { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
   manage_catalog:   { ADMIN: true,  CONSULTOR: true, LIDER: true, RESPONSABLE: false, DIRECTIVO: false },
   manage_platform:  { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
+  // el administrador de la plataforma deshace lo que otros registraron: intentos de diagnóstico, evaluaciones, decisiones, KPI y capturas
+  undo_any:         { ADMIN: true,  CONSULTOR: false, LIDER: false, RESPONSABLE: false, DIRECTIVO: false },
 };
 
 /** ¿Puede el usuario ejecutar la acción? `target` (línea o recurso con
@@ -101,12 +104,12 @@ export function can(user: SessionUser | null, action: Action, target?: number | 
 /** Acciones relevantes por módulo (para el chip de acceso y la documentación). */
 export const MODULE_ACTIONS: Record<ModuleKey, Action[]> = {
   panel:        ["view"],
-  madurez:      ["view", "answer_f1", "view_f1_all", "capture_maturity", "publish_maturity", "verify_evidence"],
+  madurez:      ["view", "answer_f1", "view_f1_all", "capture_maturity", "publish_maturity", "verify_evidence", "undo_any"],
   benchmark:    ["view"],
   capacidades:  ["view", "edit_initiatives"],
   kpi:          ["view", "report_kpi"],
   ruta:         ["view", "edit_initiatives"],
-  iniciativas:  ["view", "create_initiatives", "edit_initiatives", "edit_tasks", "evaluate_initiatives", "decide_initiatives"],
+  iniciativas:  ["view", "create_initiatives", "edit_initiatives", "edit_tasks", "evaluate_initiatives", "decide_initiatives", "undo_any"],
   proyectos:    ["view", "edit_tasks", "verify_evidence"],
   bi:           ["view"],
   metodologia:  ["view"],

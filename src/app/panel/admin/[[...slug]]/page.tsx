@@ -480,6 +480,7 @@ const ACTION_DESC: Record<Action, string> = {
   manage_companies: "Crear, editar, desactivar y eliminar empresas",
   manage_catalog: "Editar el catálogo de la empresa (responsables, personas, objetivos, KPI, iniciativas, finanzas y territorio)",
   manage_platform: "Integraciones, branding y configuración de la plataforma",
+  undo_any: "Deshacer acciones de cualquier usuario: borrar intentos de diagnóstico, evaluaciones, decisiones, valores de KPI y capturas",
 };
 
 const ROLES = ["ADMIN", "CONSULTOR", "LIDER", "RESPONSABLE", "DIRECTIVO"] as const;

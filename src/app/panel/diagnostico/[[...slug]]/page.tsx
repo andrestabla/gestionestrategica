@@ -35,7 +35,7 @@ import { ModoFocal, pedirPantallaCompleta, teclaNumero, irAlSiguientePendiente, 
 import { UnaAUna, SelectorVista, useVista, type Pantalla } from "@/components/una-a-una";
 import {
   Radar, Layers, ClipboardList, ClipboardCheck, Flame, PenLine, ArrowLeft, ArrowRight, CheckCircle2,
-  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText, RefreshCw, Circle,
+  AlertTriangle, Info, Loader2, Upload, FileCheck2, Send, Link2, Users, Printer, FileText, RefreshCw, Circle, Trash2,
 } from "lucide-react";
 import { MarcaGE } from "@/components/logo";
 
@@ -454,6 +454,22 @@ function Dimension({ code }: { code: string }) {
 
 const toResponse = (t: TestResponse): Response => ({ tipo: "test", meta: { nombre: t.name, cargo: t.cargo ?? t.role, empresa: "" }, r: t.r });
 
+/** Botón de deshacer del administrador: confirma, llama al endpoint DELETE y recarga. */
+function BotonDeshacer({ titulo, pregunta, url, onDone, body }: { titulo: string; pregunta: string; url: string; onDone: () => void | Promise<void>; body?: Record<string, unknown> }) {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (!(await confirmar(pregunta))) return;
+    setBusy(true);
+    try {
+      const res = await fetch(url, { method: "DELETE", ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) avisar(j?.error ?? `Error ${res.status}`, "warn"); else { avisar("Eliminado"); await onDone(); }
+    } catch { avisar("No se pudo conectar con el servidor.", "warn"); }
+    setBusy(false);
+  };
+  return <button type="button" onClick={run} disabled={busy} title={titulo} aria-label={titulo} className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-bad-text disabled:opacity-40">{busy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}</button>;
+}
+
 function useTestResponses() {
   const [stored, setStored] = useState<TestResponse[]>([]);
   const [mine, setMine] = useState<TestResponse | null>(null);
@@ -466,7 +482,8 @@ function useTestResponses() {
 
 function TestTab() {
   const v = useCatalog();
-  const { stored, mine } = useTestResponses();
+  const { stored, mine, refetch } = useTestResponses();
+  const canUndo = useCan("undo_any");
   const demo = v.catalog.demoResponses.filter((x) => x.tipo === "test");
   const tests = [...demo, ...stored.map(toResponse)];
   const reads = tests.map((t) => readTest(t.r));
@@ -496,7 +513,7 @@ function TestTab() {
                     <td className="px-3 py-2"><b className="text-ink">{String(t.meta.nombre)}</b><div className="text-[12px] text-faint">{String(t.meta.cargo ?? "")}{i >= demo.length ? " · plataforma" : ""} · <Link href={`/panel/diagnostico/test/informe/${i < demo.length ? `demo:${i}` : encodeURIComponent(stored[i - demo.length].email)}`} className="font-bold text-cyan-deep hover:underline">informe</Link></div></td>
                     {reads[i].caps.map((c) => <td key={c.n} className={`num px-2 py-2 text-center ${c.avg != null && c.avg < THRESHOLD ? "font-bold" : ""}`} style={c.avg != null && c.avg < THRESHOLD ? { color: "var(--bad-text)" } : undefined}>{f1(c.avg, 2)}<div className="text-[11px] font-normal text-faint">{c.cov}/6</div></td>)}
                     <td className="px-3 py-2 font-semibold text-ink">{reads[i].stage}{reads[i].provisional ? " (provisional)" : ""}</td>
-                    <td className="px-3 py-2 text-muted">{reads[i].hypothesis ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted">{reads[i].hypothesis ?? "—"}{canUndo && i >= demo.length && <BotonDeshacer titulo="Eliminar este test" pregunta={`¿Eliminar el test de ${String(t.meta.nombre)}? La persona podrá responderlo de nuevo.`} url={`/api/td/test?email=${encodeURIComponent(stored[i - demo.length].email)}`} onDone={refetch} />}</td>
                   </tr>
                 ))}
                 {tests.length > 1 && <tr className="border-t border-line bg-surface-2/60"><td className="px-3 py-2 font-bold text-ink">Promedio</td>{TEST.bloques.map((b, i) => <td key={b.cap} className="num px-2 py-2 text-center font-extrabold text-ink">{f1(avg(reads.map((r) => r.caps[i].avg)), 2)}</td>)}<td colSpan={2} /></tr>}
@@ -743,8 +760,9 @@ function EscalaF1() {
 }
 
 function AutoevaluacionTab() {
-  const { data } = useF1();
+  const { data, refetch } = useF1();
   const canAll = useCan("view_f1_all");
+  const canUndo = useCan("undo_any");
   const mine = data?.mine ?? null;
   const total = data?.total ?? PRACTICES.length;
   const myN = mine ? Object.keys(mine.r).length : 0;
@@ -807,6 +825,7 @@ function AutoevaluacionTab() {
                   ...CAPS.map((c, i) => ({ key: c.code, header: c.code, align: "center" as const, priority: 2 as const, cell: ({ L }: (typeof lecturas)[number]) => { const m = L.caps[i].m; return <span className={m != null && m < THRESHOLD ? "font-bold text-bad" : ""}>{f1(m, 2)}</span>; } })),
                   { key: "avance", header: "Avance", align: "center", priority: 2, cell: ({ L }) => `${L.answered}/${total}` },
                   { key: "fecha", header: "Guardada", priority: 3, cell: ({ f }) => <span className="text-muted">{new Date(f.at).toLocaleDateString("es-CO")}</span> },
+                  ...(canUndo ? [{ key: "admin", header: "", align: "center" as const, priority: 1 as const, cell: ({ f }: (typeof lecturas)[number]) => <BotonDeshacer titulo="Eliminar esta autoevaluación" pregunta={`¿Eliminar la autoevaluación de ${f.name}? Se borra también su análisis con IA; la persona podrá responder de nuevo.`} url={`/api/td/f1?email=${encodeURIComponent(f.email)}`} onDone={refetch} /> }] : []),
                 ]} />
                 {lecturas.length > 1 && <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl bg-surface-2/60 px-4 py-2 text-[12.5px]"><b className="text-ink">Comité</b>{capsCons.map((c) => <span key={c.cap.n} className="num"><span className="text-faint">{c.cap.code}</span> <b className="text-ink">{f1(c.m, 2)}</b></span>)}</div>}
               </div>
@@ -1283,7 +1302,7 @@ function Brechas() {
 
 /* ═══ Fuente 2 · enlace anónimo y respuestas recibidas ═══ */
 
-type F2Api = { url: string | null; total: number; byArea: Record<string, number>; latest: string | null; open: string[] };
+type F2Api = { url: string | null; total: number; byArea: Record<string, number>; latest: string | null; open: string[]; respuestas?: { id: string; at: string; area: string | null }[] };
 
 function F2Card() {
   const [d, setD] = useState<F2Api | null>(null);
@@ -1315,6 +1334,14 @@ function F2Card() {
           <div className="mt-1 text-[12px] text-muted">{ok ? "Muestra suficiente para reportar." : `Faltan ${8 - (d?.total ?? 0)} para la muestra mínima; con menos de cinco la Fuente 2 no se reporta y la madurez se calcula 55/45.`}</div>
           {d && Object.keys(d.byArea).length > 0 && <div className="mt-2 space-y-0.5 text-[12px]">{Object.entries(d.byArea).map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-ink-soft">{k}</span><span className="num text-muted">{v}{v < 5 ? " · no se reporta por separado" : ""}</span></div>)}</div>}
           {d?.latest && <div className="mt-2 text-[12px] text-faint">Última: {new Date(d.latest).toLocaleString("es-CO")}</div>}
+          {d && d.respuestas && d.respuestas.length > 0 && (
+            <div className="mt-3 border-t border-line pt-2">
+              <div className="label mb-1">Respuestas (administrador)</div>
+              <div className="max-h-40 space-y-0.5 overflow-auto">
+                {[...d.respuestas].reverse().map((r) => <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="num text-ink-soft">{r.id}</span><span className="truncate text-faint">{r.area ?? "Sin área"} · {new Date(r.at).toLocaleDateString("es-CO")}</span><span className="ml-auto"><BotonDeshacer titulo="Eliminar esta respuesta" pregunta={`¿Eliminar la respuesta ${r.id} de la encuesta de equipos? Es anónima y no se puede recuperar.`} url={`/api/td/f2?id=${encodeURIComponent(r.id)}`} onDone={load} /></span></div>)}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Card>
