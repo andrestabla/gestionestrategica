@@ -3886,17 +3886,17 @@ export async function registrarSinSesion(slug: string | null, path: string) {
    Se guarda en la misma tabla que los informes con IA (tipo «alineacion», asunto = horizonte) con la huella de las
    prioridades y objetivos que la originaron: si cambian, se marca desactualizada. */
 
-export const getAlineacion = (horizon: string): (Omit<InformeGuardado, "informe"> & { informe: AlineacionIA }) | null => {
-  const g = informes().get(`alineacion|${horizon}`); if (!g) return null;
+export const getAlineacion = (horizon: string, kind: InformeKind = "alineacion"): (Omit<InformeGuardado, "informe"> & { informe: AlineacionIA }) | null => {
+  const g = informes().get(`${kind}|${horizon}`); if (!g) return null;
   return { ...g, informe: g.informe as unknown as AlineacionIA };
 };
 
-export function saveAlineacion(user: SessionUser, horizon: string, inputHash: string, informe: AlineacionIA, model = "openai"): { ok: true; saved: InformeGuardado } | { ok: false; status: number; error: string } {
+export function saveAlineacion(user: SessionUser, horizon: string, inputHash: string, informe: AlineacionIA, model = "openai", kind: InformeKind = "alineacion"): { ok: true; saved: InformeGuardado } | { ok: false; status: number; error: string } {
   if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "La validación la lanza quien administra la estrategia." };
-  const kind = "alineacion" as InformeKind, subject = horizon;
+  const subject = horizon;
   const saved: InformeGuardado = { kind, subject, inputHash, informe: informe as unknown as InformeIA, model, by: user.email, at: new Date().toISOString() };
   informes().set(`${kind}|${subject}`, saved);
-  audit(user, "task", `alineacion:${horizon}`, `validación de alineación generada (${informe.items.filter((i) => i.color === "verde").length} verde · ${informe.items.filter((i) => i.color === "amarillo").length} amarillo · ${informe.items.filter((i) => i.color === "rojo").length} rojo)`);
+  audit(user, "task", `${kind}:${horizon}`, `${kind === "alineacion" ? "validación de alineación" : "validación de iniciativas"} generada (${informe.items.filter((i) => i.color === "verde").length} verde · ${informe.items.filter((i) => i.color === "amarillo").length} amarillo · ${informe.items.filter((i) => i.color === "rojo").length} rojo)`);
   void persist("validación de alineación", async (db) => {
     const companyId = cid();
     const data = { inputHash, content: informe as unknown as object, model, by: user.email, at: new Date(saved.at) };

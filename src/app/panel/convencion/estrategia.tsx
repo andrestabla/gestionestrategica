@@ -24,6 +24,7 @@ import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonesBase, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
 import { SEMAFORO, NATURALEZA, ELEMENTOS, type AlineacionIA, type AlineacionItem, type PropuestaObjetivo } from "@/lib/alineacion";
+import { NATURALEZA_INI, ELEMENTOS_INI, type ValidacionIni, type IniItem, type PropuestaIniciativa } from "@/lib/iniciativas-ia";
 import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
@@ -846,6 +847,28 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
   const [fLever, setFLever] = useState("");   // prioridad: la del objetivo al que pertenece el KR (o la iniciativa)
   const leverDeIni = (i: InitiativeFull) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
   const [nueva, setNueva] = useState(false);
+  // validación de iniciativas con IA (acompañamiento): semáforo por iniciativa, qué falta, qué hacer y redacción propuesta
+  const [val, setVal] = useState<{ validacion: ValidacionIni | null; at: string | null; desactualizado: boolean; disponible: boolean } | null>(null);
+  const [valBusy, setValBusy] = useState(false);
+  const [valOpen, setValOpen] = useState<InitiativeFull | null>(null);
+  useEffect(() => {
+    if (!acomp || !horizon) return;
+    let alive = true;
+    fetch(`/api/td/initiatives/validar?horizon=${encodeURIComponent(horizon)}`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive && j) setVal(j); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [acomp, horizon, cat]);
+  const validarInis = async () => {
+    setValBusy(true);
+    try {
+      const res = await fetch("/api/td/initiatives/validar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { avisar(j.error ?? "No se pudo validar.", "bad"); return; }
+      setVal(j); avisar("Iniciativas validadas.");
+    } finally { setValBusy(false); }
+  };
+  const valDe = (id: string): IniItem | undefined => val?.validacion?.items.find((i) => i.id === id);
+  const cuenta = (c: IniItem["color"]) => val?.validacion?.items.filter((i) => i.color === c).length ?? 0;
+  const ChipVal = ({ i }: { i: InitiativeFull }) => { const it = valDe(i.id); if (!it) return null; return <button type="button" onClick={() => setValOpen(i)} className={`${SEMAFORO[it.color].chip} !py-0 text-[11px]`} title="Ver la lectura y qué hacer">● {SEMAFORO[it.color].label}{it.naturaleza !== "iniciativa" ? ` · ${NATURALEZA_INI[it.naturaleza]}` : ""}{it.faltan.length ? ` · falta ${it.faltan.map((f) => ELEMENTOS_INI[f] ?? f).join(", ")}` : ""}{it.duplicaDe.length ? ` · duplica ${it.duplicaDe.join(", ")}` : ""}</button>; };
   const [edit, setEdit] = useState<InitiativeFull | null>(null);
   // quien administra el catálogo edita todas; quien solo puede crear, edita y elimina las suyas
   // el líder de tribu (ámbito) edita solo las de su tribu; el directivo por QR, las que creó
@@ -863,11 +886,23 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
         {acomp && <AyudaMetodologica tema="iniciativas" />}
+        {acomp && canEdit && <button type="button" onClick={validarInis} disabled={valBusy || val?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={val?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por iniciativa: formulación, vínculo al KR, responsable, plazo, capacidad y duplicidades"}>{valBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {val?.validacion ? "Volver a validar iniciativas" : "Validar iniciativas"} <span className="text-faint">(IA)</span></button>}
         {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary btn-sm text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
         <span className="text-[12px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <StatCard label="Resultados clave completos" value={krs.length} unit={incompletos.length ? `+ ${incompletos.length} incompletos` : undefined} foot={`en ${horizonLabel(cat.company, horizon)}`} />
+        {acomp && val?.validacion && (
+          <div className="col-span-full flex flex-wrap items-center gap-2 rounded-xl bg-surface-2/60 px-4 py-2.5 text-[12.5px]">
+            <span className="font-bold text-ink">Formulación de iniciativas · {horizonLabel(cat.company, horizon)}:</span>
+            <span className="chip chip-ok">{cuenta("verde")} bien formulada{cuenta("verde") === 1 ? "" : "s"}</span>
+            <span className="chip chip-gold">{cuenta("amarillo")} con mejoras</span>
+            <span className="chip chip-bad">{cuenta("rojo")} por replantear</span>
+            {val.desactualizado && <span className="chip chip-warn">desactualizada: cambiaron las iniciativas</span>}
+            {val.at && <span className="text-faint">· {new Date(val.at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</span>}
+            {val.validacion.resumen && <p className="w-full leading-relaxed text-ink-soft">{val.validacion.resumen}</p>}
+          </div>
+        )}
         <StatCard label="KR con iniciativa" value={krs.filter((x) => initiativesOfKr(cat, x.k.code).length > 0).length} unit={`de ${krs.length}`} foot="al menos una iniciativa los mueve" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Iniciativas sin KR" value={unlinked.length} unit={`de ${cat.initiatives.length}`} foot="no mueven un resultado clave del horizonte" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
@@ -883,7 +918,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
                 <div key={k.code} className="px-5 py-3">
                   <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[12px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className={`num text-[12px] font-bold ${initiativesOfKr(cat, k.code).length > KR_INI_MAX ? "text-bad" : "text-faint"}`}>{initiativesOfKr(cat, k.code).length} de {KR_INI_MAX}</span><span className="text-[12px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
                   {inis.length === 0 ? <p className="mt-1 text-[12px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
-                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[12px]"><Rocket size={10} className="shrink-0 text-faint" /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[12px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
+                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[12px]"><Rocket size={10} className="shrink-0 text-faint" /><ChipVal i={i} /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[12px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
                   )}
                 </div>
               );
@@ -902,7 +937,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
           <div className="divide-y divide-line">
             {unlinked.map((i) => (
               <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
-                <div className="min-w-0 flex-1"><div className="truncate font-semibold text-ink">{i.name}</div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><span className="truncate font-semibold text-ink">{i.name}</span><ChipVal i={i} /></div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
                 {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 btn-sm text-[12px] sm:btn-sm sm:text-[12px]"><Link2 size={11} /> Vincular</button>}
                 {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
               </div>
@@ -911,6 +946,8 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
           </div>
         </Card>
       </div>
+      {valOpen && <ValidacionIniModal i={valOpen} item={valDe(valOpen.id)} onClose={() => setValOpen(null)} onEdit={mine(valOpen) ? () => { setValOpen(null); setEdit(valOpen); } : undefined}
+        onAplicar={mine(valOpen) ? async (patch) => { const ok = await mutate("initiative", "upsert", { id: valOpen.id, name: valOpen.name, objetivo: valOpen.objetivo, ownerId: valOpen.ownerId, kpi: valOpen.kpi, cmi: valOpen.cmi, horizon: valOpen.horizon, capability: valOpen.capability, subsistema: valOpen.subsistema, status: valOpen.status, ...patch }); if (ok) { avisar("Iniciativa actualizada; vuelve a validar para refrescar el semáforo."); setValOpen(null); } } : undefined} saving={saving} />}
       {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
       {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setEdit(null)}
@@ -968,12 +1005,23 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
   const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "" });
   const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
-  const ok = f.name.trim().length >= 5 && !!f.ownerId && okrLinkOk(cat, horizon, link);
+  const acompIni = isAcompanamiento(cat.company);
+  // toda iniciativa nueva nace asociada a un resultado clave; el asistente propone tres a partir de ese KR
+  const ok = f.name.trim().length >= 5 && !!f.ownerId && !!link.kpi && okrLinkOk(cat, horizon, link);
+  const [sugIni, setSugIni] = useState<{ capability?: string; start?: string; end?: string }>({});
+  const [prop, setProp] = useState<{ loading: boolean; error: string | null; items: PropuestaIniciativa[] }>({ loading: false, error: null, items: [] });
+  const proponer = async () => {
+    setProp({ loading: true, error: null, items: [] });
+    const res = await fetch("/api/td/initiatives/proponer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kpi: link.kpi, horizon, borrador: f.name.trim() }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) { setProp({ loading: false, error: j?.error ?? `Error ${res.status}`, items: [] }); return; }
+    setProp({ loading: false, error: null, items: j?.propuestas ?? [] });
+  };
   return (
     <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub={isAcompanamiento(cat.company) ? "lo que se hace para mover un resultado clave; con él queda habilitada para calificar" : "lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar"} onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: initial?.capability ?? "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA" })}>
+          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: initial?.capability ?? sugIni.capability ?? "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA", ...(!initial && sugIni.start ? { start: sugIni.start, end: sugIni.end } : {}) })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
@@ -981,8 +1029,64 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <Field label={isAcompanamiento(cat.company) ? "Sponsor" : "Tribu dueña"}><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} />
-        <p className="text-[12px] text-faint">Queda asociada al resultado clave elegido y a {horizonLabel(cat.company, horizon)}; así se califica en Priorización en vivo como las demás.</p>
+        <p className="text-[12px] text-faint">{acompIni ? "El resultado clave es obligatorio: toda iniciativa nace para mover uno." : "Queda asociada al resultado clave elegido"} Queda asociada a {horizonLabel(cat.company, horizon)}; así se califica en Priorización como las demás.</p>
+        {acompIni && !initial && (
+          <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => void proponer()} disabled={!link.kpi || prop.loading} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={link.kpi ? "Tres iniciativas propuestas para mover este resultado clave, con el contexto de la empresa" : "Elige primero el resultado clave"}>
+                {prop.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {prop.items.length ? "Otras propuestas" : "Asistente de creación"} <span className="text-faint">(IA)</span>
+              </button>
+              <span className="text-[12px] text-faint">{link.kpi ? (f.name.trim().length >= 5 ? "Corrige tu borrador y propone alternativas" : "Propone tres iniciativas que muevan el resultado clave elegido") + ": nombre como entrega, qué logra, capacidad que instala e inicio y fin." : "Con el resultado clave elegido, el asistente propone iniciativas que lo muevan."}</span>
+            </div>
+            {prop.error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{prop.error}</p>}
+            {prop.items.length > 0 && (
+              <div className="mt-2.5 space-y-1.5">
+                {prop.items.map((p, n) => (
+                  <div key={n} className="rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
+                    <div className="text-[13px] font-semibold leading-snug text-ink">{p.name}</div>
+                    {p.objetivo && <div className="mt-0.5 leading-snug text-ink-soft">{p.objetivo}</div>}
+                    <div className="num mt-0.5 text-faint">{p.capability ? `instala ${p.capability} · ` : ""}{p.start} → {p.end}</div>
+                    {p.porque && <div className="mt-0.5 leading-snug text-muted">{p.porque}</div>}
+                    <button type="button" onClick={() => { setF({ ...f, name: p.name, objetivo: p.objetivo || f.objetivo }); setSugIni({ capability: p.capability || undefined, start: p.start, end: p.end }); }} className="mt-1 text-[12px] font-semibold text-cyan-deep hover:underline">Usar esta propuesta</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+    </Modal>
+  );
+}
+
+function ValidacionIniModal({ i, item, onClose, onEdit, onAplicar, saving }: { i: InitiativeFull; item?: IniItem; onClose: () => void; onEdit?: () => void; onAplicar?: (patch: { name?: string; objetivo?: string }) => Promise<void>; saving?: boolean }) {
+  return (
+    <Modal title={`${i.id} · formulación`} sub={i.kpi ? `mueve ${i.kpi}` : "sin resultado clave"} onClose={onClose}
+      footer={<>{onEdit && <button type="button" onClick={onEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar la iniciativa</button>}<button type="button" onClick={onClose} className="btn-primary btn-sm text-[12px]">Cerrar</button></>}>
+      <div className="text-[14px] font-extrabold leading-snug text-ink">{i.name}</div>
+      {i.objetivo && <p className="mt-1 text-[12.5px] leading-snug text-muted">{i.objetivo}</p>}
+      {item ? (
+        <>
+          <div className="mt-4 flex flex-wrap items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span>{item.naturaleza !== "iniciativa" && <span className="chip chip-warn">{NATURALEZA_INI[item.naturaleza]}</span>}{item.duplicaDe.length > 0 && <span className="chip chip-warn">duplica o se solapa con {item.duplicaDe.join(", ")}</span>}{item.faltan.map((f) => <span key={f} className="chip chip-bad">falta {ELEMENTOS_INI[f] ?? f}</span>)}</div>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink">{item.justificacion}</p>
+          {item.recomendaciones.length > 0 && (
+            <div className="mt-4">
+              <div className="label !text-[11px]">Qué hacer</div>
+              <ul className="mt-1.5 space-y-1.5">{item.recomendaciones.map((r, n) => <li key={n} className="flex gap-2 text-[13px] leading-relaxed text-ink"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-deep" /><span>{r}</span></li>)}</ul>
+            </div>
+          )}
+          {(item.reformulacion || item.logroPropuesto) && (
+            <div className="mt-4 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
+              <div className="label !text-[11px]">Redacción propuesta</div>
+              {item.reformulacion && <p className="mt-1.5 text-[13.5px] font-semibold leading-relaxed text-ink">«{item.reformulacion}»</p>}
+              {item.logroPropuesto && <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft"><span className="font-semibold">Qué logra:</span> {item.logroPropuesto}</p>}
+              {onAplicar && <div className="mt-2.5 flex flex-wrap gap-2">
+                <button type="button" disabled={saving} onClick={() => void onAplicar({ ...(item.reformulacion ? { name: item.reformulacion } : {}), ...(item.logroPropuesto ? { objetivo: item.logroPropuesto } : {}) })} className="btn-primary btn-sm text-[12px]"><CheckCircle2 size={12} /> Usar esta redacción</button>
+              </div>}
+            </div>
+          )}
+        </>
+      ) : <p className="mt-4 text-[12.5px] italic text-faint">Esta iniciativa aún no tiene lectura: pulsa «Validar iniciativas».</p>}
     </Modal>
   );
 }
