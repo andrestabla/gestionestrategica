@@ -262,6 +262,7 @@ function ArranqueCard() {
   const f1On = hasInstrument(c.company, "f1");
   const [respuestas, setRespuestas] = useState<number | null>(null);
   const [prio, setPrio] = useState<{ evaluadas: number; portafolio: number } | null>(null);
+  const [metas, setMetas] = useState<number | null>(null);
   useEffect(() => {
     const url = f1On ? "/api/td/f1" : "/api/td/test";
     fetch(url).then((r) => (r.ok ? r.json() : null)).then((j) => setRespuestas(j ? (j.responses?.length ?? 0) : 0)).catch(() => setRespuestas(0));
@@ -270,6 +271,7 @@ function ArranqueCard() {
       const decisions = (j?.decisions ?? {}) as Record<string, { decision?: string }>;
       setPrio({ evaluadas: new Set(evals.map((e) => e.iniId)).size, portafolio: Object.values(decisions).filter((d) => d.decision === "IMPLEMENTAR" || d.decision === "PREPARAR").length });
     }).catch(() => setPrio({ evaluadas: 0, portafolio: 0 }));
+    fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then((j) => setMetas(j ? (j.metas?.length ?? 0) : 0)).catch(() => setMetas(0));
   }, [f1On]);
   const t = (tab: "prioridades" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio") => estrategiaHref(c.company, tab, base);
   const levers = leversOf(c.company);
@@ -285,6 +287,7 @@ function ArranqueCard() {
     { mod: mod("iniciativas"), label: V.tabs.iniciativas, n: v.initiatives.length, meta: cuenta(v.initiatives.length, "iniciativa"), href: t("iniciativas") },
     { mod: mod("priorizacion"), label: V.tabs.priorizacion, n: prio?.evaluadas ?? 0, meta: prio === null ? "…" : `${cuenta(prio.evaluadas, "iniciativa evaluada", "iniciativas evaluadas")}`, href: t("priorizacion") },
     { mod: mod("portafolio"), label: V.tabs.portafolio, n: prio?.portafolio ?? 0, meta: prio === null ? "…" : `${cuenta(prio.portafolio, "iniciativa decidida", "iniciativas decididas")}`, href: t("portafolio") },
+    { mod: "cascada" as ModuleId, label: "Cascada trimestral", n: metas ?? 0, meta: metas === null ? "…" : cuenta(metas, "meta trimestral", "metas trimestrales"), href: `${base}/panel/cascada` },
   ].map((p) => ({ ...p, estado: moduleState(c.company, p.mod) })).filter((p) => p.estado !== "off");   // fuera del alcance: no se muestra; pendiente: se muestra con candado
   const pendientes = pasos.filter((p) => p.estado === "pendiente").length;
   const hechos = pasos.filter((p) => p.estado === "on" && p.n > 0).length;   // lo pendiente no cuenta como hecho aunque tenga datos cargados
@@ -292,7 +295,7 @@ function ArranqueCard() {
   return (
     <Card className="rise mb-5">
       <CardHeader title="Lista de arranque" sub={`${hechos} de ${pasos.length - pendientes} pasos habilitados con información${pendientes ? ` · ${pendientes} aún no habilitado${pendientes === 1 ? "" : "s"} en la plataforma` : ""} · el panel se llena a medida que avanza el método`} />
-      <ol className="grid gap-2 px-5 pb-5 sm:grid-cols-4 xl:grid-cols-7">
+      <ol className="grid gap-2 px-5 pb-5 sm:grid-cols-4 xl:grid-cols-8">
         {pasos.map((p, i) => (
           <li key={p.label}>
             {p.estado === "pendiente" ? (

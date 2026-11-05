@@ -11,7 +11,7 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock, UserCircle2 } from "lucide-react"
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock, UserCircle2, CalendarRange } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
 import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
@@ -173,6 +173,7 @@ const NAV = [
   { href: "/panel/kpi", label: "Indicadores", icon: Gauge, code: "M4", mod: "kpi" as ModuleId | undefined },
   { href: "/panel/ruta", label: "Ruta", icon: MapIcon, code: "M5", mod: "ruta" as ModuleId | undefined },
   { href: "/panel/iniciativas", label: "Iniciativas", icon: ListChecks, code: "M6", mod: "seguimiento" as ModuleId | undefined },
+  { href: "/panel/cascada", label: "Cascada trimestral", icon: CalendarRange, code: "F04", mod: "cascada" as ModuleId | undefined },
   { href: "/panel/convencion", label: "Convención", icon: Presentation, code: "CV", mod: "convencion" as ModuleId | undefined },
   { href: "/panel/proyectos", label: "Proyectos", icon: KanbanSquare, code: "GP", mod: "proyectos" as ModuleId | undefined },
   { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7", mod: "inteligencia" as ModuleId | undefined },
@@ -255,6 +256,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.iniciativas}`, label: V.tabs.iniciativas, icon: Rocket, code: undefined as string | undefined, mod: "iniciativas" as ModuleId | undefined },
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.priorizacion}`, label: V.tabs.priorizacion, icon: Scale, code: undefined as string | undefined, mod: "priorizacion" as ModuleId | undefined },
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.portafolio}`, label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined, mod: "portafolio" as ModuleId | undefined },
+    { href: "/panel/cascada", label: "Cascada trimestral", icon: CalendarRange, code: "F04" as string | undefined, mod: "cascada" as ModuleId | undefined },
     { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined, mod: "inteligencia" as ModuleId | undefined },
   ];
   // los módulos fuera del alcance no aparecen en el menú de nadie (admin y advisor los abren por la URL con aviso);

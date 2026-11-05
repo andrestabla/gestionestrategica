@@ -78,6 +78,7 @@ model Company {
   teamResponses   TeamResponse[]
   f1Responses     F1Response[]
   diagnosticReports DiagnosticReport[]
+  quarterGoals    QuarterGoal[]
   responsibles    Responsible[]
   objectives      CmiObjective[]
   people          Person[]
@@ -574,4 +575,15 @@ model MailLog {
   messageId   String?
 
   @@index([at])
+}
+
+/// F04 · Cascada y plan trimestral: metas del trimestre por área con criterio de éxito, hitos, interdependencias y cierre.
+model QuarterGoal {
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String // mt-…
+  data      Json
+  at        DateTime @updatedAt
+
+  @@id([companyId, id])
 }

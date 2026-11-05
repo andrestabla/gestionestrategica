@@ -29,6 +29,7 @@ import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
 import { EvaluacionFocal } from "@/components/evaluacion-focal";
+import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
@@ -1140,6 +1141,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         <Presentation size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
         <span>Ratificación ejecutiva: las renuncias exigen motivo registrado; lo no resuelto queda explícitamente pendiente. El seguimiento posterior sigue el ritmo de la empresa (trimestres y sprints) desde <Link href={`${base}/panel/proyectos`} className="font-semibold text-cyan-deep hover:underline">Proyectos</Link>.</span>
       </div>
+      {acomp && <CapacidadesPortafolio decisions={prio?.decisions} compact />}
     </>
   );
 }

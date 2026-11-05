@@ -32,6 +32,7 @@ import { can } from "@/lib/permissions";
 import { isMailTemplateKey, validarPlantilla, type MailTemplateKey } from "@/lib/plantillas-correo";
 import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
 import { parseModulesOff, parseModulesStored } from "@/lib/modulos";
+import { normalizarMeta, proponerDesdePortafolio, type MetaTrimestral } from "@/lib/cascada";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
@@ -166,6 +167,7 @@ export type TenantState = {
   iniOverrides: Map<string, InitiativeOverride>;
   evals: Map<string, Evaluation>;          // clave iniId|email
   decisions: Map<string, DecisionRecord>;  // clave iniId
+  metas: Map<string, MetaTrimestral>;      // F04 · metas trimestrales por área
   users: ManagedUser[];
   integrations: Map<IntegrationKey, IntegrationConfig>;
   branding?: Branding;
@@ -223,6 +225,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
+    metas: new Map(),
     users: catalog.seedUsers.map((u) => ({ email: u.email, name: u.name, role: u.role, line: u.line, responsibleId: u.responsibleId, active: true, seeded: true })),
     integrations: new Map(), notifRead: new Map(), itinComments: new Map(), hydrated: false, version: -1, versionAt: 0, writes: 0,
   };
@@ -430,12 +433,13 @@ async function loadTenant(st: TenantState) {
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
     // el resto de la empresa, en paralelo: una ida y vuelta a la base en lugar de quince en serie
-    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows, informeRows] = await Promise.all([
+    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows, informeRows, metaRows] = await Promise.all([
       db.projectTask.findMany(W), db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } }), db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } }),
       db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } }), db.initiativeOverride.findMany(W), db.initiativeEvaluation.findMany(W), db.initiativeDecision.findMany(W),
       db.itineraryComment.findMany(W), db.user.findMany(W), db.integration.findMany(W), db.branding.findUnique({ where: { companyId } }), db.notifRead.findMany(W),
       db.practiceCapture.findMany({ where: { companyId, cut: "A3" } }), db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } }),
       db.testResponse.findMany(W), db.testNote.findMany(W), db.f1Response.findMany(W), db.diagnosticReport.findMany(W),
+      db.quarterGoal.findMany(W).catch(() => []),
     ]);
     const rows = rowsRaw as (DbTaskRow & {
       iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
@@ -482,6 +486,7 @@ async function loadTenant(st: TenantState) {
     // priorización: evaluaciones de la matriz y decisiones de tiempo
     for (const e of evalRows) evals().set(e.id, e.data as Evaluation);
     for (const d of decisionRows) decisions().set(d.code, d.data as DecisionRecord);
+    st.metas.clear(); for (const m of metaRows as { id: string; data: unknown }[]) st.metas.set(m.id, m.data as MetaTrimestral);
     for (const c of itinCommentRows) S().itinComments.set(c.id, c.data as ItineraryComment);
     // usuarios de la empresa, integraciones, branding y notificaciones leídas
     if (dbUsers.length) {
@@ -3040,6 +3045,7 @@ function purgeUserData(email: string): { name: string } | null {
   const comentariosTocados: string[] = [];
   for (const c of S().itinComments.values()) { const cc = c as unknown as { id: string; author?: string; email?: string }; if ((cc.email ?? "").toLowerCase() === key) { cc.author = ANON; delete cc.email; comentariosTocados.push(cc.id); } }
   for (const a of auditLog()) if ((a.email ?? "").toLowerCase() === key) { a.actor = ANON; a.email = ""; }
+  for (const m of metas().values()) { if (m.by.toLowerCase() === key) m.by = ANON; if (m.cierre && m.cierre.by.toLowerCase() === key) m.cierre.by = ANON; }
   for (const p of cat().people ?? []) if ((p.email ?? "").toLowerCase() === key) p.email = "";
   void persist("cuenta eliminada", async (db) => {
     const companyId = cid();
@@ -3785,4 +3791,66 @@ export function clearCapture(actor: SessionUser, varId: unknown): { ok: true } |
   audit(actor, "task", `captura:${v}`, "captura A3 eliminada por el administrador");
   void persist("captura", (db) => db.practiceCapture.deleteMany({ where: { companyId: cid(), cut: "A3", practice: v } }));
   return { ok: true };
+}
+
+
+/* ═══ F04 · Cascada y plan trimestral: metas trimestrales por área ═══
+   Las editan quienes administran el catálogo (advisor, líder, admin) y cada responsable de área sobre las de
+   su área. El cierre del trimestre (cumplimiento y aprendizaje) sigue la misma regla. */
+
+const metas = () => S().metas;
+export const getMetas = (): MetaTrimestral[] => [...metas().values()].sort((a, b) => a.quarter.localeCompare(b.quarter) || a.areaId.localeCompare(b.areaId));
+
+function puedeMeta(user: SessionUser, areaId: string): { ok: false; status: number; error: string } | null {
+  if (can(user, "manage_catalog")) return null;
+  if (user.role === "RESPONSABLE" && user.responsibleId && user.responsibleId === areaId) return null;
+  return { ok: false, status: 403, error: "Las metas trimestrales las registran el advisor, el líder y el responsable de cada área." };
+}
+const ctxMetas = () => { const c = cat(); return { areas: c.responsibles.map((r) => r.id), levers: (c.company.levers ?? []).map((l) => l.id), objectives: c.objectives.map((o) => o.id), kpis: c.kpis.map((k) => k.code), initiatives: c.initiatives.map((i) => i.id) }; };
+
+export function upsertMeta(user: SessionUser, input: Partial<MetaTrimestral> & Record<string, unknown>): { ok: true; meta: MetaTrimestral } | { ok: false; status: number; error: string } {
+  const n = normalizarMeta(input, ctxMetas());
+  if (!n.ok) return { ok: false, status: 422, error: n.error };
+  const id = typeof input.id === "string" && input.id ? input.id : `mt-${Date.now().toString(36)}${randomBytes(2).toString("hex")}`;
+  const prev = metas().get(id);
+  const no = puedeMeta(user, n.meta.areaId) ?? (prev ? puedeMeta(user, prev.areaId) : null); if (no) return no;
+  const m: MetaTrimestral = { ...n.meta, cierre: prev?.cierre, id, by: prev?.by ?? user.email, at: new Date().toISOString() };
+  metas().set(id, m);
+  audit(user, "task", `meta:${id}`, `${prev ? "meta trimestral actualizada" : "meta trimestral creada"} (${m.quarter} · ${m.areaId})`);
+  void persist("meta trimestral", (db) => db.quarterGoal.upsert({ where: { companyId_id: { companyId: cid(), id } }, update: { data: m }, create: { companyId: cid(), id, data: m } }));
+  return { ok: true, meta: m };
+}
+
+export function removeMeta(user: SessionUser, id: unknown): { ok: true } | { ok: false; status: number; error: string } {
+  const m = metas().get(String(id ?? "")); if (!m) return { ok: false, status: 404, error: "La meta no existe." };
+  const no = puedeMeta(user, m.areaId); if (no) return no;
+  metas().delete(m.id);
+  audit(user, "task", `meta:${m.id}`, "meta trimestral eliminada");
+  void persist("meta trimestral", (db) => db.quarterGoal.deleteMany({ where: { companyId: cid(), id: m.id } }));
+  return { ok: true };
+}
+
+/** Cierre del trimestre para una meta: cumplimiento (0–100) y aprendizaje; fija el estado según el cumplimiento. */
+export function cerrarMeta(user: SessionUser, id: unknown, input: { cumplimiento?: unknown; aprendizaje?: unknown }): { ok: true; meta: MetaTrimestral } | { ok: false; status: number; error: string } {
+  const m = metas().get(String(id ?? "")); if (!m) return { ok: false, status: 404, error: "La meta no existe." };
+  const no = puedeMeta(user, m.areaId); if (no) return no;
+  const c = Number(input.cumplimiento);
+  if (!Number.isFinite(c) || c < 0 || c > 100) return { ok: false, status: 422, error: "El cumplimiento es un porcentaje de 0 a 100." };
+  const aprendizaje = String(input.aprendizaje ?? "").trim().slice(0, 600);
+  m.cierre = { cumplimiento: Math.round(c), aprendizaje, at: new Date().toISOString(), by: user.email };
+  m.estado = c >= 90 ? "CUMPLIDA" : c > 0 ? "PARCIAL" : "NO_CUMPLIDA";
+  m.at = new Date().toISOString();
+  audit(user, "task", `meta:${m.id}`, `cierre del trimestre: ${m.cierre.cumplimiento} %`);
+  void persist("meta trimestral", (db) => db.quarterGoal.upsert({ where: { companyId_id: { companyId: cid(), id: m.id } }, update: { data: m }, create: { companyId: cid(), id: m.id, data: m } }));
+  return { ok: true, meta: m };
+}
+
+/** Propone la cascada del año desde el portafolio (una meta por iniciativa en su trimestre de inicio) y la guarda. */
+export function proponerCascada(user: SessionUser, year: unknown): { ok: true; creadas: number } | { ok: false; status: number; error: string } {
+  if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "La propuesta de cascada la lanza el advisor o el líder." };
+  const y = Number(year); if (!Number.isInteger(y) || y < 2020 || y > 2100) return { ok: false, status: 422, error: "Indica el año (p. ej. 2027)." };
+  const c = cat();
+  const nuevas = proponerDesdePortafolio(c.initiatives, c.objectives, y, getMetas());
+  for (const n of nuevas) { const r = upsertMeta(user, n as Partial<MetaTrimestral> & Record<string, unknown>); if (!r.ok) return r; }
+  return { ok: true, creadas: nuevas.length };
 }
