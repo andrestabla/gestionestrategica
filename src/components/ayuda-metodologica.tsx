@@ -101,11 +101,51 @@ const KR: Lamina[] = [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" }) {
+const INICIATIVAS: Lamina[] = [
+  { k: "Qué es", t: "Una iniciativa es lo que se hace para mover un resultado clave", body: <>
+    <p className="text-[14px] leading-relaxed text-ink">Una <b>iniciativa</b> es un conjunto acotado de trabajo (proyecto, programa, cambio de proceso, lanzamiento) con inicio y fin, un responsable y recursos, que existe para <b>mover un resultado clave</b> de un objetivo directivo. Si no mueve ningún resultado clave, no es estratégica: es operación o es una idea sin dueño.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">En el marco 4Shine Empresas es el eslabón entre la <b>Dirección</b> (prioridades, objetivos, KR) y la <b>Ejecución</b> (portafolio, cascada trimestral y seguimiento). Cada iniciativa declara además la <b>capacidad que instala</b> en la organización.</p>
+  </> },
+  { k: "Función", t: "Para qué sirve", body: <ul className="space-y-2">
+    <Li><b>Convierte el resultado en acción:</b> el KR dice cuánto; la iniciativa dice cómo, quién y cuándo.</Li>
+    <Li><b>Entra a la priorización:</b> solo una iniciativa vinculada a un resultado clave completo se puede calificar con la matriz y decidir en el portafolio.</Li>
+    <Li><b>Ordena el esfuerzo:</b> máximo dos iniciativas por resultado clave obliga a elegir las que de verdad lo alteran.</Li>
+    <Li><b>Baja a la cascada trimestral:</b> sus hitos, responsable y fechas alimentan las metas de cada área por trimestre.</Li>
+  </ul> },
+  { k: "Estructura", t: "Qué debe tener", body: <>
+    <div className="grid gap-2 sm:grid-cols-2">
+      {[["Nombre", "un sustantivo de entrega, no un verbo: «Call center para droguerías», no «Implementar call center»."], ["Qué logra", "el cambio concreto que deja instalado y cómo mueve el resultado clave."], ["Resultado clave que mueve", "uno principal; si mueve varios, se elige el que más depende de ella."], ["Responsable", "un área y una persona que responde; el sponsor es el de la prioridad."], ["Inicio y fin", "trimestre de inicio y de cierre; una iniciativa sin fin es operación."], ["Capacidad que instala", "la dimensión del mapa 4Shine que fortalece (p. ej. Accountability, Cadencia, Tecnología)."], ["Recursos y presupuesto", "lo que necesita en personas, dinero y tiempo, aunque sea estimado."], ["Alcance", "qué incluye y qué queda fuera; evita la iniciativa paraguas."]].map(([a, b]) => (
+        <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
+      ))}
+    </div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Bien>«Modelo de cobertura omnicanal del panel médico AAA y AA: diseño, piloto en dos regionales y despliegue nacional. Mueve la frecuencia de visita 5 de 6; Comercial; T1 a T3 2027; instala Cadencia de ejecución.»</Bien>
+      <Mal>«Mejorar la relación con los médicos.» (sin entrega, sin KR, sin responsable ni fin: es un deseo, no una iniciativa)</Mal>
+    </div>
+  </> },
+  { k: "Tips", t: "Para formularlas bien", body: <ul className="space-y-2">
+    <Li><b>Entrega, no actividad continua:</b> si no se puede terminar, es un proceso; conviértelo en el proyecto que lo instala.</Li>
+    <Li><b>Un KR principal:</b> si una iniciativa «mueve todo», probablemente no mueve nada; acótala.</Li>
+    <Li><b>Pocas y decisivas:</b> de 1 a 2 por resultado clave; el portafolio decide cuáles van ahora, cuáles se preparan y cuáles se descartan.</Li>
+    <Li><b>Con dueño y fecha desde el día uno:</b> sin responsable y trimestre de inicio no entra al portafolio.</Li>
+    <Li><b>Declara la capacidad:</b> la iniciativa deja algo instalado (proceso, dato, tecnología, talento); nómbralo con la dimensión del mapa.</Li>
+    <Li><b>Dimensiona antes de prometer:</b> recursos estimados y dependencias de otras áreas; eso alimenta la cascada trimestral.</Li>
+    <Li><b>Evita duplicados:</b> dos iniciativas con la misma entrega en áreas distintas se fusionan o se diferencian por alcance.</Li>
+  </ul> },
+  { k: "Errores", t: "Errores frecuentes", body: <ul className="space-y-2">
+    <Li>Iniciativa sin resultado clave: no se puede calificar ni decidir.</Li>
+    <Li>Nombre con verbo («Implementar…», «Gestionar…»): describe tarea, no entrega.</Li>
+    <Li>Iniciativa paraguas que agrupa cinco proyectos: no se puede priorizar ni cerrar.</Li>
+    <Li>Más de dos iniciativas por KR: el esfuerzo se dispersa.</Li>
+    <Li>Sin trimestre de inicio o de fin: no cabe en la cascada trimestral.</Li>
+  </ul> },
+];
+
+export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" | "iniciativas" }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : KR;
-  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : "Resultados clave · ayuda metodológica";
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : KR;
+  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setI((x) => Math.min(laminas.length - 1, x + 1)); if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1)); };

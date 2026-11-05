@@ -28,3 +28,13 @@ test("encargoAlineacion incluye prioridades, objetivos, KR, iniciativas y línea
     objetivos: [{ id: "OE-01", lever: "EXC", name: "Obtener X", krs: 1, krNombres: ["KR uno"], iniciativas: ["Ini A"] }], lineaBase: "- EXC · Resultados 2026: ventas = 10 COP", fecha: "hoy" });
   assert.match(e.user, /KR uno/); assert.match(e.user, /Ini A/); assert.match(e.user, /LÍNEA BASE/); assert.match(e.system, /EXIGENCIA/); assert.match(e.system, /REFORMULACIÓN/);
 });
+
+test("sinCifrasDeMeta quita metas numéricas y conserva años y plazos", async () => {
+  const { sinCifrasDeMeta, tieneCifrasDeMeta } = await import("../src/lib/alineacion");
+  assert.equal(sinCifrasDeMeta("Reducir el backlog de PT al menos en un 30 % al cierre de 2027."), "Reducir el backlog de PT al cierre de 2027.");
+  assert.equal(sinCifrasDeMeta("Asegurar el lanzamiento de al menos cinco nuevos productos innovadores antes de H1 2027."), "Asegurar el lanzamiento de nuevos productos innovadores en el primer semestre de 2027.");
+  assert.equal(sinCifrasDeMeta("Obtener un incremento del 10% en la rentabilidad de las marcas para el cierre de 2027."), "Obtener un incremento en la rentabilidad de las marcas para el cierre de 2027.");
+  assert.equal(sinCifrasDeMeta("Subir la participación de mercado de 3,1 a 3,4 al cierre de 2027."), "Subir la participación de mercado al cierre de 2027.");
+  assert.equal(tieneCifrasDeMeta("Consolidar la cobertura al cierre de 2027"), false);
+  assert.equal(tieneCifrasDeMeta("Lanzar 5 productos en 2027"), true);
+});

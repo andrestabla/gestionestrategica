@@ -51,6 +51,22 @@ export function encargoAlineacion(args: {
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
+/** Quita del enunciado de un objetivo las cifras de meta que el modelo cuela pese a la regla («al menos 5», «en un 30 %»,
+    «de 3,1 a 3,4»): el cuánto va en los resultados clave. Los años (2027) se conservan y «H1 2027» pasa a prosa. */
+export function sinCifrasDeMeta(texto: string): string {
+  let t = texto;
+  t = t.replace(/\b(?:en|antes de|para|hasta)\s+H([12])\s+(\d{4})\b/gi, (_m, h: string, y: string) => `en el ${h === "1" ? "primer" : "segundo"} semestre de ${y}`);
+  const CAL = "(?:al menos|como mínimo|mínimo|por lo menos|más de|por encima de|por debajo de|superior(?:es)? a|inferior(?:es)? a|menos de|cerca de|alrededor de)";
+  t = t.replace(new RegExp(`\\s*(?:${CAL}\\s+)?(?:(?:de|en|hasta|a|del|por)\\s+)?(?:${CAL}\\s+)?(?:(?:un|una|el|la)\\s+)?\\d+(?:[.,]\\d+)?\\s?(?:%|por ciento|pp\\b|puntos porcentuales|puntos básicos)`, "gi"), "");
+  t = t.replace(/\bde\s+\d+(?:[.,]\d+)?\s+a\s+\d+(?:[.,]\d+)?\b/gi, "");
+  t = t.replace(/\b(?:al menos|como mínimo|por lo menos|mínimo de|un mínimo de|más de|no menos de)\s+(?:\d+(?:[.,]\d+)?|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|treinta|cincuenta|cien)\s+/gi, "");
+  t = t.replace(/\b(?:un|una)\s+(?:incremento|aumento|reducción|crecimiento|mejora)\s+(?:de|del)\s+(?=\w)/gi, (m) => m);   // «un incremento de» sin cifra se deja
+  t = t.replace(/\s{2,}/g, " ").replace(/\s+([,.;])/g, "$1").replace(/\(\s*\)/g, "").trim();
+  return t.replace(/\s{2,}/g, " ");
+}
+/** ¿Quedan cifras de meta en el enunciado (dígitos que no sean años)? */
+export const tieneCifrasDeMeta = (texto: string): boolean => /\d/.test(texto.replace(/\b(?:19|20)\d{2}\b/g, ""));
+
 /** Lee la respuesta del modelo: un item por objetivo esperado; lo que falte queda en amarillo con nota. */
 export function parseAlineacion(raw: unknown, horizon: string, ids: string[]): AlineacionIA {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -65,7 +81,7 @@ export function parseAlineacion(raw: unknown, horizon: string, ids: string[]): A
     const naturaleza: Naturaleza = n === "resultado_clave" || n === "iniciativa" || n === "ambiguo" ? n : "objetivo";
     const duplicaDe = (Array.isArray(it.duplicaDe) ? it.duplicaDe : []).map((d) => str(d, 20).toUpperCase()).filter((d) => d && d !== id.toUpperCase() && ids.some((x) => x.toUpperCase() === d)).slice(0, 5);
     const faltan = (Array.isArray(it.faltan) ? it.faltan : []).map((f) => str(f, 20).toLowerCase()).filter((f) => f in ELEMENTOS);
-    const reformulacion = str(it.reformulacion, 400);
+    const reformulacion = sinCifrasDeMeta(str(it.reformulacion, 400));
     // exigencia: sin reformulación ni recomendación, un amarillo o rojo no es accionable; se anota para que el advisor lo complete
     if (color !== "verde" && !recs.length && !reformulacion) recs.push("Reformular el objetivo con la estructura verbo de logro + resultado + indicador impulsor + para cuándo.");
     // la redacción propuesta se vuelve la primera acción concreta («Cambiar la redacción a: …») si el modelo no la citó
@@ -115,5 +131,5 @@ export function encargoPropuestaObjetivo(args: {
 export function parsePropuestasObjetivo(raw: unknown): PropuestaObjetivo[] {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const arr = Array.isArray(o.propuestas) ? (o.propuestas as Record<string, unknown>[]) : [];
-  return arr.map((p) => ({ name: str(p?.name, 300), desc: str(p?.desc, 600), indicator: str(p?.indicator, 200), porque: str(p?.porque, 600) })).filter((p) => p.name.length >= 10).slice(0, 3);
+  return arr.map((p) => ({ name: sinCifrasDeMeta(str(p?.name, 300)), desc: str(p?.desc, 600), indicator: str(p?.indicator, 200), porque: str(p?.porque, 600) })).filter((p) => p.name.length >= 10).slice(0, 3);
 }

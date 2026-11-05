@@ -5,7 +5,7 @@ import { chatJson, iaDisponible } from "@/server/ia";
 import { can } from "@/lib/permissions";
 import { leversOf, horizonsOf, horizonLabel, horizonesBase } from "@/data/catalogo";
 import { kpisOf } from "@/lib/convencion";
-import { encargoPropuestaObjetivo, parsePropuestasObjetivo } from "@/lib/alineacion";
+import { encargoPropuestaObjetivo, parsePropuestasObjetivo, sinCifrasDeMeta, tieneCifrasDeMeta } from "@/lib/alineacion";
 import { contextoEmpresa } from "@/server/contexto-empresa";
 
 // POST /api/td/alineacion/proponer { lever, horizon?, borrador? } — asistente de creación: tres objetivos directivos
@@ -35,7 +35,15 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   let raw: unknown;
   try { raw = await chatJson(system, u, { maxTokens: 3000, timeoutMs: 90_000 }); }
   catch (e) { return NextResponse.json({ error: `El modelo no respondió: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 }); }
-  const propuestas = parsePropuestasObjetivo(raw);
+  let propuestas = parsePropuestasObjetivo(raw);
   if (!propuestas.length) return NextResponse.json({ error: "El modelo no devolvió propuestas utilizables; inténtalo de nuevo." }, { status: 502 });
+  // segunda pasada: si algún enunciado conserva cifras de meta, el modelo reescribe solo los enunciados sin cifras
+  if (propuestas.some((p) => tieneCifrasDeMeta(p.name))) {
+    try {
+      const fix = await chatJson("Reescribe enunciados de objetivos directivos en español de Colombia. Conserva la intención, el verbo de logro, el indicador impulsor y el plazo; ELIMINA toda cifra de meta (porcentajes, cantidades, «al menos N»): el cuánto va en los resultados clave. Máximo 30 palabras por enunciado. Responde solo JSON {\"names\":[\"…\",\"…\",\"…\"]} en el mismo orden.", JSON.stringify({ names: propuestas.map((p) => p.name) }), { maxTokens: 800, timeoutMs: 40_000 }) as { names?: unknown };
+      const names = Array.isArray(fix?.names) ? fix.names.map((x) => (typeof x === "string" ? sinCifrasDeMeta(x.trim().slice(0, 300)) : "")) : [];
+      propuestas = propuestas.map((p, i) => (names[i] && names[i].length >= 10 ? { ...p, name: names[i] } : p));
+    } catch { /* se entregan las propuestas saneadas por regla */ }
+  }
   return NextResponse.json({ propuestas });
 });

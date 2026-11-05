@@ -843,13 +843,15 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
   const krs = todosKr.filter((x) => krCompleto(x.k));
   const incompletos = todosKr.filter((x) => !krCompleto(x.k));
   const [fTribe, setFTribe] = useState(myTribe && cat.initiatives.some((i) => i.ownerId === myTribe) ? myTribe : "");
+  const [fLever, setFLever] = useState("");   // prioridad: la del objetivo al que pertenece el KR (o la iniciativa)
+  const leverDeIni = (i: InitiativeFull) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
   const [nueva, setNueva] = useState(false);
   const [edit, setEdit] = useState<InitiativeFull | null>(null);
   // quien administra el catálogo edita todas; quien solo puede crear, edita y elimina las suyas
   // el líder de tribu (ámbito) edita solo las de su tribu; el directivo por QR, las que creó
   const mine = (i: InitiativeFull) => scope ? i.ownerId === scope : canEdit || (canCreate && (i.createdBy ?? "").toLowerCase() === me.toLowerCase());
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
-  const unlinked = cat.initiatives.filter((i) => (!i.kpi || !todosKr.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe));
+  const unlinked = cat.initiatives.filter((i) => (!i.kpi || !todosKr.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe) && (!fLever || leverDeIni(i) === fLever));
   const [link, setLink] = useState<string | null>(null);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   const leverName = (o: CmiObjective) => levers.find((l) => l.id === o.lever)?.name ?? "";
@@ -857,7 +859,10 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Filter size={13} className="shrink-0 text-cyan-deep" />
+        <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
+        {acomp && <AyudaMetodologica tema="iniciativas" />}
         {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary btn-sm text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
         <span className="text-[12px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>
@@ -871,6 +876,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
           <CardHeader title="Qué mueve cada resultado clave" sub={`depurar: solo las iniciativas que efectivamente alteran el KR (máximo ${KR_INI_MAX} por KR)`} />
           <div className="divide-y divide-line">
             {krs.map(({ k, o }) => {
+              if (fLever && (o.lever ?? "") !== fLever) return null;
               const inis = initiativesOfKr(cat, k.code).filter((i) => !fTribe || i.ownerId === fTribe);
               if (fTribe && inis.length === 0) return null;
               return (
