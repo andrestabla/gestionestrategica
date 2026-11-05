@@ -12,7 +12,9 @@ const n = (x: number, d = 1) => x.toLocaleString("es-CO", { minimumFractionDigit
 const pct = (x: number | null, d = 1) => (x == null ? "—" : `${x > 0 ? "+" : ""}${n(x, d)} %`);
 const Crec = ({ v, d = 1 }: { v: number | null; d?: number }) => <span className={`num font-bold ${v == null ? "text-faint" : v < 0 ? "text-bad" : "text-ok"}`}>{pct(v, d)}</span>;
 
-export function MercadoFarma({ empresa }: { empresa: string }) {
+export type ParteMercado = "resumen" | "mercado" | "competencia" | "senales";
+
+export function MercadoFarma({ empresa, parte = "mercado" }: { empresa: string; parte?: ParteMercado }) {
   const sv = M.segmentos.valores; const ult = sv[sv.length - 1];
   const esp = M.especialidades; const maxEsp = esp.filas[0].mat26;
   const pr = M.proyeccion; const maxPr = Math.max(...pr.filas.map((f) => f.retail));
@@ -20,7 +22,7 @@ export function MercadoFarma({ empresa }: { empresa: string }) {
   const esSF = /siegfried/i.test(empresa);
   return (
     <>
-      <Card className="rise rise-1 mb-5">
+      {parte === "resumen" && <Card className="rise rise-1 mb-5">
         <CardHeader title="Mercado farmacéutico colombiano · IQVIA y Close-Up" sub={`${M.titulo} · ${M.autor} · ${M.fecha} · cortes MAT marzo a agosto de 2026`} />
         <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Mercado IQVIA (valores)" value={esp.totalMat26 / 1e12} decimals={2} prefix="$ " unit="billones COP" foot={`${M.especialidades.corte} · ${pct(esp.crecTotal, 2)} frente a MAT ago-25`} />
@@ -28,8 +30,10 @@ export function MercadoFarma({ empresa }: { empresa: string }) {
           <StatCard label="CAGR retail 2025-2030" value={pr.cagr.retail} decimals={1} unit="%" foot={`institucional ${n(pr.cagr.institucional)} % · total ${n(pr.cagr.total)} %`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
           <StatCard label={`${esSF ? "Siegfried" : "Siegfried Corp."} en corporaciones`} value={corp.siegfried.ms} decimals={2} unit="% MS" foot={`${corp.siegfried.rank}.º del ranking · ${pct(corp.siegfried.crec, 2)} MAT frente a mercado ${pct(corp.mercado.crec2026, 2)} · IE ${corp.siegfried.ie}`} accent="linear-gradient(90deg, var(--gold), #a87d1e)" />
         </div>
-      </Card>
+        <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-muted">{M.titulo} · {M.fuentes.join(" y ")}. El detalle está en las pestañas Mercado, Competencia y Señales.</p>
+      </Card>}
 
+      {parte === "mercado" && (<>
       <div className="mb-5 grid gap-5 xl:grid-cols-2">
         {/* segmentos */}
         <Card className="rise rise-1 overflow-hidden">
@@ -164,7 +168,9 @@ export function MercadoFarma({ empresa }: { empresa: string }) {
         </div>
         <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-muted">{M.retail.lectura}</p>
       </Card>
+      </>)}
 
+      {parte === "competencia" && (
       <div className="mb-5 grid gap-5 xl:grid-cols-2">
         {/* ranking corporaciones */}
         <Card className="rise rise-3 overflow-hidden">
@@ -211,8 +217,10 @@ export function MercadoFarma({ empresa }: { empresa: string }) {
           <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-muted">{cu.lectura}</p>
         </Card>
       </div>
+      )}
 
       {/* cambios y agenda */}
+      {parte === "senales" && (
       <div className="mb-5 grid gap-5 xl:grid-cols-2">
         <Card className="rise rise-4">
           <CardHeader title="Varios cambios simultáneos redefinen el mercado" sub="cambio e implicación para los laboratorios" />
@@ -238,6 +246,7 @@ export function MercadoFarma({ empresa }: { empresa: string }) {
           </div>
         </Card>
       </div>
+      )}
     </>
   );
 }

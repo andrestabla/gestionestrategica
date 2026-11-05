@@ -8,6 +8,8 @@
 // La empresa se ubica en cada lectura por su nombre. Cada cifra declara su fuente y su corte.
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Layers, LineChart, Swords, Pill, Map as MapIcon, Radar } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatCard } from "@/components/ui";
 import { useCatalog } from "@/components/catalog-context";
 import { useBase } from "@/components/user-context";
@@ -31,12 +33,30 @@ const TEMAS: { id: Tema; label: string }[] = [
   { id: "demanda", label: "Demanda y canales" }, { id: "margen", label: "Márgenes" }, { id: "expansion", label: "Expansión" }, { id: "talento", label: "Talento" }, { id: "cliente", label: "Cliente" },
 ];
 
+type BiTab = "resumen" | "mercado" | "competencia" | "portafolio" | "territorio" | "senales";
+const BI_TABS: { id: BiTab; label: string; icon: typeof Layers; desc: string; farma?: boolean }[] = [
+  { id: "resumen", label: "Resumen", icon: Layers, desc: "El sector en cifras y la posición de la empresa" },
+  { id: "mercado", label: "Mercado", icon: LineChart, desc: "Segmentos, clases terapéuticas, retail y especialidades (IQVIA)", farma: true },
+  { id: "competencia", label: "Competencia", icon: Swords, desc: "Rankings de corporaciones y de prescripción, pares del sector y concentración" },
+  { id: "portafolio", label: "Portafolio y regulación", icon: Pill, desc: "Registros INVIMA, canales, mezcla terapéutica, marcas y precios regulados" },
+  { id: "territorio", label: "Territorio", icon: MapIcon, desc: "Demanda, presencia y competencia por departamento" },
+  { id: "senales", label: "Señales y fuentes", icon: Radar, desc: "Cambios del entorno, agenda, hechos con fuente y cortes de datos" },
+];
+
 export default function BiPage() {
+  const router = useRouter();
+  const params = useSearchParams();
   const v = useCatalog();
   const base = useBase();
   const company = v.catalog.company;
   const s = sectorFor(v.catalog);
   const key = sectorKeyDe(company);
+  const farma = key === "farmaceutico-colombia";
+  const tabs = BI_TABS.filter((x) => !x.farma || farma);
+  const tParam = params.get("t") as BiTab | null;
+  const t: BiTab = tParam && tabs.some((x) => x.id === tParam) ? tParam : "resumen";
+  const irA = (id: BiTab) => { router.replace(`?t=${id}`, { scroll: false }); window.scrollTo({ top: 0 }); };
+  const tabDef = tabs.find((x) => x.id === t) ?? tabs[0];
   const year = s.source.cut.slice(0, 4);
   const maxDept = Math.max(...s.departments.map((d) => d.share));
   const maxSize = Math.max(...s.sizes.map((x) => x.n));
@@ -92,6 +112,16 @@ export default function BiPage() {
       <PageHeader kicker="M7 · Inteligencia" title={`Inteligencia del sector · ${s.label}`}
         desc="Los datos abiertos sistematizados complementan el diagnóstico con información sobre el contexto: la dinámica y concentración del sector, la posición de la empresa frente a sus pares, el portafolio y la exposición regulatoria de cada competidor, la distribución de la demanda y las señales del entorno que requieren seguimiento. Cada cifra indica su fuente y fecha de corte." />
 
+      <div className="rise mb-5">
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Secciones de Inteligencia">
+          {tabs.map((x) => { const on = x.id === t; return (
+            <button key={x.id} type="button" role="tab" aria-selected={on} onClick={() => irA(x.id)} className={`chip !py-1.5 text-[12.5px] ${on ? "chip-cyan" : ""}`}><x.icon size={13} /> {x.label}</button>
+          ); })}
+        </div>
+        <p className="mt-2 text-[12.5px] text-muted">{tabDef.desc}.</p>
+      </div>
+
+      {t === "resumen" && (<>
       {/* ── el sector en cifras ── */}
       <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Sociedades que reportan" value={s.n} foot={`${s.ciiu.map((c) => c.code).join(" · ")} · corte ${year}`} />
@@ -100,8 +130,8 @@ export default function BiPage() {
         <StatCard label="Margen operacional mediano" value={s.dist.opMargin.p50 ?? 0} decimals={1} unit="%" foot={`margen bruto mediano ${fmtNum(s.dist.grossMargin.p50 ?? 0, 1)} %`} accent="linear-gradient(90deg, var(--gold), #a87d1e)" />
       </div>
 
-      {/* ── mercado farmacéutico colombiano (IQVIA · Close-Up), lectura interna de Siegfried ── */}
-      {key === "farmaceutico-colombia" && <MercadoFarma empresa={company.name} />}
+      {/* ── mercado farmacéutico colombiano (IQVIA · Close-Up), lectura interna de Siegfried: cifras clave ── */}
+      {farma && <MercadoFarma empresa={company.name} parte="resumen" />}
 
       {/* ── la empresa frente al sector ── */}
       {selfPeer && (
@@ -116,19 +146,12 @@ export default function BiPage() {
         </Card>
       )}
 
-      {/* ── mapa y dispersión ── */}
-      <div className="mb-5 grid gap-5 xl:grid-cols-2">
-        <Card className="rise rise-1">
-          <CardHeader title={`${isEC ? "Ecuador" : "Colombia"}: sector, población y competencia`} sub={`tres lentes sobre el mismo mapa · ${domicilio ? `domicilio de la empresa en ${domicilio}` : "sin domicilio identificado"}${home.length ? ` · sedes declaradas: ${home.join(", ")}` : " · la empresa aún no declara sedes ni cobertura"}`} />
-          <MapaSector s={s} demand={demandAll} home={home} domicilio={domicilio} country={isEC ? "EC" : "CO"} unitName={unitName} peers={s.peers} />
-        </Card>
-        <Card className="rise rise-2">
-          <CardHeader title="Crecimiento frente a margen operacional" sub={`las ${s.peers.length} mayores del sector en ${year}; tamaño del punto según ingresos · ${ciiuFoco ? `en color, las de la actividad ${ciiuFoco}` : ""}`} />
-          <div className="px-4 pb-3"><Dispersion s={s} selfNit={selfPeer?.nit ?? null} ciiuFoco={ciiuFoco} /></div>
-          <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Arriba a la derecha crecen por encima de la mediana con más margen que la mediana; abajo a la izquierda, lo contrario. {selfPeer ? `${company.shortName || company.name} aparece en dorado.` : "La empresa aparecerá en dorado cuando su razón social figure en la ficha."} Valores extremos recortados a los bordes.</p>
-        </Card>
-      </div>
+      </>)}
 
+      {t === "mercado" && farma && <MercadoFarma empresa={company.name} parte="mercado" />}
+
+      {t === "competencia" && (<>
+      {farma && <MercadoFarma empresa={company.name} parte="competencia" />}
       {/* ── ranking de la actividad y comparativo de laboratorios ── */}
       <div className="mb-5 grid gap-5 xl:grid-cols-[380px_1fr]">
         <Card className="rise rise-2">
@@ -240,6 +263,9 @@ export default function BiPage() {
         </div>
       </Card>
 
+      </>)}
+
+      {t === "portafolio" && (<>
       {/* ── inteligencia regulatoria y macro ── */}
       {intel && (
         <>
@@ -348,6 +374,22 @@ export default function BiPage() {
         </div>
       )}
 
+      </>)}
+
+      {t === "territorio" && (<>
+      {/* ── mapa y dispersión ── */}
+      <div className="mb-5 grid gap-5 xl:grid-cols-2">
+        <Card className="rise rise-1">
+          <CardHeader title={`${isEC ? "Ecuador" : "Colombia"}: sector, población y competencia`} sub={`tres lentes sobre el mismo mapa · ${domicilio ? `domicilio de la empresa en ${domicilio}` : "sin domicilio identificado"}${home.length ? ` · sedes declaradas: ${home.join(", ")}` : " · la empresa aún no declara sedes ni cobertura"}`} />
+          <MapaSector s={s} demand={demandAll} home={home} domicilio={domicilio} country={isEC ? "EC" : "CO"} unitName={unitName} peers={s.peers} />
+        </Card>
+        <Card className="rise rise-2">
+          <CardHeader title="Crecimiento frente a margen operacional" sub={`las ${s.peers.length} mayores del sector en ${year}; tamaño del punto según ingresos · ${ciiuFoco ? `en color, las de la actividad ${ciiuFoco}` : ""}`} />
+          <div className="px-4 pb-3"><Dispersion s={s} selfNit={selfPeer?.nit ?? null} ciiuFoco={ciiuFoco} /></div>
+          <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Arriba a la derecha crecen por encima de la mediana con más margen que la mediana; abajo a la izquierda, lo contrario. {selfPeer ? `${company.shortName || company.name} aparece en dorado.` : "La empresa aparecerá en dorado cuando su razón social figure en la ficha."} Valores extremos recortados a los bordes.</p>
+        </Card>
+      </div>
+
       {/* ── demanda y competencia por territorio ── */}
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         <StatCard label="Población con sede o cobertura" value={cov.coveredPct} decimals={1} unit="%" foot={`${fmtPeople(cov.covered)} habitantes en ${plural(demandAll.filter((d) => d.presence === "sede" || d.presence === "cobertura").length)}${v.catalog.territories.length ? "" : " · la empresa aún no declara territorios"}`} />
@@ -399,6 +441,10 @@ export default function BiPage() {
         </Card>
       )}
 
+      </>)}
+
+      {t === "senales" && (<>
+      {farma && <MercadoFarma empresa={company.name} parte="senales" />}
       {/* ── señales del entorno con fuente ── */}
       {kb && grupos.length > 0 && (
         <Card className="rise rise-3 mb-5">
@@ -443,6 +489,7 @@ export default function BiPage() {
         </ul>
         <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">El sector de referencia se define en la ficha de la empresa (<Link href={`${base}/panel/admin`} className="text-cyan-deep hover:underline">Administración → Empresas</Link>, «Sector de referencia»); si no está definido, la plataforma lo infiere del CIIU o del sector declarado. Los datos se actualizan con los extractores de la plataforma en cada corte de las fuentes.</p>
       </Card>
+      </>)}
     </>
   );
 }
