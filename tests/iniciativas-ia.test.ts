@@ -12,7 +12,7 @@ test("parseValidacionIniciativas: exigencia, faltantes, duplicados y nombre prop
   assert.equal(r.items[1].color, "amarillo");
   assert.equal(r.items[2].color, "rojo");
   assert.deepEqual(r.items[2].duplicaDe, ["i1"]);
-  assert.equal(r.items[2].reformulacion, "comité mensual de backorders");
+  assert.equal(r.items[2].reformulacion, "Comité mensual de backorders");
   assert.match(r.items[2].recomendaciones[0], /^Cambiar el nombre a:/);
   assert.equal(r.items[3].color, "amarillo");
 });
@@ -20,13 +20,13 @@ test("parseValidacionIniciativas: exigencia, faltantes, duplicados y nombre prop
 test("parsePropuestasIniciativa valida dimensión y trimestres", () => {
   const p = parsePropuestasIniciativa({ propuestas: [
     { name: "Implementar call center para droguerías", objetivo: "x", capability: "EJE-4", start: "2027-T2", end: "2027-T1", porque: "y" },
-    { name: "Modelo omnicanal", objetivo: "x", capability: "ZZZ", start: "mal", end: "2027-T3" },
+    { name: "Implementación de un sistema de gestión de inventarios", objetivo: "x", capability: "ZZZ", start: "mal", end: "2027-T3" },
     { name: "a" },
   ] }, ["EJE-4", "MUL-3"], 2027);
   assert.equal(p.length, 2);
-  assert.equal(p[0].name, "call center para droguerías");
+  assert.equal(p[0].name, "Call center para droguerías");
   assert.equal(p[0].end, "2027-T2");
-  assert.equal(p[1].capability, ""); assert.equal(p[1].start, "2027-T1");
+  assert.equal(p[1].capability, ""); assert.equal(p[1].start, "2027-T1"); assert.equal(p[1].name, "Sistema de gestión de inventarios");
 });
 
 test("encargoValidacionIniciativas lleva KR, objetivos e iniciativas", () => {

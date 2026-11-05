@@ -11,6 +11,11 @@ export type IniItem = { id: string; color: Semaforo; justificacion: string; reco
 export type ValidacionIni = { horizon: string; items: IniItem[]; resumen: string };
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+/** Nombre como entrega: sin verbo inicial ni sustantivo de actividad («Implementación de un sistema…» → «Sistema…»). */
+export function nombreComoEntrega(t: string): string {
+  const s = t.replace(/^(implementar|gestionar|desarrollar|realizar|ejecutar|implementación|ejecución|realización|desarrollo|gestión|puesta en marcha)\s+(de\s+)?(un|una|el|la|los|las)?\s*/i, "").trim();
+  return s ? s[0].toUpperCase() + s.slice(1) : t;
+}
 
 export function encargoValidacionIniciativas(args: {
   empresa: { name: string; sector?: string; size?: string }; horizonte: string;
@@ -55,7 +60,7 @@ export function parseValidacionIniciativas(raw: unknown, horizon: string, ids: s
     const duplicaDe = (Array.isArray(it.duplicaDe) ? it.duplicaDe : []).map((d) => str(d, 20)).filter((d) => d && d.toLowerCase() !== id.toLowerCase() && ids.some((x) => x.toLowerCase() === d.toLowerCase())).slice(0, 5);
     const faltan = (Array.isArray(it.faltan) ? it.faltan : []).map((f) => str(f, 20).toLowerCase()).filter((f) => f in ELEMENTOS_INI);
     const recs = (Array.isArray(it.recomendaciones) ? it.recomendaciones : []).map((r) => str(r, 600)).filter(Boolean).slice(0, 6);
-    const reformulacion = sinCifrasDeMeta(str(it.reformulacion, 200)).replace(/^(implementar|gestionar|desarrollar|realizar|ejecutar)\s+/i, "");
+    const reformulacion = str(it.reformulacion, 200) ? nombreComoEntrega(sinCifrasDeMeta(str(it.reformulacion, 200))) : "";
     const logroPropuesto = str(it.logroPropuesto, 600);
     if (color !== "verde" && !recs.length && !reformulacion) recs.push("Reformular la iniciativa: nombre como entrega, qué logra, resultado clave que mueve, responsable, inicio y fin, capacidad que instala.");
     if (reformulacion && !recs.some((r) => r.includes(reformulacion.slice(0, 30)))) recs.unshift(`Cambiar el nombre a: «${reformulacion}»`);
@@ -106,6 +111,6 @@ export function parsePropuestasIniciativa(raw: unknown, dimCodes: string[], anio
   return arr.map((p) => {
     const cap = str(p?.capability, 10).toUpperCase();
     const start = q(p?.start, `${anio}-T1`); const end = q(p?.end, `${anio}-T4`);
-    return { name: sinCifrasDeMeta(str(p?.name, 200)).replace(/^(implementar|gestionar|desarrollar|realizar|ejecutar)\s+/i, ""), objetivo: str(p?.objetivo, 600), capability: dimCodes.includes(cap) ? cap : "", start, end: end >= start ? end : start, porque: str(p?.porque, 600) };
+    return { name: nombreComoEntrega(sinCifrasDeMeta(str(p?.name, 200))), objetivo: str(p?.objetivo, 600), capability: dimCodes.includes(cap) ? cap : "", start, end: end >= start ? end : start, porque: str(p?.porque, 600) };
   }).filter((p) => p.name.length >= 5).slice(0, 3);
 }
