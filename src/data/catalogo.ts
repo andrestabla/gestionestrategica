@@ -59,7 +59,7 @@ export type Financials = typeof FINANCIALS;
 /** Horizonte de planeación de la empresa: ordena el portafolio y el roadmap.
     Cada empresa define los suyos (p. ej. H1 · 12 meses, H2 · 36, H3 · 72);
     sin definición rigen los dos clásicos. */
-export type Horizon = { id: string; label: string; months: number };
+export type Horizon = { id: string; label: string; months: number; baseline?: boolean };   // baseline: línea base (consulta), no horizonte de planeación
 
 /** Palanca estratégica de la empresa (p. ej. Market Share, Fidelización,
     Madurez, Margen): ordena la convención y agrupa objetivos e iniciativas. */
@@ -86,11 +86,18 @@ export const DEFAULT_HORIZONS: Horizon[] = [
 
 const HORIZON_PALETTE = ["var(--cyan)", "var(--gold-fill)", "var(--navy)", "var(--ok)", "var(--warn)", "var(--bad)"];
 
-export const horizonsOf = (c: Pick<CompanyInfo, "horizons"> | null | undefined): Horizon[] =>
+/** Todos los horizontes de la empresa, incluida la línea base de consulta. */
+export const horizonesTodos = (c: Pick<CompanyInfo, "horizons"> | null | undefined): Horizon[] =>
   c?.horizons?.length ? c.horizons : DEFAULT_HORIZONS;
+/** Horizontes de planeación (sin la línea base): el primero es el año que se baja a objetivos, KR, iniciativas y cascada. */
+export const horizonsOf = (c: Pick<CompanyInfo, "horizons"> | null | undefined): Horizon[] => {
+  const all = horizonesTodos(c); const plan = all.filter((h) => !h.baseline); return plan.length ? plan : all;
+};
+/** Horizontes de línea base (resultados ya cerrados que se consultan, p. ej. «2026 · línea base»). */
+export const horizonesBase = (c: Pick<CompanyInfo, "horizons"> | null | undefined): Horizon[] => horizonesTodos(c).filter((h) => !!h.baseline);
 
 export const horizonLabel = (c: Pick<CompanyInfo, "horizons"> | null | undefined, id: string): string =>
-  horizonsOf(c).find((h) => h.id === id)?.label ?? id;
+  horizonesTodos(c).find((h) => h.id === id)?.label ?? id;
 
 /** Etiqueta con el plazo: «H1 · 12 meses». */
 export const horizonTitle = (h: Horizon): string => `${h.label} · ${h.months} meses`;

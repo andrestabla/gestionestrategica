@@ -14,7 +14,7 @@ import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
-  type Catalog, type CompanyInfo, horizonsOf, typeRuleOf, isGuiada, type Horizon, type Lever } from "@/data/catalogo";
+  type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
 import { periodIndex, isValidPeriod } from "@/lib/period";
@@ -33,6 +33,7 @@ import { isMailTemplateKey, validarPlantilla, type MailTemplateKey } from "@/lib
 import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
 import { parseModulesOff, parseModulesStored } from "@/lib/modulos";
 import { normalizarMeta, proponerDesdePortafolio, type MetaTrimestral } from "@/lib/cascada";
+import type { AlineacionIA } from "@/lib/alineacion";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
@@ -644,8 +645,10 @@ export function parseHorizons(input: unknown): { ok: true; horizons?: Horizon[] 
     if (label.length < 2) return { ok: false, error: `El horizonte ${id} necesita una etiqueta.` };
     if (!(months > 0 && months <= 240)) return { ok: false, error: `El horizonte ${id} necesita un plazo en meses (1–240).` };
     if (out.some((h) => h.id === id)) return { ok: false, error: `Horizonte repetido: ${id}.` };
-    if (out.length && months <= out[out.length - 1].months) return { ok: false, error: "Los horizontes van de menor a mayor plazo." };
-    out.push({ id, label, months });
+    const baseline = raw?.baseline === true;
+    const prevPlan = [...out].reverse().find((h) => !h.baseline);
+    if (!baseline && prevPlan && months <= prevPlan.months) return { ok: false, error: "Los horizontes van de menor a mayor plazo." };
+    out.push(baseline ? { id, label, months, baseline: true } : { id, label, months });
   }
   return { ok: true, horizons: out };
 }
@@ -2600,7 +2603,7 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   const lever = str(input.lever, 12).toUpperCase() || undefined;
   if (lever && !(c.company.levers ?? []).some((l) => l.id === lever)) return fail(422, "La palanca no existe en esta empresa.");
   const horizon = str(input.horizon, 12).toUpperCase() || undefined;
-  if (horizon && !horizonsOf(c.company).some((h) => h.id === horizon)) return fail(422, "El horizonte no es de esta empresa.");
+  if (horizon && !horizonesTodos(c.company).some((h) => h.id === horizon)) return fail(422, "El horizonte no es de esta empresa.");   // un objetivo puede ir a la línea base (consulta)
   const pillar = str(input.pillar, 80) || undefined, desc = str(input.desc, 600) || undefined, indicator = str(input.indicator, 200) || undefined;
   // objetivo de la tribu (laboratorio de OKR): lleva la marca okr y, si lo indica, el objetivo directivo que concreta
   const okr = input.okr === true;
@@ -3876,4 +3879,28 @@ export async function registrarSinSesion(slug: string | null, path: string) {
   const companyId = g.companies.get(slug)?.dbId; if (!companyId) return;
   const db = await prisma();
   await db.auditEvent.create({ data: { companyId, actor: "Sin sesión", email: "", role: "", entity: "task", entityId: "sesion", change: `escritura rechazada sin sesión (sesión caducada o no iniciada) · ${path}`.slice(0, 500) } }).catch(() => undefined);
+}
+
+
+/* ═══ Validación de alineación de objetivos (IA) ═══
+   Se guarda en la misma tabla que los informes con IA (tipo «alineacion», asunto = horizonte) con la huella de las
+   prioridades y objetivos que la originaron: si cambian, se marca desactualizada. */
+
+export const getAlineacion = (horizon: string): (Omit<InformeGuardado, "informe"> & { informe: AlineacionIA }) | null => {
+  const g = informes().get(`alineacion|${horizon}`); if (!g) return null;
+  return { ...g, informe: g.informe as unknown as AlineacionIA };
+};
+
+export function saveAlineacion(user: SessionUser, horizon: string, inputHash: string, informe: AlineacionIA, model = "openai"): { ok: true; saved: InformeGuardado } | { ok: false; status: number; error: string } {
+  if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "La validación la lanza quien administra la estrategia." };
+  const kind = "alineacion" as InformeKind, subject = horizon;
+  const saved: InformeGuardado = { kind, subject, inputHash, informe: informe as unknown as InformeIA, model, by: user.email, at: new Date().toISOString() };
+  informes().set(`${kind}|${subject}`, saved);
+  audit(user, "task", `alineacion:${horizon}`, `validación de alineación generada (${informe.items.filter((i) => i.color === "verde").length} verde · ${informe.items.filter((i) => i.color === "amarillo").length} amarillo · ${informe.items.filter((i) => i.color === "rojo").length} rojo)`);
+  void persist("validación de alineación", async (db) => {
+    const companyId = cid();
+    const data = { inputHash, content: informe as unknown as object, model, by: user.email, at: new Date(saved.at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind, subject } }, update: data, create: { companyId, kind, subject, ...data } });
+  });
+  return { ok: true, saved };
 }

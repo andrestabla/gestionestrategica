@@ -9,7 +9,7 @@
 //   · resumen y exportación del portafolio por horizonte y decisión
 
 import type { Catalog, Lever } from "@/data/catalogo";
-import { horizonsOf, leversOf, isConvencion } from "@/data/catalogo";
+import { horizonsOf, leversOf, isConvencion, horizonesBase } from "@/data/catalogo";
 import type { CmiObjective, InitiativeFull, KpiFull } from "@/data/cmi";
 import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
 
@@ -46,7 +46,8 @@ export type OkrIssue = {
 export function objectivesMatrix(cat: Catalog): { levers: Lever[]; horizons: string[]; cell: (lever: string, horizon: string) => CmiObjective[]; orphan: CmiObjective[] } {
   const levers = leversOf(cat.company);
   const horizons = horizonsOf(cat.company).map((h) => h.id);
-  const directive = cat.objectives.filter((o) => !o.okr);   // la matriz muestra los objetivos directivos; los de las tribus viven en OKR
+  const base = horizonesBase(cat.company).map((h) => h.id);
+  const directive = cat.objectives.filter((o) => !o.okr && !base.includes(o.horizon ?? ""));   // la matriz muestra los objetivos directivos de planeación; los de la línea base se consultan aparte
   const cell = (lever: string, horizon: string) => directive.filter((o) => (o.lever ?? "") === lever && (o.horizon ?? "") === horizon);
   const orphan = directive.filter((o) => !o.lever || !o.horizon || !levers.some((l) => l.id === o.lever) || !horizons.includes(o.horizon));
   return { levers, horizons, cell, orphan };

@@ -21,7 +21,10 @@ import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea,
 import { AccessChip, useCan, useBase, useUser } from "@/components/user-context";
 import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
-import { horizonsOf, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
+import { horizonsOf, horizonesBase, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
+import { AyudaMetodologica } from "@/components/ayuda-metodologica";
+import { SEMAFORO, type AlineacionIA, type AlineacionItem } from "@/lib/alineacion";
+import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
@@ -214,18 +217,56 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
   const [leversOpen, setLeversOpen] = useState(false);
   const owner = (id?: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "";
   const editing = open && "id" in open ? (open as CmiObjective) : null;
-  const hz = [...horizons].reverse();   // del más lejano (2033) al más cercano (2027): así trabaja la mesa redonda
+  // acompañamiento: del primer horizonte (el año que se planea) al más lejano; convención: del más lejano al más cercano, como trabaja la mesa redonda
+  const hz = acomp ? horizons : [...horizons].reverse();
+  const first = horizons[0]?.id ?? "";
+  const lineaBase = acomp ? horizonesBase(cat.company) : [];
+  const [verBase, setVerBase] = useState(false);
+  // validación de alineación (IA) del primer horizonte
+  const [ali, setAli] = useState<{ alineacion: AlineacionIA | null; at: string | null; desactualizado: boolean; disponible: boolean } | null>(null);
+  const [aliBusy, setAliBusy] = useState(false);
+  const [aliOpen, setAliOpen] = useState<CmiObjective | null>(null);
+  useEffect(() => {
+    if (!acomp || !first) return;
+    let alive = true;
+    fetch(`/api/td/alineacion?horizon=${encodeURIComponent(first)}`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive && j) setAli(j); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [acomp, first, cat]);
+  const validar = async () => {
+    setAliBusy(true);
+    try {
+      const res = await fetch("/api/td/alineacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon: first }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { avisar(j.error ?? "No se pudo validar.", "bad"); return; }
+      setAli(j); avisar("Alineación validada.");
+    } finally { setAliBusy(false); }
+  };
+  const aliDe = (id: string): AlineacionItem | undefined => ali?.alineacion?.items.find((i) => i.id === id);
+  const conteo = (c: AlineacionItem["color"]) => ali?.alineacion?.items.filter((i) => i.color === c).length ?? 0;
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {acomp
-          ? <p className="text-[12.5px] text-muted">Objetivos directivos por {V.leverLow} y horizonte: qué se logra en {horizons[0]?.label ?? "el primer horizonte"} y qué queda habilitado hacia {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}.</p>
+          ? <p className="text-[12.5px] text-muted">Objetivos directivos por {V.leverLow}: qué se logra en {horizons[0]?.label ?? "el primer horizonte"}{horizons.length > 1 ? ` y qué queda habilitado hacia ${horizons[horizons.length - 1]?.label}` : ""}.{lineaBase.length ? ` Los resultados de ${lineaBase.map((h) => h.label).join(", ")} se consultan abajo.` : ""}</p>
           : <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>}
-        {canEdit && <span className="flex w-full gap-2 sm:ml-auto sm:w-auto">
-          {!acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost flex-1 justify-center btn-sm text-[12px] sm:flex-none"><Pencil size={12} /> {V.levers}</button>}
-          <button onClick={() => setOpen({})} className="btn-primary flex-1 justify-center btn-sm text-[12px] sm:flex-none"><Plus size={12} /> Nuevo objetivo</button>
-        </span>}
+        <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
+          {acomp && <AyudaMetodologica tema="objetivos" />}
+          {acomp && canEdit && <button onClick={validar} disabled={aliBusy || ali?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={ali?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por objetivo frente a las prioridades, con justificación y recomendaciones"}>{aliBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {ali?.alineacion ? "Volver a validar alineación" : "Validar alineación"} <span className="text-faint">(IA)</span></button>}
+          {canEdit && !acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> {V.levers}</button>}
+          {canEdit && <button onClick={() => setOpen({ horizon: first })} className="btn-primary btn-sm text-[12px]"><Plus size={12} /> Nuevo objetivo</button>}
+        </span>
       </div>
+      {acomp && ali?.alineacion && (
+        <div className="rise mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface-2/60 px-4 py-2.5 text-[12.5px]">
+          <span className="font-bold text-ink">Alineación {horizonLabel(cat.company, first)}:</span>
+          <span className="chip chip-ok">{conteo("verde")} alineado{conteo("verde") === 1 ? "" : "s"}</span>
+          <span className="chip chip-gold">{conteo("amarillo")} parcial{conteo("amarillo") === 1 ? "" : "es"}</span>
+          <span className="chip chip-bad">{conteo("rojo")} no alineado{conteo("rojo") === 1 ? "" : "s"}</span>
+          {ali.desactualizado && <span className="chip chip-warn">desactualizada: cambiaron prioridades u objetivos</span>}
+          {ali.at && <span className="text-faint">· {new Date(ali.at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</span>}
+          {ali.alineacion.resumen && <p className="w-full leading-relaxed text-ink-soft">{ali.alineacion.resumen}</p>}
+        </div>
+      )}
       {isConvencion(cat.company) && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12px] leading-snug text-ink-soft" style={{ background: "color-mix(in srgb, var(--gold) 14%, var(--surface))" }}><b>Dirección 3x3 es informativa:</b> agrupa los objetivos estratégicos de CRESIO por palanca. El objetivo rector de cada palanca es el objetivo del único OKR de su tribu; el día 2 no se modifica (solo el relator registra ajustes ratificados).</p>}
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus {V.leversLow}. {canEdit ? (acomp ? `Defínelas en «${V.tabs.prioridades}»: ordenan la estrategia y agrupan objetivos e iniciativas.` : "Créalas con «Palancas»: ordenan la convención y agrupan objetivos e iniciativas.") : "Las define el advisor o la gerencia."}</EmptyNote></Card>
@@ -243,7 +284,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
                   <div key={h.id} className="mt-3">
                     <div className="mb-1.5 text-[12px] font-extrabold text-ink">{h.label} <span className="num font-semibold text-faint">· {h.months} meses</span></div>
                     <div className="space-y-2">
-                      {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} />)}
+                      {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} ali={h.id === first ? aliDe(o.id) : undefined} onAli={() => setAliOpen(o)} />)}
                       {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2.5 text-[12px] font-semibold text-faint">+ objetivo</button>}
                       {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[12px] italic text-faint">por definir</div>}
                     </div>
@@ -275,7 +316,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
                     return (
                       <td key={h.id} className="min-w-[200px]">
                         <div className="space-y-2">
-                          {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} />)}
+                          {objs.map((o) => <ObjectiveCard key={o.id} o={o} cat={cat} onEdit={canEdit ? () => setOpen(o) : undefined} ali={h.id === first ? aliDe(o.id) : undefined} onAli={() => setAliOpen(o)} />)}
                           {canEdit && <button onClick={() => setOpen({ lever: l.id, horizon: h.id })} className="w-full rounded-xl border border-dashed border-line-strong px-3 py-2 text-[12px] font-semibold text-faint hover:border-cyan-deep hover:text-cyan-deep">+ objetivo</button>}
                           {!canEdit && objs.length === 0 && <div className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[12px] italic text-faint">por definir</div>}
                         </div>
@@ -288,6 +329,37 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           </table>
         </div>
       </>)}
+      {lineaBase.map((h) => {
+        const objs = cat.objectives.filter((o) => o.horizon === h.id && !o.okr);
+        return (
+          <Card key={h.id} className="rise rise-2 mt-5 overflow-hidden">
+            <CardHeader title={`Consulta · ${h.label}`} sub={`${objs.length} resultado${objs.length === 1 ? "" : "s"} por ${V.leverLow}, con sus indicadores: contexto y línea base para ${horizons[0]?.label ?? "el horizonte"}; no se editan aquí`}
+              right={<button type="button" onClick={() => setVerBase((v) => !v)} className="btn-ghost btn-sm text-[12px]">{verBase ? "Ocultar" : "Ver resultados"}</button>} />
+            {verBase && (
+              <div className="divide-y divide-line">
+                {levers.map((l) => objs.filter((o) => o.lever === l.id).map((o) => {
+                  const ks = kpisOf(cat, o);
+                  return (
+                    <div key={o.id} className="px-5 py-3">
+                      <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.name}</div>
+                      <div className="text-[13px] font-bold text-ink">{o.name}</div>
+                      {o.desc && <p className="mt-0.5 text-[12px] leading-snug text-muted">{o.desc}</p>}
+                      {ks.length > 0 && (
+                        <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                          {ks.map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return (
+                            <li key={k.code} className="flex items-start gap-2 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-[12px]"><span className="num shrink-0 font-bold text-cyan-deep">{k.code}</span><span className="min-w-0 flex-1 text-ink">{k.name}</span><span className="num shrink-0 text-muted">{last ? `${last.value} ${k.unit}` : "—"}{k.target ? ` · meta ${k.target}` : ""}</span></li>
+                          ); })}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                }))}
+              </div>
+            )}
+          </Card>
+        );
+      })}
+      {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined} />}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
           <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la ruta" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
@@ -304,10 +376,11 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
   );
 }
 
-function ObjectiveCard({ o, cat, onEdit }: { o: CmiObjective; cat: Cat; onEdit?: () => void }) {
+function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: Cat; onEdit?: () => void; ali?: AlineacionItem; onAli?: () => void }) {
   const krs = keyResultsOf(cat, o);
   return (
-    <div className="panel group px-3.5 py-3">
+    <div className="panel group px-3.5 py-3" style={ali ? { boxShadow: `inset 3px 0 0 ${SEMAFORO[ali.color].color}` } : undefined}>
+      {ali && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
@@ -322,6 +395,29 @@ function ObjectiveCard({ o, cat, onEdit }: { o: CmiObjective; cat: Cat; onEdit?:
         {krs.slice(0, 3).map((k) => <span key={k.code} className="num chip !py-0 text-[11px]" title={k.name}>{k.code}</span>)}
       </div>
     </div>
+  );
+}
+
+function AlineacionModal({ o, item, lever, onClose, onEdit }: { o: CmiObjective; item?: AlineacionItem; lever?: Lever; onClose: () => void; onEdit?: () => void }) {
+  return (
+    <Modal title={`${o.id} · alineación`} sub={lever ? `${lever.order}. ${lever.name}` : undefined} onClose={onClose}
+      footer={<>{onEdit && <button type="button" onClick={onEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar el objetivo</button>}<button type="button" onClick={onClose} className="btn-primary btn-sm text-[12px]">Cerrar</button></>}>
+      <div className="text-[14px] font-extrabold leading-snug text-ink">{o.name}</div>
+      {o.desc && <p className="mt-1 text-[12.5px] leading-snug text-muted">{o.desc}</p>}
+      {o.indicator && <p className="mt-1 text-[12.5px] text-ink-soft"><span className="font-semibold">Indicador impulsor:</span> {o.indicator}</p>}
+      {item ? (
+        <>
+          <div className="mt-4 flex items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span></div>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink">{item.justificacion}</p>
+          {item.recomendaciones.length > 0 && (
+            <div className="mt-4">
+              <div className="label !text-[11px]">Recomendaciones</div>
+              <ul className="mt-1.5 space-y-1.5">{item.recomendaciones.map((r, i) => <li key={i} className="flex gap-2 text-[13px] leading-relaxed text-ink"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-deep" /><span>{r}</span></li>)}</ul>
+            </div>
+          )}
+        </>
+      ) : <p className="mt-4 text-[12.5px] italic text-faint">Este objetivo aún no tiene lectura: pulsa «Validar alineación».</p>}
+    </Modal>
   );
 }
 
@@ -474,7 +570,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
   const tribes = convencion ? cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || levers.some((l) => l.ownerId === r.id))
     : cat.responsibles.filter((r) => allObjectives.some((o) => inTribe(o, r.id) && (tribeOf(o) === r.id || keyResultsOf(cat, o).some((k) => k.ownerId === r.id))));
   const leversOrdenadas = [...levers].sort((a, b) => Number(b.ownerId === myTribe) - Number(a.ownerId === myTribe) || a.order - b.order);
-  const byLever = [...leversOrdenadas.filter((l) => !fLever || l.id === fLever).map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: "Sin palanca", objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length || (convencion && g.key));   // en la convención, las palancas se ven siempre (con o sin tribu elegida)
+  const byLever = [...leversOrdenadas.filter((l) => !fLever || l.id === fLever).map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: `Sin ${V.leverLow}`, objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length || (convencion && g.key));   // en la convención, las palancas se ven siempre (con o sin tribu elegida)
   const high = issues.filter((i) => i.level === "alto").length;
   return (
     <>
@@ -488,9 +584,10 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
         <Filter size={13} className="shrink-0 text-cyan-deep" />
         <span className="num text-[12px] font-bold text-ink">{objectives.length} de {allObjectives.length} objetivos</span>
         <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
-        <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
+        {!acomp && <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>}
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
-        {canEdit && !convencion && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
+        {acomp && <span className="ml-auto flex items-center gap-2"><AyudaMetodologica tema="resultados-clave" /><span className="hidden text-[12px] text-faint lg:inline">Los objetivos se definen en «{V.tabs.direccion}»; aquí se vinculan sus resultados clave.</span></span>}
+        {canEdit && !convencion && !acomp && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
         {!canEdit && <span className="ml-auto text-[12px] text-faint">{acomp ? "Solo lectura: registra el advisor." : "Solo lectura: el líder de cada tribu registra con el QR de edición."}</span>}
       </div>
       {allObjectives.length === 0 && !convencion && <Card className="rise p-6"><EmptyNote>{acomp ? <>Aún no hay objetivos en {horizonLabel(cat.company, horizon)}. Primero el objetivo directivo (en «{V.tabs.direccion}»), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</> : <>Aún no hay objetivos de las tribus en {horizonLabel(cat.company, horizon)}. Primero el objetivo ({canEdit ? "«+ Objetivo»: lo escribe la tribu a partir del objetivo directivo de su palanca" : "lo escribe el líder de cada tribu"}), después sus resultados clave: de 2 a 4 por objetivo, máximo 5.</>}</EmptyNote></Card>}
@@ -500,10 +597,10 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
           <CardHeader title={g.label} sub={acomp ? (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} en ${horizonLabel(cat.company, horizon)}` : "sin objetivos todavía en esta prioridad") : (g.objs.length ? `${g.objs.length} objetivo${g.objs.length === 1 ? "" : "s"} de la tribu en ${horizonLabel(cat.company, horizon)}` : "sin OKR todavía · un solo OKR por tribu: el objetivo rector de la palanca con 2 a 4 resultados clave (máximo 5)")}
             right={g.key ? <span className="flex flex-wrap justify-end gap-1.5">
               {canEdit && !scope && !acomp && <button onClick={() => setEjemplo(g.key)} className="btn-ghost btn-sm text-[12px]" title="Un OKR completo de ejemplo para esta palanca"><BookOpen size={12} /> Ejemplo</button>}
-              {canEdit && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
+              {canEdit && !acomp && (!scope || levers.find((l) => l.id === g.key)?.ownerId === scope) && (!convencion || g.objs.length === 0) && <button onClick={() => setObj({ lever: g.key })} className="btn-ghost btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
             </span> : undefined} />
           <div className="divide-y divide-line">
-            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>{acomp ? "Aún no hay resultados clave para este objetivo: de 2 a 4 (máximo 5), con «+ Resultado clave»." : <>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</>}</EmptyNote></div>}
+            {g.objs.length === 0 && <div className="px-5 py-4"><EmptyNote>{acomp ? `Esta ${V.leverLow} aún no tiene objetivos en ${horizonLabel(cat.company, horizon)}: se definen en «${V.tabs.direccion}».` : <>Un solo OKR por tribu: su objetivo es el objetivo rector de la palanca (el advisor lo registra tal cual) y la tribu define de 2 a 4 resultados clave (máximo 5){canEdit ? " con «+ Resultado clave» o «Sugerir OKR»" : "; los registra el líder"}.</>}</EmptyNote></div>}
             {g.objs.map((o) => {
               const krs = keyResultsOf(cat, o);
               const mine = issues.filter((i) => i.ref === o.id || krs.some((k) => k.code === i.ref));
@@ -810,7 +907,7 @@ function okrLinkOk(cat: Cat, horizon: string, v: { cmi: string; kpi: string }): 
 
 /** Iniciativa creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el OKR (objetivo y KR principal) que mueve. */
 function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false, scope = null, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; lockOwner?: boolean; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
-  const tribes = cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
+  const tribes = isAcompanamiento(cat.company) ? cat.responsibles : cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
   const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "" });
   const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });

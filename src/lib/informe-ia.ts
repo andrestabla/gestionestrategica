@@ -6,7 +6,7 @@ import { CAPS, DIMS, LEVELS, FRAMEWORKS, STAGES, THRESHOLD, type Dimension } fro
 import type { Consolidated, Recommendation } from "@/lib/od";
 import type { LecturaF1 } from "@/lib/f1";
 
-export type InformeKind = "f1" | "consolidado";
+export type InformeKind = "f1" | "consolidado" | "alineacion";   // alineacion: validación de objetivos (src/lib/alineacion.ts), misma tabla
 
 export type InformeIA = {
   titulo: string;
