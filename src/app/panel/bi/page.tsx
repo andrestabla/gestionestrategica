@@ -13,6 +13,8 @@ import { useCatalog } from "@/components/catalog-context";
 import { useBase } from "@/components/user-context";
 import { fmtNum } from "@/data/demo";
 import { sectorFor, sectorKeyDe, fmtMillones, shortName } from "@/data/sector";
+import { MercadoFarma } from "@/components/mercado-farma";
+import { MERCADO_FARMA_CO } from "@/data/mercado-farma-co";
 import { inteligenciaOf, titularDe, coincideEmpresa, atc2Nombre } from "@/data/inteligencia";
 import { EC_POPULATION, EC_POPULATION_SOURCE } from "@/data/demanda-ec";
 import { CO_POPULATION, CO_POPULATION_SOURCE } from "@/data/demanda-co";
@@ -97,6 +99,9 @@ export default function BiPage() {
         <StatCard label="Crecimiento mediano" value={s.dist.growth.p50 ?? 0} decimals={1} unit="%" foot={`cuartiles ${fmtNum(s.dist.growth.p25 ?? 0, 1)} % y ${fmtNum(s.dist.growth.p75 ?? 0, 1)} %`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Margen operacional mediano" value={s.dist.opMargin.p50 ?? 0} decimals={1} unit="%" foot={`margen bruto mediano ${fmtNum(s.dist.grossMargin.p50 ?? 0, 1)} %`} accent="linear-gradient(90deg, var(--gold), #a87d1e)" />
       </div>
+
+      {/* ── mercado farmacéutico colombiano (IQVIA · Close-Up), lectura interna de Siegfried ── */}
+      {key === "farmaceutico-colombia" && <MercadoFarma empresa={company.name} />}
 
       {/* ── la empresa frente al sector ── */}
       {selfPeer && (
@@ -412,7 +417,7 @@ export default function BiPage() {
                       <li key={h.id} className="rounded-xl bg-surface-2/60 px-4 py-3">
                         <p className="text-[12.5px] leading-snug text-ink">{h.hecho}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-faint">
-                          {f && <a href={f.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-cyan-deep hover:underline">{f.editor} · {f.fecha} <ExternalLink size={10} /></a>}
+                          {f && (f.url ? <a href={f.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-cyan-deep hover:underline">{f.editor} · {f.fecha} <ExternalLink size={10} /></a> : <span className="text-ink-soft">{f.editor} · {f.fecha}</span>)}
                           {f && <span className={`chip !py-0 text-[11px] ${f.tipo === "oficial" ? "chip-ok" : ""}`}>{f.tipo}</span>}
                           {h.nota && <span className="italic">{h.nota}</span>}
                         </div>
@@ -433,6 +438,7 @@ export default function BiPage() {
           <li className="flex items-start gap-2 rounded-xl bg-surface-2/60 px-4 py-3 text-[12.5px]"><Database size={14} className="mt-0.5 shrink-0 text-cyan-deep" /><span><b className="text-ink">{s.source.name}</b> · corte {s.source.cut.slice(0, 10)}, extraído el {s.source.fetchedAt.slice(0, 10)}. <span className="text-muted">Tamaño, crecimiento, márgenes, concentración, territorio y sociedades del sector.</span></span></li>
           {intel?.fuentes.map((f) => <li key={f.id} className="flex items-start gap-2 rounded-xl bg-surface-2/60 px-4 py-3 text-[12.5px]"><Database size={14} className="mt-0.5 shrink-0 text-cyan-deep" /><span><a href={f.url} target="_blank" rel="noreferrer" className="font-bold text-ink hover:text-cyan-deep">{f.name}</a> · extraído el {intel.fetchedAt.slice(0, 10)}. <span className="text-muted">{f.note}</span></span></li>)}
           <li className="flex items-start gap-2 rounded-xl bg-surface-2/60 px-4 py-3 text-[12.5px]"><Database size={14} className="mt-0.5 shrink-0 text-cyan-deep" /><span><a href={popSource.url} target="_blank" rel="noreferrer" className="font-bold text-ink hover:text-cyan-deep">{popSource.name}</a>. <span className="text-muted">{popSource.note}</span></span></li>
+          {key === "farmaceutico-colombia" && <li className="flex items-start gap-2 rounded-xl bg-surface-2/60 px-4 py-3 text-[12.5px]"><Database size={14} className="mt-0.5 shrink-0 text-cyan-deep" /><span><b className="text-ink">{MERCADO_FARMA_CO.titulo}</b> · {MERCADO_FARMA_CO.autor}, {MERCADO_FARMA_CO.fecha} · {MERCADO_FARMA_CO.fuentes.join(" y ")}. Lectura interna de la empresa (no es dato abierto): cifras tal como aparecen en el documento.</span></li>}
           {kb && <li className="flex items-start gap-2 rounded-xl bg-surface-2/60 px-4 py-3 text-[12.5px]"><BookOpen size={14} className="mt-0.5 shrink-0 text-cyan-deep" /><span><b className="text-ink">Base de hechos · {kb.nombre}</b> · {kb.fuentes.length} fuentes ({kb.fuentes.filter((f) => f.tipo === "oficial").length} oficiales). <span className="text-muted">Prensa económica, gremios y consultoras se citan como tales; las cifras oficiales priman cuando difieren.</span></span></li>}
         </ul>
         <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">El sector de referencia se define en la ficha de la empresa (<Link href={`${base}/panel/admin`} className="text-cyan-deep hover:underline">Administración → Empresas</Link>, «Sector de referencia»); si no está definido, la plataforma lo infiere del CIIU o del sector declarado. Los datos se actualizan con los extractores de la plataforma en cada corte de las fuentes.</p>

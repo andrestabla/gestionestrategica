@@ -8,6 +8,7 @@ import { leversOf, horizonsOf } from "@/data/catalogo";
 import { sectorOf, sectorKeyDe } from "@/data/sector";
 import { inteligenciaOf, titularDe, coincideEmpresa } from "@/data/inteligencia";
 import { executiveSummary } from "@/lib/logic";
+import { resumenMercadoFarma } from "@/data/mercado-farma-co";
 
 const n1 = (x: number | null | undefined) => (x == null ? "—" : x.toFixed(1).replace(".", ","));
 
@@ -48,6 +49,8 @@ export function contextoEmpresa(): string {
     const t = titularDe(c, intel);
     out.push(`INTELIGENCIA REGULATORIA (${intel.fetchedAt.slice(0, 10)}): ${intel.invima.registros} registros sanitarios vigentes de ${intel.invima.titulares} titulares; ${intel.regulados.presentaciones} presentaciones bajo precio máximo (${intel.regulados.circularPrincipal}, desde ${intel.regulados.vigenciaDesde}); TRM ${n1(intel.trm.valor)} (${n1(intel.trm.variacion12m)} % a doce meses).${t ? ` La empresa es el titular #${t.rank} por registros vigentes (${t.registros} registros, ${t.cums} presentaciones); ${t.regulados.share} % de sus registros tiene precio regulado (${t.regulados.mercadosRelevantes} mercados relevantes); grupos terapéuticos principales: ${t.atc1.slice(0, 3).map((a) => `${a.name} (${a.n})`).join(", ")}; ${t.vencimientos.en36m} registros vencen en 36 meses.` : ""}`);
   }
+  // Mercado farmacéutico colombiano (IQVIA · Close-Up): lectura interna de Siegfried, para las empresas del sector
+  if (sectorKeyDe(c) === "farmaceutico-colombia") out.push(resumenMercadoFarma());
   // Tablero: alertas vigentes (solo si hay seguimiento cargado)
   try {
     const v = tenantView();
