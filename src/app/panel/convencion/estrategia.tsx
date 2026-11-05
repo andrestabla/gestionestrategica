@@ -29,6 +29,7 @@ import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
+import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
@@ -979,7 +980,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         </Card>
       </div>
       {valOpen && <ValidacionIniModal i={valOpen} item={valDe(valOpen.id)} onClose={() => setValOpen(null)} onEdit={mine(valOpen) ? () => { setValOpen(null); setEdit(valOpen); } : undefined}
-        onAplicar={mine(valOpen) ? async (patch) => { const ok = await mutate("initiative", "upsert", { id: valOpen.id, name: valOpen.name, objetivo: valOpen.objetivo, ownerId: valOpen.ownerId, kpi: valOpen.kpi, cmi: valOpen.cmi, horizon: valOpen.horizon, capability: valOpen.capability, subsistema: valOpen.subsistema, status: valOpen.status, ...patch }); if (ok) { avisar("Iniciativa actualizada; vuelve a validar para refrescar el semáforo."); setValOpen(null); } } : undefined} saving={saving} />}
+        onAplicar={mine(valOpen) ? async (patch) => { const ok = await mutate("initiative", "upsert", { ...valOpen, ...patch }); if (ok) { avisar("Iniciativa actualizada; vuelve a validar para refrescar el semáforo."); setValOpen(null); } } : undefined} saving={saving} />}
       {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
       {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setEdit(null)}
@@ -1034,12 +1035,16 @@ function okrLinkOk(cat: Cat, horizon: string, v: { cmi: string; kpi: string }): 
 /** Iniciativa creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el OKR (objetivo y KR principal) que mueve. */
 function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false, scope = null, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; lockOwner?: boolean; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
   const tribes = isAcompanamiento(cat.company) ? cat.responsibles : cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
-  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "" });
+  const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "",
+    capability: initial?.capability ?? "", status: (initial?.status ?? "PLANEADA") as InitiativeFull["status"], start: initial?.start ?? "", end: initial?.end ?? "", metaResultado: initial?.metaResultado ?? "", budgetPlanned: initial?.budgetPlanned ? String(initial.budgetPlanned) : "", observaciones: initial?.observaciones ?? "" });
   const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const acompIni = isAcompanamiento(cat.company);
   // toda iniciativa nueva nace asociada a un resultado clave; el asistente propone tres a partir de ese KR
-  const ok = f.name.trim().length >= 5 && !!f.ownerId && !!link.kpi && okrLinkOk(cat, horizon, link);
+  const Q = /^\d{4}-T[1-4]$/;
+  const plazoOk = (!f.start || Q.test(f.start.trim().toUpperCase())) && (!f.end || Q.test(f.end.trim().toUpperCase())) && (!f.start || !f.end || f.start.trim().toUpperCase() <= f.end.trim().toUpperCase());
+  // el resultado clave es obligatorio al crear; una iniciativa existente sin KR se puede seguir editando (se vincula aparte)
+  const ok = f.name.trim().length >= 5 && !!f.ownerId && (initial ? (!link.kpi || okrLinkOk(cat, horizon, link)) : (!!link.kpi && okrLinkOk(cat, horizon, link))) && plazoOk;
   const [sugIni, setSugIni] = useState<{ capability?: string; start?: string; end?: string }>({});
   const [prop, setProp] = useState<{ loading: boolean; error: string | null; items: PropuestaIniciativa[] }>({ loading: false, error: null, items: [] });
   const proponer = async () => {
@@ -1053,12 +1058,21 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
     <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub={isAcompanamiento(cat.company) ? "lo que se hace para mover un resultado clave; con él queda habilitada para calificar" : "lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar"} onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: initial?.capability ?? sugIni.capability ?? "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: initial?.status ?? "PLANEADA", ...(!initial && sugIni.start ? { start: sugIni.start, end: sugIni.end } : {}) })}>
+          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: f.capability || sugIni.capability || initial?.capability || "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: f.status, start: (f.start || sugIni.start || "").trim().toUpperCase(), end: (f.end || sugIni.end || "").trim().toUpperCase(), metaResultado: f.metaResultado.trim(), budgetPlanned: Number(f.budgetPlanned.replace(/[^\d.,]/g, "").replace(",", ".")) || 0, observaciones: f.observaciones.trim(), ...(initial ? { impact: initial.impact, feasibility: initial.feasibility, urgency: initial.urgency, dependency: initial.dependency, progress: initial.progress, budgetCommitted: initial.budgetCommitted, budgetExecuted: initial.budgetExecuted, actions: initial.actions, log: initial.log, nextMilestone: initial.nextMilestone, factors: initial.factors } : {}) })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
         <Field label="Iniciativa"><AutoTextarea value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
+        <Field label="Meta o resultado esperado"><textarea value={f.metaResultado} onChange={set("metaResultado")} rows={2} placeholder="Qué queda logrado al cierre (p. ej. dos casos piloto documentados y comparados con los resultados experimentales)" className={`${INPUT} resize-y`} /></Field>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Field label="Dimensión que instala"><select value={f.capability} onChange={set("capability")} className={INPUT}><option value="">—</option>{DIMS.map((d) => <option key={d.code} value={d.code}>{d.code} · {d.name}</option>)}</select></Field>
+          <Field label="Estado"><select value={f.status} onChange={set("status")} className={INPUT}>{[["PLANEADA", "Planeada"], ["EN_CURSO", "En curso"], ["EN_RIESGO", "En riesgo"], ["COMPLETADA", "Completada"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
+          <Field label="Inicio (AAAA-Tn)" error={f.start && !Q.test(f.start.trim().toUpperCase()) ? "Trimestre como 2027-T1" : undefined}><input value={f.start} onChange={set("start")} placeholder="2027-T1" className={`${INPUT} num`} /></Field>
+          <Field label="Fin (AAAA-Tn)" error={f.end && !Q.test(f.end.trim().toUpperCase()) ? "Trimestre como 2027-T4" : f.start && f.end && Q.test(f.start.trim().toUpperCase()) && Q.test(f.end.trim().toUpperCase()) && f.start.trim().toUpperCase() > f.end.trim().toUpperCase() ? "El fin no puede ser anterior al inicio" : undefined}><input value={f.end} onChange={set("end")} placeholder="2027-T4" className={`${INPUT} num`} /></Field>
+        </div>
+        <Field label={`Presupuesto planeado (${cat.company.currency || "COP"})`}><input value={f.budgetPlanned} onChange={set("budgetPlanned")} inputMode="decimal" placeholder="0" className={`${INPUT} num`} /></Field>
+        <Field label="Observaciones"><textarea value={f.observaciones} onChange={set("observaciones")} rows={3} placeholder="Restricciones, supuestos, dependencias de otras áreas, pendientes de aprobación" className={`${INPUT} resize-y`} /></Field>
         <Field label={isAcompanamiento(cat.company) ? "Sponsor" : "Tribu dueña"}><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} />
         <p className="text-[12px] text-faint">{acompIni ? "El resultado clave es obligatorio: toda iniciativa nace para mover uno." : "Queda asociada al resultado clave elegido"} Queda asociada a {horizonLabel(cat.company, horizon)}; así se califica en Priorización como las demás.</p>

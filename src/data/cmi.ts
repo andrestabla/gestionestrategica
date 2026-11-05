@@ -273,6 +273,7 @@ export type InitiativeFull = {
   framework: string;           // framework que trabaja la empresa (F04…)
   kpi: string;
   createdBy?: string;          // correo de quien la creó: edita y elimina las suyas quien no administra el catálogo
+  observaciones?: string;      // notas libres: restricciones, supuestos, pendientes
   actions: { name: string; meta: string; status: ActionStatus; quarter: string }[];
   log: { date: string; type: "HITO" | "ALERTA" | "NOTA"; text: string }[];
   nextMilestone: { date: string; text: string };

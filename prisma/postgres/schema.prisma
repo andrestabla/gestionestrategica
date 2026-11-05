@@ -518,6 +518,7 @@ model Initiative {
   kpiId           String?
   kpi             Kpi?            @relation(fields: [kpiId], references: [id])
   createdBy       String? // correo de quien la creó
+  observaciones   String? // notas libres de la iniciativa (restricciones, supuestos, pendientes)
   successFactors  SuccessFactor[]
 
   @@unique([companyId, code])
