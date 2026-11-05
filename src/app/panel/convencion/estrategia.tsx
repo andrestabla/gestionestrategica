@@ -766,7 +766,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
   // un resultado clave se valida solo con todos sus campos: nombre, línea base, meta, unidad, dueño, plazo, frecuencia y definición con fórmula y fuente
   const faltan: string[] = [];
   if (f.name.trim().length < 3) faltan.push("resultado clave");
-  else if (!/\d/.test(f.name.replace(f.code, ""))) faltan.push("una cifra real en el nombre del resultado (cuánto)");
+  const sinCifra = f.name.trim().length >= 3 && !/\d/.test(f.name.replace(f.code, ""));   // sugerencia, no bloquea: la meta ya dice cuánto
   if (f.baseline.trim() === "" || !Number.isFinite(Number(f.baseline.replace(",", ".")))) faltan.push("línea base");
   if (f.target.trim() === "" || !Number.isFinite(Number(f.target.replace(",", ".")))) faltan.push("meta");
   else if (f.baseline.trim() !== "" && num(f.target) === num(f.baseline)) faltan.push("meta distinta de la línea base");
@@ -775,6 +775,17 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
   if (!/^\d{4}(-T[1-4])?$/.test(f.due.trim().toUpperCase())) faltan.push("plazo");
   if (f.definition.trim().length < 10) faltan.push("definición con fórmula y fuente");
   const ok = f.code.trim().length >= 2 && faltan.length === 0;
+  // asistente de línea base y meta: busca el indicador equivalente entre los resultados cerrados cargados (línea base)
+  const acompKr = isAcompanamiento(cat.company);
+  const [lb, setLb] = useState<{ loading: boolean; error: string | null; sinBase: string | null; propuesta: { baseline: number | null; meta: number | null; unidad: string; periodo: string; justificacion: string } | null; indicador: { code: string; name: string; ultimo?: number; periodo?: string; meta?: number } | null }>({ loading: false, error: null, sinBase: null, propuesta: null, indicador: null });
+  const completarBase = async () => {
+    setLb({ loading: true, error: null, sinBase: null, propuesta: null, indicador: null });
+    const res = await fetch("/api/td/okr/linea-base", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cmi: obj.id, kr: { code: f.code, name: f.name.trim(), unit: f.unit, definition: f.definition, goodDirection: f.goodDirection } }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) { setLb({ loading: false, error: j?.error ?? `Error ${res.status}`, sinBase: null, propuesta: null, indicador: null }); return; }
+    if (j?.sinBase) { setLb({ loading: false, error: null, sinBase: j.mensaje ?? "No se dispone de línea base en la información cargada a la plataforma", propuesta: null, indicador: null }); return; }
+    setLb({ loading: false, error: null, sinBase: null, propuesta: j.propuesta, indicador: j.indicador });
+  };
   // biblioteca de plantillas de KR del objetivo: prellena el formulario; la tribu fija base, meta, dueño y plazo
   // plantillas: las del objetivo directivo que concreta (o del propio id); si no hay, todas las de la palanca del objetivo
   const templates = initial ? [] : (() => {
@@ -822,6 +833,26 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
           <Field label="Unidad" help={KR_AYUDA.unit}><input value={f.unit} onChange={set("unit")} className={INPUT} /></Field>
           <Field label="Mejor si" help={KR_AYUDA.goodDirection}><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option></select></Field>
         </div>
+        {acompKr && (
+          <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => void completarBase()} disabled={f.name.trim().length < 3 || lb.loading} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={f.name.trim().length < 3 ? "Escribe primero el resultado clave" : "Busca el indicador equivalente en los resultados 2026 cargados y propone línea base y meta"}>
+                {lb.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} Completar línea base y meta <span className="text-faint">(IA)</span>
+              </button>
+              <span className="text-[12px] text-faint">Toma el último valor del indicador equivalente en los resultados cerrados (línea base) y propone la meta del horizonte.</span>
+            </div>
+            {lb.error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{lb.error}</p>}
+            {lb.sinBase && <p className="mt-2 rounded-lg px-3 py-2 text-[12.5px] font-semibold text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 14%, var(--surface))" }}>{lb.sinBase}</p>}
+            {lb.propuesta && (
+              <div className="mt-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
+                <div className="num text-[13px] font-semibold text-ink">Línea base {lb.propuesta.baseline ?? "—"} {lb.propuesta.unidad}{lb.propuesta.periodo ? ` (${lb.propuesta.periodo})` : ""} → meta {lb.propuesta.meta ?? "—"} {lb.propuesta.unidad}</div>
+                {lb.indicador && <div className="mt-0.5 text-ink-soft">Indicador 2026 equivalente: <b>{lb.indicador.code}</b> · {lb.indicador.name}{lb.indicador.meta != null ? ` · meta anterior ${lb.indicador.meta}` : ""}</div>}
+                {lb.propuesta.justificacion && <div className="mt-0.5 leading-snug text-muted">{lb.propuesta.justificacion}</div>}
+                <button type="button" onClick={() => setF({ ...f, baseline: lb.propuesta!.baseline != null ? String(lb.propuesta!.baseline) : f.baseline, target: lb.propuesta!.meta != null ? String(lb.propuesta!.meta) : f.target, unit: f.unit.trim() && f.unit !== "%" ? f.unit : (lb.propuesta!.unidad || f.unit), definition: f.definition.trim() || (lb.indicador ? `Línea base: ${lb.indicador.name} (${lb.indicador.code}), último valor ${lb.propuesta!.baseline ?? "—"}${lb.propuesta!.periodo ? ` en ${lb.propuesta!.periodo}` : ""}.` : f.definition) })} className="mt-1 text-[12px] font-semibold text-cyan-deep hover:underline">Usar línea base y meta</button>
+              </div>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Dueño" help={KR_AYUDA.ownerId}><select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">—</option>{cat.responsibles.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
           <Field label="Plazo (AAAA o AAAA-Tn)" help={KR_AYUDA.due}><input value={f.due} onChange={set("due")} className={`${INPUT} num`} /></Field>
@@ -829,6 +860,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
         </div>
         <Field label="Definición, fórmula y fuente" help={KR_AYUDA.definition}><AutoTextarea value={f.definition} onChange={set("definition")} placeholder="Cómo se calcula (fórmula) y de dónde sale el dato" className={INPUT} /></Field>
         {faltan.length > 0 && <p className="text-[12px] leading-snug text-warn">Para registrar el resultado clave completa: {faltan.join(", ")}. Toca «?» en cada campo si tienes dudas.</p>}
+        {sinCifra && faltan.length === 0 && <p className="text-[12px] leading-snug text-faint">Sugerencia: pon la cifra en el nombre («OTIF ≥ 95 % al cierre de 2027») para que el resultado se lea solo; no es obligatorio, la meta ya dice cuánto.</p>}
       </div>
     </Modal>
   );

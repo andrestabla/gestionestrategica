@@ -20,7 +20,6 @@ export function krFaltantes(k: KpiFull): string[] {
   const out: string[] = [];
   const nombre = (k.name ?? "").replace(k.code, "").trim();
   if (nombre.length < 3) out.push("resultado clave");
-  else if (!/\d/.test(nombre)) out.push("cifra real en el nombre del resultado (cuánto)");
   if (!(k.baseline > 0 || (k.series ?? []).length > 0)) out.push("línea base");
   if (!(k.target > 0)) out.push("meta");
   else if (k.target === k.baseline) out.push("meta distinta de la línea base");
