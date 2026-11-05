@@ -6,8 +6,7 @@ import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
 import {
   createCompany, updateCompany, resetStore, upsertResponsible, setLevers, upsertObjective, upsertKpi, upsertInitiative,
-  evaluateInitiative, setPrioSession, catalog,
-} from "../src/server/store";
+  evaluateInitiative, setPrioSession, catalog, removeKpi } from "../src/server/store";
 import { isCompanyMode } from "../src/lib/acceso";
 import { isAcompanamiento, isGuiada } from "../src/data/catalogo";
 import { vocabOf, yearOfFirstHorizon, startQuarters } from "../src/lib/vocabulario";
@@ -46,6 +45,15 @@ test("acompañamiento: KR completo para vincular, máximo dos iniciativas por KR
     assert.ok(ini(1, "EXC-01").ok); assert.ok(ini(2, "EXC-01").ok);
     const tercera = ini(3, "EXC-01");
     assert.ok(!tercera.ok && tercera.status === 422);
+    // un KR sin iniciativas se elimina y se desvincula de su objetivo; con iniciativas, se bloquea con explicación
+    const kr2 = upsertKpi(advisor, { code: "EXC-02", line: 1, cmi: "OE-01", name: "Clientes nuevos por línea", unit: "Cantidad", baseline: 20, target: 25, ownerId: "R01", due: "2027-T4", definition: "Clientes nuevos menos perdidos por línea" });
+    assert.ok(kr2.ok, kr2.ok ? "" : kr2.error);
+    assert.ok(upsertObjective(advisor, { ...catalog().objectives.find((o) => o.id === "OE-01")!, kpis: ["EXC-01", "EXC-02"] }).ok);
+    assert.ok(catalog().objectives.find((o) => o.id === "OE-01")!.kpis.includes("EXC-02"));
+    assert.ok(removeKpi(advisor, "EXC-02").ok);
+    assert.ok(!catalog().objectives.find((o) => o.id === "OE-01")!.kpis.includes("EXC-02"));
+    const conIni = removeKpi(advisor, "EXC-01");
+    assert.ok(!conIni.ok && conIni.status === 422 && /iniciativa/.test(conIni.error));
     // el comité no califica mientras la sesión de la prioridad (su sponsor) no esté abierta
     const ev = { scores: { D: 3, E: 3, M: 2, L: 3 }, type: {}, notes: {} };
     const cerrada = evaluateInitiative(directivo, "i1", ev);

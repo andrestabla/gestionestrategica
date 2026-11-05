@@ -97,7 +97,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       </div>
       {/* confirmación */}
       {confirm && (
-        <Modal title={confirm.title ?? "¿Confirmas?"} onClose={() => close(false)}
+        <Modal title={confirm.title ?? "¿Confirmas?"} onClose={() => close(false)} variante="dialogo"
           footer={<>
             <button ref={cancelRef} type="button" onClick={() => close(false)} className="btn-ghost">{confirm.cancelLabel ?? "Cancelar"}</button>
             <button ref={okRef} type="button" onClick={() => close(true)} className="btn-primary" style={confirm.danger ? { background: "var(--bad-text)" } : undefined}>

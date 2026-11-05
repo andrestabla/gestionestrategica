@@ -112,7 +112,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
     setSaving(true); setError(null);
     try {
       const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, op, data }) });
-      if (!res.ok) { setError((await res.json().catch(() => null))?.error ?? `Error ${res.status}`); setSaving(false); return false; }
+      if (!res.ok) { const msg = (await res.json().catch(() => null))?.error ?? `Error ${res.status}`; setError(msg); avisar(msg, "bad"); setSaving(false); return false; }
       await refetch(); setSaving(false); avisar(op === "delete" ? "Eliminado" : "Guardado"); return true;
     } catch { setError("No se pudo conectar con el servidor."); setSaving(false); return false; }
   };

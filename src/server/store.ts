@@ -2698,12 +2698,15 @@ export function removeKpi(user: SessionUser, code: string): CatResult {
   const c = cat();
   if (!c.kpis.some((k) => k.code === code)) return fail(404, "El KPI no existe.");
   if (tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === code)?.cmi) !== tribeScope(user)) return fail(403, OTRA_TRIBU);
-  const refs = [...c.objectives.filter((o) => o.kpis.includes(code)).map((o) => `objetivo ${o.id}`), ...c.initiatives.filter((i) => i.kpi === code).map((i) => `iniciativa ${i.id}`)];
-  if (refs.length) return fail(422, `No se puede eliminar: lo usan ${refs.slice(0, 4).join(", ")}${refs.length > 4 ? "…" : ""}.`);
+  // un resultado clave pertenece a su objetivo: al eliminarlo se desvincula de él; lo que sí bloquea es una iniciativa que lo mueve (primero se desvincula)
+  const refs = c.initiatives.filter((i) => i.kpi === code).map((i) => `${i.id} ${i.name}`);
+  if (refs.length) return fail(422, `No se puede eliminar: lo mueven ${refs.length === 1 ? "la iniciativa" : "las iniciativas"} ${refs.slice(0, 3).join("; ")}${refs.length > 3 ? "…" : ""}. Desvincúlalas o elimínalas primero.`);
+  const objs = c.objectives.filter((o) => o.kpis.includes(code));
+  for (const o of objs) o.kpis = o.kpis.filter((k) => k !== code);
   c.kpis = c.kpis.filter((k) => k.code !== code);
   kpiReports().delete(code);
-  audit(user, "task", `cat:${code}`, "KPI eliminado");
-  void persist("catálogo", (db) => dbDeleteKpi(db, cid(), code));
+  audit(user, "task", `cat:${code}`, `KPI eliminado${objs.length ? ` (desvinculado de ${objs.map((o) => o.id).join(", ")})` : ""}`);
+  void persist("catálogo", async (db) => { await dbDeleteKpi(db, cid(), code); for (const o of objs) await writeObjective(db, cid(), o); });
   return { ok: true };
 }
 

@@ -93,8 +93,9 @@ export function CardHeader({ title, sub, right }:
 /** Diálogo modal para crear y editar: cierra con Escape, con la X o
     pulsando el fondo; el cuerpo hace scroll si no cabe. `footer` recibe los
     botones de acción. */
-export function Modal({ title, sub, onClose, children, footer, wide = false }: {
+export function Modal({ title, sub, onClose, children, footer, wide = false, variante = "lateral" }: {
   title: string; sub?: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean;
+  variante?: "lateral" | "dialogo";   // lateral: panel a la derecha (formularios, consultas); dialogo: ventana centrada y breve (confirmaciones)
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -109,11 +110,13 @@ export function Modal({ title, sub, onClose, children, footer, wide = false }: {
   if (!mounted) return null;
   return createPortal(
     // panel lateral derecho: a toda la altura, ancho según el contenido (hasta la mitad de la pantalla en «wide»); en móvil, toda la pantalla
-    <div className="fixed inset-0 z-[70] flex justify-end"
+    <div className={`fixed inset-0 z-[70] flex ${variante === "dialogo" ? "items-center justify-center p-4" : "justify-end"}`}
       style={{ background: "color-mix(in srgb, var(--ink) 40%, transparent)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={title}
-        className={`panel panel-lateral flex h-full w-full flex-col rounded-none border-l border-line sm:rounded-l-2xl ${wide ? "sm:w-[min(50vw,1100px)] sm:min-w-[560px]" : "sm:w-[min(560px,50vw)] sm:min-w-[420px]"}`}>
+        className={variante === "dialogo"
+          ? "panel rise flex max-h-[90dvh] w-full max-w-[520px] flex-col rounded-2xl"
+          : `panel panel-lateral flex h-full w-full flex-col rounded-none border-l border-line sm:rounded-l-2xl ${wide ? "sm:w-[min(50vw,1100px)] sm:min-w-[560px]" : "sm:w-[min(560px,50vw)] sm:min-w-[420px]"}`}>
         <div className="flex items-start gap-3 border-b border-line px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="min-w-0 flex-1">
             <div className="p-title">{title}</div>
