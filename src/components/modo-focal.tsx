@@ -55,6 +55,7 @@ type Props = {
   color?: string;                     // acento de la barra (capacidad o marca)
   progress: { n: number; total: number; label?: string };
   status?: ReactNode;                 // «Guardado 10:32», «Guardando…»
+  alerta?: ReactNode;                 // aviso persistente bajo la cabecera (p. ej. guardado fallido); visible en móvil
   extra?: ReactNode;                  // chips a la derecha (p. ej. «Anónima»)
   onExit?: () => void;                // sin salida: encuesta pública
   exitLabel?: string;
@@ -63,7 +64,7 @@ type Props = {
   children: ReactNode;
 };
 
-export function ModoFocal({ kicker, title, color, progress, status, extra, onExit, exitLabel = "Salir", marca, footer, children }: Props) {
+export function ModoFocal({ kicker, title, color, progress, status, alerta, extra, onExit, exitLabel = "Salir", marca, footer, children }: Props) {
   // el portal solo existe en el cliente: en el servidor no se renderiza nada
   const mounted = useSyncExternalStore(() => () => undefined, () => true, () => false);
   const [full, setFull] = useState(false);
@@ -103,7 +104,7 @@ export function ModoFocal({ kicker, title, color, progress, status, extra, onExi
             <div className="truncate text-[14px] font-extrabold text-ink">{title}</div>
           </div>
           <div className="hidden items-center gap-1.5 text-[11.5px] text-faint lg:flex" title="Atajos de teclado"><Keyboard size={13} /> 1–5 responde · Esc sale</div>
-          {status && <span className="hidden text-[12px] text-faint sm:inline">{status}</span>}
+          {status && <span className="shrink-0 text-[11px] text-faint sm:text-[12px]">{status}</span>}
           {extra}
           <span className="num shrink-0 rounded-full bg-surface-2 px-3 py-1 text-[12px] font-bold text-ink" aria-live="polite">{progress.n} <span className="font-medium text-muted">de {progress.total}</span>{progress.label ? <span className="hidden font-medium text-muted sm:inline"> · {progress.label}</span> : null}</span>
           {soportaFull && (
@@ -112,6 +113,7 @@ export function ModoFocal({ kicker, title, color, progress, status, extra, onExi
             </button>
           )}
         </div>
+        {alerta && <div role="alert" className="border-t border-line px-3 py-2 text-[12.5px] leading-snug sm:px-5" style={{ background: "color-mix(in srgb, var(--bad) 12%, var(--surface))", color: "var(--bad-text)" }}>{alerta}</div>}
       </header>
       <div className="focal-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <main className="mx-auto w-full max-w-[860px] px-4 pb-32 pt-6 sm:px-6 sm:pt-8">{children}</main>

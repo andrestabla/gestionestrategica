@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
 import { avisar, confirmar } from "@/components/feedback";
-import { AccessChip, useCan } from "@/components/user-context";
+import { AccessChip, useCan, useUser, useBase } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
 import { LINES, fmtNum } from "@/data/demo";
@@ -870,22 +870,57 @@ function ResponderF1() {
   const params = useSearchParams();
   const [vista, setVista] = useVista();
   const [salto, setSalto] = useState<{ code: string; n: number } | null>(() => { const ir = params.get("ir"); return ir ? { code: ir.toUpperCase(), n: 1 } : null; });
-  useEffect(() => { if (data && !loaded) { if (data.mine) { setR(data.mine.r); setCargo(data.mine.cargo ?? ""); } const ir = params.get("ir"); const pr = ir ? PRACTICES.find((x) => x.code === ir.toUpperCase()) : null; if (pr) setStep(pr.line - 1); setLoaded(true); } }, [data, loaded, params]);
+  // Respaldo en este dispositivo: lo respondido que aún no llegó al servidor se conserva aunque falle la red o caduque la
+  // sesión, y se reenvía solo al volver. Clave por empresa y persona.
+  const user = useUser(); const base = useBase();
+  const respaldoKey = `f1-respaldo:${base || "/"}:${user.email.toLowerCase()}`;
+  const [fallo, setFallo] = useState<{ status: number; error: string; at: string } | null>(null);
+  useEffect(() => {
+    if (!data || loaded) return;
+    let r0: Record<string, number> = data.mine ? { ...data.mine.r } : {};
+    let c0 = data.mine?.cargo ?? "";
+    let recuperadas = 0;
+    try {
+      const raw = localStorage.getItem(respaldoKey);
+      const b = raw ? (JSON.parse(raw) as { r?: Record<string, number>; cargo?: string }) : null;
+      if (b?.r) { for (const [k, v] of Object.entries(b.r)) { if (r0[k] !== v) { r0 = { ...r0, [k]: v }; recuperadas++; } } if (b.cargo && !c0) c0 = b.cargo; }
+    } catch { /* sin almacenamiento local */ }
+    setR(r0); setCargo(c0);
+    if (recuperadas > 0 && !data.closed) { setDirty(true); avisar(`Recuperamos ${recuperadas} respuesta${recuperadas === 1 ? "" : "s"} guardada${recuperadas === 1 ? "" : "s"} en este dispositivo; se envían ahora.`, "info"); }
+    const ir = params.get("ir"); const pr = ir ? PRACTICES.find((x) => x.code === ir.toUpperCase()) : null; if (pr) setStep(pr.line - 1);
+    setLoaded(true);
+  }, [data, loaded, params, respaldoKey]);
   const total = PRACTICES.length;
   const answered = Object.keys(r).length;
   const save = useCallback(async (silent: boolean) => {
     if (!Object.keys(r).length) return false;
     setSaving(true); setMsg(null);
-    const res = await fetch("/api/td/f1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo }) });
-    const j = await res.json().catch(() => ({}));
+    try { localStorage.setItem(respaldoKey, JSON.stringify({ r, cargo, at: new Date().toISOString() })); } catch { /* sin almacenamiento local */ }
+    let res: globalThis.Response | null = null;
+    try { res = await fetch("/api/td/f1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo }) }); } catch { res = null; }
+    const j = res ? await res.json().catch(() => ({})) : {};
     setSaving(false);
-    if (!res.ok) { setMsg(j.error ?? "No se pudo guardar."); return false; }
-    setDirty(false); setSavedAt(new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }));
+    if (!res || !res.ok) {
+      const status = res?.status ?? 0;
+      const error = status === 401 ? "Tu sesión caducó." : status === 0 ? "Sin conexión." : (j.error ?? "No se pudo guardar.");
+      setMsg(error);
+      setFallo((prev) => { if (!prev) avisar(`${error} Tus respuestas quedan guardadas en este dispositivo.`, "bad"); return { status, error, at: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) }; });
+      return false;
+    }
+    setDirty(false); setFallo(null); setSavedAt(new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }));
+    try { localStorage.removeItem(respaldoKey); } catch { /* sin almacenamiento local */ }
     if (!silent) await refetch();
     return true;
-  }, [r, cargo, refetch]);
+  }, [r, cargo, refetch, respaldoKey]);
   // guardado automático: un segundo después del último cambio
   useEffect(() => { if (!dirty || data?.closed) return; const t = setTimeout(() => { void save(true); }, 1000); return () => clearTimeout(t); }, [dirty, r, cargo, data?.closed, save]);
+  // lo pendiente se reintenta al recuperar la conexión o al volver a la pestaña
+  useEffect(() => {
+    if (!dirty || data?.closed) return;
+    const again = () => { if (document.visibilityState === "visible") void save(true); };
+    window.addEventListener("online", again); document.addEventListener("visibilitychange", again);
+    return () => { window.removeEventListener("online", again); document.removeEventListener("visibilitychange", again); };
+  }, [dirty, data?.closed, save]);
   const set = (code: string, v: number) => { setR((prev) => { const next = { ...prev }; if (next[code] === v) delete next[code]; else next[code] = v; return next; }); setDirty(true); };
   if (data?.closed) {
     return (
@@ -942,6 +977,14 @@ function ResponderF1() {
     <ModoFocal kicker={`Fuente 1 · Autoevaluación directiva · paso ${step + 1} de 4`} title={cap.name} color={cap.color}
       progress={{ n: answered, total, label: "afirmaciones" }}
       status={saving ? "Guardando…" : dirty ? "Cambios sin guardar" : savedAt ? `Guardado ${savedAt}` : "El avance se guarda solo"}
+      alerta={fallo ? (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <b>No se guardó tu última respuesta ({fallo.at}):</b> {fallo.error} Lo respondido queda guardado en este dispositivo y se reenvía solo al recuperar la sesión o la conexión.
+          {fallo.status === 401
+            ? <Link href={`${base}/login`} className="font-bold underline">Volver a iniciar sesión</Link>
+            : <button type="button" onClick={() => void save(true)} className="font-bold underline">Reintentar ahora</button>}
+        </span>
+      ) : undefined}
       onExit={salir} exitLabel="Autoevaluación"
       footer={vista === "una" ? undefined : <>
         <button type="button" onClick={() => irAlPaso(Math.max(0, step - 1))} disabled={step === 0} className="btn-ghost text-[12.5px] disabled:opacity-40"><ArrowLeft size={13} /> Anterior</button>

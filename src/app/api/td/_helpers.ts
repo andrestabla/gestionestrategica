@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { urlTenant } from "@/server/request-tenant";
 import { getSession, type SessionUser } from "@/lib/session";
-import { hydrateFromDb, hydrateCompanies, companyBySlug } from "@/server/store";
+import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 
 /** Todas las rutas /api/td/* exigen sesión (compatibilidad). */
@@ -39,7 +39,10 @@ type Handler<C> = (req: Request, ctx: C, user: SessionUser) => Promise<Response>
 export function withTenant<C = unknown>(handler: Handler<C>) {
   return async (req: Request, ctx: C): Promise<Response> => {
     const user = await getSession();
-    if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    if (!user) {
+      if (req.method !== "GET") { const ref = req.headers.get("referer") ?? ""; const m = ref.match(/^https?:\/\/[^/]+\/([a-z0-9-]+)\/panel/i); void registrarSinSesion(m ? m[1].toLowerCase() : null, `${req.method} ${new URL(req.url).pathname}`); }
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
     const t = await tenantOf(user);
     if (t instanceof NextResponse) return t;
     return runWithTenant(t.slug, async () => {

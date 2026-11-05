@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { getF1Responses, saveF1Response, f1Closed, F1_CAN_SEE_ALL, flushOrError, removeF1Response } from "@/server/store";
+import { getF1Responses, saveF1Response, f1Closed, F1_CAN_SEE_ALL, flushOrError, removeF1Response, auditRechazo } from "@/server/store";
 import { PRACTICES } from "@/data/mapa";
 
 // GET  /api/td/f1 — autoevaluación directiva (Fuente 1): todas las respuestas
@@ -24,9 +24,9 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   if (!body?.r || typeof body.r !== "object") return NextResponse.json({ error: "Cuerpo inválido: faltan las respuestas" }, { status: 400 });
   const result = saveF1Response(user, { r: body.r, cargo: body.cargo });
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  if (!result.ok) { auditRechazo(user, "f1", result.error, result.status); return NextResponse.json({ error: result.error }, { status: result.status }); }
   const e = await flushOrError();
-  if (e) return NextResponse.json({ error: e }, { status: 500 });
+  if (e) { auditRechazo(user, "f1", `error de base de datos: ${e}`, 500); return NextResponse.json({ error: e }, { status: 500 }); }
   return NextResponse.json({ response: result.response, answered: result.answered, total: PRACTICES.length });
 });
 

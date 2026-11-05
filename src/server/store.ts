@@ -3855,3 +3855,21 @@ export function proponerCascada(user: SessionUser, year: unknown): { ok: true; c
   for (const n of nuevas) { const r = upsertMeta(user, n as Partial<MetaTrimestral> & Record<string, unknown>); if (!r.ok) return r; }
   return { ok: true, creadas: nuevas.length };
 }
+
+
+/* ═══ Evidencia de guardados que no llegaron ═══
+   Un guardado rechazado (permiso, validación, base de datos) queda en la actividad con su motivo; así un
+   «yo sí lo respondí» se puede contrastar con lo que el servidor recibió. */
+
+export function auditRechazo(user: SessionUser, instrumento: "f1" | "test", motivo: string, status: number) {
+  audit(user, "task", `${instrumento}:${user.email}`, `${instrumento === "f1" ? "autoevaluación directiva" : "test"}: guardado rechazado (${status}) · ${motivo}`.slice(0, 500));
+}
+
+/** Petición de escritura sin sesión (caducada o no iniciada): se anota en la empresa que indica el referer, si la hay. */
+export async function registrarSinSesion(slug: string | null, path: string) {
+  if (!slug || !hasDb()) return;
+  await hydrateCompanies();
+  const companyId = g.companies.get(slug)?.dbId; if (!companyId) return;
+  const db = await prisma();
+  await db.auditEvent.create({ data: { companyId, actor: "Sin sesión", email: "", role: "", entity: "task", entityId: "sesion", change: `escritura rechazada sin sesión (sesión caducada o no iniciada) · ${path}`.slice(0, 500) } }).catch(() => undefined);
+}
