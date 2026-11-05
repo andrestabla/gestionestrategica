@@ -107,9 +107,11 @@ export function CatalogoTab() {
     kpi: c.kpis.length, iniciativas: c.initiatives.length, finanzas: c.territories.length + (c.financials ? 1 : 0),
   };
   const starting = c.responsibles.length === 0;
+  const canImport = useCan("manage_companies");
 
   return (
     <>
+      {canImport && <ImportarCatalogo onDone={refetch} />}
       {error && <ErrorBanner error={error} onClose={() => setError(null)} />}
 
       <div className="rise mb-4">
@@ -1096,5 +1098,59 @@ function ErrorBanner({ error, onClose }: { error: string; onClose: () => void })
       <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
       <button onClick={onClose} className="text-faint hover:text-ink"><X size={14} /></button>
     </div>
+  );
+}
+
+
+/* ═══ Importar catálogo desde el JSON del conversor (solo administrador de la plataforma) ═══
+   Mismo formato que scripts/importar-catalogo.ts: la plataforma lo carga con su propia conexión a la base,
+   sin manejar credenciales fuera de ella. Repetirlo actualiza; «vaciar antes» borra el catálogo actual. */
+function ImportarCatalogo({ onDone }: { onDone: () => Promise<void> }) {
+  const [archivo, setArchivo] = useState<{ nombre: string; data: unknown; resumen: string } | null>(null);
+  const [vaciar, setVaciar] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [resultado, setResultado] = useState<{ ok: boolean; errores: string[]; conteo: Record<string, number> } | null>(null);
+  const leer = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      const data = JSON.parse(await f.text()) as Record<string, unknown[]>;
+      const n = (k: string) => (Array.isArray(data[k]) ? data[k].length : 0);
+      setArchivo({ nombre: f.name, data, resumen: `${n("responsibles")} responsables · ${n("people")} personas · ${n("objectives")} objetivos · ${n("kpis")} KPI · ${n("initiatives")} iniciativas${data.company ? " · ficha de la empresa" : ""}` });
+      setResultado(null);
+    } catch { avisar("El archivo no es un JSON válido.", "warn"); setArchivo(null); }
+  };
+  const importar = async () => {
+    if (!archivo) return;
+    if (!(await confirmar(`¿Importar «${archivo.nombre}» en esta empresa?${vaciar ? " Se vacía el catálogo actual antes de cargar." : " Lo que coincida por código se actualiza; lo demás se añade."}`))) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/td/catalogo/importar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: archivo.data, vaciar }) });
+      const j = await res.json().catch(() => null);
+      if (!res.ok && res.status !== 207) { avisar(j?.error ?? `Error ${res.status}`, "warn"); setBusy(false); return; }
+      setResultado(j);
+      avisar(j.ok ? "Catálogo importado" : `Importado con ${j.errores.length} errores`, j.ok ? undefined : "warn");
+      await onDone();
+    } catch { avisar("No se pudo conectar con el servidor.", "warn"); }
+    setBusy(false);
+  };
+  return (
+    <Card className="rise mb-5">
+      <CardHeader title="Importar catálogo desde un archivo" sub="JSON del conversor de la plantilla de carga: ficha de la empresa, responsables, objetivos, resultados clave e iniciativas · solo administrador" />
+      <div className="flex flex-wrap items-end gap-3 px-5 pb-5">
+        <label className="flex-1 basis-[280px]">
+          <span className="label !text-[11px]">Archivo JSON</span>
+          <input type="file" accept="application/json,.json" onChange={(e) => void leer(e.target.files?.[0])} className="mt-1 block w-full text-[12.5px] text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-[12px] file:font-bold file:text-ink" />
+          {archivo && <div className="mt-1 text-[12px] text-muted">{archivo.resumen}</div>}
+        </label>
+        <label className="flex items-center gap-2 text-[12.5px] text-ink-soft"><input type="checkbox" checked={vaciar} onChange={(e) => setVaciar(e.target.checked)} /> Vaciar el catálogo actual antes</label>
+        <button type="button" onClick={importar} disabled={!archivo || busy} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px] disabled:opacity-40">{busy ? "Importando…" : "Importar"}</button>
+      </div>
+      {resultado && (
+        <div className="border-t border-line px-5 py-3 text-[12.5px]">
+          <div className="text-ink">Catálogo ahora: {Object.entries(resultado.conteo).map(([k, v]) => `${v} ${k}`).join(" · ")}</div>
+          {resultado.errores.length > 0 && <ul className="mt-1.5 space-y-0.5 text-bad-text">{resultado.errores.map((e) => <li key={e}>{e}</li>)}</ul>}
+        </div>
+      )}
+    </Card>
   );
 }
