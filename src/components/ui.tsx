@@ -108,11 +108,12 @@ export function Modal({ title, sub, onClose, children, footer, wide = false }: {
   }, [onClose]);
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto p-0 sm:items-start sm:p-6"
-      style={{ background: "color-mix(in srgb, var(--ink) 45%, transparent)" }}
+    // panel lateral derecho: a toda la altura, ancho según el contenido (hasta la mitad de la pantalla en «wide»); en móvil, toda la pantalla
+    <div className="fixed inset-0 z-[70] flex justify-end"
+      style={{ background: "color-mix(in srgb, var(--ink) 40%, transparent)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={title}
-        className={`panel rise mt-auto flex max-h-[96dvh] w-full flex-col rounded-b-none sm:my-auto sm:max-h-none sm:rounded-b-2xl ${wide ? "max-w-[1080px]" : "max-w-[600px]"}`}>
+        className={`panel panel-lateral flex h-full w-full flex-col rounded-none border-l border-line sm:rounded-l-2xl ${wide ? "sm:w-[min(50vw,1100px)] sm:min-w-[560px]" : "sm:w-[min(560px,50vw)] sm:min-w-[420px]"}`}>
         <div className="flex items-start gap-3 border-b border-line px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="min-w-0 flex-1">
             <div className="p-title">{title}</div>
@@ -120,8 +121,8 @@ export function Modal({ title, sub, onClose, children, footer, wide = false }: {
           </div>
           <button type="button" onClick={onClose} title="Cerrar (Esc)" aria-label="Cerrar (Esc)" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>
         </div>
-        <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
-        {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-4 py-3 sm:px-6 sm:py-3.5">{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+        {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-surface px-4 py-3 sm:px-6 sm:py-3.5">{footer}</div>}
       </div>
     </div>,
     document.body,
