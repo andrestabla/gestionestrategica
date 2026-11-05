@@ -984,15 +984,16 @@ function audit(actor: SessionUser, entity: "task" | "evidence" | "branding", ent
 
 export type ActivityEvent = { id: string; at: string; actor: string; email: string; role: string; entity: string; entityId: string; change: string };
 /** Actividad reciente de la empresa, leída de la base (lo que hicieron todos, en cualquier instancia). */
-export async function activityFeed(opts: { since?: string; limit?: number } = {}): Promise<{ events: ActivityEvent[]; activeUsers: number }> {
+export async function activityFeed(opts: { since?: string; until?: string; limit?: number } = {}): Promise<{ events: ActivityEvent[]; activeUsers: number }> {
   const limit = Math.min(500, Math.max(1, opts.limit ?? 200));
   const since = opts.since && !Number.isNaN(Date.parse(opts.since)) ? new Date(opts.since) : undefined;
+  const until = opts.until && !Number.isNaN(Date.parse(opts.until)) ? new Date(opts.until) : undefined;
   if (!hasDb()) {
-    const events = auditLog().filter((a) => !since || new Date(a.at) > since).slice(0, limit).map((a) => ({ id: String(a.id), at: a.at, actor: a.actor, email: a.email ?? "", role: a.role, entity: a.entity, entityId: a.entityId, change: a.change }));
+    const events = auditLog().filter((a) => (!since || new Date(a.at) > since) && (!until || new Date(a.at) < until)).slice(0, limit).map((a) => ({ id: String(a.id), at: a.at, actor: a.actor, email: a.email ?? "", role: a.role, entity: a.entity, entityId: a.entityId, change: a.change }));
     return { events, activeUsers: new Set(auditLog().filter((a) => Date.now() - Date.parse(a.at) < 10 * 60_000).map((a) => a.email ?? a.actor)).size };
   }
   const db = await prisma(); const companyId = cid();
-  const rows = await db.auditEvent.findMany({ where: { companyId, ...(since ? { at: { gt: since } } : {}) }, orderBy: { at: "desc" }, take: limit }) as { id: string; at: Date; actor: string; email: string; role: string; entity: string; entityId: string; change: string }[];
+  const rows = await db.auditEvent.findMany({ where: { companyId, ...(since || until ? { at: { ...(since ? { gt: since } : {}), ...(until ? { lt: until } : {}) } } : {}) }, orderBy: { at: "desc" }, take: limit }) as { id: string; at: Date; actor: string; email: string; role: string; entity: string; entityId: string; change: string }[];
   const recent = await db.auditEvent.findMany({ where: { companyId, at: { gt: new Date(Date.now() - 10 * 60_000) } }, select: { email: true, actor: true }, distinct: ["email"] }) as { email: string; actor: string }[];
   return { events: rows.map((r) => ({ id: r.id, at: r.at.toISOString(), actor: r.actor, email: r.email, role: r.role, entity: r.entity, entityId: r.entityId, change: r.change })), activeUsers: recent.length };
 }
