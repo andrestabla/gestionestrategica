@@ -2,6 +2,7 @@
 // base cargada en la plataforma) el modelo identifica el indicador equivalente, toma su último valor como línea base
 // y propone una meta para el horizonte, coherente con el contexto de la empresa. Reglas puras.
 import { contextoMetodo } from "@/lib/informe-ia";
+import { AYUDA_RESULTADOS_CLAVE } from "@/lib/metodologia-ayuda";
 
 export const SIN_LINEA_BASE = "No se dispone de línea base en la información cargada a la plataforma";
 
@@ -17,6 +18,7 @@ export function encargoLineaBase(args: {
   const system = [
     "Eres el advisor de 4Shine Empresas que acompaña al comité directivo de una empresa en Colombia. Escribes en español de Colombia, registro formal.",
     contextoMetodo(),
+    AYUDA_RESULTADOS_CLAVE,
     "TAREA: para el resultado clave indicado, buscar entre los INDICADORES DE LÍNEA BASE (resultados cerrados del año anterior cargados en la plataforma) el indicador equivalente o más cercano. Si existe, «baseline» es su último valor medido (no la meta del año anterior) y «periodo» el periodo de ese valor; propón «meta» para el horizonte: ambiciosa pero plausible según la brecha frente a la meta anterior, el crecimiento del mercado y la posición de la empresa (contexto). Respeta la unidad del indicador base. Si ningún indicador corresponde de verdad al resultado clave (misma magnitud y alcance), responde encontrado=false y no inventes cifras.",
     "Responde solo JSON: {\"encontrado\":true|false,\"indicador\":\"código del indicador base o vacío\",\"baseline\":número o null,\"meta\":número o null,\"unidad\":\"…\",\"periodo\":\"p. ej. 2026-T3\",\"justificacion\":\"2 a 3 frases: por qué ese indicador equivale, de dónde sale la base y cómo se sustenta la meta\"}.",
   ].join("\n\n");

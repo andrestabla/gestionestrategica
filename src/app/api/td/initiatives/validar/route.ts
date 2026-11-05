@@ -6,6 +6,7 @@ import { chatJson, iaDisponible } from "@/server/ia";
 import { can } from "@/lib/permissions";
 import { leversOf, horizonsOf, horizonLabel } from "@/data/catalogo";
 import { keyResultsOf } from "@/lib/convencion";
+import { DIMS } from "@/data/mapa";
 import { encargoValidacionIniciativas, parseValidacionIniciativas } from "@/lib/iniciativas-ia";
 import { contextoEmpresa } from "@/server/contexto-empresa";
 
@@ -14,8 +15,8 @@ import { contextoEmpresa } from "@/server/contexto-empresa";
 const KIND = "alineacion-ini";
 const huella = (horizon: string) => {
   const c = catalog();
-  const inis = c.initiatives.filter((i) => i.horizon === horizon).map((i) => [i.id, i.name, i.objetivo ?? "", i.cmi, i.kpi ?? "", i.ownerId, i.start ?? "", i.end ?? "", i.capability ?? ""]);
-  return createHash("sha256").update(JSON.stringify({ v: 1, inis })).digest("hex").slice(0, 24);
+  const inis = c.initiatives.filter((i) => i.horizon === horizon).map((i) => [i.id, i.name, i.objetivo ?? "", i.metaResultado ?? "", i.cmi, i.kpi ?? "", i.ownerId, i.start ?? "", i.end ?? "", i.capability ?? "", i.budgetPlanned ?? 0, i.observaciones ?? ""]);
+  return createHash("sha256").update(JSON.stringify({ v: 2, inis })).digest("hex").slice(0, 24);
 };
 
 export const GET = withTenant(async (req: Request) => {
@@ -39,7 +40,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     prioridades: leversOf(c.company).map((l) => ({ id: l.id, name: l.name, indicator: l.indicator })),
     objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name })),
     krs: objetivos.flatMap((o) => keyResultsOf(c, o).map((k) => ({ code: k.code, name: k.name, objective: o.id, baseline: k.baseline != null ? String(k.baseline) : undefined, target: k.target != null ? String(k.target) : undefined, unit: k.unit, due: k.due }))),
-    iniciativas: inis.map((i) => ({ id: i.id, name: i.name, objetivo: i.objetivo, cmi: i.cmi, kpi: i.kpi, owner: owner(i.ownerId), start: i.start, end: i.end, capability: i.capability, status: i.status, budget: i.budgetPlanned })),
+    iniciativas: inis.map((i) => ({ id: i.id, name: i.name, objetivo: i.objetivo, metaResultado: i.metaResultado, cmi: i.cmi, kpi: i.kpi, owner: owner(i.ownerId), start: i.start, end: i.end, capability: i.capability, capabilityName: DIMS.find((d) => d.code === i.capability)?.name, status: i.status, budget: i.budgetPlanned, observaciones: i.observaciones })),
     contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }),
   });
   let raw: unknown;
