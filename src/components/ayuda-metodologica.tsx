@@ -15,7 +15,7 @@ const Li = ({ children }: { children: ReactNode }) => <li className="flex gap-2 
 const OBJETIVOS: Lamina[] = [
   { k: "Qué es", t: "Un objetivo directivo baja una prioridad al año", body: <>
     <p className="text-[14px] leading-relaxed text-ink">Un <b>objetivo directivo</b> es el resultado concreto que la dirección se compromete a lograr en el horizonte (el año de planeación) para hacer avanzar una <b>prioridad estratégica</b>. La prioridad dice hacia dónde va la empresa en 3 a 5 años; el objetivo dice qué tiene que ser cierto al cierre del año para que esa prioridad avance.</p>
-    <p className="mt-3 text-[13px] leading-relaxed text-muted">En el marco 4Shine Empresas pertenece a la capacidad de <b>Dirección</b>: traduce la estrategia en una página a compromisos verificables, que después se miden con resultados clave y se mueven con iniciativas.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">En el marco 4Shine Empresas pertenece a la capacidad de <b>Dirección</b>: traduce la estrategia en una página a compromisos verificables. Los <b>resultados clave</b> se formulan después, sobre cada objetivo; lo que sí se deja declarado desde el objetivo es su <b>indicador impulsor</b>, la medida que mejor resume el logro.</p>
   </> },
   { k: "Función", t: "Para qué sirve", body: <ul className="space-y-2">
     <Li><b>Da foco:</b> pocos objetivos por prioridad obligan a elegir qué resultados importan de verdad este año.</Li>
@@ -24,20 +24,25 @@ const OBJETIVOS: Lamina[] = [
     <Li><b>Permite priorizar:</b> las iniciativas se califican por lo que aportan a un resultado clave de un objetivo, no por quién las propone.</Li>
   </ul> },
   { k: "Estructura", t: "Cómo se construye", body: <>
-    <div className="rounded-2xl bg-surface-2 px-4 py-3 text-[13.5px] leading-relaxed text-ink"><b>Verbo de logro</b> + <b>qué resultado</b> + <b>en qué alcance</b> (+ <b>cuánto</b>, si no va en los resultados clave) + <b>para cuándo</b>.</div>
+    <div className="rounded-2xl bg-surface-2 px-4 py-3 text-[13.5px] leading-relaxed text-ink"><b>Verbo de logro</b> + <b>resultado</b> + <b>indicador impulsor</b> + <b>para cuándo</b>.</div>
     <ul className="mt-3 space-y-2">
-      <Li><b>Una prioridad:</b> cada objetivo pertenece a una sola prioridad estratégica y aporta a su indicador.</Li>
-      <Li><b>Un sponsor:</b> el directivo que responde por él (el de la prioridad, salvo acuerdo distinto).</Li>
-      <Li><b>Aspiración:</b> una o dos frases sobre qué cambia en el negocio cuando se logra.</Li>
-      <Li><b>Indicador impulsor:</b> la medida que mejor resume el logro; después se detalla en 2 a 4 resultados clave.</Li>
+      <Li><b>Verbo de logro:</b> alcanzar, consolidar, obtener, reducir, posicionar; nunca «gestionar», «trabajar en» o «implementar» (eso describe actividad).</Li>
+      <Li><b>Resultado:</b> qué queda logrado en el negocio, con su alcance (línea, canal, planta, mercado).</Li>
+      <Li><b>Indicador impulsor:</b> la medida con la que se seguirá el logro. Se declara ya; las cifras (base y meta) se fijan después en los resultados clave.</Li>
+      <Li><b>Para cuándo:</b> el cierre del horizonte o un hito dentro de él.</Li>
+      <Li>Además: <b>una prioridad</b> (aporta a su indicador), <b>un sponsor</b> que responde por él y una <b>aspiración</b> de una o dos frases.</Li>
     </ul>
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
-      <Bien>«Obtener la certificación de la planta ante el INVIMA y cerrar los compromisos técnicos críticos antes del cierre de 2027.»</Bien>
-      <Mal>«Mejorar la operación de la planta.» (sin resultado verificable ni alcance ni plazo)</Mal>
+      <Bien>«<b>Obtener</b> la certificación BPM de la planta farmacéutica ante el INVIMA, <b>medida por</b> la resolución de certificación emitida, <b>antes del cierre</b> de 2027.»</Bien>
+      <Bien>«<b>Consolidar</b> la cobertura del panel médico prioritario con un modelo presencial y digital, <b>medida por</b> la frecuencia de visita a médicos AAA y AA, <b>al cierre del primer semestre</b> de 2027.»</Bien>
+      <Mal>«Mejorar la operación de la planta.» (sin resultado, sin indicador impulsor, sin plazo)</Mal>
+      <Mal>«Implementar el nuevo CRM comercial en 2027.» (es una iniciativa: describe lo que se hace, no lo que queda logrado)</Mal>
+      <Mal>«Subir la participación de mercado de 3,1 % a 3,4 %.» (es un resultado clave: ya trae base y meta; falta el logro que lo explica)</Mal>
     </div>
   </> },
   { k: "Tips", t: "Para formularlos bien", body: <ul className="space-y-2">
-    <Li><b>Resultado, no actividad:</b> «reunir al comité» es una tarea; «reducir el backorder a menos del 5 %» es un resultado.</Li>
+    <Li><b>Resultado, no actividad:</b> «reunir al comité» o «implementar un sistema» son tareas o iniciativas; «reducir el backorder técnico, medido por el backorder mensual, al cierre de 2027» es un objetivo.</Li>
+    <Li><b>Sin cifras de meta:</b> el «cuánto» va en los resultados clave; si el enunciado ya trae base y meta, probablemente es un resultado clave, no un objetivo.</Li>
     <Li><b>Un logro por enunciado:</b> si hay un «y» que une dos resultados distintos, son dos objetivos.</Li>
     <Li><b>Verificable:</b> alguien externo debe poder decir si se cumplió o no con evidencia.</Li>
     <Li><b>De 1 a 3 por prioridad:</b> más de eso diluye el foco y la capacidad de ejecución.</Li>
@@ -46,7 +51,7 @@ const OBJETIVOS: Lamina[] = [
     <Li><b>Sin duplicados:</b> dos objetivos que persiguen lo mismo desde prioridades distintas se funden o se diferencian.</Li>
   </ul> },
   { k: "Validación", t: "Qué revisa la validación de alineación", body: <>
-    <p className="text-[13px] leading-relaxed text-ink">El botón <b>Validar alineación</b> pide al modelo una lectura de cada objetivo frente a su prioridad, al conjunto de prioridades y al contexto de la empresa (sector, negocio y datos). Las prioridades no se cuestionan: ya están validadas por la dirección.</p>
+    <p className="text-[13px] leading-relaxed text-ink">El botón <b>Validar alineación</b> pide al modelo una lectura de cada objetivo frente a su prioridad, al conjunto de prioridades, a los demás objetivos y al contexto de la empresa (sector, negocio y datos). Las prioridades no se cuestionan: ya están validadas por la dirección. Además del semáforo, señala duplicidades entre objetivos y enunciados que en realidad son resultados clave o iniciativas.</p>
     <div className="mt-3 space-y-2 text-[12.5px]">
       <div className="flex items-center gap-2"><span className="chip chip-ok">Alineado</span><span className="text-muted">contribuye de forma directa a su prioridad y está bien formulado.</span></div>
       <div className="flex items-center gap-2"><span className="chip chip-gold">Parcialmente alineado</span><span className="text-muted">contribuye de forma parcial o indirecta, o tiene problemas de formulación o de forma.</span></div>
@@ -59,7 +64,8 @@ const OBJETIVOS: Lamina[] = [
 const KR: Lamina[] = [
   { k: "Qué es", t: "Un resultado clave hace medible el objetivo", body: <>
     <p className="text-[14px] leading-relaxed text-ink">Un <b>resultado clave</b> es la medida cuantitativa que indica si el objetivo directivo se está logrando. No describe qué se hace, sino qué cambia y cuánto: tiene <b>línea base</b>, <b>meta</b> y <b>plazo</b>.</p>
-    <p className="mt-3 text-[13px] leading-relaxed text-muted">Cada objetivo lleva de 2 a 4 resultados clave (máximo 5). Juntos deben bastar para afirmar, con datos, que el objetivo se cumplió.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">Cada objetivo lleva de 2 a 4 resultados clave (máximo 5). Juntos deben bastar para afirmar, con datos, que el objetivo se cumplió. Son mucho más específicos que el objetivo: donde el objetivo declara el indicador impulsor, el resultado clave pone la cifra.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted"><b>Línea base para 2027:</b> los resultados cerrados de 2026 (están en Objetivos directivos → «Consulta · 2026 · línea base»). El valor con que cerró 2026 es el punto de partida del resultado clave 2027.</p>
   </> },
   { k: "Función", t: "Para qué sirve", body: <ul className="space-y-2">
     <Li><b>Hace verificable el objetivo:</b> sin resultado clave, el cumplimiento queda a juicio de cada quien.</Li>
@@ -69,7 +75,7 @@ const KR: Lamina[] = [
   </ul> },
   { k: "Estructura", t: "Qué debe tener", body: <>
     <div className="grid gap-2 sm:grid-cols-2">
-      {[["Nombre con cifra", "«OTIF ≥ 95 % al cierre de 2027», no «mejorar el OTIF»."], ["Línea base", "el valor actual, con su fecha de corte."], ["Meta", "el valor a alcanzar, con la unidad y el sentido (mayor o menor es mejor)."], ["Plazo", "trimestre o año en que se mide el cumplimiento."], ["Dueño", "quien responde por el dato y por el resultado."], ["Definición y fórmula", "cómo se calcula y de qué fuente sale, para que cualquiera lo reproduzca."]].map(([a, b]) => (
+      {[["Nombre con cifra", "«OTIF ≥ 95 % al cierre de 2027», no «mejorar el OTIF»."], ["Línea base", "el valor con que cerró 2026 (o el último dato disponible), con su fecha de corte."], ["Meta", "el valor a alcanzar, con la unidad y el sentido (mayor o menor es mejor)."], ["Plazo", "trimestre o año en que se mide el cumplimiento."], ["Dueño", "quien responde por el dato y por el resultado."], ["Definición y fórmula", "cómo se calcula y de qué fuente sale, para que cualquiera lo reproduzca."]].map(([a, b]) => (
         <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
       ))}
     </div>

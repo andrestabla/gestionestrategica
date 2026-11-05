@@ -23,7 +23,7 @@ import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonesBase, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
-import { SEMAFORO, type AlineacionIA, type AlineacionItem } from "@/lib/alineacion";
+import { SEMAFORO, NATURALEZA, type AlineacionIA, type AlineacionItem } from "@/lib/alineacion";
 import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
@@ -331,32 +331,37 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
       </>)}
       {lineaBase.map((h) => {
         const objs = cat.objectives.filter((o) => o.horizon === h.id && !o.okr);
+        const nk = objs.reduce((a, o) => a + kpisOf(cat, o).length, 0);
         return (
-          <Card key={h.id} className="rise rise-2 mt-5 overflow-hidden">
-            <CardHeader title={`Consulta · ${h.label}`} sub={`${objs.length} resultado${objs.length === 1 ? "" : "s"} por ${V.leverLow}, con sus indicadores: contexto y línea base para ${horizons[0]?.label ?? "el horizonte"}; no se editan aquí`}
-              right={<button type="button" onClick={() => setVerBase((v) => !v)} className="btn-ghost btn-sm text-[12px]">{verBase ? "Ocultar" : "Ver resultados"}</button>} />
+          <div key={h.id} className="rise rise-2 mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-surface-2/60 px-4 py-3">
+            <BookOpen size={15} className="shrink-0 text-cyan-deep" />
+            <div className="min-w-0 flex-1 text-[12.5px] leading-snug text-ink-soft"><b className="text-ink">Consulta · {h.label}:</b> {objs.length} registro{objs.length === 1 ? "" : "s"} por {V.leverLow} con {nk} indicador{nk === 1 ? "" : "es"}. Línea base para los resultados clave de {horizons[0]?.label ?? "el horizonte"}; no se edita.</div>
+            <button type="button" onClick={() => setVerBase(true)} className="btn-ghost btn-sm text-[12px]">Ver resultados {h.label.replace(/ · línea base$/i, "")}</button>
             {verBase && (
-              <div className="divide-y divide-line">
-                {levers.map((l) => objs.filter((o) => o.lever === l.id).map((o) => {
-                  const ks = kpisOf(cat, o);
-                  return (
-                    <div key={o.id} className="px-5 py-3">
-                      <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.name}</div>
-                      <div className="text-[13px] font-bold text-ink">{o.name}</div>
-                      {o.desc && <p className="mt-0.5 text-[12px] leading-snug text-muted">{o.desc}</p>}
-                      {ks.length > 0 && (
-                        <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-                          {ks.map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return (
-                            <li key={k.code} className="flex items-start gap-2 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-[12px]"><span className="num shrink-0 font-bold text-cyan-deep">{k.code}</span><span className="min-w-0 flex-1 text-ink">{k.name}</span><span className="num shrink-0 text-muted">{last ? `${last.value} ${k.unit}` : "—"}{k.target ? ` · meta ${k.target}` : ""}</span></li>
-                          ); })}
-                        </ul>
-                      )}
-                    </div>
-                  );
-                }))}
-              </div>
+              <Modal title={`Consulta · ${h.label}`} sub={`Resultados cerrados por ${V.leverLow}: línea base para los resultados clave de ${horizons[0]?.label ?? "el horizonte"}`} onClose={() => setVerBase(false)} wide
+                footer={<button type="button" onClick={() => setVerBase(false)} className="btn-primary btn-sm text-[12px]">Cerrar</button>}>
+                <div className="divide-y divide-line">
+                  {levers.map((l) => objs.filter((o) => o.lever === l.id).map((o) => {
+                    const ks = kpisOf(cat, o);
+                    return (
+                      <div key={o.id} className="py-3 first:pt-0">
+                        <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.name}</div>
+                        <div className="text-[13px] font-bold text-ink">{o.name}</div>
+                        {o.desc && <p className="mt-0.5 text-[12px] leading-snug text-muted">{o.desc}</p>}
+                        {ks.length > 0 && (
+                          <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                            {ks.map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return (
+                              <li key={k.code} className="flex items-start gap-2 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-[12px]"><span className="num shrink-0 font-bold text-cyan-deep">{k.code}</span><span className="min-w-0 flex-1 text-ink">{k.name}</span><span className="num shrink-0 text-muted">{last ? `${last.value} ${k.unit}` : "—"}{k.target ? ` · meta ${k.target}` : ""}</span></li>
+                            ); })}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  }))}
+                </div>
+              </Modal>
             )}
-          </Card>
+          </div>
         );
       })}
       {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined} />}
@@ -380,7 +385,7 @@ function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: C
   const krs = keyResultsOf(cat, o);
   return (
     <div className="panel group px-3.5 py-3" style={ali ? { boxShadow: `inset 3px 0 0 ${SEMAFORO[ali.color].color}` } : undefined}>
-      {ali && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
+      {ali && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.naturaleza !== "objetivo" ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
@@ -407,7 +412,7 @@ function AlineacionModal({ o, item, lever, onClose, onEdit }: { o: CmiObjective;
       {o.indicator && <p className="mt-1 text-[12.5px] text-ink-soft"><span className="font-semibold">Indicador impulsor:</span> {o.indicator}</p>}
       {item ? (
         <>
-          <div className="mt-4 flex items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span></div>
+          <div className="mt-4 flex flex-wrap items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span>{item.naturaleza !== "objetivo" && <span className="chip chip-warn">{NATURALEZA[item.naturaleza]}</span>}{item.duplicaDe.length > 0 && <span className="chip chip-warn">duplica o se solapa con {item.duplicaDe.join(", ")}</span>}</div>
           <p className="mt-2 text-[13px] leading-relaxed text-ink">{item.justificacion}</p>
           {item.recomendaciones.length > 0 && (
             <div className="mt-4">

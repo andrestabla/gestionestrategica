@@ -15,7 +15,7 @@ const huella = (horizon: string) => {
   const c = catalog();
   const levers = leversOf(c.company).map((l) => [l.id, l.name, l.indicator ?? "", l.desc ?? ""]);
   const objs = c.objectives.filter((o) => o.horizon === horizon && !o.okr).map((o) => [o.id, o.lever ?? "", o.name, o.desc ?? "", o.indicator ?? "", o.pillar ?? ""]);
-  return createHash("sha256").update(JSON.stringify({ v: 1, levers, objs })).digest("hex").slice(0, 24);
+  return createHash("sha256").update(JSON.stringify({ v: 2, levers, objs })).digest("hex").slice(0, 24);
 };
 
 export const GET = withTenant(async (req: Request) => {
@@ -38,7 +38,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     empresa: { name: c.company.name, sector: c.company.sector, size: c.company.size },
     horizonte: horizonLabel(c.company, horizon),
     prioridades: levers.map((l) => ({ id: l.id, order: l.order, name: l.name, indicator: l.indicator, desc: l.desc, sponsor: sponsor(l.ownerId) })),
-    objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length })),
+    objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length, iniciativas: c.initiatives.filter((i) => i.cmi === o.id).map((i) => i.name) })),
     contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }),
   });
   let raw: unknown;
