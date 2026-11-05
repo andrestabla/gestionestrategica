@@ -23,7 +23,7 @@ import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonesBase, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
-import { SEMAFORO, NATURALEZA, type AlineacionIA, type AlineacionItem } from "@/lib/alineacion";
+import { SEMAFORO, NATURALEZA, ELEMENTOS, type AlineacionIA, type AlineacionItem, type PropuestaObjetivo } from "@/lib/alineacion";
 import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
@@ -364,7 +364,8 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           </div>
         );
       })}
-      {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined} />}
+      {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined}
+        onAplicar={canEdit ? async (patch) => { const ok = await mutate("objective", "upsert", { id: aliOpen.id, ...patch }); if (ok) { avisar("Objetivo actualizado; vuelve a validar para refrescar el semáforo."); setAliOpen(null); } } : undefined} saving={saving} />}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
           <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la ruta" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
@@ -385,7 +386,7 @@ function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: C
   const krs = keyResultsOf(cat, o);
   return (
     <div className="panel group px-3.5 py-3" style={ali ? { boxShadow: `inset 3px 0 0 ${SEMAFORO[ali.color].color}` } : undefined}>
-      {ali && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.naturaleza !== "objetivo" ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
+      {ali && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.naturaleza !== "objetivo" ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{(ali.faltan ?? []).length ? ` · falta ${ali.faltan.map((f) => ELEMENTOS[f] ?? f).join(", ")}` : ""}{ali.reformulacion ? " · redacción propuesta" : ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
@@ -403,7 +404,7 @@ function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: C
   );
 }
 
-function AlineacionModal({ o, item, lever, onClose, onEdit }: { o: CmiObjective; item?: AlineacionItem; lever?: Lever; onClose: () => void; onEdit?: () => void }) {
+function AlineacionModal({ o, item, lever, onClose, onEdit, onAplicar, saving }: { o: CmiObjective; item?: AlineacionItem; lever?: Lever; onClose: () => void; onEdit?: () => void; onAplicar?: (patch: { name?: string; indicator?: string }) => Promise<void>; saving?: boolean }) {
   return (
     <Modal title={`${o.id} · alineación`} sub={lever ? `${lever.order}. ${lever.name}` : undefined} onClose={onClose}
       footer={<>{onEdit && <button type="button" onClick={onEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar el objetivo</button>}<button type="button" onClick={onClose} className="btn-primary btn-sm text-[12px]">Cerrar</button></>}>
@@ -412,14 +413,26 @@ function AlineacionModal({ o, item, lever, onClose, onEdit }: { o: CmiObjective;
       {o.indicator && <p className="mt-1 text-[12.5px] text-ink-soft"><span className="font-semibold">Indicador impulsor:</span> {o.indicator}</p>}
       {item ? (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span>{item.naturaleza !== "objetivo" && <span className="chip chip-warn">{NATURALEZA[item.naturaleza]}</span>}{item.duplicaDe.length > 0 && <span className="chip chip-warn">duplica o se solapa con {item.duplicaDe.join(", ")}</span>}</div>
+          <div className="mt-4 flex flex-wrap items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span>{item.naturaleza !== "objetivo" && <span className="chip chip-warn">{NATURALEZA[item.naturaleza]}</span>}{item.duplicaDe.length > 0 && <span className="chip chip-warn">duplica o se solapa con {item.duplicaDe.join(", ")}</span>}{(item.faltan ?? []).map((f) => <span key={f} className="chip chip-bad">falta {ELEMENTOS[f] ?? f}</span>)}</div>
           <p className="mt-2 text-[13px] leading-relaxed text-ink">{item.justificacion}</p>
           {item.recomendaciones.length > 0 && (
             <div className="mt-4">
-              <div className="label !text-[11px]">Recomendaciones</div>
+              <div className="label !text-[11px]">Qué hacer</div>
               <ul className="mt-1.5 space-y-1.5">{item.recomendaciones.map((r, i) => <li key={i} className="flex gap-2 text-[13px] leading-relaxed text-ink"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-deep" /><span>{r}</span></li>)}</ul>
             </div>
           )}
+          {item.reformulacion && (
+            <div className="mt-4 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
+              <div className="label !text-[11px]">Redacción propuesta <span className="font-normal normal-case tracking-normal text-faint">· verbo de logro + resultado + indicador impulsor + para cuándo</span></div>
+              <p className="mt-1.5 text-[13.5px] font-semibold leading-relaxed text-ink">«{item.reformulacion}»</p>
+              {item.indicadorPropuesto && <p className="mt-1.5 text-[12.5px] text-ink-soft"><span className="font-semibold">Indicador impulsor propuesto:</span> {item.indicadorPropuesto}</p>}
+              {onAplicar && <div className="mt-2.5 flex flex-wrap gap-2">
+                <button type="button" disabled={saving} onClick={() => void onAplicar({ name: item.reformulacion, ...(item.indicadorPropuesto ? { indicator: item.indicadorPropuesto } : {}) })} className="btn-primary btn-sm text-[12px]"><CheckCircle2 size={12} /> Usar esta redacción{item.indicadorPropuesto ? " e indicador" : ""}</button>
+                {item.indicadorPropuesto && <button type="button" disabled={saving} onClick={() => void onAplicar({ indicator: item.indicadorPropuesto })} className="btn-ghost btn-sm text-[12px]">Solo el indicador</button>}
+              </div>}
+            </div>
+          )}
+          {!item.reformulacion && item.indicadorPropuesto && <p className="mt-3 text-[12.5px] text-ink-soft"><span className="font-semibold">Indicador impulsor propuesto:</span> {item.indicadorPropuesto}{onAplicar && <button type="button" disabled={saving} onClick={() => void onAplicar({ indicator: item.indicadorPropuesto })} className="ml-2 font-semibold text-cyan-deep hover:underline">Usarlo</button>}</p>}
         </>
       ) : <p className="mt-4 text-[12.5px] italic text-faint">Este objetivo aún no tiene lectura: pulsa «Validar alineación».</p>}
     </Modal>
@@ -456,6 +469,16 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
   };
   const krsElegidos = sug.okr ? sug.okr.krs.filter((_, n) => sug.chosen[n]) : [];
   const redaccionDistinta = !!sug.okr && sug.okr.objective.name.trim() !== f.name.trim();
+  // asistente de creación (acompañamiento): con la prioridad elegida y, si hay, el borrador, el modelo propone tres objetivos
+  const acompCrea = !okr && isAcompanamiento(cat.company);
+  const [prop, setProp] = useState<{ loading: boolean; error: string | null; items: PropuestaObjetivo[] }>({ loading: false, error: null, items: [] });
+  const proponer = async () => {
+    setProp({ loading: true, error: null, items: [] });
+    const res = await fetch("/api/td/alineacion/proponer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lever: f.lever, horizon: f.horizon, borrador: f.name.trim() }) });
+    const j = await res.json().catch(() => null);
+    if (!res.ok) { setProp({ loading: false, error: j?.error ?? `Error ${res.status}`, items: [] }); return; }
+    setProp({ loading: false, error: null, items: j?.propuestas ?? [] });
+  };
   return (
     <Modal title={initial ? `Objetivo · ${initial.id}` : okr ? "Nuevo objetivo de la tribu" : "Nuevo objetivo"} sub={okr ? "primero el objetivo; después, de 2 a 4 resultados clave (máximo 5)" : `aspiración, indicador impulsor, ${Vb(cat).leverLow} y horizonte`} onClose={onCancel}
       footer={<>
@@ -475,6 +498,29 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
         </div>
         {okr && parents.length > 0 && <p className="text-[12px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
         <Field label={okr ? (initial?.parent ? "Objetivo del OKR · objetivo rector de la palanca (se adopta tal cual)" : "Objetivo 2027 de la tribu") : "Objetivo"}><AutoTextarea value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
+        {acompCrea && (
+          <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => void proponer()} disabled={!f.lever || prop.loading} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={f.lever ? "Tres objetivos propuestos para esta prioridad, con el contexto de la empresa" : `Elige primero la ${Vb(cat).leverLow}`}>
+                {prop.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {prop.items.length ? "Otras propuestas" : "Asistente de creación"} <span className="text-faint">(IA)</span>
+              </button>
+              <span className="text-[12px] text-faint">{f.name.trim().length >= 10 ? "Corrige tu borrador y propone alternativas" : "Propone tres objetivos para la prioridad elegida"}, con la estructura verbo de logro + resultado + indicador impulsor + para cuándo, sin duplicar los existentes.</span>
+            </div>
+            {prop.error && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{prop.error}</p>}
+            {prop.items.length > 0 && (
+              <div className="mt-2.5 space-y-1.5">
+                {prop.items.map((p, n) => (
+                  <div key={n} className="rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
+                    <div className="text-[13px] font-semibold leading-snug text-ink">{p.name}</div>
+                    {p.indicator && <div className="mt-0.5 text-ink-soft"><span className="font-semibold">Indicador impulsor:</span> {p.indicator}</div>}
+                    {p.porque && <div className="mt-0.5 leading-snug text-muted">{p.porque}</div>}
+                    <button type="button" onClick={() => setF({ ...f, name: p.name, desc: p.desc || f.desc, indicator: p.indicator || f.indicator })} className="mt-1 text-[12px] font-semibold text-cyan-deep hover:underline">Usar esta propuesta</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
         <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder="¿Cómo mediremos ese avance? (complementa el indicador de la palanca)" className={INPUT} /></Field>
         {okr && (

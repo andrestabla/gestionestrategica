@@ -57,7 +57,7 @@ const OBJETIVOS: Lamina[] = [
       <div className="flex items-center gap-2"><span className="chip chip-gold">Parcialmente alineado</span><span className="text-muted">contribuye de forma parcial o indirecta, o tiene problemas de formulación o de forma.</span></div>
       <div className="flex items-center gap-2"><span className="chip chip-bad">No alineado</span><span className="text-muted">no aporta a su prioridad, pertenece a otra o no es un objetivo.</span></div>
     </div>
-    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Al pulsar cada semáforo se ve la justificación y, si procede, las recomendaciones técnicas (de fondo) o de forma. La lectura se marca desactualizada cuando cambian las prioridades o los objetivos.</p>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">La validación es exigente: solo es verde el objetivo que aporta de forma inequívoca a su prioridad, tiene los cuatro elementos de la estructura, es un objetivo (no un KR ni una iniciativa), no duplica a otro y es coherente con el mercado y la posición de la empresa. Al pulsar cada semáforo se ve la justificación, qué elementos faltan, qué hacer y una redacción propuesta que se puede aplicar con un clic. La lectura se marca desactualizada cuando cambian las prioridades o los objetivos.</p>
   </> },
 ];
 

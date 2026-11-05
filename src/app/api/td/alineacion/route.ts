@@ -4,8 +4,8 @@ import { withTenant } from "../_helpers";
 import { catalog, getAlineacion, saveAlineacion, flushOrError } from "@/server/store";
 import { chatJson, iaDisponible } from "@/server/ia";
 import { can } from "@/lib/permissions";
-import { leversOf, horizonsOf, horizonLabel } from "@/data/catalogo";
-import { keyResultsOf } from "@/lib/convencion";
+import { leversOf, horizonsOf, horizonLabel, horizonesBase } from "@/data/catalogo";
+import { keyResultsOf, kpisOf } from "@/lib/convencion";
 import { encargoAlineacion, parseAlineacion } from "@/lib/alineacion";
 import { contextoEmpresa } from "@/server/contexto-empresa";
 
@@ -15,7 +15,7 @@ const huella = (horizon: string) => {
   const c = catalog();
   const levers = leversOf(c.company).map((l) => [l.id, l.name, l.indicator ?? "", l.desc ?? ""]);
   const objs = c.objectives.filter((o) => o.horizon === horizon && !o.okr).map((o) => [o.id, o.lever ?? "", o.name, o.desc ?? "", o.indicator ?? "", o.pillar ?? ""]);
-  return createHash("sha256").update(JSON.stringify({ v: 2, levers, objs })).digest("hex").slice(0, 24);
+  return createHash("sha256").update(JSON.stringify({ v: 3, levers, objs })).digest("hex").slice(0, 24);
 };
 
 export const GET = withTenant(async (req: Request) => {
@@ -38,11 +38,12 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     empresa: { name: c.company.name, sector: c.company.sector, size: c.company.size },
     horizonte: horizonLabel(c.company, horizon),
     prioridades: levers.map((l) => ({ id: l.id, order: l.order, name: l.name, indicator: l.indicator, desc: l.desc, sponsor: sponsor(l.ownerId) })),
-    objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length, iniciativas: c.initiatives.filter((i) => i.cmi === o.id).map((i) => i.name) })),
+    objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length, krNombres: keyResultsOf(c, o).map((k) => k.name), iniciativas: c.initiatives.filter((i) => i.cmi === o.id).map((i) => i.name) })),
+    lineaBase: horizonesBase(c.company).flatMap((h) => c.objectives.filter((o) => o.horizon === h.id).map((o) => `- ${o.lever ?? ""} · ${o.name}: ${kpisOf(c, o).map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return `${k.name}${last ? ` = ${last.value} ${k.unit}` : ""}${k.target ? ` (meta ${k.target})` : ""}`; }).join("; ") || "sin indicadores"}`)).join("\n") || undefined,
     contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }),
   });
   let raw: unknown;
-  try { raw = await chatJson(system, u, { maxTokens: 6000, timeoutMs: 120_000 }); }
+  try { raw = await chatJson(system, u, { maxTokens: 9000, timeoutMs: 150_000 }); }
   catch (e) { return NextResponse.json({ error: `El modelo no respondió: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 }); }
   const informe = parseAlineacion(raw, horizon, objetivos.map((o) => o.id));
   const r = saveAlineacion(user, horizon, huella(horizon), informe);
