@@ -23,11 +23,11 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   if (!body?.r || typeof body.r !== "object") return NextResponse.json({ error: "Cuerpo inválido: faltan las respuestas" }, { status: 400 });
-  const result = saveF1Response(user, { r: body.r, cargo: body.cargo });
+  const result = saveF1Response(user, { r: body.r, cargo: body.cargo, base: body.base });
   if (!result.ok) { auditRechazo(user, "f1", result.error, result.status); return NextResponse.json({ error: result.error }, { status: result.status }); }
   const e = await flushOrError();
   if (e) { auditRechazo(user, "f1", `error de base de datos: ${e}`, 500); return NextResponse.json({ error: e }, { status: 500 }); }
-  return NextResponse.json({ response: result.response, answered: result.answered, total: PRACTICES.length });
+  return NextResponse.json({ response: result.response, answered: result.answered, merged: result.merged, total: PRACTICES.length });
 });
 
 // DELETE /api/td/f1?email= — el administrador borra la autoevaluación de una persona (y su análisis con IA).

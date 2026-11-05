@@ -6,7 +6,8 @@ import { cookies } from "next/headers";
 
 const SECRET = process.env.AUTH_SECRET ?? "pgtd-dev-secret-cambiar-en-produccion";
 const COOKIE = "pgtd_session";
-const MAX_AGE = 60 * 60 * 8; // 8 horas; el cierre por inactividad se renueva por request
+import { INACTIVIDAD_MIN } from "@/lib/inactividad";
+const MAX_AGE = 60 * INACTIVIDAD_MIN; // 30 minutos de inactividad: cada petición a la API renueva la cookie (renewSession)
 
 export type SessionCompany = { slug: string; name: string; shortName: string };
 
@@ -67,6 +68,17 @@ export async function setSession(user: SessionUser) {
     maxAge: MAX_AGE,
     path: "/",
   });
+}
+
+/** Renueva la cookie si la sesión sigue válida y lleva más de 5 minutos emitida: así el cierre es por
+    inactividad (30 min sin peticiones) y no por tiempo fijo desde el login. Solo desde rutas de API. */
+export async function renewSession(user: SessionUser) {
+  const store = await cookies();
+  const token = store.get(COOKIE)?.value; if (!token) return;
+  try {
+    const data = JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString());
+    if (typeof data.exp === "number" && data.exp - Date.now() < (MAX_AGE - 5 * 60) * 1000) await setSession(user);
+  } catch { /* token ilegible: no se renueva */ }
 }
 
 export async function clearSession() {

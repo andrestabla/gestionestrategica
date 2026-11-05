@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { ConsentGate } from "@/components/consentimiento-gate";
+import { SesionInactiva } from "@/components/sesion-inactiva";
 import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
@@ -44,6 +45,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
       <CatalogProvider initial={view ?? emptyView()}>
         <FeedbackProvider>
         <AppShell user={user} companies={companies} mode={company?.mode ?? "completa"} modulesOff={company?.modulesOff ?? []} modulesPending={company?.modulesPending ?? []}>
+          <SesionInactiva />
           {noCompany && user.role !== "ADMIN" ? (
             <p className="rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
               Tu cuenta no tiene una empresa activa asignada. Pide al administrador de la plataforma que te asigne una.

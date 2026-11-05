@@ -9,7 +9,7 @@
 //   /panel/diagnostico/brechas              → brechas priorizadas y nivel de acompañamiento
 //   /panel/diagnostico/captura              → captura del corte A3 (autoevaluación y verificación)
 
-import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
@@ -892,35 +892,70 @@ function ResponderF1() {
   }, [data, loaded, params, respaldoKey]);
   const total = PRACTICES.length;
   const answered = Object.keys(r).length;
-  const save = useCallback(async (silent: boolean) => {
-    if (!Object.keys(r).length) return false;
-    setSaving(true); setMsg(null);
-    try { localStorage.setItem(respaldoKey, JSON.stringify({ r, cargo, at: new Date().toISOString() })); } catch { /* sin almacenamiento local */ }
+  // Guardado en tiempo real. Cada respuesta se envía de inmediato (250 ms para agrupar teclas seguidas) con el estado
+  // completo; si hay un envío en curso, el siguiente espera y lleva lo más reciente. Un fallo de red o del servidor se
+  // reintenta solo con espera creciente (3 s → 30 s); una sesión caducada espera a que la persona vuelva a entrar y se
+  // reenvía al volver a la pestaña. Al cerrar la pestaña, lo pendiente sale con keepalive. Cada envío indica desde qué copia
+  // partió para que el servidor fusione, sin perder nada, si hubo cambios desde otro dispositivo.
+  const latest = useRef({ r, cargo });
+  const dirtyRef = useRef(false);
+  useEffect(() => { latest.current = { r, cargo }; dirtyRef.current = dirty; }, [r, cargo, dirty]);
+  const baseAt = useRef<string | null>(null);
+  const saveRef = useRef<((silent: boolean) => Promise<boolean>) | null>(null);
+  const enviando = useRef(false); const otraVez = useRef(false); const intentos = useRef(0);
+  const reintento = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hora = () => new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const save = useCallback(async (silent: boolean): Promise<boolean> => {
+    const snap = latest.current;
+    if (!Object.keys(snap.r).length) return false;
+    if (enviando.current) { otraVez.current = true; return true; }
+    enviando.current = true; setSaving(true); setMsg(null);
+    if (reintento.current) { clearTimeout(reintento.current); reintento.current = null; }
+    try { localStorage.setItem(respaldoKey, JSON.stringify({ r: snap.r, cargo: snap.cargo, at: new Date().toISOString() })); } catch { /* sin almacenamiento local */ }
     let res: globalThis.Response | null = null;
-    try { res = await fetch("/api/td/f1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo }) }); } catch { res = null; }
+    try { res = await fetch("/api/td/f1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r: snap.r, cargo: snap.cargo, base: baseAt.current }) }); } catch { res = null; }
     const j = res ? await res.json().catch(() => ({})) : {};
-    setSaving(false);
+    enviando.current = false; setSaving(false);
     if (!res || !res.ok) {
       const status = res?.status ?? 0;
       const error = status === 401 ? "Tu sesión caducó." : status === 0 ? "Sin conexión." : (j.error ?? "No se pudo guardar.");
       setMsg(error);
-      setFallo((prev) => { if (!prev) avisar(`${error} Tus respuestas quedan guardadas en este dispositivo.`, "bad"); return { status, error, at: new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) }; });
+      setFallo((prev) => { if (!prev) avisar(`${error} Tus respuestas quedan guardadas en este dispositivo.`, "bad"); return { status, error, at: hora() }; });
+      if (status === 0 || status >= 500) { intentos.current += 1; const espera = Math.min(30_000, 3_000 * 2 ** (intentos.current - 1)); reintento.current = setTimeout(() => { void saveRef.current?.(true); }, espera); }
       return false;
     }
-    setDirty(false); setFallo(null); setSavedAt(new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }));
+    intentos.current = 0;
+    if (j.response?.at) baseAt.current = j.response.at;
+    if (j.merged && j.response?.r) { setR((prev) => ({ ...j.response.r, ...prev })); avisar("Se combinaron respuestas guardadas desde otro dispositivo.", "info"); }
+    const cambio = otraVez.current || JSON.stringify(latest.current) !== JSON.stringify(snap);
+    otraVez.current = false;
+    if (cambio) { void saveRef.current?.(true); return true; }
+    setDirty(false); setFallo(null); setSavedAt(hora());
     try { localStorage.removeItem(respaldoKey); } catch { /* sin almacenamiento local */ }
     if (!silent) await refetch();
     return true;
-  }, [r, cargo, refetch, respaldoKey]);
-  // guardado automático: un segundo después del último cambio
-  useEffect(() => { if (!dirty || data?.closed) return; const t = setTimeout(() => { void save(true); }, 1000); return () => clearTimeout(t); }, [dirty, r, cargo, data?.closed, save]);
-  // lo pendiente se reintenta al recuperar la conexión o al volver a la pestaña
+  }, [refetch, respaldoKey]);
+  useEffect(() => { saveRef.current = save; }, [save]);
+  useEffect(() => { if (data?.mine?.at && !baseAt.current) baseAt.current = data.mine.at; }, [data]);
+  // guardado automático inmediato
+  useEffect(() => { if (!loaded || !dirty || data?.closed) return; const t = setTimeout(() => { void save(true); }, 250); return () => clearTimeout(t); }, [loaded, dirty, r, cargo, data?.closed, save]);
+  // lo pendiente se reintenta al recuperar la conexión o al volver a la pestaña (también tras iniciar sesión en otra pestaña)
   useEffect(() => {
     if (!dirty || data?.closed) return;
     const again = () => { if (document.visibilityState === "visible") void save(true); };
-    window.addEventListener("online", again); document.addEventListener("visibilitychange", again);
-    return () => { window.removeEventListener("online", again); document.removeEventListener("visibilitychange", again); };
+    window.addEventListener("online", again); window.addEventListener("focus", again); document.addEventListener("visibilitychange", again);
+    return () => { window.removeEventListener("online", again); window.removeEventListener("focus", again); document.removeEventListener("visibilitychange", again); };
   }, [dirty, data?.closed, save]);
+  // al cerrar o abandonar la pestaña, lo pendiente sale aunque la página ya no exista
+  useEffect(() => {
+    const h = () => {
+      if (!dirtyRef.current) return;
+      const snap = latest.current;
+      try { void fetch("/api/td/f1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r: snap.r, cargo: snap.cargo, base: baseAt.current }), keepalive: true }); } catch { /* sin red */ }
+    };
+    window.addEventListener("pagehide", h);
+    return () => window.removeEventListener("pagehide", h);
+  }, []);
   const set = (code: string, v: number) => { setR((prev) => { const next = { ...prev }; if (next[code] === v) delete next[code]; else next[code] = v; return next; }); setDirty(true); };
   if (data?.closed) {
     return (

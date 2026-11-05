@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { urlTenant } from "@/server/request-tenant";
-import { getSession, type SessionUser } from "@/lib/session";
+import { getSession, type SessionUser, renewSession } from "@/lib/session";
 import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 
@@ -45,6 +45,7 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
     }
     const t = await tenantOf(user);
     if (t instanceof NextResponse) return t;
+    await renewSession(user).catch(() => undefined);
     return runWithTenant(t.slug, async () => {
       // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
       await hydrateFromDb({ force: req.method !== "GET" });

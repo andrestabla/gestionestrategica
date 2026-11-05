@@ -1655,8 +1655,8 @@ export const f1Closed = (): boolean => Boolean(S().published);
 
 export function saveF1Response(
   user: SessionUser,
-  input: { r: Record<string, unknown>; cargo?: string },
-): { ok: true; response: F1Response; answered: number } | { ok: false; status: number; error: string } {
+  input: { r: Record<string, unknown>; cargo?: string; base?: unknown },
+): { ok: true; response: F1Response; answered: number; merged: boolean } | { ok: false; status: number; error: string } {
   if (!hasInstrument(cat().company, "f1")) return { ok: false, status: 403, error: `${instrumentLabel("f1")}: no está habilitada para esta empresa.` };
   if (!can(user, "answer_f1")) return { ok: false, status: 403, error: "Tu rol no responde la autoevaluación directiva." };
   if (f1Closed()) return { ok: false, status: 422, error: "El corte A3 ya está publicado: la autoevaluación está cerrada." };
@@ -1668,22 +1668,26 @@ export function saveF1Response(
     if (!inRange(v, 1, 5)) return { ok: false, status: 422, error: `El ítem ${code} admite un entero de 1 a 5.` };
     r[code] = Number(v);
   }
-  const answered = Object.keys(r).length;
-  if (!answered) return { ok: false, status: 422, error: "Responde al menos un ítem para guardar el avance." };
+  if (!Object.keys(r).length) return { ok: false, status: 422, error: "Responde al menos un ítem para guardar el avance." };
   const prev = f1Store().get(user.email);
+  // `base` es la fecha de la copia desde la que respondió el cliente: si el servidor ya tiene otra (otro dispositivo o
+  // pestaña), se fusionan y gana lo que llega; así una copia vieja nunca borra respuestas ya guardadas.
+  const merged = !!prev && typeof input.base === "string" && input.base !== prev.at;
+  const final = merged ? { ...prev.r, ...r } : r;
+  const answered = Object.keys(final).length;
   const response: F1Response = {
     email: user.email, name: user.name, role: user.role,
     cargo: input.cargo?.trim() || prev?.cargo || undefined,
-    at: new Date().toISOString(), r,
+    at: new Date().toISOString(), r: final,
   };
   f1Store().set(user.email, response);
-  audit(user, "task", `f1:${user.email}`, `autoevaluación directiva guardada (${answered} de ${PRACTICES.length} ítems)`);
+  audit(user, "task", `f1:${user.email}`, `autoevaluación directiva guardada (${answered} de ${PRACTICES.length} ítems)${merged ? " · fusionada con la copia guardada desde otro dispositivo" : ""}`);
   void persist("autoevaluación", async (db) => {
     const companyId = cid();
     const data = { name: response.name, role: response.role, cargo: response.cargo ?? null, answers: response.r, at: new Date(response.at) };
     await db.f1Response.upsert({ where: { companyId_email: { companyId, email: response.email } }, update: data, create: { email: response.email, companyId, ...data } });
   });
-  return { ok: true, response, answered };
+  return { ok: true, response, answered, merged };
 }
 
 /* ═══ Análisis con IA del diagnóstico ═══
