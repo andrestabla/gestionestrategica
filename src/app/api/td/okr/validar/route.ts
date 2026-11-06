@@ -22,8 +22,8 @@ export const POST = withTenant(async (req: Request) => {
   if (!iaDisponible()) return NextResponse.json({ error: "OpenAI no está configurado en Administración → Integraciones." }, { status: 503 });
   const body = await req.json().catch(() => null);
   const cat = catalog();
-  const o = cat.objectives.find((x) => x.id === String(body?.objective ?? "") && x.okr);
-  if (!o) return NextResponse.json({ error: "Indica un objetivo de tribu registrado." }, { status: 422 });
+  const o = cat.objectives.find((x) => x.id === String(body?.objective ?? "") && (x.okr || cat.company.mode === "acompanamiento"));
+  if (!o) return NextResponse.json({ error: "Indica un objetivo registrado con resultados clave." }, { status: 422 });
   const lever = leversOf(cat.company).find((l) => l.id === o.lever);
   if (!lever) return NextResponse.json({ error: "El objetivo no tiene prioridad estratégica." }, { status: 422 });
   const tribeName = cat.responsibles.find((r) => r.id === lever.ownerId)?.dependencia ?? "el sponsor de la prioridad";

@@ -500,7 +500,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
     setProp({ loading: false, error: null, items: j?.propuestas ?? [] });
   };
   return (
-    <Modal title={initial ? `Objetivo · ${initial.id}` : okr ? "Nuevo objetivo de la tribu" : "Nuevo objetivo"} sub={okr ? "primero el objetivo; después, de 2 a 4 resultados clave (máximo 5)" : `aspiración, indicador impulsor, ${Vb(cat).leverLow} y horizonte`} onClose={onCancel}
+    <Modal title={initial ? `Objetivo · ${initial.id}` : okr && !isAcompanamiento(cat.company) ? "Nuevo objetivo de la tribu" : "Nuevo objetivo"} sub={okr ? "primero el objetivo; después, de 2 a 4 resultados clave (máximo 5)" : `aspiración, indicador impulsor, ${Vb(cat).leverLow} y horizonte`} onClose={onCancel}
       footer={<>
         {onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}
         <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
@@ -516,8 +516,8 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
             ? <Field label={Vb(cat).group}><input value={cat.responsibles.find((r) => r.id === levers.find((l) => l.id === f.lever)?.ownerId)?.dependencia ?? "—"} disabled className={INPUT} /></Field>
             : <Field label="Horizonte"><select value={f.horizon} onChange={set("horizon")} className={INPUT}><option value="">— sin horizonte —</option>{horizons.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></Field>}
         </div>
-        {okr && parents.length > 0 && <p className="text-[12px] leading-snug text-faint">Lineamientos del Directorio para esta palanca (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
-        <Field label={okr ? (initial?.parent ? "Objetivo del OKR · objetivo rector de la palanca (se adopta tal cual)" : "Objetivo 2027 de la tribu") : "Objetivo"}><AutoTextarea value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
+        {okr && parents.length > 0 && <p className="text-[12px] leading-snug text-faint">Lineamientos del Directorio para esta {Vb(cat).leverLow} (Dirección 3x3): {parents.map((o) => o.name.slice(0, 70)).join(" · ")}.</p>}
+        <Field label={okr ? (initial?.parent ? `Objetivo del OKR · objetivo rector de la ${Vb(cat).leverLow} (se adopta tal cual)` : (isAcompanamiento(cat.company) ? "Objetivo" : "Objetivo 2027 de la tribu")) : "Objetivo"}><AutoTextarea value={f.name} onChange={set("name")} disabled={okr && !!initial?.parent} placeholder={okr && !isAcompanamiento(cat.company) ? "Qué logra la tribu en 2027: concreta el lineamiento, con su «cuánto» en los resultados clave" : "Qué se logra o queda habilitado"} className={INPUT} /></Field>
         {acompCrea && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -546,7 +546,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
         {okr && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : "Elige la palanca y escribe el objetivo"}>
+              <button type="button" onClick={() => void pedir()} disabled={!puedeSugerir || sug.loading} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title={puedeSugerir ? "El modelo propone los resultados clave de este objetivo" : `Elige la ${Vb(cat).leverLow} y escribe el objetivo`}>
                 {sug.loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {sug.okr ? "Otra propuesta" : "Sugerir OKR"}
               </button>
               {sug.okr && sug.fuentes.length > 0 && <FuentesButton onClick={() => setVerFuentes(true)} />}
@@ -574,7 +574,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
                   </label>
                 ))}
                 {verFuentes && <FuentesModal fuentes={sug.fuentes} usadas={usadasDe(sug.okr)} onClose={() => setVerFuentes(false)} />}
-                <p className="text-[12px] leading-snug text-faint">Se crean con línea base 0 y la meta sugerida (si la hay), dueño {tribe?.dependencia ?? "la tribu"} y plazo a fin de {horizons[0]?.label ?? "horizonte"}; la tribu fija base y meta reales en la mesa.</p>
+                <p className="text-[12px] leading-snug text-faint">Se crean con línea base 0 y la meta sugerida (si la hay), dueño {tribe?.dependencia ?? (isAcompanamiento(cat.company) ? "el sponsor" : "la tribu")} y plazo a fin de {horizons[0]?.label ?? "horizonte"}; {isAcompanamiento(cat.company) ? "el sponsor" : "la tribu"} fija base y meta reales{isAcompanamiento(cat.company) ? "" : " en la mesa"}.</p>
               </div>
             )}
           </div>

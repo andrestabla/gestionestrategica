@@ -19,7 +19,7 @@ export const maxDuration = 60;
 export const GET = withTenant(async () => NextResponse.json({ disponible: iaDisponible() }));
 
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
-  if (!can(user, "manage_catalog")) return NextResponse.json({ error: "Solo el líder de tribu (o el advisor) pide sugerencias de OKR." }, { status: 403 });
+  if (!can(user, "manage_catalog")) return NextResponse.json({ error: "Solo quien administra la estrategia pide sugerencias de resultados clave." }, { status: 403 });
   if (!iaDisponible()) return NextResponse.json({ error: "OpenAI no está configurado en Administración → Integraciones." }, { status: 503 });
   const body = await req.json().catch(() => null);
   const cat = catalog();
@@ -34,7 +34,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     ? { name: o.name.trim().slice(0, 200), desc: typeof o.desc === "string" ? o.desc.trim().slice(0, 600) : "", indicator: typeof o.indicator === "string" ? o.indicator.trim().slice(0, 200) : "" }
     : undefined;
   // con el id de un objetivo ya registrado, el modelo conoce sus KR y propone solo los complementarios
-  const registrado = o && typeof o.id === "string" ? cat.objectives.find((x) => x.id === o.id && x.okr) : undefined;
+  const registrado = o && typeof o.id === "string" ? cat.objectives.find((x) => x.id === o.id && (x.okr || cat.company.mode === "acompanamiento")) : undefined;
   const existing = registrado ? keyResultsOf(cat, registrado).map((k) => k.name) : [];
   const fuentes = evidenciaPara(cat.company, lever);   // base de conocimiento del sector y del país, numerada
   const { system, user: prompt } = armarEncargo(cat, lever, tribeName, templates, objective, existing, fuentes);

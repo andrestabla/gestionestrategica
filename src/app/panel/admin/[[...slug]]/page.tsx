@@ -434,7 +434,7 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
             <ScopeSelects line={line} responsibleId={responsibleId} responsibles={responsibles}
               onChange={(p) => { if (p.line !== undefined) setLine(p.line ?? undefined); if (p.responsibleId !== undefined) setResponsibleId(p.responsibleId ?? undefined); }} />
             <p className="text-[12px] leading-snug text-faint">
-              Con responsable (tribu, área), edita y evalúa solo lo que tiene ese dueño; la capacidad rige las prácticas del diagnóstico. Hace falta al menos uno.
+              Con responsable (área o equipo), edita y evalúa solo lo que tiene ese dueño; la capacidad rige las prácticas del diagnóstico. Hace falta al menos uno.
             </p>
           </>
         )}

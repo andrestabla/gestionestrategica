@@ -21,7 +21,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const name = typeof ini?.name === "string" ? ini.name.trim().slice(0, 200) : "";
   if (name.length < 5) return NextResponse.json({ error: "Escribe primero el nombre de la iniciativa." }, { status: 422 });
   const candidatos: CandidatoOkr[] = okrObjectivesOf(cat, horizon).map((o) => ({ id: o.id, name: o.name, krs: keyResultsOf(cat, o).map((k) => ({ code: k.code, name: k.name })) }));
-  if (!candidatos.length) return NextResponse.json({ error: "Aún no hay OKR de las tribus en este horizonte; créalos en la pestaña OKR." }, { status: 422 });
+  if (!candidatos.length) return NextResponse.json({ error: cat.company.mode === "acompanamiento" ? "Aún no hay objetivos con resultados clave en este horizonte; créalos en «Resultados clave»." : "Aún no hay OKR de las tribus en este horizonte; créalos en la pestaña OKR." }, { status: 422 });
   const { system, user: prompt } = armarVinculo(cat, { name, objetivo: typeof ini?.objetivo === "string" ? ini.objetivo.trim().slice(0, 600) : "" }, candidatos);
   try {
     const v = parseVinculo(await chatJson(system, prompt, { maxTokens: 300 }), candidatos);   // v.none: ningún OKR evidente
