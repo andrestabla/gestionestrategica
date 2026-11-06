@@ -75,7 +75,8 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       const data = await res.json().catch(() => null);
       const u = data?.user;
       // cada empresa tiene su ruta: /empresa/panel; el admin sin empresa elige en /empresas
-      router.push(u?.company?.slug ? `/${u.company.slug}/panel` : u?.role === "ADMIN" ? "/empresas" : "/panel");
+      // quien pertenece a varias empresas (consultor, sobre todo) elige primero con cuál trabaja
+      router.push((u?.empresas?.length ?? 0) > 1 ? "/empresas" : u?.company?.slug ? `/${u.company.slug}/panel` : u?.role === "ADMIN" ? "/empresas" : "/panel");
       router.refresh();
     } else {
       const data = await res.json().catch(() => null);

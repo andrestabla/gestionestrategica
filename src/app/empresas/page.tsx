@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { hydrateCompanies, listCompanies, tenantView, getUsers } from "@/server/store";
+import { hydrateCompanies, listCompanies, tenantView, getUsers, companyBySlug } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { CompanyChooser, type ChooserCompany } from "@/components/company-chooser";
 
@@ -9,9 +9,12 @@ import { CompanyChooser, type ChooserCompany } from "@/components/company-choose
 export default async function EmpresasPage() {
   const user = await getSession();
   if (!user) redirect("/login");
-  if (user.role !== "ADMIN") redirect("/panel");
   await hydrateCompanies();
-  const all = listCompanies();
+  const admin = user.role === "ADMIN";
+  // quien no administra la plataforma elige solo entre las empresas a las que pertenece (si son varias)
+  const mias = (user.empresas ?? []).map((e) => companyBySlug(e.slug)).filter((c): c is NonNullable<typeof c> => !!c && c.active);
+  if (!admin && mias.length < 2) redirect(user.company ? `/${user.company.slug}/panel` : "/panel");
+  const all = admin ? listCompanies() : mias;
   const companies: ChooserCompany[] = [];
   for (const c of all) {
     let stats = { users: 0, initiatives: 0, kpis: 0, people: 0 };
@@ -27,5 +30,5 @@ export default async function EmpresasPage() {
     });
   }
   companies.sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "es"));
-  return <CompanyChooser companies={companies} current={user.company?.slug ?? null} userName={user.name} />;
+  return <CompanyChooser companies={companies} current={user.company?.slug ?? null} userName={user.name} admin={admin} roles={admin ? undefined : Object.fromEntries((user.empresas ?? []).map((e) => [e.slug, e.role]))} />;
 }

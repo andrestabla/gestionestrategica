@@ -281,27 +281,18 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
       {user.role === "ADMIN" && <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/35">Empresa activa</div>}
       <div className="text-[12.5px] font-bold text-white">{brand?.shortName ?? company?.shortName ?? "Sin empresa"}</div>
       <div className="mt-0.5 text-[12px] leading-snug text-white/40">{brand?.institutionName ?? company?.name ?? "Elige una empresa para operar"}</div>
-      {user.role === "ADMIN" && companies.length > 0 && (
+      {((user.role === "ADMIN" && companies.length > 0) || companies.length > 1) && (
         <Link href="/empresas" onClick={() => setOpen(false)}
+          title={user.role === "ADMIN" ? undefined : `Perteneces a ${companies.length} empresas`}
           className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white/[0.08] px-2.5 py-1.5 text-[12px] font-bold text-white/85 transition-colors hover:bg-white/[0.14] hover:text-white">
           <ArrowRightLeft size={12} /> Cambiar de empresa
         </Link>
-      )}
-      {user.role !== "ADMIN" && companies.length > 1 && (
-        <div className="mt-2">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/35">Tus empresas</div>
-          <ul className="mt-1 space-y-0.5">
-            {companies.map((c) => c.slug === company?.slug
-              ? <li key={c.slug} className="rounded-lg bg-white/[0.12] px-2.5 py-1 text-[12px] font-bold text-white">{c.shortName}<span className="ml-1.5 text-[10.5px] font-semibold text-white/45">{(user.empresas ?? []).find((e) => e.slug === c.slug)?.role?.toLowerCase()}</span></li>
-              : <li key={c.slug}><a href={`/api/auth/empresa?slug=${encodeURIComponent(c.slug)}&next=${encodeURIComponent(`/${c.slug}/panel`)}`} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"><ArrowRightLeft size={11} /> {c.shortName}<span className="ml-auto text-[10.5px] text-white/40">{(user.empresas ?? []).find((e) => e.slug === c.slug)?.role?.toLowerCase()}</span></a></li>)}
-          </ul>
-        </div>
       )}
     </>
   );
 
   const navItems = (mini: boolean) => (
-    <nav className={`flex flex-col gap-1 ${mini ? "px-2.5" : "px-3"}`}>
+    <nav className={`flex flex-col gap-0.5 ${mini ? "px-2.5" : "px-3"}`}>
       {!mini && <div className="label mb-1 px-3 !text-white/30">{convencion ? "Convención" : "Módulos"}</div>}
       {navList.map((item) => {
         const active = isActive(item.href);
@@ -309,7 +300,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
           return (
             <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
               title={`${item.label} · próximamente, conforme avance el acompañamiento`}
-              className={`group relative flex items-center rounded-xl text-[13px] font-medium text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/50 ${mini ? "justify-center px-0 py-[10px]" : "gap-3 px-3 py-[9px]"}`}>
+              className={`group relative flex items-center rounded-xl text-[13px] font-medium text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/50 ${mini ? "justify-center px-0 py-[8px]" : "gap-3 px-3 py-[7px]"}`}>
               <item.icon size={mini ? 18 : 16} strokeWidth={1.9} />
               {!mini && <span className="flex-1">{item.label}</span>}
               <Lock size={mini ? 10 : 12} className={mini ? "absolute right-1.5 top-1.5" : "opacity-70"} />
@@ -320,7 +311,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
           <Link key={item.href} href={base + item.href} onClick={() => setOpen(false)}
             title={item.code ? `${item.label} · ${item.code}` : mini ? item.label : undefined}
             className={`group relative flex items-center rounded-xl text-[13px] font-medium transition-all duration-150 ${
-              mini ? "justify-center px-0 py-[10px]" : "gap-3 px-3 py-[9px]"
+              mini ? "justify-center px-0 py-[8px]" : "gap-3 px-3 py-[7px]"
             } ${
               active
                 ? "bg-white/[0.09] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
@@ -347,24 +338,30 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
         style={{ background: "var(--grad-deep)", width: collapsed ? RAIL_W_MIN : RAIL_W }}>
         <div aria-hidden className="pointer-events-none absolute inset-0"
           style={{ background: "radial-gradient(420px 220px at 100% 0%, rgb(79 208 236 / 0.09), transparent 60%)" }} />
-        <div className={`relative flex items-center pb-6 pt-5 ${collapsed ? "justify-center px-0" : "gap-2.5 px-5"}`}>
+        <div className={`relative flex shrink-0 items-center pb-4 pt-4 ${collapsed ? "flex-col gap-2 px-0" : "gap-2.5 px-4"}`}>
           {brand?.logoDark || brand?.logoLight ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={(brand.logoDark ?? brand.logoLight)!} alt="" className="h-7 max-w-[140px] object-contain" />
+            <img src={(brand.logoDark ?? brand.logoLight)!} alt="" className="h-7 max-w-[120px] object-contain" />
           ) : (
             <AlgoritmoMark size={27} />
           )}
           {!collapsed && !(brand?.logoDark || brand?.logoLight) && (
-            <div className="leading-tight">
-              <div className="text-[13.5px] font-extrabold tracking-tight text-white">{brand?.platformName ?? "Gestión estratégica"}</div>
+            <div className="min-w-0 leading-tight">
+              <div className="text-[13px] font-extrabold leading-[1.1] tracking-tight text-white">{brand?.platformName ?? "Gestión estratégica"}</div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 4Shine Empresas
               </div>
             </div>
           )}
+          <button onClick={toggleRail}
+            title={collapsed ? "Expandir menú" : "Contraer menú"} aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/45 transition-colors hover:bg-white/[0.08] hover:text-white ${collapsed ? "" : "ml-auto"}`}>
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
-        <div className="relative">{navItems(collapsed)}</div>
-        <div className={`relative mt-auto pb-4 ${collapsed ? "px-2.5" : "px-4"}`}>
+        {/* los módulos se desplazan en su propio espacio: con muchos no empujan el bloque de empresa fuera de la vista */}
+        <div className="rail-scroll relative min-h-0 flex-1 overflow-y-auto pb-2">{navItems(collapsed)}</div>
+        <div className={`relative shrink-0 border-t border-white/[0.06] pb-3 pt-3 ${collapsed ? "px-2.5" : "px-4"}`}>
           {!collapsed && (
             <div className="mb-3 overflow-hidden rounded-xl bg-white/[0.05] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)]">
               <div className="spine h-[2.5px]" />
@@ -373,20 +370,13 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
               </div>
             </div>
           )}
-          <button onClick={toggleRail}
-            title={collapsed ? "Expandir menú" : "Contraer menú"} aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
-            className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white ${
-              collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
-            {collapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
-            {!collapsed && "Contraer menú"}
-          </button>
           <Link href={`${base}/panel/perfil`} title={collapsed ? "Mi perfil" : undefined} aria-label={collapsed ? "Mi perfil" : undefined}
-            className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium transition-colors hover:bg-white/[0.05] hover:text-white ${path.startsWith("/panel/perfil") ? "text-white" : "text-white/45"} ${collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
+            className={`flex w-full items-center rounded-xl py-1.5 text-[12.5px] font-medium transition-colors hover:bg-white/[0.05] hover:text-white ${path.startsWith("/panel/perfil") ? "text-white" : "text-white/45"} ${collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
             <UserCircle2 size={15} /> {!collapsed && "Mi perfil"}
           </Link>
           <button onClick={logout}
             title={collapsed ? "Cerrar sesión" : undefined} aria-label={collapsed ? "Cerrar sesión" : undefined}
-            className={`flex w-full items-center rounded-xl py-2 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white ${
+            className={`flex w-full items-center rounded-xl py-1.5 text-[12.5px] font-medium text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white ${
               collapsed ? "justify-center px-0" : "gap-2.5 px-3"}`}>
             <LogOut size={14} /> {!collapsed && "Cerrar sesión"}
           </button>

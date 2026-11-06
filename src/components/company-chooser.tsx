@@ -16,7 +16,9 @@ export type ChooserCompany = {
   users: number; initiatives: number; kpis: number; people: number;
 };
 
-export function CompanyChooser({ companies, current, userName }: { companies: ChooserCompany[]; current: string | null; userName: string }) {
+const ROL: Record<string, string> = { ADMIN: "admin", CONSULTOR: "consultor", LIDER: "líder", RESPONSABLE: "responsable", DIRECTIVO: "directivo" };
+
+export function CompanyChooser({ companies, current, userName, admin = true, roles }: { companies: ChooserCompany[]; current: string | null; userName: string; admin?: boolean; roles?: Record<string, string> }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
         <AlgoritmoMark size={26} />
         <div className="min-w-0 leading-tight">
           <div className="truncate text-[13.5px] font-extrabold tracking-tight text-ink">Gestión estratégica</div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">Administración de la plataforma</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">{admin ? "Administración de la plataforma" : "Tus empresas"}</div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-[12px] text-muted sm:inline">{userName}</span>
@@ -67,11 +69,11 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
             <div className="label mb-2">Paso 1 de 2</div>
             <h1 className="text-[24px] font-extrabold leading-tight tracking-tight text-ink sm:text-[30px]">¿Con qué empresa vas a trabajar?</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
-              Cada empresa es un contexto independiente: su diagnóstico, su portafolio, sus KPI y sus cuentas.
-              Elige una para entrar a su panel; podrás cambiarla en cualquier momento desde el menú.
+              {admin ? "Cada empresa es un contexto independiente: su diagnóstico, su portafolio, sus KPI y sus cuentas." : `Tu cuenta pertenece a ${companies.length} empresas, cada una con su rol y su contexto.`}
+              {" "}Elige una para entrar a su panel; podrás cambiarla en cualquier momento desde el menú.
             </p>
           </div>
-          <button onClick={() => setCreating(true)} className="btn-primary !py-2 text-[12.5px]"><Plus size={13} /> Nueva empresa</button>
+          {admin && <button onClick={() => setCreating(true)} className="btn-primary !py-2 text-[12.5px]"><Plus size={13} /> Nueva empresa</button>}
         </div>
 
         {error && <p className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))" }}>{error}</p>}
@@ -109,6 +111,7 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {isCurrent && <span className="chip chip-cyan !py-0 text-[11px]">activa ahora</span>}
+                    {roles?.[c.slug] && <span className="chip chip-gold !py-0 text-[11px]">{ROL[roles[c.slug]] ?? roles[c.slug].toLowerCase()}</span>}
                     {!c.active && <span className="chip chip-bad !py-0 text-[11px]">desactivada</span>}
                     {c.template === "demo" && <span className="chip chip-gold !py-0 text-[11px]">plantilla demo</span>}
                     <span className="chip !py-0 text-[11px]"><MapPin size={9} /> {[c.city, c.department].filter(Boolean).join(", ") || (c.country === "EC" ? "Ecuador" : "Colombia")} · {c.currency}</span>
@@ -125,10 +128,10 @@ export function CompanyChooser({ companies, current, userName }: { companies: Ch
           </div>
         )}
 
-        <p className="mt-8 flex items-start gap-2 text-[12px] leading-relaxed text-faint">
+        {admin && <p className="mt-8 flex items-start gap-2 text-[12px] leading-relaxed text-faint">
           <Settings2 size={12} className="mt-0.5 shrink-0" />
           Las empresas desactivadas no se pueden elegir: reactívalas o elimínalas desde Administración → Empresas, dentro de cualquier empresa activa.
-        </p>
+        </p>}
       </main>
 
       {creating && <CompanyForm saving={saving} initial={null} onCancel={() => setCreating(false)} onSubmit={create} />}
