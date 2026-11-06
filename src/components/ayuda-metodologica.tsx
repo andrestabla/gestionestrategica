@@ -155,9 +155,19 @@ const CASCADA: Lamina[] = [
     <Li><b>Ordena el ritmo:</b> planear, ejecutar, cerrar y aprender cada trimestre, con cumplimiento medido.</Li>
     <Li><b>Instala capacidades antes de exigir resultado:</b> las brechas de «Capacidades para ejecutar» entran como hitos previos.</Li>
   </ul> },
+  { k: "Árbol", t: "Todo se organiza en un árbol de siete niveles", body: <>
+    <p className="text-[13px] leading-relaxed text-ink">La cascada se lee de arriba abajo: <b>Prioridad → Objetivo → Resultado clave → Iniciativa → Unidad o área (con su rol y su prioridad dentro de la iniciativa) → Persona o equipo → Meta por trimestre</b>. Nada cuelga en el aire: cada meta del trimestre pertenece a un área que participa en una iniciativa, que mueve un resultado clave de un objetivo de una prioridad.</p>
+    <div className="mt-3 rounded-xl bg-surface-2 px-3.5 py-3 text-[12.5px] leading-relaxed text-ink-soft">
+      <b className="text-ink">Premisa:</b> ninguna iniciativa es de una sola área. Cada iniciativa es trabajo articulado e interdependiente entre unidades. Por eso, antes de las metas, se declara la <b className="text-ink">articulación</b>: qué áreas participan, cuál lidera (una sola), con qué prioridad (1 = la que más aporta), quién la ejecuta (persona o equipo) y, sobre todo, <b className="text-ink">qué debe hacer cada área</b>: una contribución concreta con entregable y fecha.
+    </div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Bien>«Modelo omnicanal del panel AAA y AA · Promoción médica lidera (1): ejecutar el ciclo de visita presencial y virtual con 22 visitadores · TIC contribuye (2): integrar el CRM con la plataforma de contenido y depurar el maestro de médicos, entrega 31 de marzo · Marketing contribuye (3): producir y aprobar doce piezas de contenido científico por trimestre.»</Bien>
+      <Mal>«Modelo omnicanal · Promoción médica.» (una sola área y sin contribuciones: la interdependencia con TIC y marketing queda invisible hasta que falla)</Mal>
+    </div>
+  </> },
   { k: "Estructura", t: "Qué debe tener una meta trimestral", body: <>
     <div className="grid gap-2 sm:grid-cols-2">
-      {[["Trimestre y área", "un trimestre (2027-T1) y el área responsable; una meta pertenece a una sola área."], ["Prioridad, objetivo y KR", "de qué prioridad cuelga, a qué objetivo directivo aporta y qué resultado clave mueve."], ["Iniciativa", "la iniciativa del portafolio que la meta ejecuta (implementar o preparar)."], ["Meta", "qué logra el área este trimestre, en una frase con cifra: «cubrir el 40 % del panel AAA y AA»."], ["Criterio de éxito", "cómo sabremos que se cumplió: el dato, la fuente y el corte."], ["Hitos", "de 2 a 4 entregables con responsable y fecha; cada uno con estado (pendiente, en curso, hecho)."], ["Dependencias", "qué necesita de otras áreas y para cuándo: es el aviso temprano del trimestre."], ["Cierre", "al terminar el trimestre: cumplimiento en porcentaje y el aprendizaje que cambia el siguiente plan."]].map(([a, b]) => (
+      {[["Trimestre y área", "un trimestre (2027-T1) y el área responsable; una meta pertenece a una sola área, declarada en la articulación de su iniciativa."], ["Persona o equipo", "quién responde dentro del área: una persona del catálogo o un equipo."], ["Prioridad, objetivo y KR", "de qué prioridad cuelga, a qué objetivo directivo aporta y qué resultado clave mueve."], ["Iniciativa", "la iniciativa del portafolio que la meta ejecuta (implementar o preparar)."], ["Meta", "qué logra el área este trimestre, en una frase con cifra: «cubrir el 40 % del panel AAA y AA»."], ["Criterio de éxito", "cómo sabremos que se cumplió: el dato, la fuente y el corte."], ["Hitos", "de 2 a 4 entregables con responsable y fecha; cada uno con estado (pendiente, en curso, hecho)."], ["Dependencias", "qué necesita de otras áreas y para cuándo: es el aviso temprano del trimestre."], ["Cierre", "al terminar el trimestre: cumplimiento en porcentaje y el aprendizaje que cambia el siguiente plan."]].map(([a, b]) => (
         <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
       ))}
     </div>
@@ -187,7 +197,10 @@ const CASCADA: Lamina[] = [
     </tbody></table></div>
   </> },
   { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
-    <Li><b>Proponer desde el portafolio</b> (advisor o líder): crea una meta por iniciativa del año en su trimestre de inicio, en el área de su responsable, con su prioridad y objetivo; después cada área completa criterio, hitos y dependencias.</Li>
+    <Li><b>Árbol de la cascada</b> (vista principal): las siete capas plegables por prioridad y filtrables por área, con las metas de cada área en columnas T1 a T4. Entran las iniciativas con decisión «implementar» o «preparar», las articuladas y las que ya tienen metas.</Li>
+    <Li><b>Articular áreas</b> en cada iniciativa (advisor, líder o responsable del área dueña): áreas, rol, prioridad, persona o equipo, qué debe hacer y entrega. <b>Articular áreas con IA</b> (advisor): una sola acción que propone la articulación de todas las iniciativas sin articular; después se edita.</Li>
+    <Li><b>Regla:</b> una meta de una iniciativa solo se registra en un área declarada en su articulación; así ninguna queda fuera del árbol.</Li>
+    <Li><b>Proponer metas desde el portafolio</b> (advisor o líder): crea una meta por iniciativa articulada y por área que participa, en su trimestre de inicio, con la contribución del área como meta; después cada área completa criterio, hitos y dependencias.</Li>
     <Li><b>Nueva meta</b> (advisor y responsables de área): una meta por área y trimestre, con prioridad, objetivo, KR e iniciativa.</Li>
     <Li><b>Ciclo del trimestre:</b> metas, áreas, hitos hechos, dependencias y, al cerrar, el cumplimiento promedio y los aprendizajes.</Li>
     <Li><b>Interdependencias:</b> la vista de quién necesita qué de quién en el trimestre, para la reunión mensual.</Li>

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
-import { resetStore, catalog, getDecisions, getRevisionesCap, getChecklistsCap, getMetas, getAlineacion, listCompanies, calificables } from "../src/server/store";
+import { resetStore, catalog, getDecisions, getRevisionesCap, getChecklistsCap, getMetas, getAlineacion, getArticulaciones, listCompanies, calificables } from "../src/server/store";
 import { crearDemoSiegfried } from "../src/server/demo-siegfried";
 import { lecturaCapacidades } from "../src/lib/capacidades";
 import type { SessionUser } from "../src/lib/session";
@@ -35,6 +35,11 @@ test("la instancia demo TEST SIEGFRIED se crea con todo el recorrido hecho y sin
     assert.equal(lecturaCapacidades(rev.i14).semaforo, "lista");
     assert.match(rev.i13.notas ?? "", /CRM/);
     assert.equal(getMetas().length, 13);
+    assert.ok(getMetas().every((m) => m.persona));
+    const arts = getArticulaciones();
+    assert.equal(Object.keys(arts).length, 22);
+    assert.ok(Object.values(arts).every((a) => a.areas.filter((x) => x.rol === "LIDERA").length === 1 && a.areas.length >= 2));
+    assert.equal(r.resumen.articulaciones, 22);
     assert.ok(Object.values(calificables()).every((x) => x.ok));
   });
   const otra = await crearDemoSiegfried(admin);

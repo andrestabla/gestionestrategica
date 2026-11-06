@@ -40,6 +40,7 @@ import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
 import { FRENTES, normalizarRevision, lecturaCapacidades, checklistHash, type ChecklistCap, type RevisionCapacidades, type Frente } from "@/lib/capacidades";
+import { normalizarArticulacion, type Articulacion } from "@/lib/cascada";
 
 /* ═══ Estado ═══ */
 
@@ -3828,6 +3829,12 @@ const ctxMetas = () => { const c = cat(); return { areas: c.responsibles.map((r)
 export function upsertMeta(user: SessionUser, input: Partial<MetaTrimestral> & Record<string, unknown>): { ok: true; meta: MetaTrimestral } | { ok: false; status: number; error: string } {
   const n = normalizarMeta(input, ctxMetas());
   if (!n.ok) return { ok: false, status: 422, error: n.error };
+  // toda meta de una iniciativa pertenece a un área declarada en su articulación: así ninguna queda fuera del árbol
+  if (n.meta.initiative) {
+    const art = getArticulacion(n.meta.initiative);
+    if (!art) return { ok: false, status: 422, error: "Declara primero la articulación de la iniciativa (qué áreas participan y qué hace cada una); después se registran sus metas." };
+    if (!art.areas.some((a) => a.areaId === n.meta.areaId)) return { ok: false, status: 422, error: "El área de la meta no participa en la iniciativa: agrégala a la articulación con su contribución." };
+  }
   const id = typeof input.id === "string" && input.id ? input.id : `mt-${Date.now().toString(36)}${randomBytes(2).toString("hex")}`;
   const prev = metas().get(id);
   const no = puedeMeta(user, n.meta.areaId) ?? (prev ? puedeMeta(user, prev.areaId) : null); if (no) return no;
@@ -3867,9 +3874,32 @@ export function proponerCascada(user: SessionUser, year: unknown): { ok: true; c
   if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "La propuesta de cascada la lanza el advisor o el líder." };
   const y = Number(year); if (!Number.isInteger(y) || y < 2020 || y > 2100) return { ok: false, status: 422, error: "Indica el año (p. ej. 2027)." };
   const c = cat();
-  const nuevas = proponerDesdePortafolio(c.initiatives, c.objectives, y, getMetas());
+  const nuevas = proponerDesdePortafolio(c.initiatives, c.objectives, y, getMetas(), getArticulaciones());
   for (const n of nuevas) { const r = upsertMeta(user, n as Partial<MetaTrimestral> & Record<string, unknown>); if (!r.ok) return r; }
   return { ok: true, creadas: nuevas.length };
+}
+
+/* ═══ Articulación entre áreas (cascada) ═══
+   Por iniciativa: qué áreas participan, cuál lidera, con qué prioridad, quién y qué debe hacer cada una. Se guarda en
+   DiagnosticReport (kind articulacion, subject = id de la iniciativa). La registran quienes administran el catálogo y
+   el responsable del área dueña de la iniciativa. */
+export const getArticulacion = (iniId: string): Articulacion | null => { const g = informes().get(`articulacion|${iniId}`); return g ? (g.informe as unknown as Articulacion) : null; };
+export const getArticulaciones = (): Record<string, Articulacion> => Object.fromEntries([...informes().values()].filter((g) => g.kind === "articulacion").map((g) => [g.subject, g.informe as unknown as Articulacion]));
+export function saveArticulacion(user: SessionUser, iniId: string, input: unknown): { ok: true; articulacion: Articulacion } | { ok: false; status: number; error: string } {
+  const i = cat().initiatives.find((x) => x.id === iniId);
+  if (!i) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!can(user, "manage_catalog") && !(user.role === "RESPONSABLE" && user.responsibleId && user.responsibleId === i.ownerId)) return { ok: false, status: 403, error: "La articulación la registran el advisor, el líder o el responsable del área dueña de la iniciativa." };
+  const r = normalizarArticulacion(input, iniId, user.email, { areas: cat().responsibles.map((x) => x.id) });
+  if (!r.ok) return { ok: false, status: 422, error: r.error };
+  const saved: InformeGuardado = { kind: "articulacion", subject: iniId, inputHash: String(r.articulacion.areas.length), informe: r.articulacion as unknown as InformeIA, model: "manual", by: user.email, at: r.articulacion.at };
+  informes().set(`articulacion|${iniId}`, saved);
+  void persist("articulación de la iniciativa", async (db) => {
+    const companyId = cid();
+    const data = { inputHash: saved.inputHash, content: r.articulacion as unknown as object, model: "manual", by: user.email, at: new Date(saved.at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind: "articulacion", subject: iniId } }, update: data, create: { companyId, kind: "articulacion", subject: iniId, ...data } });
+  });
+  audit(user, "task", `articulacion:${iniId}`, `articulación de ${iniId}: ${r.articulacion.areas.map((a) => `${a.areaId}${a.rol === "LIDERA" ? " (lidera)" : ""}`).join(", ")}`);
+  return { ok: true, articulacion: r.articulacion };
 }
 
 

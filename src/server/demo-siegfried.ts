@@ -5,8 +5,8 @@
 // funciones del store que usa la plataforma, así el resultado es exactamente lo que vería un advisor.
 
 import base from "@/data/demo-siegfried/base.json";
-import { DEMO_SLUG, DEMO_NAME, OBJETIVOS_EXTRA, INDICADORES_FALTANTES, KRS, INICIATIVAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
-import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, upsertMeta, catalog, flushOrError } from "@/server/store";
+import { DEMO_SLUG, DEMO_NAME, OBJETIVOS_EXTRA, INDICADORES_FALTANTES, KRS, INICIATIVAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
+import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 import { huellaAlineacion, huellaIniciativas } from "@/server/huellas";
 import { PRACTICES } from "@/data/mapa";
@@ -97,12 +97,14 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
     let revisiones = 0;
     for (const [id, cp] of Object.entries(CAPACIDADES)) { const r = saveRevisionCap(advisor, id, { respuestas: cp.r, falta: cp.falta ?? {}, notas: notas[id] }); check(`capacidades ${id}`, r); if (r.ok) revisiones++; }
 
-    // 6. cascada trimestral 2027
+    // 6. articulación entre áreas de cada iniciativa y cascada trimestral 2027
+    let articulaciones = 0;
+    for (const [id, areas] of Object.entries(ARTICULACION)) { const r = saveArticulacion(advisor, id, { areas }); check(`articulación ${id}`, r); if (r.ok) articulaciones++; }
     let metas = 0;
     for (const m of METAS) { const r = upsertMeta(advisor, { ...m, estado: m.estado ?? "PLANEADA" } as never); check(`meta ${m.initiative} ${m.quarter}`, r); if (r.ok) metas++; }
 
     const cc = catalog();
-    return { responsables: cc.responsibles.length, objetivos: cc.objectives.length, resultadosClave: cc.kpis.length, iniciativas: cc.initiatives.length, autoevaluaciones: F1_DIRECTIVOS.length, calificaciones: evaluaciones, decisiones, revisionesCapacidades: revisiones, metasTrimestrales: metas };
+    return { responsables: cc.responsibles.length, objetivos: cc.objectives.length, resultadosClave: cc.kpis.length, iniciativas: cc.initiatives.length, autoevaluaciones: F1_DIRECTIVOS.length, calificaciones: evaluaciones, decisiones, revisionesCapacidades: revisiones, articulaciones, metasTrimestrales: metas };
   });
   const bad = await flushOrError(); if (bad) avisos.push(`escritura en la base: ${bad}`);
   return { ok: true, slug: DEMO_SLUG, resumen, avisos };

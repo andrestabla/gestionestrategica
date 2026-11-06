@@ -13,8 +13,11 @@ import { leversOf, horizonsOf } from "@/data/catalogo";
 import { vocabOf, yearOfFirstHorizon } from "@/lib/vocabulario";
 import { confirmar, avisar } from "@/components/feedback";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
-import { trimestresDe, trimestreLabel, cicloTrimestre, interdependencias, METAS_ESTADOS, HITO_ESTADOS, type MetaTrimestral, type Hito, type Dependencia, type MetaEstado } from "@/lib/cascada";
-import { Plus, Pencil, Trash2, Loader2, Save, Sparkles, CalendarRange, GitBranch, ListChecks, Network, RefreshCw, CheckCircle2, Flag } from "lucide-react";
+import { trimestresDe, trimestreLabel, cicloTrimestre, interdependencias, arbolCascada, METAS_ESTADOS, HITO_ESTADOS, type MetaTrimestral, type Hito, type Dependencia, type MetaEstado, type Articulacion, type AreaArticulada, type NodoIniciativa } from "@/lib/cascada";
+import { ArbolCascada } from "@/components/arbol-cascada";
+import { ArticulacionModal } from "@/components/articulacion-modal";
+import type { Decision } from "@/lib/priorizacion";
+import { Plus, Pencil, Trash2, Loader2, Save, Sparkles, CalendarRange, GitBranch, ListChecks, Network, RefreshCw, CheckCircle2, Flag, Users2 } from "lucide-react";
 
 const INPUT = "input !py-2 text-[12px]";
 const ESTADO_CLS: Record<MetaEstado, string> = { PLANEADA: "chip", EN_CURSO: "chip chip-cyan", CUMPLIDA: "chip chip-ok", PARCIAL: "chip chip-gold", NO_CUMPLIDA: "chip chip-bad" };
@@ -36,6 +39,12 @@ export default function CascadaPage() {
     return [...cnt.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? yearOfFirstHorizon(horizonsOf(cat.company));
   }, [cat]);
   const [metas, setMetas] = useState<MetaTrimestral[] | null>(null);
+  const [articulaciones, setArticulaciones] = useState<Record<string, Articulacion>>({});
+  const [decisions, setDecisions] = useState<Record<string, { decision?: Decision | null }>>({});
+  const [vista, setVista] = useState<"arbol" | "trimestre">("arbol");
+  const [filtroArea, setFiltroArea] = useState(user.role === "RESPONSABLE" && user.responsibleId ? user.responsibleId : "");
+  const [artIni, setArtIni] = useState<NodoIniciativa | null>(null);
+  const [articulando, setArticulando] = useState<{ n: number; total: number } | null>(null);
   const [year, setYear] = useState<number>(yearBase);
   const [quarter, setQuarter] = useState<string>(`${yearBase}-T1`);
   const [lever, setLever] = useState("");
@@ -43,8 +52,9 @@ export default function CascadaPage() {
   const [cierre, setCierre] = useState<MetaTrimestral | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(() => fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then((j) => setMetas(j ? j.metas : [])).catch(() => setMetas([])), []);
-  useEffect(() => { let alive = true; fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) setMetas(j ? j.metas : []); }).catch(() => { if (alive) setMetas([]); }); return () => { alive = false; }; }, []);
+  const aplicar = useCallback((j: { metas?: MetaTrimestral[]; articulaciones?: Record<string, Articulacion>; decisions?: Record<string, { decision?: Decision | null }> } | null) => { setMetas(j?.metas ?? []); if (j?.articulaciones) setArticulaciones(j.articulaciones); if (j?.decisions) setDecisions(j.decisions); }, []);
+  const load = useCallback(() => fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then(aplicar).catch(() => setMetas([])), [aplicar]);
+  useEffect(() => { let alive = true; fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) aplicar(j); }).catch(() => { if (alive) setMetas([]); }); return () => { alive = false; }; }, [aplicar]);
 
   const post = async (body: Record<string, unknown>, okMsg: string) => {
     setBusy(true);
@@ -52,7 +62,7 @@ export default function CascadaPage() {
       const res = await fetch("/api/td/cascada", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { avisar(j.error ?? "No se pudo guardar.", "bad"); return false; }
-      setMetas(j.metas ?? []); avisar(okMsg); return true;
+      setMetas(j.metas ?? []); if (j.articulaciones) setArticulaciones(j.articulaciones); avisar(okMsg); return true;
     } finally { setBusy(false); }
   };
   const puede = (areaId: string) => canAll || (user.role === "RESPONSABLE" && user.responsibleId === areaId);
@@ -68,8 +78,28 @@ export default function CascadaPage() {
 
   const nueva = (pre?: Partial<Draft>) => setEdit({ quarter, areaId: user.role === "RESPONSABLE" && user.responsibleId ? user.responsibleId : (areas[0]?.id ?? ""), lever: lever || levers[0]?.id || "", meta: "", criterio: "", hitos: [], depende: [], estado: "PLANEADA", ...pre });
   const borrar = async (m: MetaTrimestral) => { if (await confirmar(`¿Eliminar la meta «${m.meta.slice(0, 60)}» de ${areaName(m.areaId)}?`)) await post({ op: "delete", id: m.id }, "Meta eliminada."); };
+  const arbol = arbolCascada({ levers, objectives: cat.objectives, kpis: cat.kpis, initiatives: cat.initiatives, metas: metas ?? [], articulaciones, decisions, year, soloPortafolio: true });
+  const puedeArticular = (ini: NodoIniciativa) => canAll || (user.role === "RESPONSABLE" && user.responsibleId === ini.ownerId);
+  const guardarArticulacion = async (iniId: string, areas: AreaArticulada[]) => { if (await post({ op: "articulacion", iniId, data: { areas } }, "Articulación guardada.")) setArtIni(null); };
+  // una sola acción del advisor: el modelo articula todas las iniciativas del portafolio que aún no lo están
+  const articularTodas = async () => {
+    const ids = arbol.flatMap((p) => p.objetivos.flatMap((o) => o.krs.flatMap((k) => k.iniciativas.filter((i) => !i.articulada).map((i) => i.id))));
+    if (!ids.length) { avisar("Todas las iniciativas del portafolio ya están articuladas; edita cada una desde el árbol.", "warn"); return; }
+    if (!(await confirmar(`El modelo propondrá la articulación entre áreas de ${ids.length} iniciativa${ids.length === 1 ? "" : "s"} del portafolio (quién lidera, quién contribuye y qué hace cada una). Después puedes editar cada una. ¿Continuar?`))) return;
+    setArticulando({ n: 0, total: ids.length }); let hechas = 0; const errores: string[] = [];
+    try {
+      for (const iniId of ids) {
+        setArticulando({ n: hechas, total: ids.length });
+        const res = await fetch("/api/td/cascada/articular", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ iniId }) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) { errores.push(`${iniId}: ${j.error ?? "sin respuesta"}`); if (res.status === 403 || res.status === 503) break; continue; }
+        setArticulaciones((a) => ({ ...a, [iniId]: j.articulacion })); hechas++;
+      }
+    } finally { setArticulando(null); }
+    if (errores.length) avisar(`${hechas} de ${ids.length} articuladas. Falló: ${errores.slice(0, 2).join(" · ")}`, hechas ? "warn" : "bad"); else avisar(`Articulación propuesta para ${hechas} iniciativa${hechas === 1 ? "" : "s"}.`);
+  };
   const proponer = async () => {
-    if (!(await confirmar({ title: `Proponer la cascada ${year} desde el portafolio`, body: "Se crea una meta por cada iniciativa del año en su trimestre de inicio, en el área de su responsable y con su prioridad y objetivo. Las que ya existen no se duplican; después se ajusta cada una.", confirmLabel: "Proponer" }))) return;
+    if (!(await confirmar({ title: `Proponer la cascada ${year} desde el portafolio`, body: "Se crea una meta por cada iniciativa articulada del año y por cada área que participa, en su trimestre de inicio, con la contribución del área como meta. Las iniciativas sin articulación se omiten; las metas que ya existen no se duplican; después se ajusta cada una.", confirmLabel: "Proponer" }))) return;
     await post({ op: "proponer", year }, "Cascada propuesta desde el portafolio.");
   };
 
@@ -78,18 +108,32 @@ export default function CascadaPage() {
       <PageHeader kicker="F04 · Ejecución" title="Cascada y plan trimestral" desc={`Bajar las ${V.leversLow} de la empresa a metas trimestrales de cada área: qué aporta cada una, con qué criterio de éxito, con qué hitos, qué necesita de las demás y cómo cierra el trimestre.`}
         actions={<>
           <AyudaMetodologica tema="cascada" />
-          {canAll && <button onClick={proponer} disabled={busy} className="btn-ghost btn-sm text-[12px]"><Sparkles size={13} /> Proponer desde el portafolio</button>}
+          {canAll && <button onClick={() => void articularTodas()} disabled={busy || articulando !== null} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="El modelo propone, para cada iniciativa del portafolio sin articular, qué áreas participan y qué hace cada una">{articulando ? <><Loader2 size={13} className="animate-spin" /> Articulando {articulando.n + 1} de {articulando.total}…</> : <><Users2 size={13} /> Articular áreas con IA</>}</button>}
+          {canAll && <button onClick={proponer} disabled={busy} className="btn-ghost btn-sm text-[12px]"><Sparkles size={13} /> Proponer metas desde el portafolio</button>}
           {(canAll || user.role === "RESPONSABLE") && <button onClick={() => nueva()} disabled={busy} className="btn-primary btn-sm text-[12px]"><Plus size={13} /> Nueva meta</button>}
         </>} />
 
+      <div className="mb-3 inline-flex rounded-xl bg-surface-2 p-1 text-[12px] font-bold">
+        {([["arbol", "Árbol de la cascada"], ["trimestre", "Por trimestre"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setVista(v)} className={`rounded-lg px-3 py-1.5 transition-all ${vista === v ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>{l}</button>)}
+      </div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select value={year} onChange={(e) => { const y = Number(e.target.value); setYear(y); setQuarter(`${y}-T${quarter.slice(-1)}`); }} className="input w-auto !py-1.5 pr-7 !text-[12px]">{years.map((y) => <option key={y} value={y}>{y}</option>)}</select>
-        <div className="flex gap-1">{trimestres.map((q) => <button key={q} onClick={() => setQuarter(q)} className={`chip ${q === quarter ? "chip-cyan" : ""}`}>{trimestreLabel(q)}</button>)}</div>
+        {vista === "trimestre" && <div className="flex gap-1">{trimestres.map((q) => <button key={q} onClick={() => setQuarter(q)} className={`chip ${q === quarter ? "chip-cyan" : ""}`}>{trimestreLabel(q)}</button>)}</div>}
+        {vista === "arbol" && <select value={filtroArea} onChange={(e) => setFiltroArea(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto" aria-label="Filtrar por área"><option value="">Todas las áreas</option>{areas.map((a) => <option key={a.id} value={a.id}>{a.dependencia || a.cargo}</option>)}</select>}
         <select value={lever} onChange={(e) => setLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[320px]"><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
         <button onClick={load} title="Actualizar" className="btn-ghost btn-sm ml-auto text-[12px]"><RefreshCw size={12} /></button>
       </div>
 
-      {metas === null ? <SkeletonCards n={3} /> : (
+      {metas === null ? <SkeletonCards n={3} /> : vista === "arbol" ? (
+        <Card className="rise mb-5">
+          <CardHeader title={`Cascada ${year} · ${V.lever} → objetivo → resultado clave → iniciativa → área → persona o equipo → meta por trimestre`} sub="Cada iniciativa es trabajo articulado entre áreas: quién lidera, quién contribuye, en qué orden y qué debe hacer cada una; las metas del trimestre cuelgan de cada área" />
+          <div className="px-5 pb-5">
+            <ArbolCascada arbol={arbol} trimestres={trimestres} areaName={areaName} filtroArea={filtroArea} puedeArea={puede} puedeArticular={puedeArticular}
+              onNuevaMeta={(pre) => { const i = cat.initiatives.find((x) => x.id === pre.initiative); const o = cat.objectives.find((x) => x.id === i?.cmi); nueva({ ...pre, lever: o?.lever ?? lever ?? levers[0]?.id ?? "", objective: i?.cmi, kpi: i?.kpi || undefined }); }}
+              onEditarMeta={(m) => setEdit({ ...m })} onArticular={(ini) => setArtIni(ini)} />
+          </div>
+        </Card>
+      ) : (
         <>
           {/* Ciclo trimestral */}
           <Card className="rise mb-5">
@@ -222,6 +266,7 @@ export default function CascadaPage() {
         </>
       )}
 
+      {artIni && <ArticulacionModal ini={{ id: artIni.id, name: artIni.name, ownerId: artIni.ownerId }} areas={areas} people={cat.people} initial={articulaciones[artIni.id]?.areas} busy={busy} onClose={() => setArtIni(null)} onSave={(a) => guardarArticulacion(artIni.id, a)} />}
       {edit && <MetaModal draft={edit} areas={areas} levers={levers} cat={cat} canAll={canAll} busy={busy} onClose={() => setEdit(null)}
         onSave={async (d) => { if (await post({ op: "upsert", data: d }, d.id ? "Meta actualizada." : "Meta creada.")) setEdit(null); }} />}
       {cierre && <CierreModal meta={cierre} busy={busy} onClose={() => setCierre(null)} onSave={async (c, a) => { if (await post({ op: "cerrar", id: cierre.id, cumplimiento: c, aprendizaje: a }, "Trimestre cerrado para la meta.")) setCierre(null); }} />}
@@ -247,6 +292,7 @@ function MetaModal({ draft, areas, levers, cat, canAll, busy, onClose, onSave }:
         <Field label="Prioridad estratégica"><select value={d.lever} onChange={(e) => setD((x) => ({ ...x, lever: e.target.value, objective: undefined, kpi: undefined, initiative: undefined }))} className={INPUT}>{levers.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></Field>
         <Field label="Objetivo directivo"><select value={d.objective ?? ""} onChange={(e) => setD((x) => ({ ...x, objective: e.target.value || undefined, kpi: undefined, initiative: undefined }))} className={INPUT}><option value="">—</option>{objs.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}</select></Field>
         <Field label="Resultado clave"><select value={d.kpi ?? ""} onChange={(e) => set("kpi", e.target.value || undefined)} className={INPUT}><option value="">—</option>{kpis.map((k) => <option key={k.code} value={k.code}>{k.code} · {k.name}</option>)}</select></Field>
+        <Field label="Persona o equipo" help="Quién responde dentro del área." className="sm:col-span-3"><input value={d.persona ?? ""} onChange={(e) => set("persona", e.target.value || undefined)} placeholder="p. ej. Jefe de planeación · equipo de visita virtual" className={INPUT} /></Field>
         <Field label="Iniciativa del portafolio" className="sm:col-span-3"><select value={d.initiative ?? ""} onChange={(e) => set("initiative", e.target.value || undefined)} className={INPUT}><option value="">—</option>{inis.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></Field>
         <Field label="Meta del trimestre" help="Qué logra el área este trimestre, en una frase." className="sm:col-span-3"><AutoTextarea value={d.meta} onChange={(e) => set("meta", e.target.value)} className={INPUT} /></Field>
         <Field label="Criterio de éxito" help="Cómo sabremos que se cumplió: cifra, entregable o condición verificable." className="sm:col-span-3"><AutoTextarea value={d.criterio} onChange={(e) => set("criterio", e.target.value)} className={INPUT} /></Field>
