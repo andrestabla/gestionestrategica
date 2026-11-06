@@ -1251,7 +1251,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[12px] text-faint">se refresca cada 15 s</span>
       </div>
-      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
+      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       {!prio && <SkeletonCards n={4} className="mb-5" />}
       <div className={`mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4 ${prio ? "" : "hidden"}`}>

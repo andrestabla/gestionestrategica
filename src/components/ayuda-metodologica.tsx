@@ -6,7 +6,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Modal } from "@/components/ui";
 import { BookOpen, ArrowLeft, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
-import { CRITERIA, LEVEL_NAMES, TYPE_CRITERIA, consolidate, score, decisionCheck, DECISIONS, type Evaluation, type Level, type TypeMark } from "@/lib/priorizacion";
+import { CRITERIA, LEVEL_NAMES, TYPE_CRITERIA, DEFAULT_TYPE_RULE, consolidate, score, decisionCheck, typeOf, DECISIONS, type Evaluation, type Level, type TypeMark, type TypeRule } from "@/lib/priorizacion";
+import { EvaluacionFocal, type EvaluacionGuardable } from "@/components/evaluacion-focal";
 
 type Lamina = { t: string; k: string; body: ReactNode };
 const Bien = ({ children }: { children: ReactNode }) => <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12.5px] leading-snug" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-ok" /><span>{children}</span></div>;
@@ -234,52 +235,79 @@ const PRIORIDADES: Lamina[] = [
   </ul> },
 ];
 
-/** Simulación interactiva de una priorización: tres evaluadores califican una iniciativa; se ve el puntaje de cada uno,
-    el consolidado, el tipo por mayoría, las tres señales y qué decisiones de tiempo son admisibles. */
-function SimuladorPriorizacion() {
-  type Fila = { nombre: string; D: Level; E: Level; M: Level; L: Level; marcas: number };
-  const [filas, setFilas] = useState<Fila[]>([
-    { nombre: "Sponsor", D: 4, E: 3, M: 3, L: 3, marcas: 4 },
-    { nombre: "Directivo 2", D: 3, E: 3, M: 2, L: 2, marcas: 3 },
-    { nombre: "Directivo 3", D: 4, E: 2, M: 3, L: 3, marcas: 2 },
-  ]);
-  const set = (i: number, k: keyof Fila, v: number) => setFilas((f) => f.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
-  const evals: Evaluation[] = filas.map((f, i) => ({ iniId: "sim", by: `e${i}`, name: f.nombre, role: "DIRECTIVO", at: "", scores: { D: f.D, E: f.E, M: f.M, L: f.L }, type: Object.fromEntries(TYPE_CRITERIA.map((c, n) => [c.key, n < f.marcas ? "ESTRATEGICO" : "TACTICO"])) as Record<string, TypeMark>, notes: {} } as unknown as Evaluation));
-  const c = consolidate(evals);
-  const niveles: Level[] = [1, 2, 3, 4];
-  const Sel = ({ v, on }: { v: number; on: (n: number) => void }) => <select value={v} onChange={(e) => on(Number(e.target.value))} className="input !py-0.5 pr-6 !text-[12px]">{niveles.map((n) => <option key={n} value={n}>{n}</option>)}</select>;
+/** Simulación de una priorización con la misma experiencia del usuario: la iniciativa de ejemplo se califica en
+    modo focal, un criterio por pantalla (EvaluacionFocal); al registrar, se muestra el puntaje propio, el de otros
+    dos evaluadores fijos, el consolidado, las señales y las decisiones admisibles. */
+const SIM_INI = {
+  id: "SIM-01", name: "Modelo de cobertura omnicanal del panel médico AAA y AA",
+  objetivo: "Cubrir el 100 % del panel AAA y AA con una combinación de visita presencial, visita virtual y contenido científico digital, para subir la frecuencia de contacto sin aumentar la fuerza de ventas.",
+};
+const SIM_HECHOS: [string, string][] = [
+  ["Resultado clave que mueve", "Frecuencia de contacto con el panel AAA/AA: de 1,8 a 2,6 contactos por médico al mes a dic-2027 (línea base 2026: 1,8). La iniciativa es la principal palanca de ese KR."],
+  ["Cómo se comprobará", "Indicador: contactos efectivos por médico/mes en el CRM, cruzado con prescripción IQVIA del panel. Corte a jun-2027: si no llega a 2,2 contactos, se ajusta el mix o se detiene."],
+  ["Qué permanece y dónde se replica", "Deja el modelo de segmentación, los guiones y la plataforma de contenido; en 2028 se replica a la línea de sistema nervioso central con la misma estructura, sin contratar visitadores."],
+  ["Capacidad", "Responsable: dirección de marketing médico, con autoridad sobre el presupuesto. Presupuesto aprobado: $ 480 millones. Pendiente: la integración del CRM con la plataforma de contenido, con proveedor contratado y entrega a mar-2027."],
+];
+const SIM_OTROS: { nombre: string; scores: Record<"D" | "E" | "M" | "L", Level>; marcas: number; sustento: string }[] = [
+  { nombre: "Sponsor de la prioridad", scores: { D: 4, E: 3, M: 3, L: 3 }, marcas: 4, sustento: "Es la palanca principal del KR de frecuencia; tiene indicador, método y corte; replicable a SNC; queda la integración del CRM con cierre definido." },
+  { nombre: "Directivo de operaciones", scores: { D: 3, E: 3, M: 2, L: 2 }, marcas: 3, sustento: "Aporte directo, pero la réplica a SNC no está demostrada y la integración del CRM es una dependencia crítica sin holgura." },
+];
+function SimuladorPriorizacion({ rule = DEFAULT_TYPE_RULE }: { rule?: TypeRule }) {
+  const [evaluando, setEvaluando] = useState(false);
+  const [mia, setMia] = useState<EvaluacionGuardable | null>(null);
+  const marcasDe = (n: number) => Object.fromEntries(rule.criteria.map((c, i) => [c.key, i < n ? "ESTRATEGICO" : "TACTICO"])) as Record<string, TypeMark>;
+  const evals: Evaluation[] = [
+    ...(mia ? [{ iniId: SIM_INI.id, by: "tu", name: "Tú", role: "DIRECTIVO", at: "", scores: mia.scores, type: mia.type, notes: mia.notes } as unknown as Evaluation] : []),
+    ...SIM_OTROS.map((o, i) => ({ iniId: SIM_INI.id, by: `e${i}`, name: o.nombre, role: "DIRECTIVO", at: "", scores: o.scores, type: marcasDe(o.marcas), notes: {} } as unknown as Evaluation)),
+  ];
+  const c = consolidate(evals, rule);
+  const tipoDe = (ev: Evaluation) => (typeOf(ev.type, rule, ev.scores) === "ESTRATEGICO" ? "estratégica" : "táctica");
   return (
     <div className="space-y-3">
-      <p className="text-[12.5px] leading-relaxed text-muted">Cambia las calificaciones y mira cómo se mueven el puntaje, el consolidado, las señales y las decisiones admisibles. Iniciativa de ejemplo: «Modelo de cobertura omnicanal del panel médico AAA y AA», vinculada al resultado clave de frecuencia de visita.</p>
-      <div className="overflow-x-auto rounded-xl border border-line">
-        <table className="w-full text-[12px]">
-          <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Evaluador</th>{CRITERIA.map((k) => <th key={k.key} className="px-2 py-2" title={k.name}>{k.short} · {k.weight} %</th>)}<th className="px-2 py-2">Marcas estratégicas (de 4)</th><th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Tipo</th></tr></thead>
-          <tbody>
-            {filas.map((f, i) => (
-              <tr key={i} className="border-t border-line">
-                <td className="px-3 py-1.5 font-semibold text-ink">{f.nombre}</td>
-                {(["D", "E", "M", "L"] as const).map((k) => <td key={k} className="px-2 py-1.5"><Sel v={f[k]} on={(n) => set(i, k, n)} /></td>)}
-                <td className="px-2 py-1.5"><select value={f.marcas} onChange={(e) => set(i, "marcas", Number(e.target.value))} className="input !py-0.5 pr-6 !text-[12px]">{[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}</select></td>
-                <td className="num px-2 py-1.5 text-right font-extrabold text-ink">{score(f)}</td>
-                <td className="px-2 py-1.5 text-ink-soft">{f.marcas >= 3 ? "Estratégica" : "Táctica"}</td>
-              </tr>
+      <p className="text-[12.5px] leading-relaxed text-muted">La simulación usa exactamente la misma pantalla con la que calificarás las iniciativas reales: a pantalla completa, un criterio por paso, con la pregunta y la descripción de cada nivel a la vista. Lee la ficha de la iniciativa de ejemplo, califícala y compara tu valoración con la de otros dos evaluadores.</p>
+      <div className="panel px-4 py-3.5">
+        <div className="num text-[11px] font-bold uppercase tracking-[0.14em] text-faint">{SIM_INI.id} · iniciativa de ejemplo</div>
+        <div className="mt-0.5 text-[15px] font-extrabold leading-snug text-ink">{SIM_INI.name}</div>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft">{SIM_INI.objetivo}</p>
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+          {SIM_HECHOS.map(([a, b]) => <div key={a} className="rounded-xl bg-surface-2 px-3 py-2"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12px] leading-snug text-ink">{b}</div></div>)}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setEvaluando(true)} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]">{mia ? "Volver a calificar" : "Calificar esta iniciativa"} · {rule.criteria.length + CRITERIA.length} criterios</button>
+          <span className="text-[12px] text-muted">{mia ? "Tu calificación es de prueba: no se guarda en la plataforma." : "Nada de lo que marques aquí se guarda: es un ensayo."}</span>
+        </div>
+      </div>
+      {evaluando && (
+        <EvaluacionFocal key={mia ? "otra" : "primera"} ini={{ ...SIM_INI, detalle: <ul className="space-y-1">{SIM_HECHOS.map(([a, b]) => <li key={a}><b className="text-ink">{a}:</b> {b}</li>)}</ul> }} rule={rule} initial={mia ? ({ scores: mia.scores, type: mia.type, notes: mia.notes } as unknown as Evaluation) : undefined} saving={false} titulo="Simulación · ayuda metodológica F16"
+          onSave={async (ev) => { setMia(ev); setEvaluando(false); return true; }} onExit={() => setEvaluando(false)} />
+      )}
+      {mia && (
+        <>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {evals.map((ev, i) => (
+              <div key={i} className={`rounded-xl px-3 py-2.5 ${i === 0 ? "bg-cyan-wash" : "bg-surface-2"}`}>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-faint">{ev.name}</div>
+                <div className="num text-[12px] text-ink">{(["D", "E", "M", "L"] as const).map((k) => `${k} ${ev.scores[k]}`).join(" · ")}</div>
+                <div className="num text-[12px] text-muted">puntaje <b className="text-ink">{score(ev.scores)}</b> · {tipoDe(ev)}</div>
+                {i > 0 && <div className="mt-1 text-[11.5px] leading-snug text-muted">{SIM_OTROS[i - 1].sustento}</div>}
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Consolidado</div><div className="num text-[13px] text-ink">Promedios I {c.avg.D} · E {c.avg.E} · S {c.avg.M} · C {c.avg.L}</div><div className="num text-[12px] text-muted">Redondeo {c.rounded.D}/{c.rounded.E}/{c.rounded.M}/{c.rounded.L} → puntaje <b className="text-ink">{c.score}</b></div><div className="text-[12px] text-muted">Tipo por mayoría: <b className="text-ink">{c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica"}</b> ({c.strategicVotes} de {c.n})</div></div>
-        <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Señales</div>
-          <div className="mt-1 flex flex-wrap gap-1"><span className={`chip !py-0 text-[11px] ${c.eligible ? "chip-ok" : "chip-bad"}`}>{c.eligible ? "elegible (impacto ≥ 3)" : "no elegible (impacto < 3)"}</span><span className={`chip !py-0 text-[11px] ${c.capacityFirst ? "chip-warn" : "chip-ok"}`}>{c.capacityFirst ? "capacidad primero (C ≤ 2)" : "capacidad resuelta"}</span><span className={`chip !py-0 text-[11px] ${c.lowConsensus ? "chip-bad" : "chip-ok"}`}>{c.lowConsensus ? `bajo consenso (±${c.spread})` : `consenso (±${c.spread})`}</span></div></div>
-        <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Decisiones admisibles</div>
-          <ul className="mt-1 space-y-0.5 text-[12px]">{DECISIONS.map((d) => { const r = decisionCheck(d.key, c, d.key === "RENUNCIAR" ? "motivo registrado" : undefined); return <li key={d.key} className="flex items-start gap-1.5"><span className={r.ok ? "text-ok" : "text-bad"}>{r.ok ? "✓" : "✗"}</span><span className="text-ink">{d.label}{!r.ok && <span className="block text-[11px] leading-snug text-muted">{r.reason}</span>}</span></li>; })}</ul></div>
-      </div>
-      <p className="text-[12px] leading-relaxed text-muted">Orden en el horizonte: entre las estratégicas elegibles, de mayor a menor puntaje; empates por impacto y luego por evidencia. Las tácticas se transfieren al área; las no elegibles y las sin evaluar quedan fuera del orden.</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Consolidado ({c.n} evaluadores)</div><div className="num text-[13px] text-ink">Promedios I {c.avg.D} · E {c.avg.E} · S {c.avg.M} · C {c.avg.L}</div><div className="num text-[12px] text-muted">Redondeo {c.rounded.D}/{c.rounded.E}/{c.rounded.M}/{c.rounded.L} → puntaje <b className="text-ink">{c.score}</b></div><div className="text-[12px] text-muted">Tipo por mayoría: <b className="text-ink">{c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica"}</b> ({c.strategicVotes} de {c.n})</div></div>
+            <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Señales</div>
+              <div className="mt-1 flex flex-wrap gap-1"><span className={`chip !py-0 text-[11px] ${c.eligible ? "chip-ok" : "chip-bad"}`}>{c.eligible ? "elegible (impacto ≥ 3)" : "no elegible (impacto < 3)"}</span><span className={`chip !py-0 text-[11px] ${c.capacityFirst ? "chip-warn" : "chip-ok"}`}>{c.capacityFirst ? "capacidad primero (C ≤ 2)" : "capacidad resuelta"}</span><span className={`chip !py-0 text-[11px] ${c.lowConsensus ? "chip-bad" : "chip-ok"}`}>{c.lowConsensus ? `bajo consenso (±${c.spread})` : `consenso (±${c.spread})`}</span></div></div>
+            <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Decisiones admisibles</div>
+              <ul className="mt-1 space-y-0.5 text-[12px]">{DECISIONS.map((d) => { const r = decisionCheck(d.key, c, d.key === "RENUNCIAR" ? "motivo registrado" : undefined); return <li key={d.key} className="flex items-start gap-1.5"><span className={r.ok ? "text-ok" : "text-bad"}>{r.ok ? "✓" : "✗"}</span><span className="text-ink">{d.label}{!r.ok && <span className="block text-[11px] leading-snug text-muted">{r.reason}</span>}</span></li>; })}</ul></div>
+          </div>
+          <p className="text-[12px] leading-relaxed text-muted">Así se vería en Priorización: el consolidado se recalcula con cada calificación registrada; entre las estratégicas elegibles del horizonte se ordena de mayor a menor puntaje, con empates por impacto y luego por evidencia. {c.lowConsensus ? "Hay bajo consenso: en la sesión real conviene conversar el criterio con mayor diferencia antes de decidir." : "Hay consenso: la gerencia o el advisor puede registrar la decisión de tiempo."}</p>
+        </>
+      )}
     </div>
   );
 }
 
-const PRIORIZACION: Lamina[] = [
+const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
   { k: "Qué es", t: "Convertir el inventario de iniciativas en un portafolio ejecutable", body: <>
     <p className="text-[14px] leading-relaxed text-ink">La <b>priorización de iniciativas</b> (F16) separa tres cosas que suelen mezclarse: <b>cuánto vale</b> una iniciativa, <b>de qué tipo</b> es y <b>cuándo</b> se hace. Solo entran las que mueven un resultado clave; se califican con cuatro criterios de peso fijo, se consolidan en grupo y se ordenan por horizonte antes de decidir su tiempo.</p>
     <p className="mt-3 text-[13px] leading-relaxed text-muted">Resultado: pocas iniciativas, con dueño y con una decisión de tiempo. Lo táctico no se desecha: se transfiere al área con responsable nombrado.</p>
@@ -312,7 +340,7 @@ const PRIORIZACION: Lamina[] = [
     <div className="grid gap-2 sm:grid-cols-2">{DECISIONS.map((d) => <div key={d.key} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold text-ink">{d.label}</div><div className="mt-0.5 text-[12px] leading-snug text-ink-soft">{d.rule}</div></div>)}</div>
     <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Implementar exige elegible y capacidad resuelta; preparar o validar exige al menos una evaluación; renunciar exige motivo. Se registra autor y fecha; una iniciativa puede cambiar de decisión, pero su calificación histórica no se reescribe.</p>
   </> },
-  { k: "Simulación", t: "Simula una priorización", body: <SimuladorPriorizacion /> },
+  { k: "Simulación", t: "Simula una priorización", body: <SimuladorPriorizacion rule={rule} /> },
   { k: "En la plataforma", t: "Cómo se hace aquí", body: <ul className="space-y-2">
     <Li>El advisor abre la calificación de una prioridad, o de todas a la vez; mientras está abierta, cada miembro del comité califica una sola vez cada iniciativa y el ranking se actualiza en vivo.</Li>
     <Li>Al cerrar, el advisor revisa el orden (puede ajustarlo a mano), propone el trimestre de inicio y guarda; la dirección ratifica.</Li>
@@ -321,10 +349,10 @@ const PRIORIZACION: Lamina[] = [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" }) {
+export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion"; rule?: TypeRule }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? PRIORIZACION : KR;
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : KR;
   const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
