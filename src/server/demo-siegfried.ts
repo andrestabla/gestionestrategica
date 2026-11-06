@@ -5,7 +5,7 @@
 // funciones del store que usa la plataforma, así el resultado es exactamente lo que vería un advisor.
 
 import base from "@/data/demo-siegfried/base.json";
-import { DEMO_SLUG, DEMO_NAME, OBJETIVOS_EXTRA, INDICADORES_FALTANTES, KRS, INICIATIVAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
+import { DEMO_SLUG, DEMO_NAME, DEMO_SHORT, LEVERS, OBJETIVOS, KRS, INICIATIVAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
 import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 import { huellaAlineacion, huellaIniciativas } from "@/server/huellas";
@@ -29,9 +29,9 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
   }
   const co = base.company as Record<string, unknown>;
   const created = await createCompany(actor, {
-    name: DEMO_NAME, slug: DEMO_SLUG, shortName: "Test Siegfried", city: String(co.city ?? ""), department: String(co.department ?? ""), sector: String(co.sector ?? ""), size: String(co.size ?? ""),
+    name: DEMO_NAME, slug: DEMO_SLUG, shortName: DEMO_SHORT, city: String(co.city ?? ""), department: String(co.department ?? ""), sector: String(co.sector ?? ""), size: String(co.size ?? ""),
     sectorKey: String(co.sectorKey ?? ""), ciiu: String(co.ciiu ?? ""), country: "CO", currency: "COP", template: "vacia",
-    horizons: co.horizons, levers: co.levers, typeRule: "cresio", mode: "acompanamiento", instruments: ["f1"],
+    horizons: co.horizons, levers: LEVERS, typeRule: "cresio", mode: "acompanamiento", instruments: ["f1"],
   } as Parameters<typeof createCompany>[1]);
   if (!created.ok) return created;
 
@@ -41,7 +41,8 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
   const resumen = runWithTenant(DEMO_SLUG, () => {
     // 1. catálogo: responsables, objetivos (línea base 2026 y 2027), resultados clave e iniciativas completas
     for (const r of base.responsibles) check(`responsable ${r.id}`, upsertResponsible(advisor, r as never));
-    const objetivos = [...base.objectives.map((o) => ({ ...o, indicator: (o as { indicator?: string }).indicator || INDICADORES_FALTANTES[o.id] || "" })), ...OBJETIVOS_EXTRA];
+    // objetivos: los resultados 2026 del catálogo real como línea base y los objetivos 2027 ideales de la capa demo
+    const objetivos = [...base.objectives.filter((o) => o.horizon === "LB"), ...OBJETIVOS];
     for (const o of objetivos) check(`objetivo ${o.id}`, upsertObjective(advisor, { ...(o as object), kpis: [] } as never));
     for (const k of base.kpis) check(`KPI ${k.code}`, upsertKpi(advisor, k as never));
     for (const k of KRS) check(`KR ${k.code}`, upsertKpi(advisor, { ...k, line: 3, series: [] } as never));
@@ -62,7 +63,7 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
     // 3. validaciones con IA en verde (objetivos e iniciativas del horizonte 2027)
     const c = catalog();
     const leverName = (id?: string) => leversOf(c.company).find((l) => l.id === id)?.name ?? "";
-    const alineacion: AlineacionIA = { horizon: "H1", resumen: "Los veinte objetivos directivos 2027 están alineados con las siete prioridades: cada uno tiene verbo de logro, resultado, indicador impulsor y plazo, sin duplicidades ni enunciados que sean resultados clave o iniciativas.",
+    const alineacion: AlineacionIA = { horizon: "H1", resumen: "Los dieciséis objetivos directivos 2027 están alineados con las siete prioridades (de dos a tres por prioridad): cada uno tiene verbo de logro, resultado, indicador impulsor declarado y el plazo del horizonte, sin cifras de meta, sin duplicidades y sin enunciados que sean resultados clave o iniciativas.",
       items: c.objectives.filter((o) => o.horizon === "H1").map((o) => ({ id: o.id, color: "verde" as const, justificacion: JUSTIFICACION_OBJETIVO(leverName(o.lever)), recomendaciones: [], naturaleza: "objetivo" as const, duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: [] })) };
     check("validación de objetivos", saveAlineacion(advisor, "H1", huellaAlineacion("H1"), alineacion, "demo", "alineacion"));
     const validacionIni: ValidacionIni = { horizon: "H1", resumen: "Las veintidós iniciativas cumplen los ocho elementos: nombre como entrega, qué logran, responsable, inicio y fin, capacidad que instalan, presupuesto, resultado clave que mueven y alcance acotado.",
@@ -89,13 +90,8 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
 
     // 5. capacidades para ejecutar: checklist personalizado en una iniciativa y revisión de todas las decididas
     for (const [id, ch] of Object.entries(CHECKLISTS_PERSONALIZADOS)) check(`checklist ${id}`, saveChecklistCap(advisor, id, ch.frentes, ch.resumen, "demo"));
-    const notas: Record<string, string> = {
-      i13: "Falta incorporar en el CRM el registro del contacto digital por médico: hoy el consumo de contenido se carga a mano cada mes. Mientras no esté la integración, el KR de contactos efectivos se mide con dato parcial.",
-      i9: "La transferencia tecnológica depende del proveedor del equipo para el entrenamiento; conviene fijar en el contrato las fechas de capacitación antes del arranque.",
-      i12: "Recomiendo no contratar el equipo completo hasta tener el proceso de televenta probado en el piloto de 300 droguerías.",
-    };
     let revisiones = 0;
-    for (const [id, cp] of Object.entries(CAPACIDADES)) { const r = saveRevisionCap(advisor, id, { respuestas: cp.r, falta: cp.falta ?? {}, notas: notas[id] }); check(`capacidades ${id}`, r); if (r.ok) revisiones++; }
+    for (const [id, cp] of Object.entries(CAPACIDADES)) { const r = saveRevisionCap(advisor, id, { respuestas: cp.r, falta: cp.falta ?? {}, notas: cp.notas }); check(`capacidades ${id}`, r); if (r.ok) revisiones++; }
 
     // 6. articulación entre áreas de cada iniciativa y cascada trimestral 2027
     let articulaciones = 0;

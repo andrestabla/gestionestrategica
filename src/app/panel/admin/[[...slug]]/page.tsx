@@ -206,8 +206,8 @@ function EmpresasTab() {
   }, []);
   useEffect(() => { refetch(); }, [refetch]);
   const crearDemo = async () => {
-    const existe = companies.some((c) => c.slug === "test-siegfried");
-    if (!(await confirmar(existe ? "La instancia TEST SIEGFRIED ya existe. ¿Eliminarla y crearla de nuevo con el recorrido completo?" : "Se crea la instancia TEST SIEGFRIED (modo acompañamiento, solo autoevaluación directiva) con prioridades, objetivos 2027, resultados clave, iniciativas, validaciones, calificaciones, decisiones, capacidades y cascada ya hechos. ¿Continuar?"))) return;
+    const existe = companies.some((c) => c.slug === "demo-siegfried");
+    if (!(await confirmar(existe ? "La instancia DEMO SIEGFRIED ya existe. ¿Eliminarla y crearla de nuevo con el recorrido ideal?" : "Se crea la instancia DEMO SIEGFRIED (modo acompañamiento, solo autoevaluación directiva) con el recorrido ideal del método: prioridades con resultado del ciclo y renuncia, objetivos 2027, resultados clave, iniciativas, validaciones, calificaciones, decisiones, capacidades, articulación y cascada. ¿Continuar?"))) return;
     setSaving(true); setError(null);
     try {
       const res = await fetch("/api/td/empresas/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recrear: existe }) });
@@ -238,7 +238,7 @@ function EmpresasTab() {
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
             right={<span className="inline-flex flex-wrap gap-2">
-              <button type="button" disabled={saving} onClick={() => void crearDemo()} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="Crea la instancia TEST SIEGFRIED con todo el recorrido del método ya hecho, para mostrar al advisor lo que se espera"><Sparkles size={12} /> {companies.some((c) => c.slug === "test-siegfried") ? "Recrear demo TEST SIEGFRIED" : "Crear demo TEST SIEGFRIED"}</button>
+              <button type="button" disabled={saving} onClick={() => void crearDemo()} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="Crea la instancia DEMO SIEGFRIED con el recorrido ideal del método, de las prioridades a la cascada trimestral, para mostrar al advisor y al comité lo que se espera"><Sparkles size={12} /> {companies.some((c) => c.slug === "demo-siegfried") ? "Recrear DEMO SIEGFRIED" : "Crear DEMO SIEGFRIED"}</button>
               <button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm text-[12px]"><Building2 size={12} /> Nueva empresa</button>
             </span>} />
           <div className="px-2 pb-2">
