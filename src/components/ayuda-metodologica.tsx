@@ -141,11 +141,50 @@ const INICIATIVAS: Lamina[] = [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" | "iniciativas" }) {
+const PRIORIDADES: Lamina[] = [
+  { k: "Qué es", t: "Una prioridad estratégica es una apuesta del ciclo, no un área", body: <>
+    <p className="text-[14px] leading-relaxed text-ink">Una <b>prioridad estratégica</b> es una de las pocas apuestas (de 3 a 5) en las que la empresa concentra su esfuerzo durante el ciclo de 3 a 5 años para avanzar hacia su <b>meta ambiciosa</b>. Sale de la estrategia en una página: propósito, visión de futuro y meta con métrica, cifra y fecha; dónde jugamos y dónde no; promesas diferenciadoras.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">En el marco 4Shine Empresas pertenece a la capacidad de <b>Dirección</b> (F01 · Estrategia en una página): cada prioridad tiene dueño, resultado esperado y nombra una <b>renuncia</b>, lo que la empresa deja de hacer para sostenerla.</p>
+  </> },
+  { k: "Función", t: "Para qué sirve", body: <ul className="space-y-2">
+    <Li><b>Concentra:</b> pocas apuestas con recursos reales, en lugar de una lista de deseos por área.</Li>
+    <Li><b>Es el hilo conductor:</b> cada objetivo directivo, resultado clave, iniciativa y meta trimestral cuelga de una prioridad; nada entra al portafolio sin ella.</Li>
+    <Li><b>Hace explícitas las renuncias:</b> iniciativas eliminadas, aplazadas o no iniciadas, comunicadas al equipo.</Li>
+    <Li><b>Ordena la rendición de cuentas:</b> un sponsor directivo responde por cada prioridad en el ritmo trimestral.</Li>
+  </ul> },
+  { k: "Estructura", t: "Qué debe tener", body: <>
+    <div className="grid gap-2 sm:grid-cols-2">
+      {[["Nombre", "corto y reconocible, con intención: «Excelencia comercial», «Disciplina operacional»; no el nombre de un área."], ["Resultado esperado del ciclo", "qué queda logrado al cierre del ciclo, conectado con la meta ambiciosa."], ["Indicador que la mide", "de 1 a 3 medidas del avance de la apuesta; de ellas se derivan los indicadores impulsores de los objetivos."], ["Sponsor", "un directivo que responde por ella (no el gerente general para todas)."], ["Descripción o tesis", "por qué esta apuesta: dónde juega la empresa, qué promesa diferenciadora sostiene."], ["Renuncia", "lo que se deja de hacer para sostenerla: segmentos, proyectos o actividades que salen."]].map(([a, b]) => (
+        <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
+      ))}
+    </div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Bien>«Excelencia comercial: consolidar la cobertura y la codificación en los canales prioritarios, medida por participación de mercado y rotación en retail; sponsor Comercial; renunciamos a atender canales de bajo volumen sin plan.»</Bien>
+      <Mal>«Finanzas.» (es un área, no una apuesta: no dice qué cambia, con qué medida, ni a qué se renuncia)</Mal>
+    </div>
+  </> },
+  { k: "Tips", t: "Para definirlas bien", body: <ul className="space-y-2">
+    <Li><b>De 3 a 5:</b> más prioridades diluyen el foco; si todo es prioritario, nada lo es.</Li>
+    <Li><b>Apuestas, no áreas:</b> si la lista coincide con el organigrama, no hay estrategia sino presupuesto.</Li>
+    <Li><b>Conectadas con la meta y con el «dónde jugamos»:</b> cada una explica cómo acerca la meta ambiciosa en el mercado y el cliente elegidos.</Li>
+    <Li><b>Cada una nombra una renuncia concreta:</b> no genérica («ser más eficientes») sino verificable («salimos del canal X»).</Li>
+    <Li><b>Sin solapamientos:</b> dos prioridades que persiguen el mismo resultado se funden o se diferencian por alcance.</Li>
+    <Li><b>Con el lenguaje del negocio:</b> mercado, canal, producto, planta, regulación.</Li>
+    <Li><b>Se renuevan en cada ciclo</b> y se revisan una vez al año con acta: asistentes, cambios acordados, versión.</Li>
+  </ul> },
+  { k: "En la plataforma", t: "Cómo se usan aquí", body: <ul className="space-y-2">
+    <Li>Las prioridades validadas por la dirección son el marco fijo: la validación de alineación evalúa los objetivos frente a ellas y no las cuestiona.</Li>
+    <Li>Una prioridad cargada como <b>propuesta</b> (pendiente de aprobación) se muestra con su chip; sus objetivos se validan igual, señalando que dependen de esa aprobación.</Li>
+    <Li>El sponsor de la prioridad es el dueño por defecto de sus resultados clave e iniciativas y abre la sesión de priorización de su prioridad.</Li>
+    <Li>Objetivos directivos, resultados clave, iniciativas, priorización, portafolio y cascada trimestral se leen por prioridad: es el eje de toda la cadena.</Li>
+  </ul> },
+];
+
+export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : KR;
-  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : "Resultados clave · ayuda metodológica";
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : KR;
+  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setI((x) => Math.min(laminas.length - 1, x + 1)); if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1)); };

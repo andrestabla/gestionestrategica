@@ -183,7 +183,10 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <p className="text-[12.5px] text-muted">Las {V.leversLow} ordenan la estrategia: cada objetivo, resultado clave e iniciativa cuelga de una. Máximo ocho; el orden es la jerarquía acordada por la dirección.</p>
-        {canEdit && <button onClick={() => setOpen(true)} className="btn-primary ml-auto btn-sm text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          {isAcompanamiento(cat.company) && <AyudaMetodologica tema="prioridades" />}
+          {canEdit && <button onClick={() => setOpen(true)} className="btn-primary btn-sm text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
+        </span>
       </div>
       {levers.length === 0 ? (
         <Card className="rise p-6"><EmptyNote>Esta empresa aún no define sus {V.leversLow}. {canEdit ? "Defínelas aquí: nombre, sponsor, indicador y descripción." : "Las define el advisor o la gerencia."}</EmptyNote></Card>

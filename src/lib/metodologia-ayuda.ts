@@ -31,3 +31,8 @@ QUÉ ES: la medida cuantitativa que indica si el objetivo directivo se está log
 ESTRUCTURA: nombre con cifra («OTIF ≥ 95 % al cierre de 2027»), línea base (valor con que cerró el año anterior, con fecha de corte), meta (valor a alcanzar, unidad y sentido), plazo, dueño, definición y fórmula con fuente.
 TIPS: resultado, no tarea; ambicioso y posible; medible con datos que existen; pocos y complementarios; evita métricas de vanidad; cada resultado clave con al menos una iniciativa.
 ERRORES: sin línea base; meta sin plazo; dueño colectivo; KR que repite el objetivo; más de cinco.`;
+
+export const AYUDA_PRIORIDADES = `AYUDA METODOLÓGICA · PRIORIDADES ESTRATÉGICAS (F01 · Estrategia en una página, marco 4Shine Empresas)
+QUÉ ES: una de las 3 a 5 apuestas del ciclo (3 a 5 años) en las que la empresa concentra su esfuerzo para avanzar hacia la meta ambiciosa; sale de la estrategia en una página (propósito, visión, meta con métrica, cifra y fecha; dónde jugamos y dónde no; promesas diferenciadoras). Cada prioridad tiene dueño, resultado esperado y nombra una renuncia.
+ESTRUCTURA: nombre corto con intención (apuesta, no área); resultado esperado del ciclo; indicador que la mide (1 a 3); sponsor directivo; descripción o tesis (dónde juega, qué promesa sostiene); renuncia concreta.
+TIPS: de 3 a 5; apuestas, no áreas; conectadas con la meta y el «dónde jugamos»; renuncia verificable; sin solapamientos; lenguaje del negocio; se renuevan en cada ciclo y se revisan una vez al año con acta.`;
