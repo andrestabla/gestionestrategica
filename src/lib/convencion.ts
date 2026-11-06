@@ -157,7 +157,7 @@ const csvCell = (v: unknown) => { const s = v === null || v === undefined ? "" :
 
 /** Portafolio en CSV (separador «;» para Excel en español). */
 export function portfolioCsv(rows: PortfolioRow[]): string {
-  const head = ["id", "iniciativa", "palanca", "responsable", "horizonte", "horizonte sugerido", "evaluadores", "D", "E", "M", "L", "puntaje", "tipo", "elegible", "capacidad primero", "decisión", "motivo"];
+  const head = ["id", "iniciativa", "prioridad", "responsable", "horizonte", "horizonte sugerido", "evaluadores", "D", "E", "M", "L", "puntaje", "tipo", "elegible", "capacidad primero", "decisión", "motivo"];
   const lines = rows.map((r) => [
     r.id, r.name, r.lever ?? "", r.owner ?? "", r.horizon, r.suggested ?? "", r.c.n, r.c.n ? r.c.avg.D : "", r.c.n ? r.c.avg.E : "", r.c.n ? r.c.avg.M : "", r.c.n ? r.c.avg.L : "",
     r.c.n ? r.c.score : "", r.c.type ?? "", r.c.n ? (r.c.eligible ? "sí" : "no") : "", r.c.n ? (r.c.capacityFirst ? "sí" : "no") : "", r.decision ?? "pendiente", r.rationale ?? "",

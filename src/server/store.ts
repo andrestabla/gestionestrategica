@@ -601,7 +601,7 @@ export function parseLevers(input: unknown): { ok: true; levers?: Lever[] } | { 
     const name = str(raw?.name, 80);
     if (!id) return { ok: false, error: "Cada palanca necesita un identificador (p. ej. MS)." };
     if (name.length < 3) return { ok: false, error: `La palanca ${id} necesita un nombre.` };
-    if (out.some((l) => l.id === id)) return { ok: false, error: `Palanca repetida: ${id}.` };
+    if (out.some((l) => l.id === id)) return { ok: false, error: `Prioridad repetida: ${id}.` };
     const ownerId = str(raw?.ownerId, 10) || undefined;
     const indicator = str(raw?.indicator, 300) || undefined;
     const desc = str(raw?.desc, 600) || undefined;
