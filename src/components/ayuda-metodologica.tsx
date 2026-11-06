@@ -9,6 +9,7 @@ import { BookOpen, ArrowLeft, ArrowRight, CheckCircle2, XCircle } from "lucide-r
 import { CRITERIA, LEVEL_NAMES, TYPE_CRITERIA, DEFAULT_TYPE_RULE, consolidate, score, decisionCheck, typeOf, DECISIONS, type Evaluation, type Level, type TypeMark, type TypeRule } from "@/lib/priorizacion";
 import { EvaluacionFocal, type EvaluacionGuardable } from "@/components/evaluacion-focal";
 import { FRENTES, NIVEL_CAP, SEMAFORO } from "@/lib/capacidades";
+import { ROL_AREA } from "@/lib/cascada";
 
 type Lamina = { t: string; k: string; body: ReactNode };
 const Bien = ({ children }: { children: ReactNode }) => <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12.5px] leading-snug" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-ok" /><span>{children}</span></div>;
@@ -141,6 +142,50 @@ const INICIATIVAS: Lamina[] = [
     <Li>Iniciativa paraguas que agrupa cinco proyectos: no se puede priorizar ni cerrar.</Li>
     <Li>Más de dos iniciativas por KR: el esfuerzo se dispersa.</Li>
     <Li>Sin trimestre de inicio o de fin: no cabe en la cascada trimestral.</Li>
+  </ul> },
+];
+
+const PORTAFOLIO: Lamina[] = [
+  { k: "Qué es", t: "El portafolio es lo que la empresa decidió hacer, no lo que se le ocurrió", body: <>
+    <p className="text-[14px] leading-relaxed text-ink">El <b>portafolio</b> es el conjunto de iniciativas que salieron de la priorización con una <b>decisión de tiempo</b>: ahora implementar, ahora preparar o validar, luego (backlog) o renunciar. Es el cierre de la cadena Dirección → Ejecución: de las prioridades a los objetivos, de los objetivos a los resultados clave, de ahí a las iniciativas calificadas y, por último, a la decisión de cuándo.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">La calificación dice cuánto vale una iniciativa; el portafolio dice cuándo se hace y con qué recursos. Lo que no tiene decisión no está en el portafolio: es inventario.</p>
+  </> },
+  { k: "Función", t: "Para qué sirve", body: <ul className="space-y-2">
+    <Li><b>Concentra los recursos:</b> pocas iniciativas en «implementar», con dueño, presupuesto y fecha; el resto espera o se descarta de forma explícita.</Li>
+    <Li><b>Hace visible la renuncia:</b> lo que queda en backlog o se descarta se comunica; nadie sigue trabajando en lo que la dirección no eligió.</Li>
+    <Li><b>Alimenta la ejecución:</b> solo lo decidido pasa a Capacidades para ejecutar y a la cascada trimestral.</Li>
+    <Li><b>Se lee por prioridad y por decisión:</b> cuántas iniciativas sostienen cada prioridad y en qué momento arrancan.</Li>
+  </ul> },
+  { k: "Decisión de tiempo", t: "Cuatro decisiones y sus condiciones", body: <>
+    <div className="grid gap-2 sm:grid-cols-2">{DECISIONS.map((d) => <div key={d.key} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold text-ink">{d.label}</div><div className="mt-0.5 text-[12px] leading-snug text-ink-soft">{d.rule}</div></div>)}</div>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Implementar exige impacto consolidado de 3 o 4 y capacidad resuelta; preparar o validar exige al menos una calificación; renunciar exige motivo. Las tácticas (según la regla de tipo de la empresa) no compiten en el portafolio: se transfieren al área con responsable. Decide la gerencia o el advisor; queda autor, fecha y sustento.</p>
+  </> },
+  { k: "Lectura", t: "Cómo se lee el portafolio", body: <ul className="space-y-2">
+    <Li><b>Por prioridad:</b> cada prioridad debería tener de 2 a 4 iniciativas en «implementar» o «preparar». Una prioridad sin iniciativas decididas es una apuesta sin brazos; una con diez es dispersión.</Li>
+    <Li><b>Por decisión:</b> el total en «implementar» cabe en la capacidad real del año (personas y presupuesto). Si no cabe, algo pasa a «preparar» o a backlog.</Li>
+    <Li><b>Por resultado clave:</b> cada KR con al menos una iniciativa decidida; un KR sin iniciativa es una meta sin plan.</Li>
+    <Li><b>Bajo consenso y capacidad primero:</b> las señales de la priorización se revisan antes de decidir «implementar».</Li>
+    <Li><b>Sustento:</b> cada decisión dice por qué ahora, por qué luego o por qué no; es lo que se comunica al equipo.</Li>
+  </ul> },
+  { k: "Tips", t: "Para decidir bien", body: <ul className="space-y-2">
+    <Li><b>Decide en una sesión,</b> con el ranking a la vista y el presupuesto del año: no iniciativa por iniciativa en días distintos.</Li>
+    <Li><b>«Preparar» no es «implementar despacio»:</b> es una etapa acotada con evidencia esperada, responsable y recursos propios; termina con una decisión.</Li>
+    <Li><b>Backlog con condición:</b> «cuando el CRM esté integrado», «cuando cierre la certificación»; sin condición es un cajón.</Li>
+    <Li><b>Renunciar es una decisión, no un olvido:</b> con motivo y comunicada al dueño.</Li>
+    <Li><b>Revisa el portafolio cada trimestre</b> con el cierre de la cascada: lo que no avanzó cambia de decisión o de dueño.</Li>
+  </ul> },
+  { k: "Ejemplo", t: "Un portafolio decidido", body: <>
+    <p className="text-[12.5px] leading-relaxed text-muted">Laboratorios Cordillera (ficticia), prioridad «Disponibilidad garantizada del portafolio esencial», cuatro iniciativas calificadas.</p>
+    <div className="mt-3 overflow-x-auto rounded-xl border border-line"><table className="w-full text-[12px]"><thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Iniciativa</th><th className="px-2 py-2">Puntaje</th><th className="px-2 py-2">Decisión</th><th className="px-3 py-2">Sustento</th></tr></thead><tbody>
+      {[["Plan maestro integrado (demanda, capacidad, materiales)", "85", "Ahora: implementar", "Mueve el fill rate del 91 % al 96 %; capacidad confirmada en planeación; retrasarlo compromete el KR del año."], ["Integración LIMS–plan maestro", "72", "Ahora: preparar o validar", "Piloto de tres meses con dos moléculas para comprobar que la liberación baja de 9 a 6 días; TIC con presupuesto propio."], ["Centro de distribución regional", "68", "Luego: backlog", "Depende de alcanzar el 96 % de fill rate con la red actual; se revisa en el cierre del T2."], ["Maquila para terceros en líneas esenciales", "55", "Renunciar", "Usa la capacidad que la promesa de disponibilidad necesita; contradice la renuncia declarada en la prioridad."]].map((r) => <tr key={r[0]} className="border-t border-line align-top">{r.map((c, i) => <td key={i} className={`px-3 py-2 leading-snug ${i === 0 ? "font-semibold text-ink" : i === 1 ? "num font-bold text-ink" : "text-ink-soft"}`}>{c}</td>)}</tr>)}
+    </tbody></table></div>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Lo que hace bien: dos iniciativas sostienen la prioridad ahora, una espera con condición y una se descarta con motivo. El total en «implementar» cabe en el presupuesto del año, y las dos decididas pasan a Capacidades para ejecutar y a la cascada.</p>
+  </> },
+  { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
+    <Li>El portafolio parte del 100 % de las iniciativas; el ranking consolidado de Priorización se superpone cuando llega. Filtros por objetivo, sponsor, prioridad y decisión; exportación a CSV.</Li>
+    <Li>La decisión de tiempo se registra en la ficha de cada iniciativa (gerencia o advisor), con sustento; las condiciones de cada decisión se verifican contra el consolidado.</Li>
+    <Li>Resumen por prioridad y decisión, y lista ordenada por puntaje consolidado dentro de cada horizonte.</Li>
+    <Li>Lo decidido en «implementar» o «preparar» entra a <b>Capacidades para ejecutar</b> y al árbol de la <b>Cascada trimestral</b>, donde cada iniciativa se articula entre áreas ({Object.values(ROL_AREA).join(" y ").toLowerCase()}).</Li>
   </ul> },
 ];
 
@@ -455,11 +500,11 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" | "capacidades" | "cascada"; rule?: TypeRule }) {
+export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" | "capacidades" | "cascada" | "portafolio"; rule?: TypeRule }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : tema === "capacidades" ? CAPACIDADES : tema === "cascada" ? CASCADA : KR;
-  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : tema === "capacidades" ? "Capacidades para ejecutar · ayuda metodológica" : tema === "cascada" ? "Cascada y plan trimestral · ayuda metodológica (F04)" : "Resultados clave · ayuda metodológica";
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : tema === "capacidades" ? CAPACIDADES : tema === "cascada" ? CASCADA : tema === "portafolio" ? PORTAFOLIO : KR;
+  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : tema === "capacidades" ? "Capacidades para ejecutar · ayuda metodológica" : tema === "cascada" ? "Cascada y plan trimestral · ayuda metodológica (F04)" : tema === "portafolio" ? "Portafolio · ayuda metodológica" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setI((x) => Math.min(laminas.length - 1, x + 1)); if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1)); };
