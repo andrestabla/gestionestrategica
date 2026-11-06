@@ -1201,6 +1201,11 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const mySession = me.responsibleId ? sessionOf(sessions, me.responsibleId) : null;
   const [expected, setExpected] = useState(3);
   const rows = prio?.ranking ?? [];
+  // F16 · condición de entrada: el servidor dice qué iniciativas se pueden calificar y por qué no las demás
+  const calDe = (id: string) => prio?.calificables?.[id];
+  const calOk = (id: string) => (prio ? (calDe(id)?.ok ?? !!cat.initiatives.find((i) => i.id === id)?.kpi) : false);
+  const calMotivo = (id: string) => calDe(id)?.motivo ?? "sin resultado clave vinculado";
+  const calEtiqueta = (id: string) => { const e = calDe(id)?.etapa; return e === "formulacion" ? "incompleta" : e === "validacion" ? "sin validar" : "sin KR"; };
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   type Ini = Cat["initiatives"][number];
   const objLever = (i: { cmi: string }) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
@@ -1246,13 +1251,14 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[12px] text-faint">se refresca cada 15 s</span>
       </div>
+      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       {!prio && <SkeletonCards n={4} className="mb-5" />}
       <div className={`mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4 ${prio ? "" : "hidden"}`}>
         <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Evaluaciones registradas" value={(prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)).length} foot={`${cov.evaluators.length} evaluadores activos`} />
-        <StatCard label="Habilitadas para calificar" value={list.filter((i) => i.kpi).length} unit={`de ${list.length}`} foot={acomp ? "vinculadas a un resultado clave" : "vinculadas a un resultado clave por el líder de tribu"} accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+        <StatCard label="Habilitadas para calificar" value={list.filter((i) => calOk(i.id)).length} unit={`de ${list.length}`} foot={acomp ? "completas y validadas, con resultado clave completo" : "vinculadas a un resultado clave por el líder de tribu"} accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="rise overflow-hidden">
@@ -1269,7 +1275,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                     <span className="block text-[13px] font-bold leading-snug text-ink">{i.name}</span>
                     <span className="num block text-[12px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">
-                      {!i.kpi && <span className="chip chip-warn !py-0 text-[11px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR · no se califica</span>}
+                      {!calOk(i.id) && <span className="chip chip-warn !py-0 text-[11px]" title={calMotivo(i.id)}>{calEtiqueta(i.id)} · no se califica</span>}
                       <span className={`chip !py-0 text-[11px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
                       {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[11px]">D {c.rounded.D}</span>}
                       {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]">L {c.rounded.L}</span>}
@@ -1303,7 +1309,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                       {CRITERIA.map((cr) => <td key={cr.key} className="num px-2 py-2 text-center">{c && c.n ? <span className={`font-bold ${c.rounded[cr.key] >= 3 ? "text-ink" : "text-muted"}`}>{c.avg[cr.key]}</span> : <span className="text-faint">—</span>}</td>)}
                       <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
                       <td className="px-2 py-2"><span className="flex flex-wrap gap-1">
-                        {!i.kpi && <span className="chip chip-warn !py-0 text-[11px]" title={`Sin resultado clave: ${acomp ? "vincúlala" : "el líder de tribu la vincula"} en ${V.tabs.iniciativas}`}>sin KR</span>}
+                        {!calOk(i.id) && <span className="chip chip-warn !py-0 text-[11px]" title={calMotivo(i.id)}>{calEtiqueta(i.id)}</span>}
                         {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[11px]">D {c.rounded.D}</span>}
                         {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]">L {c.rounded.L}</span>}
                         {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[11px]">consenso</span>}
@@ -1844,6 +1850,20 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
     avisar(action === "abrir" ? "Calificación abierta" : action === "cerrar" ? "Calificación cerrada: revisa el orden" : action === "guardar" ? "Priorización guardada" : "Calificación reabierta");
     onChanged();
   };
+  // acompañamiento: abrir o cerrar la calificación de todas las prioridades a la vez (una petición por sponsor)
+  const actTodas = async (action: "abrir" | "cerrar") => {
+    const objetivo = tribes.filter((t) => sessionOf(sessions, t.id).status === (action === "abrir" ? "cerrada" : "abierta"));
+    if (!objetivo.length) { avisar(action === "abrir" ? "No hay prioridades con calificación cerrada." : "No hay prioridades con calificación abierta.", "info"); return; }
+    if (!(await confirmar({ title: action === "abrir" ? `Abrir la calificación de ${objetivo.length} prioridades` : `Cerrar la calificación de ${objetivo.length} prioridades`, body: objetivo.map((t) => groupName(t.id)).join(" · "), confirmLabel: action === "abrir" ? "Abrir todas" : "Cerrar todas" }))) return;
+    setBusy(true); setErr(null); let fallos = 0;
+    for (const t of objetivo) {
+      const res = await fetch("/api/td/priorizacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tribe: t.id, session: action }) });
+      if (!res.ok) fallos++;
+    }
+    setBusy(false); setOrder(null);
+    avisar(fallos ? `${objetivo.length - fallos} de ${objetivo.length} ${action === "abrir" ? "abiertas" : "cerradas"}; ${fallos} con error.` : (action === "abrir" ? "Calificación abierta en todas las prioridades" : "Calificación cerrada en todas las prioridades: revisa el orden de cada una"), fallos ? "warn" : "ok");
+    onChanged();
+  };
   const move = (id: string, d: -1 | 1) => { const a = [...ids]; const i = a.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setOrder(a); };
   const name = (id: string) => cat.initiatives.find((i) => i.id === id)?.name ?? id;
   // trimestre de inicio propuesto por la tribu (T1 a T4 de 2027, o después); lo ratifica el directorio en la ficha
@@ -1872,6 +1892,11 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
             {ses.status === "abierta" && <button type="button" disabled={busy} onClick={() => void act("cerrar")} className="btn-primary btn-sm text-[12px] disabled:opacity-40"><Lock size={12} /> Cerrar calificación y revisar</button>}
             {(ses.status === "revision" || ses.status === "abierta") && <button type="button" disabled={busy} onClick={() => void act("guardar")} className={`${ses.status === "revision" ? "btn-primary" : "btn-ghost"} btn-sm text-[12px] disabled:opacity-40`}><Save size={12} /> Guardar priorización</button>}
             {(ses.status === "guardada" || ses.status === "revision") && <button type="button" disabled={busy} onClick={() => void act("reabrir")} className="btn-ghost btn-sm text-[12px] disabled:opacity-40"><RefreshCw size={12} /> Reabrir</button>}
+            {acomp && !leaderOnly && tribes.length > 1 && <>
+              <span className="mx-1 hidden h-5 w-px bg-line sm:inline-block" />
+              <button type="button" disabled={busy} onClick={() => void actTodas("abrir")} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title="Abre la calificación de todas las prioridades que estén cerradas"><Scale size={12} /> Abrir todas</button>
+              <button type="button" disabled={busy} onClick={() => void actTodas("cerrar")} className="btn-ghost btn-sm text-[12px] disabled:opacity-40" title="Cierra la calificación de todas las prioridades abiertas"><Lock size={12} /> Cerrar todas</button>
+            </>}
           </span>
         </div>
         {err && <p className="mt-2 rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>{err}</p>}

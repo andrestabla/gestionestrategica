@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
-import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError, removeEvaluation, clearDecision } from "@/server/store";
+import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError, removeEvaluation, clearDecision, calificables } from "@/server/store";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz de priorización, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
@@ -15,6 +15,7 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
     decisions: getDecisions(),
     ranking,
     sessions: catalog().company.prioSessions ?? {},
+    calificables: calificables(),
   });
 });
 

@@ -6,6 +6,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Modal } from "@/components/ui";
 import { BookOpen, ArrowLeft, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { CRITERIA, LEVEL_NAMES, TYPE_CRITERIA, consolidate, score, decisionCheck, DECISIONS, type Evaluation, type Level, type TypeMark } from "@/lib/priorizacion";
 
 type Lamina = { t: string; k: string; body: ReactNode };
 const Bien = ({ children }: { children: ReactNode }) => <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12.5px] leading-snug" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-ok" /><span>{children}</span></div>;
@@ -202,11 +203,98 @@ const PRIORIDADES: Lamina[] = [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" }) {
+/** Simulación interactiva de una priorización: tres evaluadores califican una iniciativa; se ve el puntaje de cada uno,
+    el consolidado, el tipo por mayoría, las tres señales y qué decisiones de tiempo son admisibles. */
+function SimuladorPriorizacion() {
+  type Fila = { nombre: string; D: Level; E: Level; M: Level; L: Level; marcas: number };
+  const [filas, setFilas] = useState<Fila[]>([
+    { nombre: "Sponsor", D: 4, E: 3, M: 3, L: 3, marcas: 4 },
+    { nombre: "Directivo 2", D: 3, E: 3, M: 2, L: 2, marcas: 3 },
+    { nombre: "Directivo 3", D: 4, E: 2, M: 3, L: 3, marcas: 2 },
+  ]);
+  const set = (i: number, k: keyof Fila, v: number) => setFilas((f) => f.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  const evals: Evaluation[] = filas.map((f, i) => ({ iniId: "sim", by: `e${i}`, name: f.nombre, role: "DIRECTIVO", at: "", scores: { D: f.D, E: f.E, M: f.M, L: f.L }, type: Object.fromEntries(TYPE_CRITERIA.map((c, n) => [c.key, n < f.marcas ? "ESTRATEGICO" : "TACTICO"])) as Record<string, TypeMark>, notes: {} } as unknown as Evaluation));
+  const c = consolidate(evals);
+  const niveles: Level[] = [1, 2, 3, 4];
+  const Sel = ({ v, on }: { v: number; on: (n: number) => void }) => <select value={v} onChange={(e) => on(Number(e.target.value))} className="input !py-0.5 pr-6 !text-[12px]">{niveles.map((n) => <option key={n} value={n}>{n}</option>)}</select>;
+  return (
+    <div className="space-y-3">
+      <p className="text-[12.5px] leading-relaxed text-muted">Cambia las calificaciones y mira cómo se mueven el puntaje, el consolidado, las señales y las decisiones admisibles. Iniciativa de ejemplo: «Modelo de cobertura omnicanal del panel médico AAA y AA», vinculada al resultado clave de frecuencia de visita.</p>
+      <div className="overflow-x-auto rounded-xl border border-line">
+        <table className="w-full text-[12px]">
+          <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Evaluador</th>{CRITERIA.map((k) => <th key={k.key} className="px-2 py-2" title={k.name}>{k.short} · {k.weight} %</th>)}<th className="px-2 py-2">Marcas estratégicas (de 4)</th><th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Tipo</th></tr></thead>
+          <tbody>
+            {filas.map((f, i) => (
+              <tr key={i} className="border-t border-line">
+                <td className="px-3 py-1.5 font-semibold text-ink">{f.nombre}</td>
+                {(["D", "E", "M", "L"] as const).map((k) => <td key={k} className="px-2 py-1.5"><Sel v={f[k]} on={(n) => set(i, k, n)} /></td>)}
+                <td className="px-2 py-1.5"><select value={f.marcas} onChange={(e) => set(i, "marcas", Number(e.target.value))} className="input !py-0.5 pr-6 !text-[12px]">{[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}</select></td>
+                <td className="num px-2 py-1.5 text-right font-extrabold text-ink">{score(f)}</td>
+                <td className="px-2 py-1.5 text-ink-soft">{f.marcas >= 3 ? "Estratégica" : "Táctica"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Consolidado</div><div className="num text-[13px] text-ink">Promedios I {c.avg.D} · E {c.avg.E} · S {c.avg.M} · C {c.avg.L}</div><div className="num text-[12px] text-muted">Redondeo {c.rounded.D}/{c.rounded.E}/{c.rounded.M}/{c.rounded.L} → puntaje <b className="text-ink">{c.score}</b></div><div className="text-[12px] text-muted">Tipo por mayoría: <b className="text-ink">{c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica"}</b> ({c.strategicVotes} de {c.n})</div></div>
+        <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Señales</div>
+          <div className="mt-1 flex flex-wrap gap-1"><span className={`chip !py-0 text-[11px] ${c.eligible ? "chip-ok" : "chip-bad"}`}>{c.eligible ? "elegible (impacto ≥ 3)" : "no elegible (impacto < 3)"}</span><span className={`chip !py-0 text-[11px] ${c.capacityFirst ? "chip-warn" : "chip-ok"}`}>{c.capacityFirst ? "capacidad primero (C ≤ 2)" : "capacidad resuelta"}</span><span className={`chip !py-0 text-[11px] ${c.lowConsensus ? "chip-bad" : "chip-ok"}`}>{c.lowConsensus ? `bajo consenso (±${c.spread})` : `consenso (±${c.spread})`}</span></div></div>
+        <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Decisiones admisibles</div>
+          <ul className="mt-1 space-y-0.5 text-[12px]">{DECISIONS.map((d) => { const r = decisionCheck(d.key, c, d.key === "RENUNCIAR" ? "motivo registrado" : undefined); return <li key={d.key} className="flex items-start gap-1.5"><span className={r.ok ? "text-ok" : "text-bad"}>{r.ok ? "✓" : "✗"}</span><span className="text-ink">{d.label}{!r.ok && <span className="block text-[11px] leading-snug text-muted">{r.reason}</span>}</span></li>; })}</ul></div>
+      </div>
+      <p className="text-[12px] leading-relaxed text-muted">Orden en el horizonte: entre las estratégicas elegibles, de mayor a menor puntaje; empates por impacto y luego por evidencia. Las tácticas se transfieren al área; las no elegibles y las sin evaluar quedan fuera del orden.</p>
+    </div>
+  );
+}
+
+const PRIORIZACION: Lamina[] = [
+  { k: "Qué es", t: "Convertir el inventario de iniciativas en un portafolio ejecutable", body: <>
+    <p className="text-[14px] leading-relaxed text-ink">La <b>priorización de iniciativas</b> (F16) separa tres cosas que suelen mezclarse: <b>cuánto vale</b> una iniciativa, <b>de qué tipo</b> es y <b>cuándo</b> se hace. Solo entran las que mueven un resultado clave; se califican con cuatro criterios de peso fijo, se consolidan en grupo y se ordenan por horizonte antes de decidir su tiempo.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">Resultado: pocas iniciativas, con dueño y con una decisión de tiempo. Lo táctico no se desecha: se transfiere al área con responsable nombrado.</p>
+  </> },
+  { k: "Condición de entrada", t: "Qué se puede calificar", body: <ul className="space-y-2">
+    <Li><b>Vinculada a un resultado clave completo:</b> cifra, línea base, meta distinta de la base, unidad, dueño, plazo y fórmula. Máximo dos iniciativas por resultado clave.</Li>
+    <Li><b>Formulación completa:</b> qué logra, responsable, inicio y fin, capacidad que instala y presupuesto planeado (los elementos de la ayuda de Iniciativas).</Li>
+    <Li><b>Validada en la etapa anterior:</b> la validación de iniciativas la deja en verde. Lo amarillo se corrige y se revalida; lo rojo se replantea.</Li>
+    <Li>Lo que no cumple aparece en el ranking con el motivo («sin KR», «incompleta», «sin validar») y no se puede calificar.</Li>
+  </ul> },
+  { k: "Criterios y pesos", t: "Cuatro criterios con peso fijo", body: <>
+    <p className="text-[12.5px] leading-relaxed text-muted">Los pesos expresan la tesis del método: primero el resultado y la evidencia, después la réplica; la capacidad pesa poco porque se resuelve, no se premia. Puntaje = (40·I + 30·E + 20·S + 10·C) ÷ 4, de 25 a 100. Cada persona califica una sola vez y deja su sustento.</p>
+    <div className="mt-3 overflow-x-auto rounded-xl border border-line"><table className="w-full text-[12px]"><thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Criterio</th><th className="px-2 py-2">Peso</th><th className="px-2 py-2">Nivel 1</th><th className="px-2 py-2">Nivel 4</th></tr></thead><tbody>
+      {CRITERIA.map((k) => <tr key={k.key} className="border-t border-line align-top"><td className="px-3 py-1.5 font-semibold text-ink">{k.name}</td><td className="num px-2 py-1.5">{k.weight} %</td><td className="px-2 py-1.5 text-ink-soft">{k.levels[1]}</td><td className="px-2 py-1.5 text-ink-soft">{k.levels[4]}</td></tr>)}
+    </tbody></table></div>
+    <p className="mt-2 text-[12px] text-muted">Antes de abrir la ventana, calibra con el equipo un ejemplo común: acuerden qué es un 3 y qué es un 4 ({Object.values(LEVEL_NAMES).join(" · ")}).</p>
+  </> },
+  { k: "Tipo", t: "Estratégica o táctica", body: <>
+    <p className="text-[13px] leading-relaxed text-ink">Es estratégica la iniciativa que cumple al menos <b>tres de las cuatro marcas</b>. La táctica no se desecha: se transfiere al área con responsable y sale del portafolio estratégico. Es la única pieza que una empresa puede sustituir por su propia regla.</p>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">{TYPE_CRITERIA.map((t) => <div key={t.key} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold text-ink">{t.name}</div><div className="mt-0.5 text-[12px] leading-snug text-ink-soft"><b>Estratégica:</b> {t.strategic}</div><div className="mt-0.5 text-[12px] leading-snug text-muted"><b>Táctica:</b> {t.tactical}</div></div>)}</div>
+  </> },
+  { k: "Consolidación", t: "Consolidación, señales y orden", body: <ul className="space-y-2">
+    <Li><b>Consolidar:</b> promedio de cada criterio entre evaluadores, redondeado al nivel más cercano; el puntaje se recalcula con esos promedios; el tipo se decide por mayoría.</Li>
+    <Li><b>Elegible como prioridad crítica</b> cuando el impacto consolidado es 3 o 4.</Li>
+    <Li><b>Capacidad primero</b> cuando la capacidad queda en 1 o 2: se resuelve responsable, disponibilidad o recursos antes de arrancar.</Li>
+    <Li><b>Bajo consenso</b> cuando entre el mayor y el menor puntaje individual hay más de 15 puntos: conviene conversar antes de decidir.</Li>
+    <Li><b>Orden:</b> de mayor a menor puntaje entre las estratégicas elegibles de cada horizonte; empates por impacto y luego por evidencia.</Li>
+  </ul> },
+  { k: "Decisión de tiempo", t: "Quien gobierna el portafolio decide", body: <>
+    <div className="grid gap-2 sm:grid-cols-2">{DECISIONS.map((d) => <div key={d.key} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold text-ink">{d.label}</div><div className="mt-0.5 text-[12px] leading-snug text-ink-soft">{d.rule}</div></div>)}</div>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Implementar exige elegible y capacidad resuelta; preparar o validar exige al menos una evaluación; renunciar exige motivo. Se registra autor y fecha; una iniciativa puede cambiar de decisión, pero su calificación histórica no se reescribe.</p>
+  </> },
+  { k: "Simulación", t: "Simula una priorización", body: <SimuladorPriorizacion /> },
+  { k: "En la plataforma", t: "Cómo se hace aquí", body: <ul className="space-y-2">
+    <Li>El advisor abre la calificación de una prioridad, o de todas a la vez; mientras está abierta, cada miembro del comité califica una sola vez cada iniciativa y el ranking se actualiza en vivo.</Li>
+    <Li>Al cerrar, el advisor revisa el orden (puede ajustarlo a mano), propone el trimestre de inicio y guarda; la dirección ratifica.</Li>
+    <Li>Las decisiones de tiempo se registran en Portafolio con autor, fecha y motivo; las renuncias exigen motivo.</Li>
+    <Li>Una iniciativa que cambia después de calificada conserva su calificación; si cambia de fondo, se reinicia su sesión y se vuelve a calificar.</Li>
+  </ul> },
+];
+
+export function AyudaMetodologica({ tema }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : KR;
-  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : "Resultados clave · ayuda metodológica";
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? PRIORIZACION : KR;
+  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setI((x) => Math.min(laminas.length - 1, x + 1)); if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1)); };

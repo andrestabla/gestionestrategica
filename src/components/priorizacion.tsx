@@ -29,6 +29,7 @@ export type PriorizacionData = {
   decisions: Record<string, DecisionRecord>;
   ranking: { id: string; horizon: string; line: number; name: string; c: Consolidated; position: number; suggested: string | null; fuera: FueraDelOrden | null }[];
   sessions?: PrioSessions;   // modo convención: sesión de calificación por tribu
+  calificables?: Record<string, { ok: boolean; motivo?: string; etapa?: "kr" | "formulacion" | "validacion" }>;   // F16: solo se califican las completas y validadas
 };
 
 /** Chip del horizonte sugerido por el puntaje frente al actual. */

@@ -2026,6 +2026,7 @@ export function evaluateInitiative(
 ): { ok: true; evaluation: Evaluation; consolidated: Consolidated } | { ok: false; status: number; error: string } {
   const base = cat().initiatives.find((i) => i.id === iniId);
   if (!base) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (cat().company.mode === "acompanamiento") { const cal = calificabilidad(base); if (!cal.ok) return { ok: false, status: 422, error: `No se califica todavía: ${cal.motivo}.` }; }
   if (!base.kpi) return { ok: false, status: 422, error: "La iniciativa aún no está vinculada a un resultado clave: el líder de la tribu la vincula en «Iniciativas → KR» y entonces queda habilitada para calificar." };
   if (!can(user, "evaluate_initiatives", base) || (tribeScope(user) && base.ownerId !== tribeScope(user))) {
     return {
@@ -3909,3 +3910,35 @@ export function saveAlineacion(user: SessionUser, horizon: string, inputHash: st
   });
   return { ok: true, saved };
 }
+
+
+/* ═══ Calificabilidad (acompañamiento, F16 · condición de entrada) ═══
+   Solo se califican las iniciativas completas y validadas en la etapa anterior: vinculadas a un resultado clave
+   completo (máximo dos por KR), con la formulación completa (qué logra, responsable, inicio y fin, capacidad que
+   instala y presupuesto) y con la validación de iniciativas en verde. */
+
+export type Calificabilidad = { ok: boolean; motivo?: string; etapa?: "kr" | "formulacion" | "validacion" };
+
+export function calificabilidad(i: InitiativeFull): Calificabilidad {
+  const c = cat();
+  if (!i.kpi) return { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" };
+  const k = c.kpis.find((x) => x.code === i.kpi);
+  if (!k) return { ok: false, etapa: "kr", motivo: "el resultado clave vinculado ya no existe" };
+  const faltanKr = krFaltantes(k);
+  if (faltanKr.length) return { ok: false, etapa: "kr", motivo: `resultado clave ${k.code} incompleto (sin ${faltanKr.join(", ")})` };
+  const Q = /^\d{4}-T[1-4]$/;
+  const faltan: string[] = [];
+  if ((i.objetivo ?? "").trim().length < 15) faltan.push("qué logra");
+  if (!i.ownerId) faltan.push("responsable");
+  if (!(Q.test(i.start ?? "") && Q.test(i.end ?? ""))) faltan.push("inicio y fin");
+  if (!i.capability) faltan.push("capacidad que instala");
+  if (!((i.budgetPlanned ?? 0) > 0)) faltan.push("presupuesto planeado");
+  if (faltan.length) return { ok: false, etapa: "formulacion", motivo: `formulación incompleta (falta ${faltan.join(", ")})` };
+  const val = informes().get(`alineacion-ini|${i.horizon}`);
+  const item = val ? ((val.informe as unknown as { items?: { id: string; color: string }[] }).items ?? []).find((x) => x.id === i.id) : undefined;
+  if (!item) return { ok: false, etapa: "validacion", motivo: "sin validar en Iniciativas (pulsa «Validar iniciativas»)" };
+  if (item.color !== "verde") return { ok: false, etapa: "validacion", motivo: item.color === "rojo" ? "la validación la marca por replantear" : "la validación pide mejoras (amarillo): corrígela y revalida" };
+  return { ok: true };
+}
+
+export const calificables = (): Record<string, Calificabilidad> => Object.fromEntries(cat().initiatives.map((i) => [i.id, cat().company.mode === "acompanamiento" ? calificabilidad(i) : (i.kpi ? { ok: true } : { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" })]));
