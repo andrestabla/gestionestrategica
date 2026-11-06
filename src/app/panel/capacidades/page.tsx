@@ -34,13 +34,13 @@ export default function CapacidadesPage() {
   const canAll = useCan("manage_catalog");
   const levers = leversOf(cat.company);
   const [datos, setDatos] = useState<Datos | null>(null);
-  const [fLever, setFLever] = useState("");
+  const [fOwner, setFOwner] = useState(user.role === "RESPONSABLE" && user.responsibleId ? user.responsibleId : "");
   const [fEstado, setFEstado] = useState<"" | Estado>("");
   const [revisando, setRevisando] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [personalizando, setPersonalizando] = useState<string | null>(null);
+  const [personalizando, setPersonalizando] = useState<{ n: number; total: number } | null>(null);
 
   const load = useCallback(() => fetch("/api/td/capacidades").then((r) => (r.ok ? r.json() : null)).then((j) => setDatos(j ?? { elegibles: [], checklists: {}, revisiones: {} })).catch(() => setDatos({ elegibles: [], checklists: {}, revisiones: {} })), []);
   useEffect(() => { void load(); }, [load]);
@@ -64,11 +64,12 @@ export default function CapacidadesPage() {
     const i = cat.initiatives.find((x) => x.id === e.id);
     const lever = leverOf(e.id);
     return i ? { ...e, i, lever, estado: estadoDe(e.id), rev: datos?.revisiones[e.id], chk: datos?.checklists[e.id] } : null;
-  }).filter((x): x is NonNullable<typeof x> => !!x).filter((f) => (!fLever || f.lever?.id === fLever) && (!fEstado || f.estado === fEstado))
+  }).filter((x): x is NonNullable<typeof x> => !!x).filter((f) => (!fOwner || f.i.ownerId === fOwner) && (!fEstado || f.estado === fEstado))
     .sort((a, b) => (a.decision === b.decision ? 0 : a.decision === "IMPLEMENTAR" ? -1 : 1) || a.i.name.localeCompare(b.i.name, "es")),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [datos, cat, fLever, fEstado]);
-  const todas = datos?.elegibles ?? [];
+  [datos, cat, fOwner, fEstado]);
+  const todas = useMemo(() => datos?.elegibles ?? [], [datos]);
+  const duenos = useMemo(() => cat.responsibles.filter((r) => todas.some((e) => cat.initiatives.find((i) => i.id === e.id)?.ownerId === r.id)), [cat, todas]);
   const cuenta = (e: Estado) => todas.filter((x) => estadoDe(x.id) === e).length;
 
   const guardar = async (iniId: string, r: RevisionBorrador) => {
@@ -86,16 +87,26 @@ export default function CapacidadesPage() {
     if (!res.ok) { avisar(j.error ?? "El modelo no respondió.", "bad"); return null; }
     return j.propuesta ?? null;
   };
-  const personalizar = async (iniId: string) => {
-    const ya = datos?.checklists[iniId];
-    if (ya && !(await confirmar("Esta iniciativa ya tiene un checklist personalizado. ¿Generar uno nuevo? La revisión registrada quedará marcada para revisarse de nuevo."))) return;
-    setPersonalizando(iniId);
+  // una sola acción del advisor o el admin: el modelo adapta el checklist de todas las iniciativas elegibles, una por una
+  const personalizarTodas = async () => {
+    const ids = todas.map((e) => e.id);
+    if (!ids.length) { avisar("No hay iniciativas con decisión implementar o preparar.", "bad"); return; }
+    const pendientes = ids.filter((id) => !datos?.checklists[id]);
+    const objetivo = pendientes.length ? pendientes : ids;
+    if (!pendientes.length && !(await confirmar(`Las ${ids.length} iniciativas ya tienen checklist personalizado. ¿Generarlos de nuevo? Las revisiones registradas quedarán marcadas para revisarse otra vez.`))) return;
+    setPersonalizando({ n: 0, total: objetivo.length });
+    let hechas = 0; const errores: string[] = [];
     try {
-      const res = await fetch("/api/td/capacidades/personalizar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ iniId }) });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) { avisar(j.error ?? "El modelo no respondió.", "bad"); return; }
-      setDatos((d) => (d ? { ...d, checklists: { ...d.checklists, [iniId]: j.checklist } } : d)); avisar("Checklist personalizado para la iniciativa.");
+      for (const iniId of objetivo) {
+        setPersonalizando({ n: hechas, total: objetivo.length });
+        const res = await fetch("/api/td/capacidades/personalizar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ iniId }) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) { errores.push(`${iniId}: ${j.error ?? "sin respuesta"}`); if (res.status === 403 || res.status === 503) break; continue; }
+        setDatos((d) => (d ? { ...d, checklists: { ...d.checklists, [iniId]: j.checklist } } : d)); hechas++;
+      }
     } finally { setPersonalizando(null); }
+    if (errores.length) avisar(`${hechas} de ${objetivo.length} personalizadas. Falló: ${errores.slice(0, 3).join(" · ")}`, hechas ? "warn" : "bad");
+    else avisar(`Checklist personalizado para ${hechas} iniciativa${hechas === 1 ? "" : "s"}.`);
   };
 
   const rev = revisando ? cat.initiatives.find((i) => i.id === revisando) : null;
@@ -118,7 +129,10 @@ export default function CapacidadesPage() {
     <>
       <PageHeader kicker={V.kicker} title="Capacidades para ejecutar"
         desc="Con el portafolio decidido, cada iniciativa en «implementar» o «preparar» se recorre con un checklist de cinco frentes: unidad, proceso, procedimiento, conocimiento y tecnología. El resultado dice si la capacidad está instalada o qué haría falta antes de arrancar."
-        actions={<AyudaMetodologica tema="capacidades" />} />
+        actions={<div className="flex flex-wrap items-center gap-2">
+          {canAll && <button type="button" onClick={() => void personalizarTodas()} disabled={personalizando !== null || todas.length === 0} className="btn-primary btn-sm inline-flex items-center gap-1.5 text-[12px] disabled:opacity-50" title="El modelo adapta las afirmaciones, preguntas y niveles de cada iniciativa elegible a su contexto y al de la empresa">{personalizando ? <><Loader2 size={12} className="animate-spin" /> Personalizando {personalizando.n + 1} de {personalizando.total}…</> : <><Sparkles size={12} /> Personalizar checklists con IA</>}</button>}
+          <AyudaMetodologica tema="capacidades" />
+        </div>} />
 
       {datos === null ? <SkeletonCards n={4} /> : (
         <>
@@ -133,21 +147,21 @@ export default function CapacidadesPage() {
             <Card className="rise p-6"><EmptyNote>Aún no hay iniciativas con decisión «implementar» o «preparar». Las decisiones de tiempo se registran en <Link href={estrategiaHref(cat.company, "portafolio", base)} className="font-bold text-cyan-deep hover:underline">{V.tabs.portafolio}</Link>; desde allí entran aquí.</EmptyNote></Card>
           ) : (
             <Card className="rise overflow-hidden">
-              <CardHeader title="Iniciativas del portafolio" sub={`${filas.length} de ${todas.length} · ${canAll ? "personaliza el checklist con IA y revisa cada una" : "revisa las de tu prioridad o las que tienes a cargo"}`}
+              <CardHeader title="Iniciativas del portafolio" sub={`${filas.length} de ${todas.length} · ${canAll ? "cada dueño filtra sus iniciativas y revisa sus capacidades; el advisor revisa cualquiera" : "filtra tus iniciativas y revisa las capacidades para ejecutarlas"}`}
                 right={<div className="flex flex-wrap gap-2">
-                  <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input !py-1.5 pr-7 !text-[12px]" aria-label={`Filtrar por ${V.leverLow}`}><option value="">Todas las {V.leversLow}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
+                  <select value={fOwner} onChange={(e) => setFOwner(e.target.value)} className="input !py-1.5 pr-7 !text-[12px]" aria-label="Filtrar por dueño de la iniciativa"><option value="">Todos los dueños</option>{duenos.map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select>
                   <select value={fEstado} onChange={(e) => setFEstado(e.target.value as Estado | "")} className="input !py-1.5 pr-7 !text-[12px]" aria-label="Filtrar por estado"><option value="">Todos los estados</option>{(Object.keys(ESTADO_LABEL) as Estado[]).map((e) => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}</select>
                 </div>} />
               <div className="overflow-x-auto">
                 <table className="w-full text-[12.5px]">
-                  <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-5 py-2">Iniciativa</th><th className="px-3 py-2">{V.lever}</th><th className="px-3 py-2">Decisión</th><th className="px-3 py-2">Checklist</th><th className="px-3 py-2">Capacidad para ejecutar</th><th className="px-3 py-2 text-right">Acciones</th></tr></thead>
+                  <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-5 py-2">Iniciativa</th><th className="px-3 py-2">Dueño</th><th className="px-3 py-2">Decisión</th><th className="px-3 py-2">Checklist</th><th className="px-3 py-2">Capacidad para ejecutar</th><th className="px-3 py-2 text-right">Acciones</th></tr></thead>
                   <tbody>
                     {filas.map((f) => {
                       const lect = f.rev ? lecturaCapacidades(f.rev, frentesDe(f.id)) : null;
                       return (
                         <tr key={f.id} className="border-t border-line align-top">
-                          <td className="px-5 py-2.5"><div className="font-semibold text-ink">{f.i.name}</div><div className="text-[11.5px] text-muted">{f.id} · {owner(f.i.ownerId) || "sin responsable"}{f.i.kpi ? ` · KR ${f.i.kpi}` : ""}</div></td>
-                          <td className="px-3 py-2.5 text-ink-soft">{f.lever?.name ?? "—"}</td>
+                          <td className="px-5 py-2.5"><div className="font-semibold text-ink">{f.i.name}</div><div className="text-[11.5px] text-muted">{f.id}{f.i.kpi ? ` · KR ${f.i.kpi}` : ""}{f.lever ? ` · ${f.lever.name}` : ""}</div></td>
+                          <td className="px-3 py-2.5 text-ink-soft">{owner(f.i.ownerId) || "sin dueño"}</td>
                           <td className="px-3 py-2.5"><span className={`${DECISION_CLS[f.decision]} !py-0 text-[11px]`}>{decisionLabel(f.decision)}</span></td>
                           <td className="px-3 py-2.5">
                             <span className="chip !py-0 text-[11px]" title={f.chk ? `${f.chk.resumen || "Personalizado"} · ${f.chk.by} · ${f.chk.at.slice(0, 10)}` : "Checklist genérico de cinco frentes"}>{f.chk ? <><Sparkles size={10} /> personalizado</> : "genérico"}</span>
@@ -159,7 +173,6 @@ export default function CapacidadesPage() {
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex flex-wrap justify-end gap-1.5">
-                              {canAll && <button type="button" onClick={() => void personalizar(f.id)} disabled={personalizando !== null} className="btn-ghost btn-sm inline-flex items-center gap-1 text-[12px] disabled:opacity-50" title="El modelo adapta las afirmaciones, preguntas y niveles a esta iniciativa y a la empresa">{personalizando === f.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {f.chk ? "Volver a personalizar" : "Personalizar con IA"}</button>}
                               {f.rev && <button type="button" onClick={() => setDetalle(f.id)} className="btn-ghost btn-sm inline-flex items-center gap-1 text-[12px]"><Eye size={12} /> Ver</button>}
                               {puedeRevisar(f.id) && <button type="button" onClick={() => { setError(null); setRevisando(f.id); }} className="btn-primary btn-sm inline-flex items-center gap-1 text-[12px]">{f.rev ? <RefreshCw size={12} /> : <ClipboardCheck size={12} />} {f.rev ? "Revisar de nuevo" : "Revisar"}</button>}
                             </div>

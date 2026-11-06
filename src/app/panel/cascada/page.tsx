@@ -11,7 +11,6 @@ import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { leversOf, horizonsOf } from "@/data/catalogo";
 import { vocabOf, yearOfFirstHorizon } from "@/lib/vocabulario";
-import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
 import { confirmar, avisar } from "@/components/feedback";
 import { trimestresDe, trimestreLabel, cicloTrimestre, interdependencias, METAS_ESTADOS, HITO_ESTADOS, type MetaTrimestral, type Hito, type Dependencia, type MetaEstado } from "@/lib/cascada";
 import { Plus, Pencil, Trash2, Loader2, Save, Sparkles, CalendarRange, GitBranch, ListChecks, Network, RefreshCw, CheckCircle2, Flag } from "lucide-react";
@@ -218,8 +217,6 @@ export default function CascadaPage() {
               )}
             </Card>
           </div>
-
-          <CapacidadesPortafolio compact />
         </>
       )}
 
