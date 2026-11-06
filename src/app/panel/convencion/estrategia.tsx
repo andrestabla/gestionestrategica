@@ -1948,7 +1948,10 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
     onChanged();
   };
   const tone = ses.status === "abierta" ? "chip-ok" : ses.status === "guardada" ? "chip-cyan" : ses.status === "revision" ? "chip-gold" : "";
-  const hora = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" }) : "");
+  // la hora se escribe solo en el cliente (zona horaria y locale del navegador): en el servidor el texto va sin hora, así no hay desajuste de hidratación
+  const [enCliente, setEnCliente] = useState(false);
+  useEffect(() => { setEnCliente(true); }, []);
+  const hora = (iso?: string) => (iso && enCliente ? new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false }) : "");
   return (
     <Card className="rise mb-5 overflow-hidden">
       <CardHeader title={acomp ? "Sesión por prioridad · calificación y trimestre de inicio" : "Mesa de la tribu · calificación y trimestre de inicio"} sub={acomp ? "el advisor abre la calificación de la prioridad, la cierra, ajusta el orden si hace falta, propone el trimestre de inicio de cada iniciativa y guarda" : "el líder abre la calificación, la cierra, ajusta el orden si hace falta, propone el trimestre de inicio de cada iniciativa y guarda"} />
