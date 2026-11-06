@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findUserForLogin, verifyPassword, companyBySlug } from "@/server/store";
+import { findUserForLogin, verifyPassword, companyBySlug, empresasDe } from "@/server/store";
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
@@ -31,8 +31,9 @@ export async function POST(req: Request) {
   if (found.company && !found.company.active) {
     return NextResponse.json({ error: "La empresa de tu cuenta está desactivada." }, { status: 403 });
   }
-  // la cuenta de una empresa solo entra por la ruta de su empresa
-  if (tenant && found.user.role !== "ADMIN" && found.company?.slug !== tenant) {
+  // la cuenta de una empresa entra por la ruta de su empresa principal o por la de cualquiera donde tenga membresía
+  const membresia = tenant ? found.otras.find((o) => o.company.slug === tenant) : undefined;
+  if (tenant && found.user.role !== "ADMIN" && found.company?.slug !== tenant && !membresia) {
     return NextResponse.json({ error: "Esta cuenta no pertenece a esta empresa. Entra por el enlace de la tuya." }, { status: 401 });
   }
   // el acceso genérico (/login) también admite cuentas de empresa: entran con su
@@ -43,18 +44,20 @@ export async function POST(req: Request) {
   }
   // el admin de plataforma no tiene empresa propia: la elige en /empresas tras
   // entrar, o queda activa la de la URL por la que entró
-  let company = found.company ?? null;
+  let company = membresia ? membresia.company : found.company ?? null;
   if (!company && tenant && found.user.role === "ADMIN") {
     const c = companyBySlug(tenant);
     if (c?.active) company = c;
   }
+  const empresas = empresasDe(found);
   const session: SessionUser = {
     email: found.user.email,
     name: found.user.name,
-    role: found.user.role,
-    line: found.user.line,
-    responsibleId: found.user.responsibleId,
+    role: membresia ? membresia.role : found.user.role,
+    line: membresia ? membresia.line : found.user.line,
+    responsibleId: membresia ? membresia.responsibleId : found.user.responsibleId,
     company: company ? { slug: company.slug, name: company.name, shortName: company.shortName } : undefined,
+    ...(empresas.length > 1 ? { empresas: empresas.map((e) => ({ slug: e.slug, shortName: e.shortName, role: e.role })) } : {}),
   };
   await setSession(session);
   return NextResponse.json({ ok: true, user: session });

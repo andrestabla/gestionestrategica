@@ -23,14 +23,16 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   const fromUrl = await urlTenant();
   if (fromUrl) {
     if (!companyBySlug(fromUrl)) notFound();
-    if (user.role !== "ADMIN" && user.company?.slug !== fromUrl) redirect(user.company ? `/${user.company.slug}/panel` : "/login");
-    if (user.role === "ADMIN" && user.company?.slug !== fromUrl) {
+    const miembro = user.role !== "ADMIN" && user.company?.slug !== fromUrl && (user.empresas ?? []).some((e) => e.slug === fromUrl);
+    if (user.role !== "ADMIN" && user.company?.slug !== fromUrl && !miembro) redirect(user.company ? `/${user.company.slug}/panel` : "/login");
+    if ((user.role === "ADMIN" || miembro) && user.company?.slug !== fromUrl) {
       const back = (await urlTenantPath()) ?? `/${fromUrl}/panel`;
       redirect(`/api/auth/empresa?slug=${encodeURIComponent(fromUrl)}&next=${encodeURIComponent(back)}`);
     }
   }
   const company = user.company ? companyBySlug(user.company.slug) : null;
-  const companies = user.role === "ADMIN" ? listCompanies().map((c) => ({ slug: c.slug, name: c.name, shortName: c.shortName, active: c.active })) : [];
+  const companies = user.role === "ADMIN" ? listCompanies().map((c) => ({ slug: c.slug, name: c.name, shortName: c.shortName, active: c.active }))
+    : (user.empresas ?? []).map((e) => { const c = companyBySlug(e.slug); return { slug: e.slug, name: c?.name ?? e.shortName, shortName: e.shortName, active: c?.active ?? true }; });
   // el admin sin empresa activa elige una por pantalla (si existe alguna)
   if (user.role === "ADMIN" && !company && companies.length > 0) redirect("/empresas");
   const noCompany = !company || (!company.active && user.role !== "ADMIN");

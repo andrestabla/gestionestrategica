@@ -106,7 +106,7 @@ function EliminarCuenta({ tienePassword, onClose }: { tienePassword: boolean; on
     } catch (e) { setError((e as Error).message); setBusy(false); }
   };
   return (
-    <Modal title="Eliminar mi cuenta" sub="esta acción no se puede deshacer" onClose={onClose}>
+    <Modal variante="dialogo" title="Eliminar mi cuenta" sub="esta acción no se puede deshacer" onClose={onClose}>
       <div className="flex items-start gap-3 rounded-xl px-4 py-3 text-[13px] leading-relaxed text-ink" style={{ background: "color-mix(in srgb, var(--bad) 10%, var(--surface))" }}>
         <AlertTriangle size={18} className="mt-0.5 shrink-0 text-bad-text" />
         <span>Se borrará <b>toda tu información</b> de la plataforma: tu cuenta y acceso, tus respuestas de diagnóstico (autoevaluación, test), tu análisis con IA, tus evaluaciones de iniciativas y tus notificaciones. Lo que pertenece a la empresa y no puede borrarse sin romper su historia (decisiones, comentarios, registro de actividad) queda anonimizado: tu nombre y tu correo desaparecen de ahí.</span>

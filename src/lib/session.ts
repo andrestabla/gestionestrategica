@@ -23,6 +23,8 @@ export type SessionUser = {
   /** Empresa del usuario. El admin de plataforma no tiene empresa propia: aquí
       va la que eligió como contexto activo (puede cambiarla). */
   company?: SessionCompany;
+  /** Empresas en las que la cuenta opera (principal y membresías) cuando son más de una: el selector de empresa. */
+  empresas?: { slug: string; shortName: string; role: SessionUser["role"] }[];
 };
 
 const sign = (payload: string) =>
@@ -48,7 +50,10 @@ export function decodeSession(token: string | undefined): SessionUser | null {
     const company = data.company && typeof data.company.slug === "string"
       ? { slug: String(data.company.slug), name: String(data.company.name ?? ""), shortName: String(data.company.shortName ?? "") }
       : undefined;
-    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, company };
+    const empresas = Array.isArray(data.empresas)
+      ? (data.empresas as unknown[]).flatMap((e) => (e && typeof e === "object" && typeof (e as { slug?: unknown }).slug === "string" ? [{ slug: String((e as { slug: string }).slug), shortName: String((e as { shortName?: unknown }).shortName ?? ""), role: (e as { role?: SessionUser["role"] }).role ?? "DIRECTIVO" }] : []))
+      : [];
+    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, company, ...(empresas.length > 1 ? { empresas } : {}) };
   } catch {
     return null;
   }

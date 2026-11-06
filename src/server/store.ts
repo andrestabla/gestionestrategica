@@ -438,13 +438,14 @@ async function loadTenant(st: TenantState) {
       start: Date; due: Date; note: string | null; evidenceIds: unknown;
     };
     // el resto de la empresa, en paralelo: una ida y vuelta a la base en lugar de quince en serie
-    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows, informeRows, metaRows] = await Promise.all([
+    const [rowsRaw, commentRows, uploadRows, reportRows, overrideRows, evalRows, decisionRows, itinCommentRows, dbUsers, integrationRows, br, notifRows, captureRows, a3, testRows, noteRows, f1Rows, informeRows, metaRows, membershipRows] = await Promise.all([
       db.projectTask.findMany(W), db.taskComment.findMany({ where: { companyId }, orderBy: { id: "asc" } }), db.fileAsset.findMany({ where: { companyId }, orderBy: { at: "asc" } }),
       db.kpiReport.findMany({ where: { companyId }, orderBy: { at: "asc" } }), db.initiativeOverride.findMany(W), db.initiativeEvaluation.findMany(W), db.initiativeDecision.findMany(W),
       db.itineraryComment.findMany(W), db.user.findMany(W), db.integration.findMany(W), db.branding.findUnique({ where: { companyId } }), db.notifRead.findMany(W),
       db.practiceCapture.findMany({ where: { companyId, cut: "A3" } }), db.assessment.findUnique({ where: { companyId_id: { companyId, id: "A3" } }, include: { scores: true } }),
       db.testResponse.findMany(W), db.testNote.findMany(W), db.f1Response.findMany(W), db.diagnosticReport.findMany(W),
       db.quarterGoal.findMany(W).catch(() => []),
+      db.userMembership.findMany({ where: { companyId, active: true }, include: { user: { include: { company: { select: { slug: true } } } } } }).catch(() => []),
     ]);
     const rows = rowsRaw as (DbTaskRow & {
       iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
@@ -502,6 +503,14 @@ async function loadTenant(st: TenantState) {
         if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; existing.consentAt = u.consentAt?.toISOString(); }
         else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString() } : {}) });
       }
+    }
+    // membresías: cuentas de otra empresa que también operan en esta, con su propio rol y ámbito
+    for (const m of membershipRows as { role: string; line: number | null; responsibleId: string | null; active: boolean; createdAt: Date; user: { email: string; name: string; active: boolean; consentAt: Date | null; company: { slug: string } | null } }[]) {
+      if (!m.user.active) continue;
+      const list = users();
+      const existing = list.find((x) => x.email.toLowerCase() === m.user.email.toLowerCase());
+      const fila: ManagedUser = { email: m.user.email, name: m.user.name, role: m.role as SessionUser["role"], line: m.line ?? undefined, responsibleId: m.responsibleId ?? undefined, active: m.active, seeded: false, membresia: true, principal: m.user.company?.slug, at: m.createdAt.toISOString(), ...(m.user.consentAt ? { consentAt: m.user.consentAt.toISOString() } : {}) };
+      if (existing) Object.assign(existing, fila); else list.push(fila);
     }
     for (const i of integrationRows) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
     if (br) Object.assign(branding(), br.data as Partial<Branding>);
@@ -821,28 +830,76 @@ export async function deleteCompany(actor: SessionUser, slug: string): Promise<{
 }
 
 /** Busca un usuario en cualquier empresa (login): admins de plataforma, memoria y base. */
-export async function findUserForLogin(email: string): Promise<{ user: ManagedUser; company: CompanyRecord | null } | null> {
+/** Pertenencia a otra empresa (membresía): la cuenta vive en su empresa principal y opera también aquí con este rol y ámbito. */
+export type Membresia = { company: CompanyRecord; role: SessionUser["role"]; line?: number; responsibleId?: string };
+export type UsuarioEncontrado = { user: ManagedUser; company: CompanyRecord | null; otras: Membresia[] };
+
+export async function findUserForLogin(email: string): Promise<UsuarioEncontrado | null> {
   const e = email.trim().toLowerCase();
   await hydrateCompanies();
   const admin = g.platformUsers.find((u) => u.active && u.email.toLowerCase() === e);
-  if (admin) return { user: admin, company: null };
+  if (admin) return { user: admin, company: null, otras: [] };
   if (hasDb()) {
     try {
       const db = await prisma();
-      const u = await db.user.findUnique({ where: { email: e }, include: { company: true } });
+      const u = await db.user.findUnique({ where: { email: e }, include: { company: true, memberships: { where: { active: true }, include: { company: { select: { slug: true } } } } } });
       if (u && u.active) {
         const company = u.company ? g.companies.get(u.company.slug) ?? null : null;
         if (u.companyId && !company) return null;
-        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: true, seeded: false }, company };
+        const otras: Membresia[] = (u.memberships as { role: string; line: number | null; responsibleId: string | null; company: { slug: string } }[]).flatMap((m) => { const c = g.companies.get(m.company.slug); return c && c.active && c.slug !== company?.slug ? [{ company: c, role: m.role as SessionUser["role"], line: m.line ?? undefined, responsibleId: m.responsibleId ?? undefined }] : []; });
+        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: true, seeded: false }, company, otras };
       }
     } catch (e2) { console.error("[4shine] búsqueda de usuario falló:", (e2 as Error).message); }
   }
+  let principal: { user: ManagedUser; company: CompanyRecord } | null = null; const otras: Membresia[] = [];
   for (const [slug, c] of g.companies) {
     const st = g.tenants.get(slug) ?? (slug === DEFAULT_TENANT ? (g.tenants.set(slug, newState(slug, ANDINA_CATALOG, c.dbId)), g.tenants.get(slug)!) : null);
     const u = st?.users.find((x) => x.active && x.email.toLowerCase() === e);
-    if (u) return { user: u, company: c };
+    if (!u) continue;
+    if (u.membresia) otras.push({ company: c, role: u.role, line: u.line, responsibleId: u.responsibleId }); else if (!principal) principal = { user: u, company: c };
   }
-  return null;
+  return principal ? { ...principal, otras: otras.filter((o) => o.company.active) } : null;
+}
+
+/** Empresas en las que una cuenta puede operar (principal y membresías), para el selector de empresa. */
+export const empresasDe = (f: UsuarioEncontrado): { slug: string; name: string; shortName: string; role: SessionUser["role"] }[] =>
+  [...(f.company ? [{ slug: f.company.slug, name: f.company.name, shortName: f.company.shortName, role: f.user.role }] : []), ...f.otras.map((o) => ({ slug: o.company.slug, name: o.company.name, shortName: o.company.shortName, role: o.role }))];
+
+/** Rol y ámbito con los que una cuenta opera en una empresa dada (principal o membresía); nulo si no pertenece. */
+export async function membershipOf(email: string, slug: string): Promise<Membresia | null> {
+  const f = await findUserForLogin(email);
+  if (!f) return null;
+  if (f.company?.slug === slug) return { company: f.company, role: f.user.role, line: f.user.line, responsibleId: f.user.responsibleId };
+  return f.otras.find((o) => o.company.slug === slug) ?? null;
+}
+
+/** Agrega a la empresa activa una cuenta que ya existe en otra empresa (membresía con rol y ámbito propios). */
+export async function addMembership(actor: SessionUser, email: string, input: { role: SessionUser["role"]; line?: number; responsibleId?: string | null }): Promise<{ ok: true; user: ManagedUser } | { ok: false; status: number; error: string }> {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
+  const e = email.trim().toLowerCase();
+  if (users().some((u) => u.email.toLowerCase() === e)) return { ok: false, status: 422, error: "Ya existe un usuario con ese correo en esta empresa." };
+  if (!VALID_ROLES.includes(input.role)) return { ok: false, status: 422, error: "Rol inválido." };
+  const f = await findUserForLogin(e);
+  if (!f) return { ok: false, status: 404, error: "No existe una cuenta activa con ese correo en otra empresa." };
+  if (!f.company) return { ok: false, status: 422, error: "Ese correo es de un administrador de la plataforma: ya opera en todas las empresas." };
+  if (f.company.slug === currentTenant()) return { ok: false, status: 422, error: "Esa cuenta ya pertenece a esta empresa." };
+  const scope = input.role === "RESPONSABLE" ? resolveScope(input.line, input.responsibleId) : { ok: true as const, line: undefined, responsibleId: undefined };
+  if (!scope.ok) return { ok: false, status: 422, error: scope.error };
+  const user: ManagedUser = { email: f.user.email, name: f.user.name, role: input.role, line: scope.line, responsibleId: scope.responsibleId, active: true, seeded: false, membresia: true, principal: f.company.slug, createdBy: actor.name, at: new Date().toISOString() };
+  users().push(user);
+  void persist("membresía", async (db) => {
+    const companyId = cid();
+    let row = await db.user.findUnique({ where: { email: e }, select: { id: true } });
+    if (!row) {
+      // cuenta que existe solo en memoria (seed): se crea su fila en su empresa principal, sin contraseña fijada
+      const principalId = g.companies.get(f.company!.slug)?.dbId ?? null;
+      row = await db.user.create({ data: { email: e, name: f.user.name, role: f.user.role, line: f.user.line ?? null, responsibleId: f.user.responsibleId ?? null, companyId: principalId, passwordHash: "", active: true }, select: { id: true } });
+    }
+    const data = { role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, active: true, createdBy: actor.email };
+    await db.userMembership.upsert({ where: { userId_companyId: { userId: row.id, companyId } }, update: data, create: { userId: row.id, companyId, ...data } });
+  });
+  audit(actor, "task", e, `cuenta de ${f.company.name} agregada a esta empresa como ${input.role}${user.role === "RESPONSABLE" ? ` · ${scopeName(user)}` : ""}`);
+  return { ok: true, user };
 }
 
 export const getPlatformUsers = (): ManagedUser[] => g.platformUsers;
@@ -2916,6 +2973,8 @@ export type ManagedUser = {
   responsibleId?: string;      // ámbito por responsable del catálogo (tribu, área)
   active: boolean;
   seeded: boolean;             // vino del seed (no se elimina, solo se desactiva)
+  membresia?: boolean;         // pertenece a esta empresa por membresía: su cuenta (y contraseña) viven en su empresa principal
+  principal?: string;          // slug de la empresa principal (solo en membresías)
   createdBy?: string;
   at?: string;
   consentAt?: string;          // aceptación del tratamiento de datos personales
@@ -3091,6 +3150,13 @@ export function removeUser(actor: SessionUser, email: string): { ok: true } | { 
   const u = users().find((x) => x.email.toLowerCase() === key);
   if (!u) return { ok: false, status: 404, error: "El usuario no existe." };
   if (key === actor.email.toLowerCase()) return { ok: false, status: 422, error: "No puedes eliminar tu propia cuenta desde aquí: hazlo desde «Mi perfil»." };
+  if (u.membresia) {
+    // la cuenta sigue existiendo en su empresa principal: aquí solo se retira la membresía
+    users().splice(users().indexOf(u), 1);
+    void persist("membresía", (db) => db.userMembership.deleteMany({ where: { companyId: cid(), user: { email: key } } }));
+    audit(actor, "task", key, `membresía retirada (${u.name}, ${u.role}); la cuenta sigue en su empresa principal`);
+    return { ok: true };
+  }
   const info = { name: u.name, role: u.role };
   purgeUserData(key);
   audit(actor, "task", key, `cuenta eliminada con toda su información (${info.name}, ${info.role})`);
@@ -3242,7 +3308,8 @@ export function updateUser(
 
   if (changes.length === 0) return { ok: false, status: 422, error: "Nada que actualizar." };
   audit(actor, "task", u.email, `usuario: ${changes.join(" · ")}`);
-  void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active } }));
+  if (u.membresia) void persist("membresía", (db) => db.userMembership.updateMany({ where: { companyId: cid(), user: { email: u.email.toLowerCase() } }, data: { role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active } }));
+  else void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active } }));
   return { ok: true, user: u };
 }
 

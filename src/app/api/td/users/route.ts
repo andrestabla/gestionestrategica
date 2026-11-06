@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { randomBytes } from "crypto";
-import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword, removeUser, flushOrError } from "@/server/store";
+import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword, removeUser, flushOrError, findUserForLogin, addMembership } from "@/server/store";
 import { can } from "@/lib/permissions";
 import { passwordOk } from "@/lib/recuperacion";
 import { passwordFromBytes } from "@/lib/correos";
@@ -25,6 +25,14 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (typeof body.password === "string" && body.password !== "auto" && !passwordOk(body.password)) return NextResponse.json({ error: "La contraseña debe tener al menos 10 caracteres." }, { status: 422 });
   if (body.sendWelcome && !mailConfigured()) return NextResponse.json({ error: "El envío de correo no está configurado (Administración → Integraciones → AWS SES)." }, { status: 503 });
   if (body.sendWelcome && !wantsPassword) return NextResponse.json({ error: "Para enviar el correo de bienvenida la cuenta necesita contraseña (manual o automática)." }, { status: 422 });
+  // una cuenta que ya existe en otra empresa (p. ej. un consultor) no se duplica: se agrega como membresía con su rol aquí
+  const existente = typeof body.email === "string" ? await findUserForLogin(body.email) : null;
+  if (existente && existente.company && existente.company.slug !== user.company?.slug && !getUsers().some((u) => u.email.toLowerCase() === String(body.email).toLowerCase())) {
+    const m = await addMembership(user, String(body.email), { role: body.role, line: body.line, responsibleId: body.responsibleId });
+    if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+    const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
+    return NextResponse.json({ user: m.user, membership: true, principal: existente.company.name, mailed: false }, { status: 201 });
+  }
   const result = createUser(user, body);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   let password: string | undefined; let generated = false;

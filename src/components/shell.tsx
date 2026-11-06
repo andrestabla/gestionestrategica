@@ -287,6 +287,16 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
           <ArrowRightLeft size={12} /> Cambiar de empresa
         </Link>
       )}
+      {user.role !== "ADMIN" && companies.length > 1 && (
+        <div className="mt-2">
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/35">Tus empresas</div>
+          <ul className="mt-1 space-y-0.5">
+            {companies.map((c) => c.slug === company?.slug
+              ? <li key={c.slug} className="rounded-lg bg-white/[0.12] px-2.5 py-1 text-[12px] font-bold text-white">{c.shortName}<span className="ml-1.5 text-[10.5px] font-semibold text-white/45">{(user.empresas ?? []).find((e) => e.slug === c.slug)?.role?.toLowerCase()}</span></li>
+              : <li key={c.slug}><a href={`/api/auth/empresa?slug=${encodeURIComponent(c.slug)}&next=${encodeURIComponent(`/${c.slug}/panel`)}`} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"><ArrowRightLeft size={11} /> {c.shortName}<span className="ml-auto text-[10.5px] text-white/40">{(user.empresas ?? []).find((e) => e.slug === c.slug)?.role?.toLowerCase()}</span></a></li>)}
+          </ul>
+        </div>
+      )}
     </>
   );
 

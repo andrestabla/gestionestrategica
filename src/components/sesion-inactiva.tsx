@@ -48,7 +48,7 @@ export function SesionInactiva() {
   }, []);
   if (!cerrada) return null;
   return (
-    <Modal title="Sesión cerrada por inactividad" onClose={() => router.push(`${base}/login`)}
+    <Modal variante="dialogo" title="Sesión cerrada por inactividad" onClose={() => router.push(`${base}/login`)}
       footer={<button type="button" onClick={() => { router.push(`${base}/login`); router.refresh(); }} className="btn-primary inline-flex items-center gap-1.5 text-[12.5px]"><LogIn size={13} /> Volver a entrar</button>}>
       <div className="flex items-start gap-3 text-[13px] leading-relaxed text-ink">
         <Clock size={18} className="mt-0.5 shrink-0 text-cyan-deep" />

@@ -156,6 +156,7 @@ export default function AdminPage() {
 /* ═══ Usuarios y roles ═══ */
 
 type ManagedUser = {
+  membresia?: boolean; principal?: string;
   email: string; name: string; role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO";
   line?: number; responsibleId?: string; active: boolean; seeded: boolean; createdBy?: string; at?: string;
 };
@@ -285,7 +286,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ name: string; email: string; password?: string; mailed: boolean; mailError?: string } | null>(null);
+  const [created, setCreated] = useState<{ name: string; email: string; password?: string; mailed: boolean; mailError?: string; membership?: boolean; principal?: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
@@ -318,7 +319,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
     const j = await res.json().catch(() => null);
     if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); setSaving(false); return false; }
     if (j?.error) setError(j.error);
-    setCreated({ name: j.user.name, email: j.user.email, password: j.password, mailed: !!j.mailed, mailError: j.mailError });
+    setCreated({ name: j.user.name, email: j.user.email, password: j.password, mailed: !!j.mailed, mailError: j.mailError, membership: !!j.membership, principal: j.principal });
     await refetch(); setSaving(false); return true;
   };
   const sendReset = async (u: ManagedUser) => {
@@ -336,7 +337,8 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
       {notice && <div className="mb-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12px] text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}><MailCheck size={14} className="shrink-0" style={{ color: "var(--ok-text)" }} />{notice}<button type="button" onClick={() => setNotice(null)} className="ml-auto text-[12px] text-faint hover:text-ink">Cerrar</button></div>}
       {created && (
         <div className="mb-4 rounded-xl border border-line bg-surface px-4 py-3 text-[12px] text-ink" style={{ boxShadow: "var(--e1)" }}>
-          <div className="font-bold">Cuenta creada: {created.name} · <span className="num font-normal text-muted">{created.email}</span></div>
+          <div className="font-bold">{created.membership ? "Cuenta agregada a esta empresa" : "Cuenta creada"}: {created.name} · <span className="num font-normal text-muted">{created.email}</span></div>
+          {created.membership && <div className="mt-1 text-[12px] text-muted">La cuenta ya existía en {created.principal ?? "otra empresa"}: entra con su misma contraseña y aquí opera con el rol que elegiste. En el panel verá «Tus empresas» para cambiar entre ellas.</div>}
           {created.password && (
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span className="text-muted">Contraseña generada (se muestra una sola vez):</span>
@@ -355,7 +357,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
             right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary btn-sm text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
           <div className="px-2 pb-2">
             <ResponsiveTable rows={users} rowKey={(u) => u.email} empty="Sin cuentas." columns={[
-              { key: "usuario", header: "Usuario", priority: 1, cell: (u) => <div className={u.active ? "" : "opacity-45"}><div className="font-semibold text-ink">{u.name}</div><div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div></div> },
+              { key: "usuario", header: "Usuario", priority: 1, cell: (u) => <div className={u.active ? "" : "opacity-45"}><div className="font-semibold text-ink">{u.name}{u.membresia && <span className="chip chip-cyan ml-1.5 !py-0 text-[10.5px]" title={`Cuenta de ${u.principal ?? "otra empresa"}: aquí opera por membresía con su propio rol`}>también en {u.principal ?? "otra empresa"}</span>}</div><div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div></div> },
               { key: "rol", header: "Rol", priority: 2, cell: (u) => (
                 <select value={u.role} disabled={saving} aria-label={`Rol de ${u.name}`} onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })} className="input w-auto !py-1 pr-7 !text-[12px]">
                   {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
@@ -365,7 +367,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
               { key: "estado", header: "Estado", priority: 2, cell: (u) => <span className={`chip ${u.active ? "chip-ok" : "chip-bad"}`}>{u.active ? "Activo" : "Desactivado"}</span> },
               { key: "acciones", header: canCompanies ? "Empresa" : "", priority: 2, align: "right", cell: (u) => (
                 <span className="inline-flex flex-wrap items-center justify-end gap-0.5">
-                  {canCompanies && companies.length > 1 && (
+                  {canCompanies && companies.length > 1 && !u.membresia && (
                     <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa" aria-label={`Empresa de ${u.name}`}
                       onChange={async (e) => { if (e.target.value && e.target.value !== me.company?.slug && await confirmar(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
                       className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[12px]">
@@ -376,7 +378,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                   <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, active: !u.active })} title={u.active ? "Desactivar" : "Reactivar"} aria-label={u.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">{u.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                   <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
                     onClick={async () => { if (await confirmar(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
-                    title="Eliminar la cuenta" aria-label="Eliminar la cuenta" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
+                    title={u.membresia ? "Quitar de esta empresa (la cuenta sigue en su empresa principal)" : "Eliminar la cuenta"} aria-label={u.membresia ? "Quitar de esta empresa" : "Eliminar la cuenta"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
                 </span>
               ) },
             ]} />

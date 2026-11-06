@@ -33,8 +33,28 @@ model User {
   resetExpires DateTime?
   consentAt    DateTime? // aceptación del tratamiento de datos personales (acceso por QR)
   consentVersion String?
+  memberships  UserMembership[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+// ─── Membresías: un usuario (sobre todo un consultor) puede pertenecer a más de una empresa ───
+// La fila de User conserva su empresa principal; cada empresa adicional es una membresía con su propio rol y ámbito.
+
+model UserMembership {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role          String   @default("CONSULTOR") // CONSULTOR | LIDER | RESPONSABLE | DIRECTIVO
+  line          Int?
+  responsibleId String?
+  active        Boolean  @default(true)
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, companyId])
 }
 
 // ─── Empresa ─────────────────────────────────────────────────────────────────
@@ -71,6 +91,7 @@ model Company {
   dataVersion Int     @default(0) // sube con cada escritura de la empresa: las demás instancias recargan su memoria al verla cambiar
 
   users           User[]
+  memberships     UserMembership[]
   assessments     Assessment[]
   kpis            Kpi[]
   initiatives     Initiative[]
