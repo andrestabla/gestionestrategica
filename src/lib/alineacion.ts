@@ -24,8 +24,9 @@ export function encargoAlineacion(args: {
   prioridades: { id: string; order: number; name: string; indicator?: string; desc?: string; sponsor?: string; propuesta?: boolean }[];
   objetivos: { id: string; lever?: string; name: string; desc?: string; indicator?: string; pillar?: string; perspective?: string; krs: number; krNombres?: string[]; iniciativas?: string[] }[];
   lineaBase?: string;
-  contexto?: string; fecha: string; soloId?: string;
+  contexto?: string; fecha: string; soloId?: string; soloIds?: string[];
 }): { system: string; user: string } {
+  const evaluar = args.soloIds?.length ? args.soloIds : args.soloId ? [args.soloId] : undefined;
   const system = [
     "Eres el advisor de 4Shine Empresas que acompaña al comité directivo de una empresa en Colombia. Escribes en español de Colombia, registro formal, sin nombres de personas.",
     contextoMetodo(),
@@ -44,13 +45,13 @@ export function encargoAlineacion(args: {
     "Responde solo JSON con esta forma exacta: {\"items\":[{\"id\":\"OE-01\",\"color\":\"verde|amarillo|rojo\",\"naturaleza\":\"objetivo|resultado_clave|iniciativa|ambiguo\",\"duplicaDe\":[\"OE-05\"],\"faltan\":[\"indicador\",\"plazo\"],\"justificacion\":\"2 a 4 frases\",\"recomendaciones\":[\"…\"],\"reformulacion\":\"…\",\"indicadorPropuesto\":\"…\"}],\"resumen\":\"3 a 5 frases sobre la alineación del conjunto: prioridades sin objetivo o sobrecargadas, patrones de formulación y qué conviene resolver primero. No escribas conteos ni cifras de objetivos por color: la plataforma los calcula y los muestra aparte\"}. Un item por objetivo recibido, con su id exacto.",
   ].filter(Boolean).join("\n\n");
   const prios = args.prioridades.map((p) => `- ${p.id} (${p.order}) «${p.name}»${p.propuesta ? " [PROPUESTA pendiente de aprobación por la Gerencia General: evalúa sus objetivos igual, pero señala que dependen de esa aprobación]" : ""}${p.indicator ? ` · indicador: ${p.indicator}` : ""}${p.desc ? ` · ${p.desc}` : ""}${p.sponsor ? ` · sponsor: ${p.sponsor}` : ""}`).join("\n");
-  const objs = args.objetivos.map((o) => `- ${o.id}${args.soloId === o.id ? " ← evaluar" : ""} [prioridad ${o.lever ?? "sin prioridad"}${o.perspective ? ` · perspectiva ${o.perspective}` : ""}${o.pillar ? ` · pilar «${o.pillar}»` : ""}] «${o.name}»${o.desc ? `\n  aspiración: ${o.desc}` : ""}${o.indicator ? `\n  indicador impulsor: ${o.indicator}` : ""}\n  resultados clave vinculados: ${o.krs}${o.krNombres?.length ? ` (${o.krNombres.join("; ")})` : ""}${o.iniciativas?.length ? `\n  iniciativas ya ligadas: ${o.iniciativas.join("; ")}` : ""}`).join("\n");
+  const objs = args.objetivos.map((o) => `- ${o.id}${evaluar?.includes(o.id) ? " ← evaluar" : ""} [prioridad ${o.lever ?? "sin prioridad"}${o.perspective ? ` · perspectiva ${o.perspective}` : ""}${o.pillar ? ` · pilar «${o.pillar}»` : ""}] «${o.name}»${o.desc ? `\n  aspiración: ${o.desc}` : ""}${o.indicator ? `\n  indicador impulsor: ${o.indicator}` : ""}\n  resultados clave vinculados: ${o.krs}${o.krNombres?.length ? ` (${o.krNombres.join("; ")})` : ""}${o.iniciativas?.length ? `\n  iniciativas ya ligadas: ${o.iniciativas.join("; ")}` : ""}`).join("\n");
   const user = [
     `EMPRESA: ${args.empresa.name}${args.empresa.sector ? ` · ${args.empresa.sector}` : ""}${args.empresa.size ? ` · ${args.empresa.size}` : ""}. Fecha: ${args.fecha}. Horizonte evaluado: ${args.horizonte}.`,
     args.contexto ? `CONTEXTO DE LA EMPRESA (sector, actividad, posición y datos abiertos):\n${args.contexto}` : "",
     `PRIORIDADES ESTRATÉGICAS (validadas por la dirección):\n${prios}`,
     args.lineaBase ? `LÍNEA BASE (resultados ya cerrados, para juzgar ambición y pertinencia):\n${args.lineaBase}` : "",
-    args.soloId ? `EVALÚA SOLO EL OBJETIVO ${args.soloId} (los demás son contexto para duplicidades y reparto por prioridad): devuelve un único item con su id.` : "",
+    evaluar ? (evaluar.length === 1 ? `EVALÚA SOLO EL OBJETIVO ${evaluar[0]} (los demás son contexto para duplicidades y reparto por prioridad): devuelve un único item con su id.` : `EVALÚA SOLO LOS OBJETIVOS ${evaluar.join(", ")} (los demás son contexto para duplicidades y reparto por prioridad): devuelve un item por cada uno de esos ids, sin omitir ninguno.`) : "",
     `OBJETIVOS DIRECTIVOS DEL HORIZONTE ${args.horizonte}:\n${objs}`,
   ].filter(Boolean).join("\n\n");
   return { system, user };

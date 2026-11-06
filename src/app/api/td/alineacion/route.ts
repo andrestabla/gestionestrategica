@@ -30,18 +30,32 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const soloId = typeof body?.id === "string" && objetivos.some((o) => o.id === body.id) ? String(body.id) : undefined;
   const levers = leversOf(c.company);
   const sponsor = (id?: string) => c.responsibles.find((r) => r.id === id)?.dependencia;
-  const { system, user: u } = encargoAlineacion({
+  const argsBase = {
     empresa: { name: c.company.name, sector: c.company.sector, size: c.company.size },
     horizonte: horizonLabel(c.company, horizon),
     prioridades: levers.map((l) => ({ id: l.id, order: l.order, name: l.name, indicator: l.indicator, desc: l.desc, sponsor: sponsor(l.ownerId), propuesta: l.propuesta })),
     objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length, krNombres: keyResultsOf(c, o).map((k) => k.name), iniciativas: c.initiatives.filter((i) => i.cmi === o.id).map((i) => i.name) })),
     lineaBase: horizonesBase(c.company).flatMap((h) => c.objectives.filter((o) => o.horizon === h.id).map((o) => `- ${o.lever ?? ""} · ${o.name}: ${kpisOf(c, o).map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return `${k.name}${last ? ` = ${last.value} ${k.unit}` : ""}${k.target ? ` (meta ${k.target})` : ""}`; }).join("; ") || "sin indicadores"}`)).join("\n") || undefined,
     contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }), soloId,
-  });
+  };
+  const { system, user: u } = encargoAlineacion(argsBase);
   let raw: unknown;
-  try { raw = await chatJson(system, u, { maxTokens: soloId ? 1500 : 9000, timeoutMs: soloId ? 60_000 : 150_000 }); }
+  try { raw = await chatJson(system, u, { maxTokens: soloId ? 1500 : 14000, timeoutMs: soloId ? 60_000 : 170_000 }); }
   catch (e) { return NextResponse.json({ error: `El modelo no respondió: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 }); }
-  let informe = parseAlineacion(raw, horizon, soloId ? [soloId] : objetivos.map((o) => o.id), Object.fromEntries(objetivos.map((o) => [o.id, o.name])));
+  const nombres = Object.fromEntries(objetivos.map((o) => [o.id, o.name]));
+  let informe = parseAlineacion(raw, horizon, soloId ? [soloId] : objetivos.map((o) => o.id), nombres);
+  // si el modelo omitió objetivos (respuesta corta o cortada), se piden en una segunda pasada solo esos ids
+  if (!soloId) {
+    const faltantes = informe.items.filter((x) => /no devolvió lectura/.test(x.justificacion)).map((x) => x.id);
+    if (faltantes.length && faltantes.length < objetivos.length) {
+      const enc2 = encargoAlineacion({ ...argsBase, soloIds: faltantes });
+      try {
+        const raw2 = await chatJson(enc2.system, enc2.user, { maxTokens: 9000, timeoutMs: 150_000 });
+        const parcial = parseAlineacion(raw2, horizon, faltantes, nombres);
+        informe = { ...informe, items: informe.items.map((x) => (faltantes.includes(x.id) ? (parcial.items.find((p) => p.id === x.id) ?? x) : x)) };
+      } catch { /* se deja la anotación de volver a validar en los que faltaron */ }
+    }
+  }
   if (soloId) {
     const previa = getAlineacion(horizon)?.informe;
     const items = (previa?.items ?? []).filter((x) => objetivos.some((o) => o.id === x.id) && x.id !== soloId);
