@@ -616,8 +616,8 @@ export function parseLevers(input: unknown): { ok: true; levers?: Lever[] } | { 
     if (name.length < 3) return { ok: false, error: `La palanca ${id} necesita un nombre.` };
     if (out.some((l) => l.id === id)) return { ok: false, error: `Prioridad repetida: ${id}.` };
     const ownerId = str(raw?.ownerId, 10) || undefined;
-    const indicator = str(raw?.indicator, 300) || undefined;
-    const desc = str(raw?.desc, 600) || undefined;
+    const indicator = str(raw?.indicator, 700) || undefined;   // hasta cuatro indicadores separados por « · »
+    const desc = str(raw?.desc, 800) || undefined;
     const observaciones = str(raw?.observaciones, 1000) || undefined;
     const propuesta = raw?.propuesta === true;
     out.push({ id, name, order: out.length + 1, ...(ownerId ? { ownerId } : {}), ...(indicator ? { indicator } : {}), ...(desc ? { desc } : {}), ...(observaciones ? { observaciones } : {}), ...(propuesta ? { propuesta: true } : {}) });

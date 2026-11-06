@@ -176,6 +176,7 @@ const Vb = (cat: Cat) => vocabOf(cat.company);
 function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
   const V = useVocab();
   const [open, setOpen] = useState(false);
+  const [editando, setEditando] = useState<Lever | null>(null);
   const owner = (id?: string) => cat.responsibles.find((r) => r.id === id);
   const objs = (l: Lever) => cat.objectives.filter((o) => o.lever === l.id);
   const krs = (l: Lever) => cat.kpis.filter((k) => objs(l).some((o) => o.id === k.cmi));
@@ -195,13 +196,16 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
       ) : (
         <div className="rise grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[...levers].sort((a, b) => a.order - b.order).map((l) => { const o = owner(l.ownerId); return (
-            <Card key={l.id} className="flex flex-col p-5">
-              <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
-              <div className="mt-0.5 text-[16px] font-extrabold leading-tight text-ink">{l.name}</div>
+            <Card key={l.id} className="relative flex flex-col p-5">
+              {canEdit && <button type="button" onClick={() => setEditando(l)} title={`Editar ${l.name}`} aria-label={`Editar ${l.name}`} className="absolute right-3 top-3 rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-cyan-deep"><Pencil size={13} /></button>}
+              <div className="num pr-8 text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+              <div className="mt-0.5 pr-8 text-[16px] font-extrabold leading-tight text-ink">{l.name}</div>
               {l.propuesta && <span className="chip chip-gold mt-1.5 w-fit !py-0 text-[11px]" title={l.observaciones ?? "Propuesta pendiente de aprobación"}>Propuesta · pendiente de aprobación</span>}
               {l.desc && <p className="mt-2 text-[12.5px] leading-snug text-ink-soft">{l.desc}</p>}
               {l.propuesta && l.observaciones && <p className="mt-1.5 text-[12px] leading-snug text-muted">{l.observaciones}</p>}
-              {l.indicator && <p className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {l.indicator}</p>}
+              {l.indicator && (() => { const inds = splitIndicadores(l.indicator); return inds.length > 1
+                ? <div className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicadores.</b><ol className="mt-0.5 list-decimal space-y-0.5 pl-4">{inds.map((x, k) => <li key={k}>{x}</li>)}</ol></div>
+                : <p className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {inds[0]}</p>; })()}
               <div className="mt-3 text-[12px] text-muted"><b className="text-ink">{V.group}.</b> {o ? (o.cargo || o.dependencia) : <span className="italic text-faint">por definir</span>}</div>
               <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
                 <span className="chip !py-0 text-[12px]">{objs(l).length} objetivo{objs(l).length === 1 ? "" : "s"}</span>
@@ -213,7 +217,67 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
         </div>
       )}
       {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setOpen(false); return ok; }} />}
+      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setEditando(null); return ok; }} />}
     </>
+  );
+}
+
+/** Los indicadores de una prioridad se guardan en un solo texto separados por « · » (los catálogos importados traen listas numeradas «1. … 2. …»). */
+export function splitIndicadores(s?: string): string[] {
+  if (!s) return [];
+  if (s.includes(" · ")) return s.split(" · ").map((x) => x.trim()).filter(Boolean);
+  const num = s.split(/(?:^|\s)\d{1,2}\.\s*/).map((x) => x.trim()).filter(Boolean);
+  return num.length > 1 ? num : [s.trim()];
+}
+const joinIndicadores = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean).join(" · ");
+
+/** Edición de una sola prioridad (lápiz de la tarjeta): nombre, sponsor, resultado del ciclo y renuncia, y un campo por indicador. */
+function LeverForm({ cat, lever, levers, saving, onCancel, onSubmit }: { cat: Cat; lever: Lever; levers: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean> }) {
+  const V = Vb(cat); const acomp = isAcompanamiento(cat.company);
+  const [f, setF] = useState({ id: lever.id, name: lever.name, ownerId: lever.ownerId ?? "", desc: lever.desc ?? "" });
+  const [inds, setInds] = useState<string[]>(() => { const x = splitIndicadores(lever.indicator); return x.length ? x : [""]; });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+  const idRepetido = levers.some((l) => l.id !== lever.id && l.id === f.id.trim().toUpperCase());
+  const valido = f.id.trim().length > 0 && !idRepetido && f.name.trim().length >= 3;
+  const guardar = () => {
+    const rows = [...levers].sort((a, b) => a.order - b.order).map((l) => l.id === lever.id
+      ? { ...l, id: f.id.trim().toUpperCase(), name: f.name.trim(), ownerId: f.ownerId || undefined, desc: f.desc.trim() || undefined, indicator: joinIndicadores(inds) || undefined }
+      : l);
+    return onSubmit(rows);
+  };
+  return (
+    <Modal title={`${lever.order}. ${lever.name}`} sub={`editar esta ${V.leverLow} · el orden y las demás se cambian en «Editar ${V.leversLow}»`} onClose={onCancel}
+      footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" disabled={saving || !valido} onClick={() => void guardar()} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar</button></>}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-[96px_1fr] gap-3">
+          <Field label="Sigla" error={idRepetido ? "Ya existe otra con esta sigla" : undefined}><input value={f.id} onChange={(e) => setF({ ...f, id: e.target.value.toUpperCase() })} maxLength={12} className={`${INPUT} num`} /></Field>
+          <Field label="Nombre"><input value={f.name} onChange={set("name")} maxLength={80} placeholder={`Nombre de la ${V.leverLow}`} className={INPUT} /></Field>
+        </div>
+        <Field label={V.group} help="quien responde por esta prioridad ante la dirección">
+          <select value={f.ownerId} onChange={set("ownerId")} className={INPUT}><option value="">por definir</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}{x.cargo && x.dependencia ? ` · ${x.cargo}` : ""}</option>)}</select>
+        </Field>
+        <Field label={acomp ? "Resultado del ciclo y renuncia" : "Descripción"} help={acomp ? "qué se logra al cierre del ciclo (cifra y fecha) y a qué se renuncia para lograrlo" : undefined}>
+          <textarea value={f.desc} onChange={set("desc")} rows={4} maxLength={800} placeholder={acomp ? "Resultado del ciclo: … a diciembre de 2030. Renuncia: …" : "Qué busca esta palanca"} className={`${INPUT} resize-y`} />
+        </Field>
+        <div>
+          <div className="mb-1 flex items-end justify-between gap-2">
+            <label className="text-[12px] font-bold text-ink">Indicadores</label>
+            <span className="text-[11.5px] text-faint">de 1 a 3, con su fuente y frecuencia</span>
+          </div>
+          <div className="space-y-1.5">
+            {inds.map((x, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <span className="num w-5 shrink-0 text-right text-[12px] text-faint">{i + 1}.</span>
+                <input value={x} onChange={(e) => setInds(inds.map((y, j) => (j === i ? e.target.value : y)))} maxLength={160} placeholder={i === 0 ? "Participación de mercado en valores (IQVIA, mensual)" : "Otro indicador (fuente, frecuencia)"} className={INPUT} />
+                {inds.length > 1 && <button type="button" onClick={() => setInds(inds.filter((_, j) => j !== i))} title="Quitar" aria-label="Quitar indicador" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-bad"><X size={13} /></button>}
+              </div>
+            ))}
+          </div>
+          {inds.length < 4 && <button type="button" onClick={() => setInds([...inds, ""])} className="mt-1.5 text-[12px] font-bold text-cyan-deep hover:underline">+ añadir indicador</button>}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -593,7 +657,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
 }
 
 function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; initial: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean> }) {
-  const [rows, setRows] = useState<{ id: string; name: string; ownerId: string; indicator: string; desc: string }[]>(initial.map((l) => ({ id: l.id, name: l.name, ownerId: l.ownerId ?? "", indicator: l.indicator ?? "", desc: l.desc ?? "" })));
+  const [rows, setRows] = useState<(Partial<Lever> & { id: string; name: string; ownerId: string })[]>(initial.map((l) => ({ ...l, ownerId: l.ownerId ?? "" })));
   const upd = (i: number, k: string, v: string) => setRows(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= rows.length) return; const c = [...rows]; [c[i], c[j]] = [c[j], c[i]]; setRows(c); };
   return (
@@ -602,16 +666,16 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
         <button type="button" disabled={saving || rows.some((r) => !r.id.trim() || r.name.trim().length < 3)} onClick={() => onSubmit(rows)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar {Vb(cat).leversLow}</button></>}>
       <div className="space-y-2">
         {rows.map((r, i) => (
-          <div key={i} className="grid grid-cols-[28px_80px_1fr_1fr_1fr_60px] items-start gap-1.5">
+          <div key={i} className="grid grid-cols-[28px_80px_1fr_1fr_60px] items-start gap-1.5">
             <div className="flex flex-col pt-1"><button onClick={() => move(i, -1)} className="text-[12px] text-faint hover:text-ink">▲</button><button onClick={() => move(i, 1)} className="text-[12px] text-faint hover:text-ink">▼</button></div>
             <input value={r.id} onChange={(e) => upd(i, "id", e.target.value.toUpperCase())} placeholder="MS" className="input num !py-1.5 !text-[12px]" />
             <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)} placeholder={`Nombre de la ${Vb(cat).leverLow}`} className="input !py-1.5 !text-[12px]" />
-            <input value={r.indicator} onChange={(e) => upd(i, "indicator", e.target.value)} placeholder="Indicador principal" className="input !py-1.5 !text-[12px]" />
             <select value={r.ownerId} onChange={(e) => upd(i, "ownerId", e.target.value)} className="input !py-1.5 !text-[12px]"><option value="">{Vb(cat).group} / responsable</option>{cat.responsibles.map((x) => <option key={x.id} value={x.id}>{x.dependencia || x.cargo}</option>)}</select>
             <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="pt-1.5 text-[12px] text-faint hover:text-bad">Quitar</button>
           </div>
         ))}
-        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "", indicator: "", desc: "" }])} className="text-[12px] font-bold text-cyan-deep hover:underline">+ añadir {Vb(cat).leverLow}</button>}
+        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "" }])} className="text-[12px] font-bold text-cyan-deep hover:underline">+ añadir {Vb(cat).leverLow}</button>}
+        <p className="pt-2 text-[12px] text-faint">Aquí se fija el orden, se añaden o se quitan {Vb(cat).leversLow}. El resultado del ciclo, la renuncia y los indicadores de cada una se editan con el lápiz de su tarjeta.</p>
       </div>
     </Modal>
   );
