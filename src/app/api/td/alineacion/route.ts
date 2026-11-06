@@ -37,7 +37,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const { system, user: u } = encargoAlineacion({
     empresa: { name: c.company.name, sector: c.company.sector, size: c.company.size },
     horizonte: horizonLabel(c.company, horizon),
-    prioridades: levers.map((l) => ({ id: l.id, order: l.order, name: l.name, indicator: l.indicator, desc: l.desc, sponsor: sponsor(l.ownerId) })),
+    prioridades: levers.map((l) => ({ id: l.id, order: l.order, name: l.name, indicator: l.indicator, desc: l.desc, sponsor: sponsor(l.ownerId), propuesta: l.propuesta })),
     objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length, krNombres: keyResultsOf(c, o).map((k) => k.name), iniciativas: c.initiatives.filter((i) => i.cmi === o.id).map((i) => i.name) })),
     lineaBase: horizonesBase(c.company).flatMap((h) => c.objectives.filter((o) => o.horizon === h.id).map((o) => `- ${o.lever ?? ""} · ${o.name}: ${kpisOf(c, o).map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return `${k.name}${last ? ` = ${last.value} ${k.unit}` : ""}${k.target ? ` (meta ${k.target})` : ""}`; }).join("; ") || "sin indicadores"}`)).join("\n") || undefined,
     contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }),

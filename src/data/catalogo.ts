@@ -63,7 +63,7 @@ export type Horizon = { id: string; label: string; months: number; baseline?: bo
 
 /** Palanca estratégica de la empresa (p. ej. Market Share, Fidelización,
     Madurez, Margen): ordena la convención y agrupa objetivos e iniciativas. */
-export type Lever = { id: string; name: string; order: number; ownerId?: string; indicator?: string; desc?: string };
+export type Lever = { id: string; name: string; order: number; ownerId?: string; indicator?: string; desc?: string; propuesta?: boolean; observaciones?: string };   // propuesta: pendiente de aprobación por la dirección
 
 /** ¿La empresa opera en modo convención (menú reducido a las cinco secciones)? */
 export const isConvencion = (c: Pick<CompanyInfo, "mode"> | null | undefined): boolean => c?.mode === "convencion";

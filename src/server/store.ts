@@ -603,9 +603,11 @@ export function parseLevers(input: unknown): { ok: true; levers?: Lever[] } | { 
     if (name.length < 3) return { ok: false, error: `La palanca ${id} necesita un nombre.` };
     if (out.some((l) => l.id === id)) return { ok: false, error: `Palanca repetida: ${id}.` };
     const ownerId = str(raw?.ownerId, 10) || undefined;
-    const indicator = str(raw?.indicator, 160) || undefined;
-    const desc = str(raw?.desc, 400) || undefined;
-    out.push({ id, name, order: out.length + 1, ...(ownerId ? { ownerId } : {}), ...(indicator ? { indicator } : {}), ...(desc ? { desc } : {}) });
+    const indicator = str(raw?.indicator, 300) || undefined;
+    const desc = str(raw?.desc, 600) || undefined;
+    const observaciones = str(raw?.observaciones, 1000) || undefined;
+    const propuesta = raw?.propuesta === true;
+    out.push({ id, name, order: out.length + 1, ...(ownerId ? { ownerId } : {}), ...(indicator ? { indicator } : {}), ...(desc ? { desc } : {}), ...(observaciones ? { observaciones } : {}), ...(propuesta ? { propuesta: true } : {}) });
   }
   return { ok: true, levers: out };
 }

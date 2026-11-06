@@ -193,7 +193,9 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
             <Card key={l.id} className="flex flex-col p-5">
               <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
               <div className="mt-0.5 text-[16px] font-extrabold leading-tight text-ink">{l.name}</div>
+              {l.propuesta && <span className="chip chip-gold mt-1.5 w-fit !py-0 text-[11px]" title={l.observaciones ?? "Propuesta pendiente de aprobación"}>Propuesta · pendiente de aprobación</span>}
               {l.desc && <p className="mt-2 text-[12.5px] leading-snug text-ink-soft">{l.desc}</p>}
+              {l.propuesta && l.observaciones && <p className="mt-1.5 text-[12px] leading-snug text-muted">{l.observaciones}</p>}
               {l.indicator && <p className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {l.indicator}</p>}
               <div className="mt-3 text-[12px] text-muted"><b className="text-ink">{V.group}.</b> {o ? (o.cargo || o.dependencia) : <span className="italic text-faint">por definir</span>}</div>
               <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
@@ -277,7 +279,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         <div className="rise space-y-4 sm:hidden">
           {levers.map((l) => (
             <div key={l.id} className="rounded-2xl bg-surface-2/60 p-3">
-              <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
+              <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}{l.propuesta ? " · propuesta" : ""}</div>
               <div className="text-[15px] font-extrabold leading-tight text-ink">{l.name}</div>
               {l.indicator && <div className="mt-1 text-[12px] leading-snug text-muted">{l.indicator}</div>}
               {hz.map((h) => {
@@ -310,6 +312,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
                   <td className="rounded-xl bg-surface-2/60 px-3 py-3">
                     <div className="num text-[12px] font-bold uppercase tracking-wider text-faint">{l.order}. {l.id}</div>
                     <div className="text-[13.5px] font-extrabold leading-tight text-ink">{l.name}</div>
+                    {l.propuesta && <span className="chip chip-gold mt-1 w-fit !py-0 text-[11px]" title={l.observaciones ?? ""}>Propuesta · pendiente de aprobación</span>}
                     {l.indicator && <div className="mt-1 text-[12px] leading-snug text-muted">{l.indicator}</div>}
                     {l.ownerId && <div className="mt-1 text-[12px] text-faint">{owner(l.ownerId)}</div>}
                   </td>
