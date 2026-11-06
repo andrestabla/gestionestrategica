@@ -1398,7 +1398,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         {acomp && <AyudaMetodologica tema="portafolio" />}
         {acomp && <DescargarDecisiones modulo="portafolio" />}
         <p className="text-[12.5px] text-muted">{acomp ? `El portafolio se lee por ${V.leverLow} y ${V.groupLow}. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa.` : convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
-        <button onClick={download} className="btn-ghost w-full justify-center btn-sm text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
+        {!acomp && <button onClick={download} className="btn-ghost w-full justify-center btn-sm text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>}
       </div>
       <Card className="rise mb-5 overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">

@@ -282,6 +282,13 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   const me = useUser();
   const responsibles = useCatalog().catalog.responsibles;
   const [newOpen, setNewOpen] = useState(false);
+  const [existentes, setExistentes] = useState<ExistingUser[] | null>(null);   // cuentas de otras empresas (admin), para agregar por membresía
+  useEffect(() => {
+    if (!newOpen || !canCompanies) { if (!newOpen) setExistentes(null); return; }
+    let alive = true;
+    fetch("/api/td/users/existentes").then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) setExistentes(j ? (j.users as ExistingUser[]) : []); }).catch(() => { if (alive) setExistentes([]); });
+    return () => { alive = false; };
+  }, [newOpen, canCompanies]);
   const [companies, setCompanies] = useState<CompanyLite[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [saving, setSaving] = useState(false);
@@ -386,7 +393,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         </Card>
 
         {newOpen && (
-          <NewUserCard saving={saving} responsibles={responsibles} onClose={() => setNewOpen(false)}
+          <NewUserCard saving={saving} responsibles={responsibles} existentes={canCompanies ? existentes : null} onClose={() => setNewOpen(false)}
             onCreate={async (input) => { const ok = await createAccount(input); if (ok) setNewOpen(false); return ok; }} />
         )}
       </div>
@@ -401,12 +408,17 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   );
 }
 
-function NewUserCard({ saving, responsibles, onCreate, onClose }: {
+type ExistingUser = { email: string; name: string; role: string; company: string; companyName: string };
+
+function NewUserCard({ saving, responsibles, existentes, onCreate, onClose }: {
   saving: boolean;
   responsibles: ResponsibleLite[];
+  existentes?: ExistingUser[] | null;   // cuentas de otras empresas (solo el admin las ve): se agregan por membresía
   onCreate: (input: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const [modo, setModo] = useState<"nueva" | "existente">("nueva");
+  const [existente, setExistente] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<ManagedUser["role"]>("RESPONSABLE");
@@ -416,7 +428,13 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
   const [password, setPassword] = useState("");
   const [sendWelcome, setSendWelcome] = useState(true);
 
+  const elegido = modo === "existente" ? (existentes ?? []).find((u) => u.email === existente) : undefined;
   const submit = async () => {
+    if (modo === "existente") {
+      if (!elegido) return;
+      if (await onCreate({ name: elegido.name, email: elegido.email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined })) { setExistente(""); onClose(); }
+      return;
+    }
     if (await onCreate({
       name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined,
       ...(pwdMode === "auto" ? { password: "auto" } : pwdMode === "manual" ? { password } : {}), sendWelcome: pwdMode !== "none" && sendWelcome,
@@ -426,21 +444,37 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
   };
   const pwdBad = pwdMode === "manual" && password.length < 10;
   return (
-    <Modal title="Nueva cuenta" sub="nace activa; con contraseña manual o automática y, si quieres, correo de bienvenida con el acceso" onClose={onClose}
+    <Modal title={modo === "existente" ? "Agregar una cuenta existente" : "Nueva cuenta"} sub={modo === "existente" ? "la cuenta ya existe en otra empresa: aquí opera por membresía, con el rol que elijas y su misma contraseña" : "nace activa; con contraseña manual o automática y, si quieres, correo de bienvenida con el acceso"} onClose={onClose}
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" onClick={submit}
-          disabled={saving || !name.trim() || !email.trim() || pwdBad || (role === "RESPONSABLE" && !line && !responsibleId)}
+          disabled={saving || (modo === "existente" ? !elegido : (!name.trim() || !email.trim() || pwdBad)) || (role === "RESPONSABLE" && !line && !responsibleId)}
           className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">
           {saving ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
-          Crear cuenta
+          {modo === "existente" ? "Agregar a esta empresa" : "Crear cuenta"}
         </button>
       </>}>
       <div className="space-y-2.5">
+        {existentes && (
+          <div className="inline-flex rounded-xl bg-surface-2 p-1 text-[12px] font-bold">
+            {([["nueva", "Nueva cuenta"], ["existente", `Cuenta existente (${existentes.length})`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setModo(k)} className={`rounded-lg px-3 py-1.5 transition-all ${modo === k ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>{l}</button>)}
+          </div>
+        )}
+        {modo === "existente" ? (
+          <>
+            <select value={existente} onChange={(e) => setExistente(e.target.value)} className="input !py-2 text-[12px]" aria-label="Cuenta existente en otra empresa">
+              <option value="">Elige la cuenta…</option>
+              {(existentes ?? []).map((u) => <option key={u.email} value={u.email}>{u.name} · {u.email} · {u.companyName} ({ROLE_LABEL[u.role as ManagedUser["role"]] ?? u.role})</option>)}
+            </select>
+            {existentes && existentes.length === 0 && <p className="text-[12px] text-faint">No hay cuentas activas en otras empresas que no estén ya en esta.</p>}
+            {elegido && <p className="text-[12px] leading-snug text-muted">{elegido.name} seguirá entrando con su contraseña actual y verá «Tus empresas» en el menú para cambiar entre {elegido.companyName} y esta.</p>}
+          </>
+        ) : (<>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)}
           placeholder="Nombre completo" className="input !py-2 text-[12px]" />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
           placeholder="correo@empresa.com" className="input !py-2 text-[12px]" />
+        </>)}
         <select value={role} onChange={(e) => setRole(e.target.value as ManagedUser["role"])}
           className="input !py-2 text-[12px]">
           {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => (
@@ -456,7 +490,7 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
             </p>
           </>
         )}
-        <div className="rounded-xl bg-surface-2/60 px-3 py-2.5">
+        {modo === "nueva" && <div className="rounded-xl bg-surface-2/60 px-3 py-2.5">
           <div className="label !text-[11px]">Contraseña</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5 text-[12px]">
             {([["auto", "Automática (generada)"], ["manual", "Manual"], ["none", "Sin contraseña (entra por QR o la fija con «¿Olvidaste tu contraseña?»)"]] as const).map(([k, l]) => (
@@ -473,7 +507,7 @@ function NewUserCard({ saving, responsibles, onCreate, onClose }: {
             </label>
           )}
           {pwdMode === "auto" && <p className="mt-1.5 text-[12px] leading-snug text-faint">La contraseña generada se muestra una sola vez al crear la cuenta.</p>}
-        </div>
+        </div>}
       </div>
     </Modal>
   );
