@@ -3,7 +3,7 @@
 // exportar-pdf, exportar-docx y exportar-xlsx a partir de la misma estructura.
 
 import { catalog, getAlineacion, getDecisions, consolidatedOf, getRevisionesCap, getChecklistsCap, getMetas, getArticulaciones, getF1Responses } from "@/server/store";
-import { leversOf, horizonsOf, horizonesBase, horizonLabel } from "@/data/catalogo";
+import { leversOf, horizonsOf, horizonesBase } from "@/data/catalogo";
 import { keyResultsOf, initiativesOfKr } from "@/lib/convencion";
 import { rank, decisionLabel, LEVEL_NAMES, type Decision } from "@/lib/priorizacion";
 import { lecturaCapacidades, FRENTES, SEMAFORO, NIVEL_CAP } from "@/lib/capacidades";
@@ -103,11 +103,12 @@ export function documentoDecisiones(modulo: ModuloExport, user: SessionUser): Do
   if (modulo === "cascada") {
     const metas = getMetas(); const arts = getArticulaciones(); const decisions = getDecisions();
     const year = Number(h1?.label.match(/\d{4}/)?.[0] ?? new Date().getFullYear());
-    const inis = c.initiatives.filter((i) => { const d = decisions[i.id]?.decision; return d === "IMPLEMENTAR" || d === "PREPARAR" || arts[i.id] || metas.some((m) => m.initiative === i.id); });
+    const ordenLever = (iniId: string) => { const i = c.initiatives.find((x) => x.id === iniId); const o = c.objectives.find((x) => x.id === i?.cmi); return levers.find((l) => l.id === o?.lever)?.order ?? 99; };
+    const inis = c.initiatives.filter((i) => { const d = decisions[i.id]?.decision; return d === "IMPLEMENTAR" || d === "PREPARAR" || arts[i.id] || metas.some((m) => m.initiative === i.id); }).sort((a, b) => ordenLever(a.id) - ordenLever(b.id) || a.cmi.localeCompare(b.cmi) || a.name.localeCompare(b.name, "es"));
     const filasArt = inis.flatMap((i) => (arts[i.id]?.areas ?? []).map((a) => [leverOfIni(i.id), i.cmi, i.kpi || "—", i.name, area(a.areaId), ROL_AREA[a.rol], String(a.prioridad), a.persona ?? "—", a.contribucion, a.entrega ?? "—"]));
     const filasMetas = metas.filter((m) => m.quarter.startsWith(`${year}-`)).map((m: MetaTrimestral) => [trimestreLabel(m.quarter), leverName(m.lever), m.objective ?? "—", m.kpi ?? "—", c.initiatives.find((i) => i.id === m.initiative)?.name ?? "—", area(m.areaId), m.persona ?? "—", m.meta, m.criterio || "—", m.hitos.map((h) => `${h.name}${h.fecha ? ` (${h.fecha})` : ""} [${h.estado.toLowerCase()}]`).join(" · ") || "—", m.depende.map((d) => `${area(d.areaId)}: ${d.que}`).join(" · ") || "—", m.cierre ? `${m.cierre.cumplimiento} %` : m.estado.toLowerCase().replace("_", " ")]);
     return { ...base, modulo, titulo: "Cascada y plan trimestral", subtitulo: `${V.lever} → objetivo → resultado clave → iniciativa → área → persona o equipo → meta por trimestre (${year})`, secciones: [
-      { titulo: `Articulación entre áreas (${inis.length} iniciativas)`, columnas: [V.lever, "Objetivo", "KR", "Iniciativa", "Área", "Rol", "Prior.", "Persona o equipo", "Qué debe hacer", "Entrega"], anchos: [10, 6, 7, 16, 9, 7, 4, 11, 20, 10], filas: filasArt },
+      { titulo: `Articulación entre áreas (${inis.length} iniciativas)`, columnas: [V.lever, "Objetivo", "KR", "Iniciativa", "Área", "Rol", "N.º", "Persona o equipo", "Qué debe hacer", "Entrega"], anchos: [10, 6, 7, 16, 9, 6, 4, 11, 21, 10], filas: filasArt },
       { titulo: `Metas trimestrales ${year} (${filasMetas.length})`, columnas: ["Trim.", V.lever, "Objetivo", "KR", "Iniciativa", "Área", "Persona o equipo", "Meta", "Criterio de éxito", "Hitos", "Depende de", "Estado"], anchos: [5, 8, 6, 7, 11, 8, 9, 13, 11, 10, 8, 4], filas: filasMetas },
     ] };
   }
