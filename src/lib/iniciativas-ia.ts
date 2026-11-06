@@ -24,7 +24,7 @@ export function encargoValidacionIniciativas(args: {
   objetivos: { id: string; lever?: string; name: string }[];
   krs: { code: string; name: string; objective: string; baseline?: string; target?: string; unit?: string; due?: string }[];
   iniciativas: { id: string; name: string; objetivo?: string; metaResultado?: string; cmi?: string; kpi?: string; owner?: string; start?: string; end?: string; capability?: string; capabilityName?: string; status?: string; budget?: number; observaciones?: string }[];
-  contexto?: string; fecha: string;
+  contexto?: string; fecha: string; soloId?: string;
 }): { system: string; user: string } {
   const system = [
     "Eres el advisor de 4Shine Empresas que acompaña al comité directivo de una empresa en Colombia. Escribes en español de Colombia, registro formal, sin nombres de personas.",
@@ -43,12 +43,16 @@ export function encargoValidacionIniciativas(args: {
     `PRIORIDADES: ${args.prioridades.map((p) => `${p.id} «${p.name}»${p.indicator ? ` [${p.indicator}]` : ""}`).join("; ")}.`,
     `OBJETIVOS DEL HORIZONTE:\n${args.objetivos.map((o) => `- ${o.id} [${o.lever ?? "sin prioridad"}] «${o.name}»`).join("\n")}`,
     `RESULTADOS CLAVE:\n${args.krs.map((k) => `- ${k.code} (objetivo ${k.objective}) «${k.name}»${k.baseline || k.target ? ` · base ${k.baseline ?? "—"} → meta ${k.target ?? "—"} ${k.unit ?? ""}` : ""}${k.due ? ` · plazo ${k.due}` : ""}`).join("\n") || "- ninguno"}`,
-    `INICIATIVAS A VALIDAR:\n${args.iniciativas.map((i) => `- ${i.id} «${i.name}»\n  qué logra: ${i.objetivo || "(vacío)"}\n  meta o resultado esperado: ${i.metaResultado || "(vacío)"}\n  objetivo: ${i.cmi ?? "—"} · KR: ${i.kpi || "(sin resultado clave)"} · responsable: ${i.owner ?? "—"} · inicio ${i.start || "(vacío)"} · fin ${i.end || "(vacío)"} · capacidad ${i.capability ? `${i.capability}${i.capabilityName ? ` ${i.capabilityName}` : ""}` : "(vacía)"} · estado ${i.status ?? "—"} · presupuesto planeado ${i.budget ? i.budget : "(vacío)"}${i.observaciones ? `\n  observaciones: ${i.observaciones.slice(0, 300)}` : ""}`).join("\n")}`,
+    args.soloId ? `EVALÚA SOLO LA INICIATIVA ${args.soloId} (las demás son contexto para duplicidades y reparto por KR): devuelve un único item con su id.` : "",
+    `INICIATIVAS${args.soloId ? " (la marcada «← evaluar» es la que se valida)" : " A VALIDAR"}:\n${args.iniciativas.map((i) => `- ${i.id}${args.soloId === i.id ? " ← evaluar" : ""} «${i.name}»\n  qué logra: ${i.objetivo || "(vacío)"}\n  meta o resultado esperado: ${i.metaResultado || "(vacío)"}\n  objetivo: ${i.cmi ?? "—"} · KR: ${i.kpi || "(sin resultado clave)"} · responsable: ${i.owner ?? "—"} · inicio ${i.start || "(vacío)"} · fin ${i.end || "(vacío)"} · capacidad ${i.capability ? `${i.capability}${i.capabilityName ? ` ${i.capabilityName}` : ""}` : "(vacía)"} · estado ${i.status ?? "—"} · presupuesto planeado ${i.budget ? i.budget : "(vacío)"}${i.observaciones ? `\n  observaciones: ${i.observaciones.slice(0, 300)}` : ""}`).join("\n")}`,
   ].filter(Boolean).join("\n\n");
   return { system, user };
 }
 
-export function parseValidacionIniciativas(raw: unknown, horizon: string, ids: string[]): ValidacionIni {
+/** Hechos verificables de cada iniciativa (lo que la plataforma sabe): prevalecen sobre lo que el modelo diga que falta. */
+export type HechosIni = { plazo: boolean; kr: boolean; responsable: boolean; capacidad: boolean; recursos: boolean; logro: boolean };
+
+export function parseValidacionIniciativas(raw: unknown, horizon: string, ids: string[], hechos: Record<string, HechosIni> = {}): ValidacionIni {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const arr = Array.isArray(o.items) ? (o.items as Record<string, unknown>[]) : [];
   const items: IniItem[] = ids.map((id) => {
@@ -59,12 +63,24 @@ export function parseValidacionIniciativas(raw: unknown, horizon: string, ids: s
     const n = str(it.naturaleza, 20).toLowerCase();
     const naturaleza: IniNaturaleza = (["operacion", "objetivo", "resultado_clave", "paraguas", "ambiguo"] as const).includes(n as never) ? (n as IniNaturaleza) : "iniciativa";
     const duplicaDe = (Array.isArray(it.duplicaDe) ? it.duplicaDe : []).map((d) => str(d, 20)).filter((d) => d && d.toLowerCase() !== id.toLowerCase() && ids.some((x) => x.toLowerCase() === d.toLowerCase())).slice(0, 5);
-    const faltan = (Array.isArray(it.faltan) ? it.faltan : []).map((f) => str(f, 20).toLowerCase()).filter((f) => f in ELEMENTOS_INI);
-    const recs = (Array.isArray(it.recomendaciones) ? it.recomendaciones : []).map((r) => str(r, 600)).filter(Boolean).slice(0, 6);
+    let faltan = (Array.isArray(it.faltan) ? it.faltan : []).map((f) => str(f, 20).toLowerCase()).filter((f) => f in ELEMENTOS_INI);
+    const h = hechos[id];
+    if (h) {   // lo verificable lo decide la plataforma: no se marca como faltante lo que está, ni se omite lo que falta
+      const verificables: [keyof HechosIni, string][] = [["plazo", "plazo"], ["kr", "kr"], ["responsable", "responsable"], ["capacidad", "capacidad"], ["recursos", "recursos"], ["logro", "logro"]];
+      for (const [k, code] of verificables) { if (h[k]) faltan = faltan.filter((f) => f !== code); else if (!faltan.includes(code)) faltan.push(code); }
+    }
+    let recs = (Array.isArray(it.recomendaciones) ? it.recomendaciones : []).map((r) => str(r, 600)).filter(Boolean).slice(0, 6);
     const reformulacion = str(it.reformulacion, 200) ? nombreComoEntrega(sinCifrasDeMeta(str(it.reformulacion, 200))) : "";
     const logroPropuesto = str(it.logroPropuesto, 600);
     if (color !== "verde" && !recs.length && !reformulacion) recs.push("Reformular la iniciativa: nombre como entrega, qué logra, resultado clave que mueve, responsable, inicio y fin, capacidad que instala.");
     if (reformulacion && !recs.some((r) => r.includes(reformulacion.slice(0, 30)))) recs.unshift(`Cambiar el nombre a: «${reformulacion}»`);
+    // acciones sobre elementos que la plataforma ya sabe resueltos se retiran; las de elementos que faltan y el modelo no mencionó se añaden
+    if (h) {
+      const quita = (re: RegExp, ok: boolean) => { if (ok) recs = recs.filter((r) => !re.test(r)); };
+      quita(/^(inicio y fin|plazo)\s*:/i, h.plazo); quita(/^resultado clave\s*:/i, h.kr); quita(/^responsable\s*:/i, h.responsable); quita(/^capacidad\s*:/i, h.capacidad); quita(/^recursos( y presupuesto)?\s*:/i, h.recursos);
+      const falta = (code: string, texto: string) => { if (faltan.includes(code) && !recs.some((r) => r.toLowerCase().startsWith(texto.split(":")[0].toLowerCase()))) recs.push(texto); };
+      falta("plazo", "Inicio y fin: fijar el trimestre de inicio y el de cierre (AAAA-Tn)."); falta("kr", "Resultado clave: vincular la iniciativa al resultado clave que mueve."); falta("responsable", "Responsable: asignar el área y la persona que responde."); falta("capacidad", "Capacidad: declarar la dimensión del mapa que instala."); falta("recursos", "Recursos y presupuesto: estimar personas, dinero y tiempo (presupuesto planeado)."); falta("logro", "Qué logra: escribir el cambio verificable y cómo mueve el resultado clave.");
+    }
     const colorFinal: Semaforo = color === "verde" && (faltan.length || naturaleza !== "iniciativa" || duplicaDe.length) ? "amarillo" : color;
     return { id, color: colorFinal, justificacion: str(it.justificacion, 1200) || "Sin justificación.", recomendaciones: recs, naturaleza, duplicaDe, faltan, reformulacion, logroPropuesto };
   });

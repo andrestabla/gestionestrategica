@@ -34,3 +34,14 @@ test("encargoValidacionIniciativas lleva KR, objetivos e iniciativas", () => {
     krs: [{ code: "OPE-01", name: "OTIF", objective: "OE-01" }], iniciativas: [{ id: "i1", name: "Comité", kpi: "OPE-01" }], fecha: "hoy" });
   assert.match(e.user, /OPE-01/); assert.match(e.user, /INICIATIVAS A VALIDAR/); assert.match(e.system, /EXIGENCIA/);
 });
+
+test("los hechos de la plataforma prevalecen sobre lo que el modelo marca como faltante", () => {
+  const r = parseValidacionIniciativas({ items: [
+    { id: "i1", color: "verde", naturaleza: "iniciativa", faltan: ["plazo"], recomendaciones: ["Inicio y fin: fijar 2027-T1 a 2027-T4"] },
+  ] }, "H1", ["i1"], { i1: { plazo: true, kr: false, responsable: true, capacidad: true, recursos: false, logro: true } });
+  const it = r.items[0];
+  assert.deepEqual(it.faltan, ["kr", "recursos"]);
+  assert.equal(it.color, "amarillo");
+  assert.ok(!it.recomendaciones.some((x) => /^Inicio y fin/.test(x)));
+  assert.ok(it.recomendaciones.some((x) => /^Resultado clave:/.test(x)) && it.recomendaciones.some((x) => /^Recursos y presupuesto:/.test(x)));
+});

@@ -32,6 +32,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const horizon = String(body?.horizon ?? horizonsOf(c.company)[0]?.id ?? "");
   const objetivos = c.objectives.filter((o) => o.horizon === horizon && !o.okr);
   if (!objetivos.length) return NextResponse.json({ error: `No hay objetivos directivos en ${horizonLabel(c.company, horizon)}.` }, { status: 422 });
+  const soloId = typeof body?.id === "string" && objetivos.some((o) => o.id === body.id) ? String(body.id) : undefined;
   const levers = leversOf(c.company);
   const sponsor = (id?: string) => c.responsibles.find((r) => r.id === id)?.dependencia;
   const { system, user: u } = encargoAlineacion({
@@ -40,12 +41,17 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     prioridades: levers.map((l) => ({ id: l.id, order: l.order, name: l.name, indicator: l.indicator, desc: l.desc, sponsor: sponsor(l.ownerId), propuesta: l.propuesta })),
     objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name, desc: o.desc, indicator: o.indicator, pillar: o.pillar, perspective: o.perspective, krs: keyResultsOf(c, o).length, krNombres: keyResultsOf(c, o).map((k) => k.name), iniciativas: c.initiatives.filter((i) => i.cmi === o.id).map((i) => i.name) })),
     lineaBase: horizonesBase(c.company).flatMap((h) => c.objectives.filter((o) => o.horizon === h.id).map((o) => `- ${o.lever ?? ""} · ${o.name}: ${kpisOf(c, o).map((k) => { const last = k.series?.length ? k.series[k.series.length - 1] : null; return `${k.name}${last ? ` = ${last.value} ${k.unit}` : ""}${k.target ? ` (meta ${k.target})` : ""}`; }).join("; ") || "sin indicadores"}`)).join("\n") || undefined,
-    contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }),
+    contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }), soloId,
   });
   let raw: unknown;
-  try { raw = await chatJson(system, u, { maxTokens: 9000, timeoutMs: 150_000 }); }
+  try { raw = await chatJson(system, u, { maxTokens: soloId ? 1500 : 9000, timeoutMs: soloId ? 60_000 : 150_000 }); }
   catch (e) { return NextResponse.json({ error: `El modelo no respondió: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 }); }
-  const informe = parseAlineacion(raw, horizon, objetivos.map((o) => o.id));
+  let informe = parseAlineacion(raw, horizon, soloId ? [soloId] : objetivos.map((o) => o.id));
+  if (soloId) {
+    const previa = getAlineacion(horizon)?.informe;
+    const items = (previa?.items ?? []).filter((x) => objetivos.some((o) => o.id === x.id) && x.id !== soloId);
+    informe = { horizon, items: [...items, informe.items[0]].sort((a, b) => objetivos.findIndex((o) => o.id === a.id) - objetivos.findIndex((o) => o.id === b.id)), resumen: previa?.resumen ?? "" };
+  }
   const r = saveAlineacion(user, horizon, huella(horizon), informe);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });

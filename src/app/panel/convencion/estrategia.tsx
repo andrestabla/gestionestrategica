@@ -246,6 +246,18 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
     } finally { setAliBusy(false); }
   };
   const aliDe = (id: string): AlineacionItem | undefined => ali?.alineacion?.items.find((i) => i.id === id);
+  const revalidarObj = async (id: string) => {
+    if (!acomp || !ali?.alineacion || ali.disponible === false) return;
+    avisar(`Revalidando ${id} con el modelo…`, "info");
+    try {
+      const res = await fetch("/api/td/alineacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon: first, id }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { avisar(j.error ?? "No se pudo revalidar el objetivo.", "warn"); return; }
+      setAli(j);
+      const it = (j.alineacion as AlineacionIA | null)?.items.find((x) => x.id === id);
+      if (it) avisar(`${id}: ${SEMAFORO[it.color].label}`, it.color === "verde" ? "ok" : "warn");
+    } catch { avisar("No se pudo revalidar el objetivo.", "warn"); }
+  };
   const conteo = (c: AlineacionItem["color"]) => ali?.alineacion?.items.filter((i) => i.color === c).length ?? 0;
   return (
     <>
@@ -370,7 +382,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         );
       })}
       {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined}
-        onAplicar={canEdit ? async (patch) => { const ok = await mutate("objective", "upsert", { id: aliOpen.id, ...patch }); if (ok) { avisar("Objetivo actualizado; vuelve a validar para refrescar el semáforo."); setAliOpen(null); } } : undefined} saving={saving} />}
+        onAplicar={canEdit ? async (patch) => { const ok = await mutate("objective", "upsert", { id: aliOpen.id, ...patch }); if (ok) { setAliOpen(null); void revalidarObj(aliOpen.id); } } : undefined} saving={saving} />}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
           <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la ruta" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
@@ -380,7 +392,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         </Card>
       )}
       {open && <ObjectiveForm cat={cat} levers={levers} horizons={horizons} initial={editing} preset={editing ? undefined : (open as { lever?: string; horizon?: string })} saving={saving}
-        onCancel={() => setOpen(null)} onSubmit={async (d) => { const ok = await mutate("objective", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) setOpen(null); return ok; }}
+        onCancel={() => setOpen(null)} onSubmit={async (d) => { const ok = await mutate("objective", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) { setOpen(null); if (editing) void revalidarObj(editing.id); } return ok; }}
         onDelete={editing ? async () => { if (await confirmar(`¿Eliminar el objetivo ${editing.id}?`)) { const ok = await mutate("objective", "delete", { id: editing.id }); if (ok) setOpen(null); } } : undefined} />}
       {leversOpen && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setLeversOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setLeversOpen(false); return ok; }} />}
     </>
@@ -903,6 +915,19 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
     } finally { setValBusy(false); }
   };
   const valDe = (id: string): IniItem | undefined => val?.validacion?.items.find((i) => i.id === id);
+  // tras guardar una iniciativa, el modelo vuelve a validar solo esa y el semáforo se refresca
+  const revalidar = async (id: string) => {
+    if (!acomp || !val?.validacion || val.disponible === false) return;
+    avisar(`Revalidando ${id} con el modelo…`, "info");
+    try {
+      const res = await fetch("/api/td/initiatives/validar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon, id }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { avisar(j.error ?? "No se pudo revalidar la iniciativa.", "warn"); return; }
+      setVal(j);
+      const it = (j.validacion as ValidacionIni | null)?.items.find((x) => x.id === id);
+      if (it) avisar(`${id}: ${SEMAFORO[it.color].label}${it.faltan.length ? ` · falta ${it.faltan.map((f) => ELEMENTOS_INI[f] ?? f).join(", ")}` : ""}`, it.color === "verde" ? "ok" : "warn");
+    } catch { avisar("No se pudo revalidar la iniciativa.", "warn"); }
+  };
   const cuenta = (c: IniItem["color"]) => val?.validacion?.items.filter((i) => i.color === c).length ?? 0;
   const ChipVal = ({ i }: { i: InitiativeFull }) => { const it = valDe(i.id); if (!it) return null; return <button type="button" onClick={() => setValOpen(i)} className={`${SEMAFORO[it.color].chip} !py-0 text-[11px]`} title="Ver la lectura y qué hacer">● {SEMAFORO[it.color].label}{it.naturaleza !== "iniciativa" ? ` · ${NATURALEZA_INI[it.naturaleza]}` : ""}{it.faltan.length ? ` · falta ${it.faltan.map((f) => ELEMENTOS_INI[f] ?? f).join(", ")}` : ""}{it.duplicaDe.length ? ` · duplica ${it.duplicaDe.join(", ")}` : ""}</button>; };
   const [edit, setEdit] = useState<InitiativeFull | null>(null);
@@ -983,17 +1008,17 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         </Card>
       </div>
       {valOpen && <ValidacionIniModal i={valOpen} item={valDe(valOpen.id)} onClose={() => setValOpen(null)} onEdit={mine(valOpen) ? () => { setValOpen(null); setEdit(valOpen); } : undefined}
-        onAplicar={mine(valOpen) ? async (patch) => { const ok = await mutate("initiative", "upsert", { ...valOpen, ...patch }); if (ok) { avisar("Iniciativa actualizada; vuelve a validar para refrescar el semáforo."); setValOpen(null); } } : undefined} saving={saving} />}
+        onAplicar={mine(valOpen) ? async (patch) => { const ok = await mutate("initiative", "upsert", { ...valOpen, ...patch }); if (ok) { setValOpen(null); void revalidar(valOpen.id); } } : undefined} saving={saving} />}
       {nueva && <InitiativeForm cat={cat} horizon={horizon} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setNueva(false)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
       {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setEdit(null)}
-        onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) setEdit(null); return ok; }}
+        onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) { setEdit(null); void revalidar(edit.id); } return ok; }}
         onDelete={async () => { if (await confirmar(`¿Eliminar la iniciativa «${edit.name}»?`)) { const ok = await mutate("initiative", "delete", { id: edit.id }); if (ok) setEdit(null); } }} />}
       {link && (() => {
         const ini = cat.initiatives.find((i) => i.id === link)!;
         return (
           <LinkForm cat={cat} horizon={horizon} ini={ini} scope={scope} saving={saving} onCancel={() => setLink(null)}
-            onSubmit={async (cmi, kpi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi, cmi }); if (ok) setLink(null); return ok; }} />
+            onSubmit={async (cmi, kpi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi, cmi }); if (ok) { setLink(null); void revalidar(ini.id); } return ok; }} />
         );
       })()}
     </>
