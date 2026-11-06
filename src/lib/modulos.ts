@@ -31,6 +31,7 @@ export const MODULES = [
   { id: "iniciativas", label: "Iniciativas", desc: "Qué iniciativa mueve cada resultado clave.", modes: ["acompanamiento", "convencion"] },
   { id: "priorizacion", label: "Priorización", desc: "Calificación con la matriz y ranking.", modes: ["acompanamiento", "convencion"] },
   { id: "portafolio", label: "Portafolio", desc: "Portafolio por prioridad y decisión de tiempo.", modes: ["acompanamiento", "convencion"] },
+  { id: "capacidades", label: "Capacidades para ejecutar", desc: "Checklist de cinco frentes (unidad, proceso, procedimiento, conocimiento, tecnología) por iniciativa del portafolio.", modes: ["completa", "acompanamiento"] },
   { id: "cascada", label: "Cascada trimestral", desc: "F04: metas trimestrales por área con criterio de éxito, hitos, interdependencias y cierre.", modes: ["completa", "acompanamiento"] },
   { id: "inteligencia", label: "Inteligencia", desc: "Benchmark sectorial, indicadores y análisis.", modes: ["completa", "acompanamiento"] },
   { id: "informe", label: "Informe", desc: "Informe ejecutivo de la plataforma.", modes: ["completa"] },
@@ -106,6 +107,7 @@ export function moduleOfRoute(path: string, t: string | null, mode: CompanyMode)
     const tab = t ?? "direccion";
     return isModule(tab) ? tab : null;
   }
+  if (under("/panel/capacidades")) return "capacidades";
   if (under("/panel/cascada")) return "cascada";
   if (under("/panel/kpi")) return "kpi";
   if (under("/panel/ruta")) return "ruta";

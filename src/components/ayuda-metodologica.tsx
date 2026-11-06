@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui";
 import { BookOpen, ArrowLeft, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { CRITERIA, LEVEL_NAMES, TYPE_CRITERIA, DEFAULT_TYPE_RULE, consolidate, score, decisionCheck, typeOf, DECISIONS, type Evaluation, type Level, type TypeMark, type TypeRule } from "@/lib/priorizacion";
 import { EvaluacionFocal, type EvaluacionGuardable } from "@/components/evaluacion-focal";
+import { FRENTES, NIVEL_CAP, SEMAFORO } from "@/lib/capacidades";
 
 type Lamina = { t: string; k: string; body: ReactNode };
 const Bien = ({ children }: { children: ReactNode }) => <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12.5px] leading-snug" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-ok" /><span>{children}</span></div>;
@@ -140,6 +141,47 @@ const INICIATIVAS: Lamina[] = [
     <Li>Iniciativa paraguas que agrupa cinco proyectos: no se puede priorizar ni cerrar.</Li>
     <Li>Más de dos iniciativas por KR: el esfuerzo se dispersa.</Li>
     <Li>Sin trimestre de inicio o de fin: no cabe en la cascada trimestral.</Li>
+  </ul> },
+];
+
+const CAPACIDADES: Lamina[] = [
+  { k: "Qué es", t: "Saber si la empresa puede ejecutar lo que decidió", body: <>
+    <p className="text-[14px] leading-relaxed text-ink">Con el portafolio decidido, cada iniciativa en <b>implementar</b> o <b>preparar</b> se recorre con un checklist de cinco frentes para reconocer si la <b>capacidad de ejecutarla está instalada</b> o qué haría falta. No califica la iniciativa (eso lo hizo la priorización): califica a la empresa frente a esa iniciativa.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">La pregunta de fondo es una sola: si arrancamos el lunes, ¿quién la hace, con qué proceso, con qué procedimiento, con qué conocimiento y con qué tecnología? Donde la respuesta es «nadie», «ninguno» o «a medias», hay una brecha que se resuelve antes o en paralelo.</p>
+  </> },
+  { k: "Los cinco frentes", t: "Qué comprueba cada frente", body: <>
+    <div className="grid gap-2 sm:grid-cols-2">
+      {FRENTES.map((f) => <div key={f.key} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{f.name}</div><div className="text-[12.5px] leading-snug text-ink">{f.que}</div><ul className="mt-1.5 space-y-0.5">{f.items.map((i) => <li key={i.code} className="text-[12px] leading-snug text-ink-soft"><span className="num font-bold text-cyan-deep">{i.code}</span> {i.texto}</li>)}</ul></div>)}
+    </div>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Cada afirmación trae una pregunta guía y la descripción de sus tres niveles, para calificar con criterio y no en abstracto. Los frentes son fijos; las afirmaciones se pueden personalizar por iniciativa.</p>
+  </> },
+  { k: "Niveles", t: "Tres niveles, por la realidad de hoy", body: <>
+    <div className="grid gap-2 sm:grid-cols-3">
+      {([1, 2, 3] as const).map((n) => <div key={n} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="num text-[13px] font-extrabold text-ink">{n} · {NIVEL_CAP[n]}</div><div className="mt-0.5 text-[12.5px] leading-snug text-ink-soft">{n === 1 ? "Habría que crearla desde cero: no hay responsable, proceso, documento, competencia o sistema." : n === 2 ? "Existe con vacíos conocidos: se puede arrancar mientras se cierran, con responsable y fecha." : "Está, se usa y se verifica. Se demuestra con un hecho, no con una intención."}</div></div>)}
+    </div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Bien>«Tecnología · datos: 2 parcial. El maestro de clientes tiene el 30 % de los médicos sin especialidad; TI depura en T1 con dueño en marketing médico.»</Bien>
+      <Mal>«Tecnología · datos: 3 instalada, porque vamos a contratar la depuración.» (califica la intención, no la realidad)</Mal>
+    </div>
+  </> },
+  { k: "Lectura", t: "Del frente a la iniciativa", body: <ul className="space-y-2">
+    <Li><b>Por frente:</b> el nivel más bajo de sus afirmaciones. Lo que falta frena todo el frente: un equipo sin dedicación anula al responsable con autoridad.</Li>
+    <Li><b>Semáforo de la iniciativa:</b> {SEMAFORO.lista.label.toLowerCase()} (los cinco frentes en 3); {SEMAFORO.ajustes.label.toLowerCase()} (ningún frente en 1, alguno en 2); {SEMAFORO.brechas.label.toLowerCase()} (al menos un frente en 1).</Li>
+    <Li><b>Qué haría falta:</b> obligatorio en cada frente no instalado, en concreto: qué, quién, cuándo. «Mejorar el proceso» no sirve; «documentar el procedimiento de liberación de lote con calidad, antes de mar-2027» sí.</Li>
+    <Li><b>Qué hacer:</b> una brecha crítica se resuelve antes de arrancar, como hito previo en la cascada trimestral o como iniciativa habilitante; un ajuste se programa en paralelo con responsable y fecha.</Li>
+  </ul> },
+  { k: "Ejemplo", t: "Una iniciativa recorrida de principio a fin", body: <>
+    <p className="text-[12.5px] leading-relaxed text-muted">Laboratorios Cordillera (ficticia). Iniciativa «Modelo de cobertura omnicanal del panel médico AAA y AA», decisión implementar, responsable marketing médico, presupuesto aprobado.</p>
+    <div className="mt-3 overflow-x-auto rounded-xl border border-line"><table className="w-full text-[12px]"><thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Frente</th><th className="px-2 py-2">Nivel</th><th className="px-3 py-2">Por qué</th><th className="px-3 py-2">Qué haría falta</th></tr></thead><tbody>
+      {[["Unidad", "3", "Dirección de marketing médico con autoridad sobre el presupuesto; equipo de 4 con dedicación; acuerdos con fuerza de ventas y TI firmados.", "—"], ["Proceso", "2", "El proceso de visita está definido y medido; el de contenido digital existe de hecho, sin dueño ni indicador.", "Nombrar dueño del proceso de contenido científico y definir 2 indicadores (publicaciones aprobadas, consumo por médico); marketing médico; ene-2027."], ["Procedimiento", "2", "Guion de visita presencial vigente; el de visita virtual no está documentado ni aprobado por asuntos regulatorios.", "Documentar y aprobar el procedimiento de visita virtual con regulatorio; feb-2027."], ["Conocimiento", "2", "Los visitadores dominan la visita presencial; 6 de 22 han hecho visita virtual; el conocimiento de la plataforma está en una persona.", "Plan de formación en visita virtual para 22 visitadores (T1) y segundo administrador de la plataforma formado; talento y TI; mar-2027."], ["Tecnología", "1", "El CRM no está integrado con la plataforma de contenido: el registro de contactos es manual y el dato de frecuencia no es confiable.", "Integración CRM–plataforma con el proveedor ya contratado y depuración del maestro de médicos; TI; entrega mar-2027. Hasta entonces, no se mide el KR con el dato del CRM."]].map((r) => <tr key={r[0]} className="border-t border-line align-top">{r.map((c, i) => <td key={i} className={`px-3 py-2 leading-snug ${i === 0 ? "font-semibold text-ink" : i === 1 ? "num font-bold text-ink" : "text-ink-soft"}`}>{c}</td>)}</tr>)}
+    </tbody></table></div>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Semáforo: <b>con brechas críticas</b>, por tecnología en 1. Decisión que sigue: la integración CRM–plataforma entra como hito previo en la cascada del T1 de 2027 y la iniciativa arranca en T2; los ajustes de proceso, procedimiento y conocimiento se programan en paralelo con responsable y fecha.</p>
+  </> },
+  { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
+    <Li>Entran solo las iniciativas con decisión <b>implementar</b> o <b>preparar</b> en el portafolio.</Li>
+    <Li><b>Personalizar con IA</b> (advisor o administrador): el modelo adapta las afirmaciones, las preguntas guía y los niveles a la iniciativa y a la empresa, con todo el contexto cargado. Los frentes no cambian. Si se personaliza después de una revisión, la revisión queda marcada para hacerse de nuevo.</Li>
+    <Li><b>Revisar</b> (advisor, sponsor de la prioridad o responsable de la iniciativa): a pantalla completa, una afirmación por paso, con «Lectura inicial con IA» opcional que propone niveles y justificaciones para confirmar o corregir.</Li>
+    <Li>El resultado queda registrado con autor y fecha; el listado muestra el semáforo y las brechas de cada iniciativa, y el detalle enlaza con la cascada trimestral para programar lo que falta.</Li>
   </ul> },
 ];
 
@@ -349,11 +391,11 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion"; rule?: TypeRule }) {
+export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" | "capacidades"; rule?: TypeRule }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : KR;
-  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : "Resultados clave · ayuda metodológica";
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : tema === "capacidades" ? CAPACIDADES : KR;
+  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : tema === "capacidades" ? "Capacidades para ejecutar · ayuda metodológica" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setI((x) => Math.min(laminas.length - 1, x + 1)); if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1)); };

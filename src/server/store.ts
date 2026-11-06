@@ -16,7 +16,9 @@ import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
   type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
-import { PRACTICES, DIMS, dimOf, F2_GENERAL } from "@/data/mapa";
+import { PRACTICES, DIMS, dimOf, F2_GENERAL, THRESHOLD } from "@/data/mapa";
+import { lecturaF1 } from "@/lib/f1";
+import { avg } from "@/lib/od";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import { krFaltantes, KR_INI_MAX } from "@/lib/convencion";
 import type { SessionUser } from "@/lib/session";
@@ -37,6 +39,7 @@ import type { AlineacionIA } from "@/lib/alineacion";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
+import { FRENTES, normalizarRevision, lecturaCapacidades, checklistHash, type ChecklistCap, type RevisionCapacidades, type Frente } from "@/lib/capacidades";
 
 /* ═══ Estado ═══ */
 
@@ -3911,6 +3914,76 @@ export function saveAlineacion(user: SessionUser, horizon: string, inputHash: st
   return { ok: true, saved };
 }
 
+
+/* ═══ Capacidades para ejecutar (módulo Capacidades) ═══
+   Con el portafolio decidido (implementar o preparar), cada iniciativa se recorre con el checklist de cinco frentes.
+   El checklist personalizado por la IA y la revisión se guardan en DiagnosticReport (kinds capacidades-checklist y
+   capacidades, subject = id de la iniciativa). */
+
+export type ElegibleCap = { id: string; decision: Decision };
+/** Iniciativas del portafolio con decisión «implementar» o «preparar»: solo esas se revisan. */
+export const elegiblesCapacidades = (): ElegibleCap[] =>
+  cat().initiatives.flatMap((i) => { const d = decisions().get(i.id)?.decision; return d === "IMPLEMENTAR" || d === "PREPARAR" ? [{ id: i.id, decision: d }] : []; });
+
+export const getChecklistCap = (iniId: string): ChecklistCap | null => {
+  const g = informes().get(`capacidades-checklist|${iniId}`);
+  return g ? (g.informe as unknown as ChecklistCap) : null;
+};
+export const getChecklistsCap = (): Record<string, ChecklistCap> => Object.fromEntries([...informes().values()].filter((g) => g.kind === "capacidades-checklist").map((g) => [g.subject, g.informe as unknown as ChecklistCap]));
+export const getRevisionesCap = (): Record<string, RevisionCapacidades> => Object.fromEntries([...informes().values()].filter((g) => g.kind === "capacidades").map((g) => [g.subject, g.informe as unknown as RevisionCapacidades]));
+
+/** Quién revisa: quien administra la estrategia, el sponsor de la prioridad y el responsable de la iniciativa. */
+export function puedeRevisarCap(user: SessionUser, i: InitiativeFull): boolean {
+  if (can(user, "manage_catalog")) return true;
+  if (user.role !== "RESPONSABLE" || !user.responsibleId) return false;
+  if (i.ownerId === user.responsibleId) return true;
+  const o = cat().objectives.find((x) => x.id === i.cmi);
+  const lever = (cat().company.levers ?? []).find((l) => l.id === o?.lever);
+  return !!lever && lever.ownerId === user.responsibleId;
+}
+
+function guardarInformeCap(user: SessionUser, kind: "capacidades" | "capacidades-checklist", iniId: string, content: object, model: string, inputHash: string) {
+  const saved: InformeGuardado = { kind, subject: iniId, inputHash, informe: content as unknown as InformeIA, model, by: user.email, at: new Date().toISOString() };
+  informes().set(`${kind}|${iniId}`, saved);
+  void persist(kind === "capacidades" ? "revisión de capacidades" : "checklist de capacidades", async (db) => {
+    const companyId = cid();
+    const data = { inputHash, content, model, by: user.email, at: new Date(saved.at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind, subject: iniId } }, update: data, create: { companyId, kind, subject: iniId, ...data } });
+  });
+}
+
+export function saveChecklistCap(user: SessionUser, iniId: string, frentes: Frente[], resumen: string, model: string): { ok: true; checklist: ChecklistCap } | { ok: false; status: number; error: string } {
+  if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "El checklist lo personaliza el advisor o el administrador." };
+  const i = cat().initiatives.find((x) => x.id === iniId);
+  if (!i) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!elegiblesCapacidades().some((e) => e.id === iniId)) return { ok: false, status: 422, error: "Solo se revisan las iniciativas con decisión «implementar» o «preparar» en el portafolio." };
+  const checklist: ChecklistCap = { iniId, frentes, resumen, by: user.email, at: new Date().toISOString(), model };
+  guardarInformeCap(user, "capacidades-checklist", iniId, checklist, model, checklistHash(frentes));
+  audit(user, "task", `capacidades-checklist:${iniId}`, `checklist de capacidades personalizado para ${iniId}`);
+  return { ok: true, checklist };
+}
+
+export function saveRevisionCap(user: SessionUser, iniId: string, input: unknown): { ok: true; revision: RevisionCapacidades } | { ok: false; status: number; error: string } {
+  const i = cat().initiatives.find((x) => x.id === iniId);
+  if (!i) return { ok: false, status: 404, error: "La iniciativa no existe." };
+  if (!puedeRevisarCap(user, i)) return { ok: false, status: 403, error: "La revisión la registran el advisor, el sponsor de la prioridad o el responsable de la iniciativa." };
+  if (!elegiblesCapacidades().some((e) => e.id === iniId)) return { ok: false, status: 422, error: "Solo se revisan las iniciativas con decisión «implementar» o «preparar» en el portafolio." };
+  const frentes = getChecklistCap(iniId)?.frentes ?? FRENTES;
+  const r = normalizarRevision(input, iniId, user.email, frentes);
+  if (!r.ok) return { ok: false, status: 422, error: r.error };
+  guardarInformeCap(user, "capacidades", iniId, r.revision, "manual", r.revision.checklist);
+  const lect = lecturaCapacidades(r.revision, frentes);
+  audit(user, "task", `capacidades:${iniId}`, `capacidades para ejecutar ${iniId}: ${lect.semaforo ?? "incompleta"}${lect.brechas.length ? ` · brechas en ${lect.brechas.map((b) => b.name.toLowerCase()).join(", ")}` : ""}`);
+  return { ok: true, revision: r.revision };
+}
+
+/** Lectura compacta del diagnóstico consolidado (Fuente 1) para el encargo a la IA: promedio por dimensión. */
+export function diagnosticoResumenCap(): string {
+  const rows = [...f1Store().values()];
+  if (!rows.length) return "";
+  const lecturas = rows.map((x) => lecturaF1(x.r));
+  return DIMS.map((d) => { const ms = lecturas.map((l) => l.dims.find((x) => x.d.code === d.code)?.m ?? null).filter((m): m is number => m != null); const m = avg(ms); return m == null ? null : `${d.code} ${d.name}: ${m.toFixed(1)}/5${m < THRESHOLD ? " (brecha)" : ""}`; }).filter(Boolean).join("; ") + ` · ${rows.length} autoevaluaciones.`;
+}
 
 /* ═══ Calificabilidad (acompañamiento, F16 · condición de entrada) ═══
    Solo se califican las iniciativas completas y validadas en la etapa anterior: vinculadas a un resultado clave
