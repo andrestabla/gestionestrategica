@@ -1235,7 +1235,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg border border-line bg-surface p-0.5 text-[12px]" role="group" aria-label="Agrupar el ranking">
           {(["tribu", "resultado"] as const).map((m) => (
-            <button key={m} type="button" onClick={() => { setMode(m); setSel(""); }} className={`rounded-md px-2.5 py-1 font-bold transition-colors ${mode === m ? "text-white" : "text-muted hover:text-ink"}`} style={mode === m ? { background: "var(--navy)" } : undefined}>{m === "tribu" ? (acomp ? `Por ${V.leverLow}` : "Por tribu") : "Por resultado"}</button>
+            <button key={m} type="button" onClick={() => { setMode(m); setSel(""); }} className={`rounded-md px-2.5 py-1 font-bold transition-colors ${mode === m ? "text-white" : "text-muted hover:text-ink"}`} style={mode === m ? { background: "var(--navy)" } : undefined}>{m === "tribu" ? (acomp ? `Por ${V.leverLow}` : (acomp ? `Por ${V.leverLow}` : "Por tribu")) : "Por resultado"}</button>
           ))}
         </div>
         <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? (acomp ? V.leversAll : V.groupsAll) : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
@@ -1285,7 +1285,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
           </div>
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[720px] text-[12px]">
-              <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">{convencion ? "Palanca" : "Horizonte"}</th><th className="px-2 py-2">Decisión</th></tr></thead>
+              <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-4 py-2">#</th><th className="px-2 py-2">Iniciativa</th><th className="num px-2 py-2 text-center">Eval.</th>{CRITERIA.map((c) => <th key={c.key} className="num px-2 py-2 text-center">{c.key}</th>)}<th className="num px-2 py-2 text-right">Puntaje</th><th className="px-2 py-2">Reglas</th><th className="px-2 py-2">{convencion ? V.lever : "Horizonte"}</th><th className="px-2 py-2">Decisión</th></tr></thead>
               <tbody>
                 {groups.map((g) => [
                   <tr key={`g-${g.key}`}><td colSpan={CRITERIA.length + 7} className="bg-surface-2/70 px-4 py-1.5 text-[12px] font-bold uppercase tracking-wider text-muted">{g.label} · {g.items.length}</td></tr>,
