@@ -172,6 +172,28 @@ const PRIORIDADES: Lamina[] = [
     <Li><b>Con el lenguaje del negocio:</b> mercado, canal, producto, planta, regulación.</Li>
     <Li><b>Se renuevan en cada ciclo</b> y se revisan una vez al año con acta: asistentes, cambios acordados, versión.</Li>
   </ul> },
+  { k: "Ejemplo completo", t: "Un ciclo de prioridades de principio a fin", body: <>
+    <p className="text-[12.5px] leading-relaxed text-muted">Andina Suministros, empresa ficticia de 60 personas que distribuye suministros industriales (el mismo ejemplo del marco). Primero el contexto de su estrategia en una página; después, sus cuatro prioridades del ciclo 2027-2029.</p>
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      {[["Meta ambiciosa", "Ventas de $ 48.000 millones en 2029 (hoy $ 31.000 millones), con margen operacional ≥ 9 %."], ["Dónde jugamos", "Plantas y talleres industriales de la región Caribe y Antioquia; no jugamos en consumo masivo ni en licitaciones públicas de bajo margen."], ["Promesa diferenciadora", "Entrega completa en 24 horas en las 15 referencias críticas de cada cliente, medida por OTIF."]].map(([a, b]) => (
+        <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
+      ))}
+    </div>
+    <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+      <table className="w-full text-[12px]">
+        <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">N.º</th><th className="px-3 py-2">Prioridad</th><th className="px-3 py-2">Resultado esperado del ciclo</th><th className="px-3 py-2">Indicador que la mide</th><th className="px-3 py-2">Sponsor</th><th className="px-3 py-2">Lo que dejamos de hacer</th></tr></thead>
+        <tbody>
+          {[
+            ["1", "Crecimiento en cuentas industriales", "Duplicar la facturación en plantas de más de 200 empleados en la región Caribe y Antioquia.", "Ventas en cuentas industriales · participación en las 50 plantas objetivo", "Gerencia comercial", "Salimos de los clientes ocasionales de ferretería minorista (12 % de la venta, 3 % del margen)."],
+            ["2", "Entrega completa en 24 horas", "Cumplir la promesa de marca en el 95 % de los pedidos de referencias críticas desde un centro de distribución en Barranquilla.", "OTIF en referencias críticas · reclamos por faltante", "Operaciones", "Dejamos de aceptar pedidos urgentes fuera del portafolio crítico sin recargo."],
+            ["3", "Margen defendible", "Llevar el margen operacional del 6,5 % al 9 % con precios por segmento y costo logístico por pedido.", "Margen operacional · costo logístico por pedido", "Administración y finanzas", "Eliminamos los descuentos no autorizados y la venta a crédito a clientes sin cupo aprobado."],
+            ["4", "Equipo que crece con la empresa", "Cubrir con sucesores internos el 80 % de los cargos críticos y bajar la rotación de vendedores a menos del 15 %.", "Cargos críticos con sucesor listo · rotación comercial", "Talento humano", "No abrimos sedes nuevas hasta tener jefe formado para cada una."],
+          ].map((r) => <tr key={r[0]} className="border-t border-line align-top">{r.map((c, i) => <td key={i} className={`px-3 py-2 leading-snug ${i === 1 ? "font-semibold text-ink" : "text-ink-soft"}`}>{c}</td>)}</tr>)}
+        </tbody>
+      </table>
+    </div>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Lo que hace bien este ejemplo: cuatro apuestas (no áreas), cada una con un resultado del ciclo ligado a la meta de $ 48.000 millones y al «dónde jugamos», uno o dos indicadores, un sponsor distinto por prioridad y una renuncia concreta y verificable. De cada prioridad saldrán después de 1 a 3 objetivos directivos del año, con sus resultados clave e iniciativas.</p>
+  </> },
   { k: "En la plataforma", t: "Cómo se usan aquí", body: <ul className="space-y-2">
     <Li>Las prioridades validadas por la dirección son el marco fijo: la validación de alineación evalúa los objetivos frente a ellas y no las cuestiona.</Li>
     <Li>Una prioridad cargada como <b>propuesta</b> (pendiente de aprobación) se muestra con su chip; sus objetivos se validan igual, señalando que dependen de esa aprobación.</Li>
