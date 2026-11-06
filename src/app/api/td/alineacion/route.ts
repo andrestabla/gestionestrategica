@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
+import { huellaAlineacion } from "@/server/huellas";
 import { withTenant } from "../_helpers";
 import { catalog, getAlineacion, saveAlineacion, flushOrError } from "@/server/store";
 import { chatJson, iaDisponible } from "@/server/ia";
@@ -11,12 +11,7 @@ import { contextoEmpresa } from "@/server/contexto-empresa";
 
 // GET  /api/td/alineacion?horizon=H1 — validación de alineación guardada para el horizonte, y si está desactualizada.
 // POST /api/td/alineacion { horizon } — la genera con el modelo (quien administra el catálogo) y la guarda.
-const huella = (horizon: string) => {
-  const c = catalog();
-  const levers = leversOf(c.company).map((l) => [l.id, l.name, l.indicator ?? "", l.desc ?? ""]);
-  const objs = c.objectives.filter((o) => o.horizon === horizon && !o.okr).map((o) => [o.id, o.lever ?? "", o.name, o.desc ?? "", o.indicator ?? "", o.pillar ?? ""]);
-  return createHash("sha256").update(JSON.stringify({ v: 3, levers, objs })).digest("hex").slice(0, 24);
-};
+const huella = huellaAlineacion;
 
 export const GET = withTenant(async (req: Request) => {
   const horizon = new URL(req.url).searchParams.get("horizon") ?? horizonsOf(catalog().company)[0]?.id ?? "";

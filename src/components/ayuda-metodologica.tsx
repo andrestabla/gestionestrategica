@@ -144,6 +144,57 @@ const INICIATIVAS: Lamina[] = [
   </ul> },
 ];
 
+const CASCADA: Lamina[] = [
+  { k: "Qué es", t: "Bajar las prioridades a metas trimestrales de cada área", body: <>
+    <p className="text-[14px] leading-relaxed text-ink">La <b>cascada y plan trimestral</b> (F04, capacidad de Ejecución) convierte el portafolio en compromisos de corto plazo: qué logra cada área este trimestre para mover un resultado clave, con qué criterio de éxito, con qué hitos y qué necesita de otras áreas. Es el puente entre la estrategia decidida y el trabajo de la semana.</p>
+    <p className="mt-3 text-[13px] leading-relaxed text-muted">Sin cascada, el portafolio se queda en intención: cada área sigue con su agenda. Con cascada, el trimestre tiene un número por área, una fecha y un dueño, y el cierre dice cuánto se cumplió y qué se aprendió.</p>
+  </> },
+  { k: "Función", t: "Para qué sirve", body: <ul className="space-y-2">
+    <Li><b>Traduce:</b> de la iniciativa (anual) a la meta del trimestre (qué se entrega en doce semanas).</Li>
+    <Li><b>Hace visible la interdependencia:</b> qué necesita un área de otra, con fecha, antes de que falle.</Li>
+    <Li><b>Ordena el ritmo:</b> planear, ejecutar, cerrar y aprender cada trimestre, con cumplimiento medido.</Li>
+    <Li><b>Instala capacidades antes de exigir resultado:</b> las brechas de «Capacidades para ejecutar» entran como hitos previos.</Li>
+  </ul> },
+  { k: "Estructura", t: "Qué debe tener una meta trimestral", body: <>
+    <div className="grid gap-2 sm:grid-cols-2">
+      {[["Trimestre y área", "un trimestre (2027-T1) y el área responsable; una meta pertenece a una sola área."], ["Prioridad, objetivo y KR", "de qué prioridad cuelga, a qué objetivo directivo aporta y qué resultado clave mueve."], ["Iniciativa", "la iniciativa del portafolio que la meta ejecuta (implementar o preparar)."], ["Meta", "qué logra el área este trimestre, en una frase con cifra: «cubrir el 40 % del panel AAA y AA»."], ["Criterio de éxito", "cómo sabremos que se cumplió: el dato, la fuente y el corte."], ["Hitos", "de 2 a 4 entregables con responsable y fecha; cada uno con estado (pendiente, en curso, hecho)."], ["Dependencias", "qué necesita de otras áreas y para cuándo: es el aviso temprano del trimestre."], ["Cierre", "al terminar el trimestre: cumplimiento en porcentaje y el aprendizaje que cambia el siguiente plan."]].map(([a, b]) => (
+        <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
+      ))}
+    </div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Bien>«2027-T1 · Promoción médica · Cubrir con el modelo omnicanal el 40 % del panel AAA y AA. Criterio: 40 % del panel con un contacto presencial y uno digital en el CRM al cierre de marzo. Hitos: segmentación aprobada (31-ene), procedimiento de visita virtual aprobado (28-feb), 22 visitadores formados (15-mar). Depende de TIC: integración CRM–contenido en marzo.»</Bien>
+      <Mal>«Avanzar en la omnicanalidad.» (sin cifra, sin criterio, sin hitos ni dependencias: no se puede cerrar)</Mal>
+    </div>
+  </> },
+  { k: "Ciclo", t: "Planear, ejecutar, cerrar y aprender", body: <ul className="space-y-2">
+    <Li><b>Planear (semana 1):</b> cada área registra sus metas del trimestre a partir del portafolio («Proponer desde el portafolio» crea una por iniciativa en su trimestre de inicio); el comité revisa criterios y dependencias.</Li>
+    <Li><b>Ejecutar (semanas 2 a 11):</b> los hitos cambian de estado; las dependencias se piden con fecha; una meta en riesgo se escala en la reunión mensual.</Li>
+    <Li><b>Cerrar (semana 12):</b> cada meta registra su cumplimiento (0 a 100 %) y un aprendizaje; el ciclo muestra el cumplimiento promedio y los aprendizajes del trimestre.</Li>
+    <Li><b>Aprender:</b> lo aprendido ajusta las metas del trimestre siguiente, no solo el discurso.</Li>
+  </ul> },
+  { k: "Tips", t: "Para que la cascada funcione", body: <ul className="space-y-2">
+    <Li><b>Pocas metas por área:</b> de 1 a 3 por trimestre; más es lista de tareas.</Li>
+    <Li><b>Cifra y fecha en la meta,</b> no en el hito: el hito es el camino, la meta es el resultado.</Li>
+    <Li><b>El criterio de éxito nombra la fuente del dato:</b> CRM, ERP, acta; si no hay fuente, no hay cierre.</Li>
+    <Li><b>Las dependencias se escriben desde quien necesita,</b> con el área que entrega y la fecha; se revisan en el ciclo.</Li>
+    <Li><b>Brechas de capacidad primero:</b> si Capacidades marcó un frente en 1, el hito que lo resuelve va antes que el hito de resultado.</Li>
+    <Li><b>Cierre honesto:</b> un 60 % con aprendizaje vale más que un 100 % sin dato.</Li>
+  </ul> },
+  { k: "Ejemplo", t: "Un trimestre de una área, de principio a fin", body: <>
+    <p className="text-[12.5px] leading-relaxed text-muted">Laboratorios Cordillera (ficticia), Dirección Técnica, 2027-T1, prioridad Disciplina Operacional, objetivo «Obtener la certificación BPM», KR «Hitos del plan de certificación cumplidos a tiempo: de 35 % a 100 %», iniciativa «Plan de certificación BPM».</p>
+    <div className="mt-3 overflow-x-auto rounded-xl border border-line"><table className="w-full text-[12px]"><tbody>
+      {[["Meta", "Cerrar los hallazgos abiertos de BPM y completar las validaciones pendientes."], ["Criterio de éxito", "0 hallazgos abiertos en el sistema de calidad y 100 % de las validaciones del plan con informe aprobado al 31 de marzo."], ["Hitos", "Plan de cierre con responsables (20-ene, hecho) · Validaciones de limpieza y procesos (15-mar, en curso) · Informes aprobados por calidad (31-mar, pendiente)."], ["Depende de", "Compras: repuestos del equipo de limpieza (15-feb). Operaciones: ventana de parada para la validación (1 a 5 de marzo)."], ["Cierre", "Cumplimiento 85 %: quedaron dos informes por aprobar. Aprendizaje: la ventana de parada se pide con seis semanas, no con dos; entra como regla del T2."]].map(([a, b]) => <tr key={a} className="border-t border-line align-top first:border-t-0"><td className="w-[150px] px-3 py-2 font-semibold text-ink">{a}</td><td className="px-3 py-2 leading-snug text-ink-soft">{b}</td></tr>)}
+    </tbody></table></div>
+  </> },
+  { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
+    <Li><b>Proponer desde el portafolio</b> (advisor o líder): crea una meta por iniciativa del año en su trimestre de inicio, en el área de su responsable, con su prioridad y objetivo; después cada área completa criterio, hitos y dependencias.</Li>
+    <Li><b>Nueva meta</b> (advisor y responsables de área): una meta por área y trimestre, con prioridad, objetivo, KR e iniciativa.</Li>
+    <Li><b>Ciclo del trimestre:</b> metas, áreas, hitos hechos, dependencias y, al cerrar, el cumplimiento promedio y los aprendizajes.</Li>
+    <Li><b>Interdependencias:</b> la vista de quién necesita qué de quién en el trimestre, para la reunión mensual.</Li>
+    <Li><b>Cierre:</b> cada meta se cierra con su porcentaje y su aprendizaje; el estado queda en cumplida, parcial o no cumplida.</Li>
+  </ul> },
+];
+
 const CAPACIDADES: Lamina[] = [
   { k: "Qué es", t: "Saber si la empresa puede ejecutar lo que decidió", body: <>
     <p className="text-[14px] leading-relaxed text-ink">Con el portafolio decidido, cada iniciativa en <b>implementar</b> o <b>preparar</b> se recorre con un checklist de cinco frentes para reconocer si la <b>capacidad de ejecutarla está instalada</b> o qué haría falta. No califica la iniciativa (eso lo hizo la priorización): califica a la empresa frente a esa iniciativa.</p>
@@ -391,11 +442,11 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
   </ul> },
 ];
 
-export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" | "capacidades"; rule?: TypeRule }) {
+export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" | "capacidades" | "cascada"; rule?: TypeRule }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
-  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : tema === "capacidades" ? CAPACIDADES : KR;
-  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : tema === "capacidades" ? "Capacidades para ejecutar · ayuda metodológica" : "Resultados clave · ayuda metodológica";
+  const laminas = tema === "objetivos" ? OBJETIVOS : tema === "iniciativas" ? INICIATIVAS : tema === "prioridades" ? PRIORIDADES : tema === "priorizacion" ? priorizacionLaminas(rule ?? DEFAULT_TYPE_RULE) : tema === "capacidades" ? CAPACIDADES : tema === "cascada" ? CASCADA : KR;
+  const titulo = tema === "objetivos" ? "Objetivos directivos · ayuda metodológica" : tema === "iniciativas" ? "Iniciativas · ayuda metodológica" : tema === "prioridades" ? "Prioridades estratégicas · ayuda metodológica (F01)" : tema === "priorizacion" ? "Priorización de iniciativas · ayuda metodológica (F16)" : tema === "capacidades" ? "Capacidades para ejecutar · ayuda metodológica" : tema === "cascada" ? "Cascada y plan trimestral · ayuda metodológica (F04)" : "Resultados clave · ayuda metodológica";
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setI((x) => Math.min(laminas.length - 1, x + 1)); if (e.key === "ArrowLeft") setI((x) => Math.max(0, x - 1)); };

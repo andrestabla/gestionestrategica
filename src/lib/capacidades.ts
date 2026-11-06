@@ -70,6 +70,7 @@ export type RevisionCapacidades = {
   respuestas: Record<string, NivelCap>;              // U1…T3
   falta: Partial<Record<FrenteKey, string>>;         // qué haría falta para instalar el frente
   checklist: string;                                 // hash del checklist con el que se respondió (genérico o personalizado)
+  notas?: string;                                    // comentarios libres de quien revisa («falta incorporar un CRM que permita…»)
   by: string; at: string;
 };
 
@@ -114,11 +115,12 @@ export function normalizarRevision(input: unknown, iniId: string, by: string, ch
   const fin = (o.falta && typeof o.falta === "object" ? o.falta : {}) as Record<string, unknown>;
   const falta: Partial<Record<FrenteKey, string>> = {};
   for (const f of FRENTES) { const t = typeof fin[f.key] === "string" ? (fin[f.key] as string).trim().slice(0, 600) : ""; if (t) falta[f.key] = t; }
+  const notas = typeof o.notas === "string" ? o.notas.trim().slice(0, 1500) : "";
   const lect = lecturaCapacidades({ respuestas, falta }, checklist);
   if (!lect.completa) return { ok: false, error: `Faltan ${lect.total - lect.respondidas} afirmaciones por calificar.` };
   const sinTexto = faltaPorDescribir({ respuestas, falta }, checklist);
   if (sinTexto.length) return { ok: false, error: `Describe qué haría falta en: ${sinTexto.map((k) => FRENTES.find((f) => f.key === k)!.name.toLowerCase()).join(", ")}.` };
-  return { ok: true, revision: { iniId, respuestas, falta, checklist: checklistHash(checklist), by, at: new Date().toISOString() } };
+  return { ok: true, revision: { iniId, respuestas, falta, checklist: checklistHash(checklist), ...(notas ? { notas } : {}), by, at: new Date().toISOString() } };
 }
 
 /* ═══ Asistente IA: lectura inicial de los cinco frentes a partir de lo que la plataforma sabe ═══ */

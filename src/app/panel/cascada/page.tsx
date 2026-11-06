@@ -12,6 +12,7 @@ import { useCatalog } from "@/components/catalog-context";
 import { leversOf, horizonsOf } from "@/data/catalogo";
 import { vocabOf, yearOfFirstHorizon } from "@/lib/vocabulario";
 import { confirmar, avisar } from "@/components/feedback";
+import { AyudaMetodologica } from "@/components/ayuda-metodologica";
 import { trimestresDe, trimestreLabel, cicloTrimestre, interdependencias, METAS_ESTADOS, HITO_ESTADOS, type MetaTrimestral, type Hito, type Dependencia, type MetaEstado } from "@/lib/cascada";
 import { Plus, Pencil, Trash2, Loader2, Save, Sparkles, CalendarRange, GitBranch, ListChecks, Network, RefreshCw, CheckCircle2, Flag } from "lucide-react";
 
@@ -76,6 +77,7 @@ export default function CascadaPage() {
     <>
       <PageHeader kicker="F04 · Ejecución" title="Cascada y plan trimestral" desc={`Bajar las ${V.leversLow} de la empresa a metas trimestrales de cada área: qué aporta cada una, con qué criterio de éxito, con qué hitos, qué necesita de las demás y cómo cierra el trimestre.`}
         actions={<>
+          <AyudaMetodologica tema="cascada" />
           {canAll && <button onClick={proponer} disabled={busy} className="btn-ghost btn-sm text-[12px]"><Sparkles size={13} /> Proponer desde el portafolio</button>}
           {(canAll || user.role === "RESPONSABLE") && <button onClick={() => nueva()} disabled={busy} className="btn-primary btn-sm text-[12px]"><Plus size={13} /> Nueva meta</button>}
         </>} />

@@ -11,7 +11,7 @@ import { UnaAUna, type Pantalla } from "@/components/una-a-una";
 import { FRENTES, NIVEL_CAP, SEMAFORO, lecturaCapacidades, faltaPorDescribir, itemsDe, type Frente, type FrenteKey, type NivelCap, type RevisionCapacidades, type PropuestaCapacidades } from "@/lib/capacidades";
 import { Loader2, Save, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 
-export type RevisionBorrador = { respuestas: Record<string, NivelCap>; falta: Partial<Record<FrenteKey, string>> };
+export type RevisionBorrador = { respuestas: Record<string, NivelCap>; falta: Partial<Record<FrenteKey, string>>; notas?: string };
 export const SEMAFORO_CLS = { lista: "chip chip-ok", ajustes: "chip chip-warn", brechas: "chip chip-bad" } as const;
 
 export function RevisionCapacidadesFocal({ ini, frentes, personalizado, initial, saving, error, onSave, onExit, proponer }: {
@@ -23,6 +23,7 @@ export function RevisionCapacidadesFocal({ ini, frentes, personalizado, initial,
 }) {
   const [respuestas, setRespuestas] = useState<Record<string, NivelCap>>(initial?.respuestas ?? {});
   const [falta, setFalta] = useState<Partial<Record<FrenteKey, string>>>(initial?.falta ?? {});
+  const [notas, setNotas] = useState(initial?.notas ?? "");
   const [justif, setJustif] = useState<Record<string, string>>({});
   const [resumenIA, setResumenIA] = useState("");
   const [pidiendo, setPidiendo] = useState(false);
@@ -32,7 +33,7 @@ export function RevisionCapacidadesFocal({ ini, frentes, personalizado, initial,
   const sinTexto = faltaPorDescribir({ respuestas, falta }, frentes);
   const puedeRegistrar = lect.completa && sinTexto.length === 0;
 
-  const registrar = async () => { setSaved(false); if (await onSave({ respuestas, falta })) setSaved(true); };
+  const registrar = async () => { setSaved(false); if (await onSave({ respuestas, falta, notas: notas.trim() || undefined })) setSaved(true); };
   const pedirLectura = async () => {
     if (!proponer) return;
     setPidiendo(true);
@@ -77,6 +78,10 @@ export function RevisionCapacidadesFocal({ ini, frentes, personalizado, initial,
             )}
           </div>
         ))}
+      </div>
+      <div className="mx-auto mt-4 max-w-[640px]">
+        <label className="block text-[12px] font-bold text-ink" htmlFor="cap-notas">Notas de quien revisa <span className="font-normal text-faint">(opcional)</span></label>
+        <textarea id="cap-notas" value={notas} onChange={(e) => setNotas(e.target.value)} rows={3} maxLength={1500} placeholder="Comentarios, condiciones o alertas: p. ej. «falta incorporar un CRM que permita registrar el contacto digital por médico…»" className="input mt-1 !py-2 text-[12.5px]" />
       </div>
       {lect.semaforo
         ? <div className="mt-5 text-center"><span className={`${SEMAFORO_CLS[lect.semaforo]} !text-[13px]`}><ShieldCheck size={13} /> {SEMAFORO[lect.semaforo].label}</span><p className="mt-1.5 text-[12.5px] text-muted">{SEMAFORO[lect.semaforo].desc}</p></div>

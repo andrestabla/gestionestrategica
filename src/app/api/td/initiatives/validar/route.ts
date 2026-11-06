@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
+import { huellaIniciativas } from "@/server/huellas";
 import { withTenant } from "../../_helpers";
 import { catalog, getAlineacion, saveAlineacion, flushOrError } from "@/server/store";
 import { chatJson, iaDisponible } from "@/server/ia";
@@ -13,11 +13,7 @@ import { contextoEmpresa } from "@/server/contexto-empresa";
 // GET  /api/td/initiatives/validar?horizon=H1 — validación guardada de las iniciativas del horizonte.
 // POST /api/td/initiatives/validar { horizon } — la genera con el modelo (quien administra el catálogo) y la guarda.
 const KIND = "alineacion-ini";
-const huella = (horizon: string) => {
-  const c = catalog();
-  const inis = c.initiatives.filter((i) => i.horizon === horizon).map((i) => [i.id, i.name, i.objetivo ?? "", i.metaResultado ?? "", i.cmi, i.kpi ?? "", i.ownerId, i.start ?? "", i.end ?? "", i.capability ?? "", i.budgetPlanned ?? 0, i.observaciones ?? ""]);
-  return createHash("sha256").update(JSON.stringify({ v: 2, inis })).digest("hex").slice(0, 24);
-};
+const huella = huellaIniciativas;
 
 export const GET = withTenant(async (req: Request) => {
   const horizon = new URL(req.url).searchParams.get("horizon") ?? horizonsOf(catalog().company)[0]?.id ?? "";

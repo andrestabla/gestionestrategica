@@ -24,7 +24,7 @@ import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar } from "@/components/feedback";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail } from "lucide-react"
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
 
@@ -204,6 +204,19 @@ function EmpresasTab() {
     if (res.ok) setCompanies((await res.json()).companies);
   }, []);
   useEffect(() => { refetch(); }, [refetch]);
+  const crearDemo = async () => {
+    const existe = companies.some((c) => c.slug === "test-siegfried");
+    if (!(await confirmar(existe ? "La instancia TEST SIEGFRIED ya existe. ¿Eliminarla y crearla de nuevo con el recorrido completo?" : "Se crea la instancia TEST SIEGFRIED (modo acompañamiento, solo autoevaluación directiva) con prioridades, objetivos 2027, resultados clave, iniciativas, validaciones, calificaciones, decisiones, capacidades y cascada ya hechos. ¿Continuar?"))) return;
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch("/api/td/empresas/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recrear: existe }) });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return; }
+      await refetch();
+      const r = j.resumen ?? {};
+      avisar(`Demo creada: ${r.objetivos ?? 0} objetivos, ${r.resultadosClave ?? 0} resultados clave, ${r.iniciativas ?? 0} iniciativas, ${r.calificaciones ?? 0} calificaciones, ${r.decisiones ?? 0} decisiones, ${r.revisionesCapacidades ?? 0} revisiones de capacidades, ${r.metasTrimestrales ?? 0} metas.${j.avisos?.length ? ` Avisos: ${j.avisos.slice(0, 2).join(" · ")}` : ""}`, j.avisos?.length ? "warn" : "ok");
+    } finally { setSaving(false); }
+  };
   const call = async (method: string, body?: Record<string, unknown>, query = "") => {
     setSaving(true); setError(null);
     const res = await fetch(`/api/td/empresas${query}`, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -223,7 +236,10 @@ function EmpresasTab() {
       <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
-            right={<button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm text-[12px]"><Building2 size={12} /> Nueva empresa</button>} />
+            right={<span className="inline-flex flex-wrap gap-2">
+              <button type="button" disabled={saving} onClick={() => void crearDemo()} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="Crea la instancia TEST SIEGFRIED con todo el recorrido del método ya hecho, para mostrar al advisor lo que se espera"><Sparkles size={12} /> {companies.some((c) => c.slug === "test-siegfried") ? "Recrear demo TEST SIEGFRIED" : "Crear demo TEST SIEGFRIED"}</button>
+              <button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm text-[12px]"><Building2 size={12} /> Nueva empresa</button>
+            </span>} />
           <div className="px-2 pb-2">
             <ResponsiveTable rows={companies} rowKey={(c) => c.slug} empty="Sin empresas." columns={[
               { key: "empresa", header: "Empresa", priority: 1, cell: (c) => <div className={c.active ? "" : "opacity-50"}><div className="font-semibold text-ink">{c.name} {me.company?.slug === c.slug && <span className="chip chip-cyan ml-1 !py-0 text-[11px]">activa</span>}</div><div className="num text-[12px] text-faint">{c.slug}{c.createdBy ? ` · creada por ${c.createdBy}` : ""}</div></div> },

@@ -1,0 +1,1329 @@
+{
+ "company": {
+  "name": "TEST SIEGFRIED",
+  "shortName": "Test Siegfried",
+  "city": "Bogotá",
+  "department": "Bogotá D.C.",
+  "size": "700 COLABORADORES, 2 PLANTAS DE PRODUCCION, PROMOCION MEDICA: 112 COMERCIAL: 113",
+  "ciiu": "C2100",
+  "sector": "Industria farmacéutica",
+  "sectorKey": "farmaceutico-colombia",
+  "country": "CO",
+  "currency": "COP",
+  "horizons": [
+   {
+    "id": "H1",
+    "label": "H1 · 2027",
+    "months": 12
+   },
+   {
+    "id": "H2",
+    "label": "H2 · 2030",
+    "months": 48
+   },
+   {
+    "id": "LB",
+    "label": "2026 · línea base",
+    "months": 12,
+    "baseline": true
+   }
+  ],
+  "levers": [
+   {
+    "id": "EXC",
+    "name": "Excelencia Comercial",
+    "order": 1,
+    "ownerId": "R03",
+    "indicator": "1. DDD 2. RX 3. MS 4.DDI 5.VENTA 6.ROTACION 7. CODIFICACION 8. DESARROLLO CANALES Y NUEVOS CLIENTES",
+    "desc": "Estrategia de crecimiento integrado, alianzas estratégicas para potenciar el impacto. Referentes desde alto costo hasta retail."
+   },
+   {
+    "id": "OPE",
+    "name": "Disciplina Operacional",
+    "order": 2,
+    "ownerId": "R05",
+    "indicator": "1. OTIF 2. UNIDADES FABRICADOAS 3. COSTO DE PRODUCCION 4. COSTO LOGISTICO 5. BACKORDER TECNICO 6. BACKORDER PRODUCCION 7. CERTIFICACIONES, VALIDACIONES Y REGIST",
+    "desc": "Simplificación y automatización de procesos."
+   },
+   {
+    "id": "FIN",
+    "name": "Eficiencia Financiera",
+    "order": 3,
+    "ownerId": "R06",
+    "indicator": "1. CASH FLOW 2. UTILIDAD NETA 3. CARTERA 5. INVENTARIO 6. EJECUCION PRESUPUESTAL",
+    "desc": "Control de costos y maximizar la generación de efectivo para crecer."
+   },
+   {
+    "id": "DIG",
+    "name": "Transformación Digital",
+    "order": 4,
+    "ownerId": "R09",
+    "indicator": "1. REDUCCION DE HORAS POR AUTOMATIZACIONES 2. INDICE DE ADOPCION DIGITAL 3. #DESARROLLOS DE DASHBOARDS",
+    "desc": "La tecnología como palanca de competitividad (automatización, canales digitales, IA, data analytics)."
+   },
+   {
+    "id": "INN",
+    "name": "Innovación Diferenciada",
+    "order": 5,
+    "ownerId": "R02",
+    "indicator": "1. # DE NUEVOS LANZAMIENTOS 2.% MS 3. RENTABILIDAD DE LAS MARCAS 4. DESARROLLO NUEVOS NEGOCIOS 5. EJECUCION PLANES DE MARKETING",
+    "desc": "Productos (propios y aliados) y modelos innovadores de go to market para servir pacientes en las 10 categorías de mayor crecimiento."
+   },
+   {
+    "id": "TAL",
+    "name": "Talento Siegfried",
+    "order": 6,
+    "ownerId": "R10",
+    "indicator": "1. NUMERO DE IDEAS EJECUTADAS 2. % DE PERSONAL CON OBJETIVOS 3. LEADERSHIP INDEX 4. CULTURE& ENGAGEMENT INDEX 5. SOSTENIBILIDAD DE NEGOCIO A PARTIR DE PLAN DE S",
+    "desc": "Evolucionar hacia una cultura de accountability, empoderamiento y colaboración transversal."
+   },
+   {
+    "id": "LEG",
+    "name": "Confianza, anticipación y valor sostenible",
+    "order": 7,
+    "ownerId": "R12",
+    "indicator": "1. % riesgos críticos priorizados con evaluación y plan; 2. % decisiones/proyectos priorizados acompañados oportunamente; 3. % controles de integridad evaluados en procesos críticos",
+    "desc": "Fortalecer decisiones responsables, anticipación de riesgos jurídicos, regulatorios y de integridad, y protección del valor corporativo mediante asesoría legal y Compliance integrados al negocio.",
+    "observaciones": "Propuesta de séptima prioridad para aprobación. Responsabilidad de gestión de riesgos compartida con dueños de procesos; Legal y Compliance no garantiza ausencia de contingencias. · Metas 2027 preliminares, condicionadas a línea base 2026, recursos y aprobación corporativa."
+   }
+  ]
+ },
+ "responsibles": [
+  {
+   "id": "R01",
+   "cargo": "Comité Ejecutivo",
+   "dependencia": "Gerencia general",
+   "rolPlataforma": "LIDER"
+  },
+  {
+   "id": "R02",
+   "cargo": "Director de Marketing",
+   "dependencia": "Marketing",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R03",
+   "cargo": "Director Comercial",
+   "dependencia": "Comercial",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R04",
+   "cargo": "Director de Promoción Médica",
+   "dependencia": "Promoción Médica",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R05",
+   "cargo": "Director de Operaciones",
+   "dependencia": "Operaciones",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R06",
+   "cargo": "Director Financiero",
+   "dependencia": "Finanzas",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R07",
+   "cargo": "Tesorería",
+   "dependencia": "Tesorería",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R08",
+   "cargo": "Compras",
+   "dependencia": "Compras",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R09",
+   "cargo": "Gerente TIC",
+   "dependencia": "TIC",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R10",
+   "cargo": "Director de Gestión Humana",
+   "dependencia": "Gestión Humana",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R11",
+   "cargo": "Directora Técnica",
+   "dependencia": "Dirección Técnica",
+   "rolPlataforma": "RESPONSABLE"
+  },
+  {
+   "id": "R12",
+   "cargo": "Directora Legal y Compliance",
+   "dependencia": "Legal y Compliance",
+   "rolPlataforma": "RESPONSABLE"
+  }
+ ],
+ "objectives": [
+  {
+   "id": "LB-EXC",
+   "perspective": "clientes",
+   "name": "Resultados 2026 · Excelencia Comercial",
+   "lever": "EXC",
+   "horizon": "LB",
+   "desc": "Estrategia de crecimiento integrado, alianzas estratégicas para potenciar el impacto. Referentes desde alto costo hasta retail.",
+   "line": 3,
+   "kpis": [
+    "EXC-01",
+    "EXC-02",
+    "EXC-03",
+    "EXC-04",
+    "EXC-05",
+    "EXC-06",
+    "EXC-07",
+    "EXC-08"
+   ]
+  },
+  {
+   "id": "LB-OPE",
+   "perspective": "procesos",
+   "name": "Resultados 2026 · Disciplina Operacional",
+   "lever": "OPE",
+   "horizon": "LB",
+   "desc": "Simplificación y automatización de procesos.",
+   "line": 3,
+   "kpis": [
+    "OPE-01",
+    "OPE-02",
+    "OPE-03"
+   ]
+  },
+  {
+   "id": "LB-FIN",
+   "perspective": "financiera",
+   "name": "Resultados 2026 · Eficiencia Financiera",
+   "lever": "FIN",
+   "horizon": "LB",
+   "desc": "Control de costos y maximizar la generación de efectivo para crecer.",
+   "line": 1,
+   "kpis": [
+    "FIN-01",
+    "FIN-02",
+    "FIN-03",
+    "FIN-04",
+    "FIN-05",
+    "FIN-06",
+    "FIN-07"
+   ]
+  },
+  {
+   "id": "LB-DIG",
+   "perspective": "aprendizaje",
+   "name": "Resultados 2026 · Transformación Digital",
+   "lever": "DIG",
+   "horizon": "LB",
+   "desc": "La tecnología como palanca de competitividad (automatización, canales digitales, IA, data analytics).",
+   "line": 4,
+   "kpis": [
+    "DIG-01",
+    "DIG-02",
+    "DIG-03",
+    "DIG-04",
+    "DIG-05",
+    "DIG-06",
+    "DIG-07"
+   ]
+  },
+  {
+   "id": "LB-INN",
+   "perspective": "procesos",
+   "name": "Resultados 2026 · Innovación Diferenciada",
+   "lever": "INN",
+   "horizon": "LB",
+   "desc": "Productos (propios y aliados) y modelos innovadores de go to market para servir pacientes en las 10 categorías de mayor crecimiento.",
+   "line": 4,
+   "kpis": [
+    "INN-01",
+    "INN-02",
+    "INN-03"
+   ]
+  },
+  {
+   "id": "LB-TAL",
+   "perspective": "aprendizaje",
+   "name": "Resultados 2026 · Talento Siegfried",
+   "lever": "TAL",
+   "horizon": "LB",
+   "desc": "Evolucionar hacia una cultura de accountability, empoderamiento y colaboración transversal.",
+   "line": 2,
+   "kpis": [
+    "TAL-01",
+    "TAL-02",
+    "TAL-03",
+    "TAL-04",
+    "TAL-05",
+    "TAL-06"
+   ]
+  },
+  {
+   "id": "OE-01",
+   "perspective": "procesos",
+   "name": "Obtener certificación de la planta farmacéutica BPMv ante el INVIMA y cumplir los compromisos técnicos críticos del año.",
+   "lever": "OPE",
+   "horizon": "H1",
+   "pillar": "Certificación de planta farma, cumplimiento técnico y sostenibilidad de la compa",
+   "desc": "Ejecutar validaciones, calificaciones, transferencias y compromisos regulatorios, cerrar brechas, consolidar evidencias, coordinar la preparación para la visita y atender los requerimientos del INVIMA dentro de plazo.",
+   "indicator": "Cumplimiento 100%",
+   "kpis": [],
+   "line": 3
+  },
+  {
+   "id": "OE-02",
+   "perspective": "procesos",
+   "name": "Mejorar la oportunidad de liberación y reducir la cuarentena de materias primas, materiales y producto terminado.",
+   "lever": "OPE",
+   "horizon": "H1",
+   "pillar": "Capacidad analítica",
+   "desc": "Alinear demanda, capacidad y prioridades de abastecimiento.",
+   "indicator": "Reducir ≥ 30 % el backlog de PT al cierre de 2027",
+   "kpis": [],
+   "line": 3
+  },
+  {
+   "id": "OE-03",
+   "perspective": "procesos",
+   "name": "Diseñar e iniciar proyecto del nuevo laboratorio para ampliar la capacidad analítica en línea con el crecimiento de la planta.",
+   "lever": "OPE",
+   "horizon": "H1",
+   "pillar": "Infraestructura y capacidad analítica",
+   "desc": "Dimensionar el laboratorio con base en la demanda proyectada y preparar la construcción prevista para 2028.",
+   "indicator": "Hitos de diseño y preparación del proyecto aprobados",
+   "kpis": [],
+   "line": 1
+  },
+  {
+   "id": "OE-04",
+   "perspective": "aprendizaje",
+   "name": "Asegurar la continuidad de negocio mediante un pipeline de sucesión evaluado y planes de desarrollo diferenciados para posiciones claves L-1 y L-2",
+   "lever": "TAL",
+   "horizon": "H1",
+   "pillar": "Pipeline de talento y sucesión",
+   "desc": "Identificar posiciones críticas y disponer de una terna de sucesores potenciales por posición, cuando el mercado interno lo permita, clasificados por readiness (listo ahora, 1–2 años y 3–5 años).",
+   "indicator": "% posiciones críticas con mapa de sucesión validado; % con al menos 1 sucesor listo ahora; % sucesores con PDI activo.",
+   "kpis": [],
+   "line": 2
+  },
+  {
+   "id": "OE-05",
+   "perspective": "aprendizaje",
+   "name": "Instalar un modelo de liderazgo Siegfried que traduzca la cultura deseada en comportamientos observables y eleve la efectividad de mandos medios.",
+   "lever": "TAL",
+   "horizon": "H1",
+   "pillar": "Liderazgo y cultura",
+   "desc": "Definir estándares comportamentales y desplegar una ruta de desarrollo con aplicación práctica, retroalimentación y medición de efectividad para líderes de personas.",
+   "indicator": "% evolucion índice de liderazgo \"latir Siegfried\" ; % equipos con planes de acción de clima.",
+   "kpis": [],
+   "line": 2
+  },
+  {
+   "id": "OE-07",
+   "perspective": "aprendizaje",
+   "name": "Fortalecer la experiencia del colaborador y el compromiso mediante la evolución de la propuesta de valor Esencia que Cuida.",
+   "lever": "TAL",
+   "horizon": "H1",
+   "pillar": "Experiencia y propuesta de valor",
+   "desc": "Rediseñar y pilotear un portafolio de beneficios flexibles segmentado por necesidades, acompañado de comunicación, reconocimiento y escucha continua.",
+   "indicator": "Índice de engagement (Clima y cultura); adopción y satisfacción de beneficios; rotación voluntaria",
+   "kpis": []
+  },
+  {
+   "id": "OE-08",
+   "perspective": "procesos",
+   "name": "Mejorar el share de cada linea entre un 3% y un 5% basado en su baseline al cierre de 2026",
+   "lever": "EXC",
+   "horizon": "H1",
+   "pillar": "EXCELENCIA COMERCIAL",
+   "desc": "Mejorar la productividad de la fuerza de ventas a partir del afinamiento en la asertividad del panel médico",
+   "kpis": []
+  },
+  {
+   "id": "OE-09",
+   "perspective": "procesos",
+   "name": "Implementar de la omnicanalidad como una estrategia para aumentar la cobertura del panel médico en un 20%",
+   "lever": "EXC",
+   "horizon": "H1",
+   "pillar": "EXCELENCIA COMERCIAL",
+   "desc": "Tener una estrategia de cobertura presencial+digital, que permita incrementar la exposicion de nuestras marcas en el cuerpo médico.",
+   "kpis": []
+  },
+  {
+   "id": "OE-10",
+   "perspective": "procesos",
+   "name": "Implementar la metrica de frecuencia 5 de 6 de visita médica en los médicos categoria AAA y AA",
+   "lever": "EXC",
+   "horizon": "H1",
+   "pillar": "EXCELENCIA COMERCIAL",
+   "desc": "Garantizar durante el primer semestre del 2027 que todos los Medicos AAA y AA tengan visita 5 de 6",
+   "kpis": []
+  },
+  {
+   "id": "OE-11",
+   "perspective": "procesos",
+   "name": "Fortalecer la capacidad productiva de Siegfried para habilitar el crecimiento sostenible del negocio, mediante la puesta en marcha de la ampliación de la planta Farma y la incorporación de equipos de nuevas tecnologías.",
+   "lever": "OPE",
+   "horizon": "H1",
+   "pillar": "DISCIPLINA OPERACIONAL",
+   "desc": "Ejecutar el cronograma integrado de acabados farmacéuticos; instalación, calificación y puesta en marcha de equipos; habilitación de los sistemas de apoyo critoco como son agua purificada, HVAC y aire comprimido; pruebas SAT de los nuevos equipos y preparación regulatoria, para dejar la ampliación en condiciones de recibir la visita del INVIMA y avanzar hacia su certificación.",
+   "indicator": "Cumplimiento oportuno del 100 % de los hitos críticos aprobados para la certificación.",
+   "kpis": [],
+   "line": 3
+  },
+  {
+   "id": "OE-12",
+   "perspective": "procesos",
+   "name": "Integrar demanda, capacidad, materiales y plan maestro; anticipar restricciones para proteger la disponibilidad de las referencias prioritarias y mejorar el OTIF",
+   "lever": "OPE",
+   "horizon": "H1",
+   "pillar": "DISCIPLINA OPERACIONAL",
+   "desc": "Integrar demanda, capacidad, materiales y plan maestro; anticipar restricciones para proteger la disponibilidad de las referencias prioritarias y mejorar el OTIF",
+   "indicator": "OTIF ≥ 95 %; cumplimiento del plan maestro de producción; seguimiento de backorders técnicos y de producción.",
+   "kpis": [],
+   "line": 3
+  },
+  {
+   "id": "OE-13",
+   "perspective": "procesos",
+   "name": "Alinear demanda, producción, abastecimiento y políticas de inventario para reducir capital inmovilizado sin generar faltantes ni deteriorar el nivel de servicio.",
+   "lever": "OPE",
+   "horizon": "H1",
+   "pillar": "DISCIPLINA OPERACIONAL",
+   "desc": "Alinear demanda, producción, abastecimiento y políticas de inventario para reducir capital inmovilizado sin generar faltantes ni deteriorar el nivel de servicio.",
+   "indicator": "Días de inventario < 160; valor total del inventario en COP frente al presupuesto aprobado para 2027; OTIF ≥ 95 % como nivel de servicio.",
+   "kpis": [],
+   "line": 3
+  },
+  {
+   "id": "OE-14",
+   "perspective": "procesos",
+   "name": "Implementar la metrica de frecuencia 3 de 4 de visita comercial de farmacias decil del 1 al 3",
+   "lever": "EXC",
+   "horizon": "H1",
+   "pillar": "EXCELENCIA COMERCIAL",
+   "desc": "Garantizar durante el primer semestre del 2027 haber recuperado los decil 1,2 y 3 en las farmacias que en el mercado ya lo son pero para siegfried no",
+   "kpis": []
+  },
+  {
+   "id": "OE-15",
+   "perspective": "procesos",
+   "name": "Lograr codificacion por encima del 90% en clientes estrategicos por libea",
+   "lever": "EXC",
+   "horizon": "H1",
+   "pillar": "EXCELENCIA COMERCIAL",
+   "desc": "implementar estrategicas por tipo de cliente para garantizar la codificacion complera",
+   "kpis": []
+  },
+  {
+   "id": "OE-LEG-01",
+   "perspective": "procesos",
+   "name": "Fortalecer la anticipación y el tratamiento de riesgos legales, regulatorios y de integridad críticos que puedan comprometer objetivos estratégicos.",
+   "lever": "LEG",
+   "horizon": "H1",
+   "pillar": "Anticipación inteligente",
+   "desc": "Riesgos críticos priorizados con responsables, evaluación de impacto, respuesta y seguimiento.",
+   "indicator": "% riesgos críticos priorizados con plan y seguimiento",
+   "kpis": [],
+   "line": 1
+  },
+  {
+   "id": "OE-LEG-02",
+   "perspective": "procesos",
+   "name": "Incrementar la contribución de Legal y Compliance a decisiones y proyectos estratégicos mediante alternativas viables y asesoría oportuna.",
+   "lever": "LEG",
+   "horizon": "H1",
+   "pillar": "Habilitación del negocio",
+   "desc": "Evaluaciones legales y de integridad oportunas en proyectos priorizados, con alternativas documentadas.",
+   "indicator": "% proyectos priorizados evaluados antes de aprobación",
+   "kpis": [],
+   "line": 1
+  },
+  {
+   "id": "OE-LEG-03",
+   "perspective": "aprendizaje",
+   "name": "Consolidar la aplicación efectiva de criterios de integridad en los procesos de mayor exposición al riesgo.",
+   "lever": "LEG",
+   "horizon": "H1",
+   "pillar": "Cultura de integridad",
+   "desc": "Decisiones de negocio respaldadas por controles prácticos y corresponsabilidad verificable.",
+   "indicator": "% procesos críticos con controles de integridad evaluados",
+   "kpis": [],
+   "line": 1
+  },
+  {
+   "id": "LB-LEG",
+   "perspective": "procesos",
+   "name": "Resultados 2026 · Confianza, anticipación y valor sostenible",
+   "lever": "LEG",
+   "horizon": "LB",
+   "desc": "Avances 2026 de Legal y Compliance reconstruidos por la dirección del área; cifras pendientes de conteo documental al 30/09/2026.",
+   "kpis": [
+    "LEG-26-01",
+    "LEG-26-02",
+    "LEG-26-03",
+    "LEG-26-04",
+    "LEG-26-05",
+    "LEG-26-06"
+   ],
+   "line": 1
+  }
+ ],
+ "kpis": [
+  {
+   "code": "EXC-01",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Participación DDD ≥ 20 % en clusters MAT",
+   "definition": "Mejorar la disponibilidad del portafolio en los PDV claves.",
+   "formula": "Valores Siegfried en pesos en el MAT/Valor total del mercado en pesos en MAT en los clusters que participa la Compañia",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "IQVIA",
+   "ownerId": "R02",
+   "baseline": 14.9,
+   "target": 20.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 17.5
+    }
+   ]
+  },
+  {
+   "code": "EXC-02",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Ranking retail en posición 6 o mejor",
+   "definition": "Incrementar participacion de mercado frente a los competidores directos, en donde seamos en IQVIA posicion 6",
+   "formula": "Informe de IQVIA, posicion en rankins de corporaciones farmaceuticas",
+   "unit": "posición",
+   "frequency": "Trimestral",
+   "source": "IQVIA",
+   "ownerId": "R02",
+   "baseline": 7.0,
+   "target": 6.0,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": []
+  },
+  {
+   "code": "EXC-03",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Participación de mercado (MS) en valores ≥ 3,40 %",
+   "definition": "En el mercado relevante lograr una participacion de mercado igual o superior al 3.4%",
+   "formula": "Informe de IQVIA MS 3.4%",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "IQVIA",
+   "ownerId": "R02",
+   "baseline": 0,
+   "target": 3.4,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": []
+  },
+  {
+   "code": "EXC-04",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Índice de evolución Rx (IE Rx) ≥ 100 en marcas core y foco",
+   "definition": "Crecer en Rx de marcas core y foco.",
+   "formula": "% Crecimiento siegfried/% crecimiento de mercado",
+   "unit": "índice",
+   "frequency": "Trimestral",
+   "source": "Close Up",
+   "ownerId": "R02",
+   "baseline": 104.0,
+   "target": 100.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 103.0
+    }
+   ]
+  },
+  {
+   "code": "EXC-05",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Participación de mercado en Rx ≥ 3,2 %",
+   "definition": "Crecer en Rx de marcas core y foco.",
+   "formula": "# total de recetas Siegfried/# total de recetas del mercado",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Close Up",
+   "ownerId": "R02",
+   "baseline": 2.85,
+   "target": 3.2,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 3.04
+    }
+   ]
+  },
+  {
+   "code": "EXC-06",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Rotación retail ≥ 30 % con 45 días de inventario (DDI)",
+   "definition": "Incrementar la rotación retail.",
+   "formula": "Informe de rotacion medido mes versus mes inmediatamente año anterior",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Informe rotacion mensual BI",
+   "ownerId": "R02",
+   "baseline": 17.0,
+   "target": 30.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": []
+  },
+  {
+   "code": "EXC-07",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Crecimiento en venta ≥ 20 % (venta de $656.010 MM COP en el año; ≥ 10 % con 150 MM USD)",
+   "definition": "Crecimiento y cumplimiento en venta.",
+   "formula": "Venta total Siegfried/Presupuesto total siegfried",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Qlik",
+   "ownerId": "R02",
+   "baseline": 22.4,
+   "target": 20.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T4",
+     "value": 23.7
+    }
+   ]
+  },
+  {
+   "code": "EXC-08",
+   "line": 3,
+   "cmi": "LB-EXC",
+   "name": "Nivel de codificación en clientes ≥ 85 % según foco del producto y canal",
+   "definition": "Incrementar el nivel de codificación en clientes.",
+   "formula": "",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Informe codificacion mensual BI",
+   "ownerId": "R02",
+   "baseline": 67.0,
+   "target": 85.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 85.71
+    }
+   ]
+  },
+  {
+   "code": "OPE-01",
+   "line": 3,
+   "cmi": "LB-OPE",
+   "name": "Días de inventario < 160",
+   "definition": "Días de inventario.",
+   "formula": "Inventario / costo de venta × 360",
+   "unit": "días",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R05",
+   "baseline": 0,
+   "target": 160.0,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 222.0
+    }
+   ]
+  },
+  {
+   "code": "OPE-02",
+   "line": 3,
+   "cmi": "LB-OPE",
+   "name": "Días de cartera: 90",
+   "definition": "Días de cartera.",
+   "formula": "Cuentas por cobrar / ventas × 360",
+   "unit": "días",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R06",
+   "baseline": 0,
+   "target": 90.0,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 82.0
+    }
+   ]
+  },
+  {
+   "code": "OPE-03",
+   "line": 3,
+   "cmi": "LB-OPE",
+   "name": "Días de acreedores: 90",
+   "definition": "Días de acreedores.",
+   "formula": "Compras / cuentas por pagar × 360",
+   "unit": "días",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R07",
+   "baseline": 0,
+   "target": 90.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 112.0
+    }
+   ]
+  },
+  {
+   "code": "FIN-01",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "GTN ≤ 5,5 %",
+   "definition": "Mejorar rentabilidad operativa y final.",
+   "formula": "Descuentos comerciales/Ventas",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R03",
+   "baseline": 0,
+   "target": 5.5,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 3.3
+    }
+   ]
+  },
+  {
+   "code": "FIN-02",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "Unidades vendidas sobre presupuestadas ≥ 100 %",
+   "definition": "Mejorar rentabilidad operativa y final.",
+   "formula": "Unidades vendidas/Presupuestadas",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R03",
+   "baseline": 0,
+   "target": 100.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 103.0
+    }
+   ]
+  },
+  {
+   "code": "FIN-03",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "Gasto comercial / ventas ≤ 12 %",
+   "definition": "Mejorar rentabilidad operativa y final.",
+   "formula": "Gasto comercial/Ventas",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R03",
+   "baseline": 0,
+   "target": 12.0,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 11.9
+    }
+   ]
+  },
+  {
+   "code": "FIN-04",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "Costo / ventas ≤ 53 %",
+   "definition": "Mejorar rentabilidad operativa y final.",
+   "formula": "Costo/Ventas",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R05",
+   "baseline": 0,
+   "target": 53.0,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 50.0
+    }
+   ]
+  },
+  {
+   "code": "FIN-05",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "Gasto variable / ventas ≤ 6,50 %",
+   "definition": "Mejorar rentabilidad operativa y final.",
+   "formula": "Gasto variable/Ventas",
+   "unit": "%",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R05",
+   "baseline": 0,
+   "target": 6.5,
+   "goodDirection": "down",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 6.3
+    }
+   ]
+  },
+  {
+   "code": "FIN-06",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "Caja operativa generada > 15.000 M USD",
+   "definition": "Mejorar flujo de fondos.",
+   "formula": "Flujo de caja",
+   "unit": "M USD",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R06",
+   "baseline": 0,
+   "target": 15000.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 18000.0
+    }
+   ]
+  },
+  {
+   "code": "FIN-07",
+   "line": 1,
+   "cmi": "LB-FIN",
+   "name": "Caja generada > 6.000 M USD",
+   "definition": "Mejorar flujo de fondos.",
+   "formula": "Flujo de caja",
+   "unit": "M USD",
+   "frequency": "Mensual",
+   "source": "Contabilidad",
+   "ownerId": "R06",
+   "baseline": 0,
+   "target": 6000.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 10000.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-01",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Reducción de horas operativas ≥ 30 % en el primer año",
+   "definition": "Porcentaje de reducción de horas operativas por automatización de procesos clave.",
+   "formula": "(Horas antes − horas despues / horas antes × 100",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Score card TIC",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 30.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 81.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-02",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Reducción ≥ 25 % del tiempo promedio de ejecución del proceso",
+   "definition": "Tiempo promedio de ejecución del proceso, antes frente a después de la automatización.",
+   "formula": "(Horas antes promedio − horas despues promedio ) / horas antes promedio × 100",
+   "unit": "horas",
+   "frequency": "Trimestral",
+   "source": "Score card TIC",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 25.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 17834.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-03",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Uso de dashboards clave del negocio: 70 %",
+   "definition": "Porcentaje de uso de dashboards clave (presupuesto, venta, inventarios, visita médica).",
+   "formula": "Usuarios activos / usuarios objetivo × 100",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "QLIK",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 70.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 78.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-04",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Dashboards desarrollados sobre solicitados ≥ 90 %",
+   "definition": "Cobertura de los dashboards solicitados por el negocio.",
+   "formula": "Dashboards solicitados / dashboards desarrollados × 100",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Score card TIC",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 90.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 92.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-05",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Índice de adopción digital ≥ 3,5 al final del año",
+   "definition": "Encuesta corta (1 a 5) sobre uso de herramientas, autonomía digital y afines.",
+   "formula": "Promedio de la encuesta",
+   "unit": "puntos",
+   "frequency": "Trimestral",
+   "source": "Encuesta",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 3.5,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 0.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-06",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Plan de entrenamiento digital ejecutado ≥ 85 % al cierre del año",
+   "definition": "Porcentaje de desarrollo del plan de entrenamiento.",
+   "formula": "Capacitación planeada / capacitaciones ejecutadas x 100",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Score card TIC",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 85.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2027-T3",
+     "value": 100.0
+    }
+   ]
+  },
+  {
+   "code": "DIG-07",
+   "line": 4,
+   "cmi": "LB-DIG",
+   "name": "Capacitación digital de 10 a 12 horas por persona",
+   "definition": "Horas de capacitación digital per cápita y número de personas, en temas digitales clave.",
+   "formula": "(colaboradores x curso X horas por colaborador por curso) / Total de colaboradores formados",
+   "unit": "horas",
+   "frequency": "Trimestral",
+   "source": "Score card TIC",
+   "ownerId": "R09",
+   "baseline": 0,
+   "target": 12.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2028-T3",
+     "value": 41.0
+    }
+   ]
+  },
+  {
+   "code": "INN-01",
+   "line": 4,
+   "cmi": "LB-INN",
+   "name": "Proyectos de I&D completados > 80 % al mes",
+   "definition": "Proyectos entregados (lanzamiento) sobre el total proyectado.",
+   "formula": "Proyectos entregados / total proyectado × 100",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Cronograma maestro de I+D y reporte de avance al comité de productos nuevos",
+   "ownerId": "R11",
+   "baseline": 0,
+   "target": 80.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 77.0
+    }
+   ]
+  },
+  {
+   "code": "INN-02",
+   "line": 4,
+   "cmi": "LB-INN",
+   "name": "Participación de lanzamientos ≥ 5 % de la venta, proyectado a un año",
+   "definition": "Ventas de las categorías de lanzamiento sobre la venta total.",
+   "formula": "Ventas de lanzamientos / venta total × 100",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Venta interna SAP en USD",
+   "ownerId": "R02",
+   "baseline": 0,
+   "target": 5.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 4.0
+    }
+   ]
+  },
+  {
+   "code": "INN-03",
+   "line": 4,
+   "cmi": "LB-INN",
+   "name": "Nuevos aliados: 2 Proyectos viables",
+   "definition": "Proyectos viables sobre proyectos evaluados.",
+   "formula": "4 Aliados estratégicos Tilman - AB Biotics - STE - Pharmalinea",
+   "unit": "número",
+   "frequency": "Semestral",
+   "source": "Matriz de evaluación, conceptos técnicos y soportes de radicación ante el INVIMA",
+   "ownerId": "R02",
+   "baseline": 0,
+   "target": 2.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 9.0
+    }
+   ]
+  },
+  {
+   "code": "TAL-01",
+   "line": 2,
+   "cmi": "LB-TAL",
+   "name": "Siegfried Conecta: 10 proyectos interáreas implementados",
+   "definition": "Número de proyectos interáreas implementados.",
+   "formula": "# de proyectos",
+   "unit": "número",
+   "frequency": "Trimestral",
+   "source": "Encuesta de Siegfried Conecta",
+   "ownerId": "R01",
+   "baseline": 0.0,
+   "target": 10.0,
+   "goodDirection": "up",
+   "due": "2026-T1",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 12.0
+    }
+   ]
+  },
+  {
+   "code": "TAL-02",
+   "line": 2,
+   "cmi": "LB-TAL",
+   "name": "Siegfried Conecta: 5 % del headcount de cada área participando en iniciativas de otras áreas",
+   "definition": "Colaboradores que participan en iniciativas distintas de su área.",
+   "formula": "Numero de colaboradores involucrados en iniciativas/Total Colaboradores",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "Encuesta de ideas y base de datos de equipos conformados",
+   "ownerId": "R01",
+   "baseline": 0.0,
+   "target": 5.0,
+   "goodDirection": "up",
+   "due": "2026-T1",
+   "series": [
+    {
+     "period": "2026-T2",
+     "value": 5.0
+    }
+   ]
+  },
+  {
+   "code": "TAL-03",
+   "line": 2,
+   "cmi": "LB-TAL",
+   "name": "Percepción en la encuesta de clima y cultura ≥ 90 %",
+   "definition": "Incrementar la percepción de la encuesta de clima y cultura e implementar las acciones del plan.",
+   "formula": "% de Engagement",
+   "unit": "%",
+   "frequency": "Anual",
+   "source": "Encuesta BEAT",
+   "ownerId": "R10",
+   "baseline": 87.0,
+   "target": 90.0,
+   "goodDirection": "up",
+   "due": "2026-T4",
+   "series": [
+    {
+     "period": "2025",
+     "value": 87.0
+    }
+   ]
+  },
+  {
+   "code": "TAL-04",
+   "line": 2,
+   "cmi": "LB-TAL",
+   "name": "Colaboradores con objetivos SMART: 95 %",
+   "definition": "Porcentaje de colaboradores con objetivos SMART en el sistema de desempeño.",
+   "formula": "Colaboradores elegibles con Objetivos/total Colaboradores elegibles",
+   "unit": "%",
+   "frequency": "Semestral",
+   "source": "BUK",
+   "ownerId": "R10",
+   "baseline": 0.0,
+   "target": 95.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 95.0
+    }
+   ]
+  },
+  {
+   "code": "TAL-05",
+   "line": 2,
+   "cmi": "LB-TAL",
+   "name": "Cumplimiento trimestral de objetivos: 25 % por trimestre",
+   "definition": "Porcentaje de cumplimiento trimestral de los objetivos.",
+   "formula": "% promedio de avance total objetivos en Herramienta",
+   "unit": "%",
+   "frequency": "Trimestral",
+   "source": "BUK",
+   "ownerId": "R10",
+   "baseline": 0.0,
+   "target": 25.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T4",
+     "value": 34.0
+    }
+   ]
+  },
+  {
+   "code": "TAL-06",
+   "line": 2,
+   "cmi": "LB-TAL",
+   "name": "Curva de distribución en la matriz de desempeño 10-20-60-10",
+   "definition": "Distribución de los colaboradores en la matriz de desempeño.",
+   "formula": "# de total colaboradores en cada uno de los cuadrantes de la matriz de desempeño (Low (1), 2(Low-Medium), 3 (estandar), 4 (high)/Total colaboradores calibrados",
+   "unit": "%",
+   "frequency": "Anual",
+   "source": "Sesion final de calibracion de desempeño efectuada en el comite Ejecutivo",
+   "ownerId": "R10",
+   "baseline": 0.0,
+   "target": 75.0,
+   "goodDirection": "up",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2025",
+     "value": 75.0
+    }
+   ]
+  },
+  {
+   "code": "LEG-26-01",
+   "line": 1,
+   "cmi": "LB-LEG",
+   "name": "N.º de contratos estratégicos de distribución internacional acompañados jurídicamente",
+   "definition": "Avance cualitativo: Acompañamiento jurídico a alianzas de distribución internacional · Evidencia por recopilar: Contratos de distribución, versiones revisadas y comunicaciones hasta 30/09/2026 · Resultado 2026: Pendiente de conteo documental al 30/09/2026 · Estado: En ejecución; cifra por verificar",
+   "formula": "",
+   "unit": "número",
+   "frequency": "Anual",
+   "source": "Dirección Legal y Compliance (reconstrucción al 30/09/2026)",
+   "goodDirection": "up",
+   "baseline": 0,
+   "target": 0,
+   "ownerId": "R12",
+   "due": "2026",
+   "series": []
+  },
+  {
+   "code": "LEG-26-02",
+   "line": 1,
+   "cmi": "LB-LEG",
+   "name": "N.º de estrategias de reconocimiento de notoriedad puestas en ejecución",
+   "definition": "Avance cualitativo: Estrategia de reconocimiento de notoriedad de marcas prioritarias en ejecución · Evidencia por recopilar: Plan marcario, documentos preparatorios y cronograma al 30/09; radicaciones SIC realizadas en octubre (excluidas del corte) · Resultado 2026: 1 estrategia en ejecución al 30/09/2026 (según información de la Dirección) · Estado: Reconstruido; validar evidencia",
+   "formula": "",
+   "unit": "número",
+   "frequency": "Anual",
+   "source": "Dirección Legal y Compliance (reconstrucción al 30/09/2026)",
+   "goodDirection": "up",
+   "baseline": 0,
+   "target": 0,
+   "ownerId": "R12",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 1.0
+    }
+   ]
+  },
+  {
+   "code": "LEG-26-03",
+   "line": 1,
+   "cmi": "LB-LEG",
+   "name": "N.º de iniciativas de revisión y fortalecimiento del programa local de seguros ejecutadas",
+   "definition": "Avance cualitativo: Fortalecimiento del programa local de seguros complementario a coberturas de casa matriz · Evidencia por recopilar: Análisis de riesgos locales, brechas de cobertura y documentos del programa de seguros · Resultado 2026: 1 iniciativa de revisión y fortalecimiento ejecutada al 30/09/2026 (según información de la Dirección) · Estado: Reconstruido; validar evidencia",
+   "formula": "",
+   "unit": "número",
+   "frequency": "Anual",
+   "source": "Dirección Legal y Compliance (reconstrucción al 30/09/2026)",
+   "goodDirection": "up",
+   "baseline": 0,
+   "target": 0,
+   "ownerId": "R12",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 1.0
+    }
+   ]
+  },
+  {
+   "code": "LEG-26-04",
+   "line": 1,
+   "cmi": "LB-LEG",
+   "name": "N.º de planes o iniciativas de Mercadeo y Commercial Trade evaluados preventivamente",
+   "definition": "Avance cualitativo: Acompañamiento preventivo de Compliance a Mercadeo y Commercial Trade · Evidencia por recopilar: Planes de mercadeo, propuestas de actividades, conceptos y registros de revisión · Resultado 2026: Pendiente de conteo documental al 30/09/2026 · Estado: En ejecución; cifra por verificar",
+   "formula": "",
+   "unit": "número",
+   "frequency": "Anual",
+   "source": "Dirección Legal y Compliance (reconstrucción al 30/09/2026)",
+   "goodDirection": "up",
+   "baseline": 0,
+   "target": 0,
+   "ownerId": "R12",
+   "due": "2026",
+   "series": []
+  },
+  {
+   "code": "LEG-26-05",
+   "line": 1,
+   "cmi": "LB-LEG",
+   "name": "N.º de iniciativas de integración de la gestión de riesgos con Isodoc implementadas",
+   "definition": "Avance cualitativo: Integración de la matriz de riesgos al sistema documental Isodoc · Evidencia por recopilar: Matriz, registro de integración en Isodoc y evidencias de implementación a septiembre · Resultado 2026: 1 iniciativa implementada o en ejecución al 30/09/2026; verificar estado exacto · Estado: Reconstruido; validar estado",
+   "formula": "",
+   "unit": "número",
+   "frequency": "Anual",
+   "source": "Dirección Legal y Compliance (reconstrucción al 30/09/2026)",
+   "goodDirection": "up",
+   "baseline": 0,
+   "target": 0,
+   "ownerId": "R12",
+   "due": "2026",
+   "series": [
+    {
+     "period": "2026-T3",
+     "value": 1.0
+    }
+   ]
+  },
+  {
+   "code": "LEG-26-06",
+   "line": 1,
+   "cmi": "LB-LEG",
+   "name": "N.º de proformas contractuales estandarizadas y vigentes",
+   "definition": "Avance cualitativo: Estandarización y optimización de gestión contractual · Evidencia por recopilar: Proformas contractuales vigentes y registros de tiempos de atención · Resultado 2026: Pendiente de inventario documental al 30/09/2026 · Estado: Complementario; cifra por verificar",
+   "formula": "",
+   "unit": "número",
+   "frequency": "Anual",
+   "source": "Dirección Legal y Compliance (reconstrucción al 30/09/2026)",
+   "goodDirection": "up",
+   "baseline": 0,
+   "target": 0,
+   "ownerId": "R12",
+   "due": "2026",
+   "series": []
+  }
+ ]
+}

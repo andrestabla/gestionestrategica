@@ -38,6 +38,9 @@ test("normalizar: exige todas las afirmaciones y «qué haría falta» en los fr
   assert.equal(ok.revision.falta.conocimiento, "Formar a 22 visitadores; T1");
   assert.equal(ok.revision.falta.unidad, "sobra");   // se guarda el texto aunque el frente esté instalado
   assert.equal(ok.revision.checklist, checklistHash(FRENTES));
+  assert.equal(ok.revision.notas, undefined);
+  const conNotas = normalizarRevision({ respuestas: todo(3), falta: {}, notas: "  Falta incorporar un CRM que permita registrar el contacto digital. " }, "i1", "x");
+  assert.ok(conNotas.ok && conNotas.revision.notas === "Falta incorporar un CRM que permita registrar el contacto digital.");
   assert.equal(lecturaCapacidades(ok.revision).semaforo, "brechas");
 });
 

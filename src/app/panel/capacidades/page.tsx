@@ -169,7 +169,7 @@ export default function CapacidadesPage() {
                           <td className="px-3 py-2.5">
                             <span className={`${ESTADO_CLS[f.estado]} !py-0 text-[11px]`}>{ESTADO_LABEL[f.estado]}</span>
                             {lect && lect.brechas.length > 0 && <div className="mt-0.5 text-[11.5px] text-muted">Brechas: {lect.brechas.map((b) => `${b.name.toLowerCase()} (${b.nivel})`).join(", ")}</div>}
-                            {f.rev && <div className="text-[11px] text-faint">{f.rev.by} · {f.rev.at.slice(0, 10)}</div>}
+                            {f.rev && <div className="text-[11px] text-faint">{f.rev.by} · {f.rev.at.slice(0, 10)}{f.rev.notas ? " · con notas" : ""}</div>}
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex flex-wrap justify-end gap-1.5">
@@ -215,6 +215,7 @@ export default function CapacidadesPage() {
                 );
               })}
             </div>
+            {det.rev.notas && <div className="mt-3 rounded-xl bg-cyan-wash px-3.5 py-3 text-[12.5px] leading-relaxed text-ink"><div className="text-[11px] font-bold uppercase tracking-wider text-cyan-deep">Notas de quien revisa</div><p className="mt-1 whitespace-pre-line">{det.rev.notas}</p></div>}
             {lect.brechas.length > 0 && <p className="mt-3 text-[12px] leading-relaxed text-muted">Las brechas críticas (nivel 1) se resuelven antes de arrancar: como hito previo en la <Link href={`${base}/panel/cascada`} className="font-bold text-cyan-deep hover:underline">cascada trimestral</Link> o como iniciativa habilitante. Los ajustes (nivel 2) se programan en paralelo con responsable y fecha.</p>}
           </Modal>
         );
