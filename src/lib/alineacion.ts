@@ -30,6 +30,10 @@ export function encargoAlineacion(args: {
     "Eres el advisor de 4Shine Empresas que acompaña al comité directivo de una empresa en Colombia. Escribes en español de Colombia, registro formal, sin nombres de personas.",
     contextoMetodo(),
     AYUDA_OBJETIVOS,
+    "ANTES DE JUZGAR, lee TODO el contexto de los módulos anteriores y del propio módulo: las prioridades (con su indicador, su resultado esperado y su sponsor), los resultados 2026 de la línea base, los resultados clave e iniciativas ya definidos para cada objetivo y el resto de objetivos del horizonte. Usa esas definiciones para recomendar con nombres concretos: eliminar, agregar, fusionar, completar, mover o convertir. No pidas lo que ya está definido en otro módulo.",
+    "PLAZO: todos los objetivos listados pertenecen al horizonte indicado (su columna en la plataforma): el «para cuándo» YA ESTÁ DADO por ese horizonte. PROHIBIDO marcar «plazo» como faltante o recomendar «fijar el plazo» por el solo hecho de que el enunciado no repita el año. Solo menciona el plazo si el enunciado contradice el horizonte o si el logro necesita un hito intermedio concreto (p. ej. «antes de la visita del INVIMA»).",
+    "VERBO DE LOGRO: un verbo de logro nombra un resultado que cambia (aumentar, reducir, alcanzar, lograr, elevar, consolidar, mantener, garantizar, asegurar, obtener, cubrir, bajar, subir, duplicar, llevar a). Un verbo de actividad nombra algo que se hace (implementar, desarrollar, diseñar, realizar, ejecutar, gestionar, crear, instalar, integrar, construir, definir, establecer, fortalecer, impulsar, promover). Si el enunciado empieza con un verbo de actividad, NO digas que «falta verbo de logro»: di que el verbo es de actividad y que el enunciado describe un medio, y recomienda «Eliminar el verbo de actividad \"implementar\" y formular el logro: …» con el resultado que esa actividad busca. Si empieza con un verbo de logro, el elemento «verbo» está cumplido. PROHIBIDO que la reformulación empiece con el mismo verbo que criticas o con un verbo de actividad.",
+    "CONTENCIÓN Y DUPLICIDAD: sé crítico para detectar objetivos que CONTIENEN a otros: uno es un medio, una parte o un caso particular del otro (p. ej. «omnicanalidad para aumentar la cobertura del panel médico» contiene «frecuencia de visita 5 de 6 en médicos AAA», que es una de sus medidas). Márcalos en duplicaDe en ambos sentidos y recomienda la acción concreta: «Integrar OE-10 en OE-09 como resultado clave de cobertura» o «Fundir OE-10 y OE-14 en un solo objetivo de frecuencia de visita por canal». Un conjunto con objetivos contenidos unos en otros no está alineado aunque cada uno se lea bien por separado.",
     "TAREA: validar, ceñido a la ayuda metodológica anterior, la ALINEACIÓN de cada objetivo directivo del horizonte con la prioridad estratégica a la que pertenece, con el conjunto de prioridades y con el resto de objetivos. Las prioridades ya fueron validadas por la dirección: no se cuestionan ni se reformulan; se evalúan los objetivos frente a ellas. Lee el CONJUNTO completo antes de juzgar cada uno: detecta duplicidades o solapamientos entre objetivos (de la misma o de distinta prioridad), prioridades sin objetivo o sobrecargadas y enunciados que no son objetivos.",
     "DEFINICIÓN (marco 4Shine Empresas): un objetivo directivo es el resultado concreto que la dirección se compromete a lograr en el horizonte para hacer avanzar una prioridad. Estructura: VERBO DE LOGRO + RESULTADO + INDICADOR IMPULSOR + PARA CUÁNDO. Declara el indicador impulsor pero NO fija cifras de base y meta: eso corresponde a los resultados clave, que se formulan después. NATURALEZA: si el enunciado ya trae base y meta numérica como su contenido central, es un «resultado_clave»; si describe algo que se hace o se implementa (un proyecto, un sistema, un comité, una campaña), es una «iniciativa»; si no se puede decidir, «ambiguo».",
     "CRITERIOS (en este orden): 1) contribución directa del objetivo a su prioridad y al indicador de la prioridad; 2) naturaleza: que sea un objetivo y no un resultado clave ni una iniciativa; 3) no duplicidad ni solapamiento con otros objetivos del conjunto; 4) pertinencia frente al sector, el negocio y los datos de la empresa (contexto adjunto); 5) formulación técnica: verbo de logro, resultado observable, indicador impulsor declarado, plazo, un solo logro por enunciado; 6) forma: longitud, claridad, coherencia entre nombre, aspiración e indicador impulsor.",
@@ -71,7 +75,36 @@ export function sinCifrasDeMeta(texto: string): string {
 export const tieneCifrasDeMeta = (texto: string): boolean => /\d/.test(texto.replace(/\b(?:19|20)\d{2}\b/g, ""));
 
 /** Lee la respuesta del modelo: un item por objetivo esperado; lo que falte queda en amarillo con nota. */
-export function parseAlineacion(raw: unknown, horizon: string, ids: string[]): AlineacionIA {
+/** Verbos de actividad: nombran un medio, no un resultado; un objetivo que empieza así es una iniciativa disfrazada. */
+export const VERBOS_ACTIVIDAD = ["implementar", "desarrollar", "diseñar", "realizar", "ejecutar", "gestionar", "crear", "instalar", "integrar", "construir", "definir", "establecer", "fortalecer", "impulsar", "promover", "implementación", "desarrollo", "diseño", "ejecución", "gestión", "creación", "instalación", "integración", "construcción"];
+const primeraPalabra = (t: string) => (t.trim().match(/^[\p{L}]+/u)?.[0] ?? "").toLowerCase();
+const esInfinitivo = (w: string) => /(ar|er|ir)$/.test(w) && w.length > 3;
+
+/** Reglas deterministas sobre la respuesta del modelo (lo verificable lo decide la plataforma):
+    el plazo lo da el horizonte (nunca «falta plazo»); un enunciado que empieza con verbo no «carece de verbo»;
+    si empieza con verbo de actividad, la acción correcta es cambiarlo por uno de logro; la reformulación no puede
+    repetir el verbo criticado. */
+function rigor(it: { faltan: string[]; recomendaciones: string[]; reformulacion: string; justificacion: string }, nombre: string | undefined) {
+  it.faltan = it.faltan.filter((f) => f !== "plazo");
+  it.recomendaciones = it.recomendaciones.filter((r) => !/^(fijar|incluir|definir|establecer|agregar|añadir|indicar|precisar)\s+(el |un |una )?(plazo|fecha|para cuándo)/i.test(r.trim()));
+  if (!nombre) return;
+  const v = primeraPalabra(nombre);
+  const vRef = primeraPalabra(it.reformulacion);
+  const actividad = VERBOS_ACTIVIDAD.includes(v);
+  if (esInfinitivo(v) || actividad) it.faltan = it.faltan.filter((f) => f !== "verbo");   // hay verbo; otra cosa es que sea de actividad
+  if (actividad) {
+    // la recomendación precisa: cambiar el verbo de actividad por uno de logro (nunca «incluir un verbo de logro: implementar»)
+    it.recomendaciones = it.recomendaciones.filter((r) => !/verbo de logro/i.test(r) || !new RegExp(`[«"']${v}`, "i").test(r));
+    if (!it.recomendaciones.some((r) => /verbo de actividad/i.test(r))) it.recomendaciones.unshift(`Eliminar el verbo de actividad «${v}» y formular el logro que esa actividad busca (aumentar, reducir, alcanzar, garantizar…), con su indicador impulsor.`);
+  }
+  if (it.reformulacion && vRef && (vRef === v && (actividad || it.recomendaciones.some((r) => /verbo/i.test(r))) || VERBOS_ACTIVIDAD.includes(vRef))) {
+    // la redacción propuesta repite el verbo criticado o usa uno de actividad: no sirve como propuesta
+    it.recomendaciones = it.recomendaciones.filter((r) => !r.includes(it.reformulacion.slice(0, 40)));
+    it.reformulacion = "";
+  }
+}
+
+export function parseAlineacion(raw: unknown, horizon: string, ids: string[], nombres: Record<string, string> = {}): AlineacionIA {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const arr = Array.isArray(o.items) ? (o.items as Record<string, unknown>[]) : [];
   const items: AlineacionItem[] = ids.map((id) => {
@@ -83,14 +116,16 @@ export function parseAlineacion(raw: unknown, horizon: string, ids: string[]): A
     const n = str(it.naturaleza, 20).toLowerCase();
     const naturaleza: Naturaleza = n === "resultado_clave" || n === "iniciativa" || n === "ambiguo" ? n : "objetivo";
     const duplicaDe = (Array.isArray(it.duplicaDe) ? it.duplicaDe : []).map((d) => str(d, 20).toUpperCase()).filter((d) => d && d !== id.toUpperCase() && ids.some((x) => x.toUpperCase() === d)).slice(0, 5);
-    const faltan = (Array.isArray(it.faltan) ? it.faltan : []).map((f) => str(f, 20).toLowerCase()).filter((f) => f in ELEMENTOS);
-    const reformulacion = sinCifrasDeMeta(str(it.reformulacion, 400));
+    const faltan0 = (Array.isArray(it.faltan) ? it.faltan : []).map((f) => str(f, 20).toLowerCase()).filter((f) => f in ELEMENTOS);
+    const base = { faltan: faltan0, recomendaciones: recs, reformulacion: sinCifrasDeMeta(str(it.reformulacion, 400)), justificacion: str(it.justificacion, 1200) || "Sin justificación." };
+    rigor(base, nombres[id]);
+    const { faltan, reformulacion } = base; const recs2 = base.recomendaciones;
     // exigencia: sin reformulación ni recomendación, un amarillo o rojo no es accionable; se anota para que el advisor lo complete
-    if (color !== "verde" && !recs.length && !reformulacion) recs.push("Reformular el objetivo con la estructura verbo de logro + resultado + indicador impulsor + para cuándo.");
+    if (color !== "verde" && !recs2.length && !reformulacion) recs2.push("Reformular el objetivo con la estructura verbo de logro + resultado + indicador impulsor + para cuándo.");
     // la redacción propuesta se vuelve la primera acción concreta («Cambiar la redacción a: …») si el modelo no la citó
-    if (reformulacion && !recs.some((r) => r.includes(reformulacion.slice(0, 40)))) recs.unshift(`Cambiar la redacción a: «${reformulacion}»`);
+    if (reformulacion && !recs2.some((r) => r.includes(reformulacion.slice(0, 40)))) recs2.unshift(`Cambiar la redacción a: «${reformulacion}»`);
     const colorFinal: Semaforo = color === "verde" && (faltan.length || naturaleza !== "objetivo" || duplicaDe.length) ? "amarillo" : color;
-    return { id, color: colorFinal, justificacion: str(it.justificacion, 1200) || "Sin justificación.", recomendaciones: recs, naturaleza, duplicaDe, reformulacion, indicadorPropuesto: str(it.indicadorPropuesto, 200), faltan };
+    return { id, color: colorFinal, justificacion: base.justificacion, recomendaciones: recs2, naturaleza, duplicaDe, reformulacion, indicadorPropuesto: str(it.indicadorPropuesto, 200), faltan };
   });
   return { horizon, items, resumen: str(o.resumen, 1500) };
 }

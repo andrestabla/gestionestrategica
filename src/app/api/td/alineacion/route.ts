@@ -41,7 +41,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   let raw: unknown;
   try { raw = await chatJson(system, u, { maxTokens: soloId ? 1500 : 9000, timeoutMs: soloId ? 60_000 : 150_000 }); }
   catch (e) { return NextResponse.json({ error: `El modelo no respondió: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 }); }
-  let informe = parseAlineacion(raw, horizon, soloId ? [soloId] : objetivos.map((o) => o.id));
+  let informe = parseAlineacion(raw, horizon, soloId ? [soloId] : objetivos.map((o) => o.id), Object.fromEntries(objetivos.map((o) => [o.id, o.name])));
   if (soloId) {
     const previa = getAlineacion(horizon)?.informe;
     const items = (previa?.items ?? []).filter((x) => objetivos.some((o) => o.id === x.id) && x.id !== soloId);

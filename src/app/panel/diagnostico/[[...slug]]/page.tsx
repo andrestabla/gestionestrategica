@@ -13,6 +13,7 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, u
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
+import { DescargarDecisiones } from "@/components/descargar-decisiones";
 import { avisar, confirmar } from "@/components/feedback";
 import { AccessChip, useCan, useUser, useBase } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
@@ -111,7 +112,7 @@ export default function DiagnosticoPage() {
       <PageHeader kicker="M1 · Diagnóstico de capacidades" title="Capacidad organizacional de la empresa"
         crumbs={tab === "resumen" ? undefined : [{ label: "Diagnóstico", href: "/panel/diagnostico" }, { label: TABS.find((t) => t.id === tab)?.label ?? (tab === "dimension" ? "Dimensión" : tab), href: TABS.find((t) => t.id === tab)?.href }, ...(arg ? [{ label: arg === "RESPONDER" ? "Responder" : arg === "RESULTADO" ? "Lectura" : arg === "INFORME" ? "Informe" : arg }] : [])]}
         desc={instrumentsOf(v.catalog.company).length === ALL_INSTRUMENTS.length ? "Dos instrumentos en secuencia: el test de capacidad empresarial como puerta de entrada y el diagnóstico de tres fuentes sobre las 68 prácticas del mapa." : instrumentsOf(v.catalog.company).join() === "f1" ? "En este caso, la autoevaluación directiva: la lectura que el equipo directivo hace de su empresa sobre las 68 prácticas del mapa, en hipótesis para contrastar. La evaluación completa suma otras fuentes y procedimientos." : `En este caso se aplica ${instrumentsOf(v.catalog.company).map(instrumentLabel).join(", ")}. La evaluación completa suma otras fuentes y procedimientos.`}
-        actions={<AccessChip module="madurez" />} />
+        actions={<span className="inline-flex flex-wrap items-center gap-2"><DescargarDecisiones modulo="diagnostico" /><AccessChip module="madurez" /></span>} />
       <details className="rise mb-4 rounded-xl bg-surface-2/70 px-4 py-2 text-[12.5px] text-ink-soft">
         <summary className="cursor-pointer select-none font-semibold text-ink">¿Cómo se calcula la madurez?</summary>
         <p className="mt-2 leading-relaxed">Cada dimensión combina las tres fuentes: madurez = 0,40 × evidencia documental (F3) + 0,30 × autoevaluación directiva (F1) + 0,30 × percepción de equipos (F2). Sin evidencia verificada, la madurez tiene techo de 2,9; sin equipos, pesa 55 % la evidencia y 45 % la dirección. La escala va de 1 (incipiente) a 5 (multiplicadora) y el umbral de práctica instalada es 3,0.</p>

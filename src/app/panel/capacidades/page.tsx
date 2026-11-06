@@ -15,6 +15,7 @@ import { vocabOf, estrategiaHref } from "@/lib/vocabulario";
 import { DIMS } from "@/data/mapa";
 import { avisar, confirmar } from "@/components/feedback";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
+import { DescargarDecisiones } from "@/components/descargar-decisiones";
 import { RevisionCapacidadesFocal, SEMAFORO_CLS, type RevisionBorrador } from "@/components/revision-capacidades";
 import { FRENTES, NIVEL_CAP, SEMAFORO, lecturaCapacidades, checklistHash, type ChecklistCap, type RevisionCapacidades, type Semaforo, type PropuestaCapacidades } from "@/lib/capacidades";
 import { decisionLabel, type Decision } from "@/lib/priorizacion";
@@ -132,6 +133,7 @@ export default function CapacidadesPage() {
         actions={<div className="flex flex-wrap items-center gap-2">
           {canAll && <button type="button" onClick={() => void personalizarTodas()} disabled={personalizando !== null || todas.length === 0} className="btn-primary btn-sm inline-flex items-center gap-1.5 text-[12px] disabled:opacity-50" title="El modelo adapta las afirmaciones, preguntas y niveles de cada iniciativa elegible a su contexto y al de la empresa">{personalizando ? <><Loader2 size={12} className="animate-spin" /> Personalizando {personalizando.n + 1} de {personalizando.total}…</> : <><Sparkles size={12} /> Personalizar checklists con IA</>}</button>}
           <AyudaMetodologica tema="capacidades" />
+          <DescargarDecisiones modulo="capacidades" />
         </div>} />
 
       {datos === null ? <SkeletonCards n={4} /> : (

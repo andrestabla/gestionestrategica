@@ -16,7 +16,8 @@ test("parseAlineacion: exigencia, faltantes, reformulación y recomendación obl
   assert.equal(r.items[2].color, "rojo");
   assert.deepEqual(r.items[2].duplicaDe, ["OE-01"]);                 // ni a sí mismo ni ids desconocidos
   assert.equal(r.items[2].recomendaciones.length, 1);               // sin recomendación ni reformulación: se añade una
-  assert.deepEqual(r.items[3].faltan, ["plazo"]);
+  assert.deepEqual(r.items[3].faltan, []);                           // el plazo lo da el horizonte: nunca «falta plazo»
+  assert.ok(!r.items[3].recomendaciones.some((x) => /^Fijar el plazo/.test(x)));
   assert.equal(r.items[3].reformulacion, "Consolidar X, medido por Y, al cierre de 2027.");
   assert.equal(r.items[3].indicadorPropuesto, "Y");
   assert.equal(r.items[4].color, "amarillo");                       // sin lectura del modelo
@@ -37,4 +38,23 @@ test("sinCifrasDeMeta quita metas numéricas y conserva años y plazos", async (
   assert.equal(sinCifrasDeMeta("Subir la participación de mercado de 3,1 a 3,4 al cierre de 2027."), "Subir la participación de mercado al cierre de 2027.");
   assert.equal(tieneCifrasDeMeta("Consolidar la cobertura al cierre de 2027"), false);
   assert.equal(tieneCifrasDeMeta("Lanzar 5 productos en 2027"), true);
+});
+
+test("parseAlineacion: rigor con el verbo (actividad vs logro) y la reformulación que repite el verbo", () => {
+  const nombres = { "OE-09": "Implementar la omnicanalidad como estrategia para aumentar la cobertura del panel médico", "OE-08": "Mejorar el share de cada línea", "OE-01": "Obtener la certificación BPM" };
+  const r = parseAlineacion({ items: [
+    { id: "OE-09", color: "amarillo", faltan: ["verbo", "plazo"], recomendaciones: ["Incluir un verbo de logro: 'Implementar' al inicio del enunciado.", "Fijar el plazo: cierre de 2027."], reformulacion: "Implementar la omnicanalidad para aumentar la cobertura del panel médico, al cierre de 2027." },
+    { id: "OE-08", color: "amarillo", faltan: ["verbo"], recomendaciones: ["Declarar el indicador impulsor: participación por línea."], reformulacion: "Aumentar la participación de mercado por línea, medida por IQVIA, al cierre de 2027." },
+    { id: "OE-01", color: "verde", faltan: [], recomendaciones: [] },
+  ] }, "H1", ["OE-09", "OE-08", "OE-01"], nombres);
+  const o9 = r.items[0];
+  assert.deepEqual(o9.faltan, []);                                                       // empieza con verbo (de actividad): no «falta verbo»
+  assert.ok(o9.recomendaciones.some((x) => /verbo de actividad «implementar»/i.test(x)));
+  assert.ok(!o9.recomendaciones.some((x) => /Incluir un verbo de logro/.test(x)));
+  assert.equal(o9.reformulacion, "");                                                    // la propuesta repetía el verbo criticado
+  assert.ok(!o9.recomendaciones.some((x) => /^Fijar el plazo/.test(x)));
+  const o8 = r.items[1];
+  assert.deepEqual(o8.faltan, []);                                                       // «Mejorar» es verbo: el modelo se equivocó
+  assert.equal(o8.reformulacion, "Aumentar la participación de mercado por línea, medida por IQVIA, al cierre de 2027.");
+  assert.equal(r.items[2].color, "verde");
 });

@@ -23,6 +23,7 @@ import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { horizonsOf, horizonesBase, horizonLabel, leversOf, typeRuleOf, isConvencion, isAcompanamiento, isGuiada, type Lever } from "@/data/catalogo";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
+import { DescargarDecisiones } from "@/components/descargar-decisiones";
 import { SEMAFORO, NATURALEZA, ELEMENTOS, type AlineacionIA, type AlineacionItem, type PropuestaObjetivo } from "@/lib/alineacion";
 import { NATURALEZA_INI, ELEMENTOS_INI, type ValidacionIni, type IniItem, type PropuestaIniciativa } from "@/lib/iniciativas-ia";
 import { kpisOf } from "@/lib/convencion";
@@ -185,6 +186,7 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
         <p className="text-[12.5px] text-muted">Las {V.leversLow} ordenan la estrategia: cada objetivo, resultado clave e iniciativa cuelga de una. Máximo ocho; el orden es la jerarquía acordada por la dirección.</p>
         <span className="ml-auto flex flex-wrap items-center gap-2">
           {isAcompanamiento(cat.company) && <AyudaMetodologica tema="prioridades" />}
+          {isAcompanamiento(cat.company) && <DescargarDecisiones modulo="prioridades" />}
           {canEdit && <button onClick={() => setOpen(true)} className="btn-primary btn-sm text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
         </span>
       </div>
@@ -270,6 +272,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           : <p className="text-[12.5px] text-muted">Trabajo retrospectivo desde {horizons[horizons.length - 1]?.label ?? "el horizonte más lejano"}: estado deseado, hitos intermedios y resultados indispensables en {horizons[0]?.label ?? "el primer horizonte"}, por palanca.</p>}
         <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
           {acomp && <AyudaMetodologica tema="objetivos" />}
+          {acomp && <DescargarDecisiones modulo="objetivos" />}
           {acomp && canEdit && <button onClick={validar} disabled={aliBusy || ali?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={ali?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por objetivo frente a las prioridades, con justificación y recomendaciones"}>{aliBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {ali?.alineacion ? "Volver a validar alineación" : "Validar alineación"} <span className="text-faint">(IA)</span></button>}
           {canEdit && !acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> {V.levers}</button>}
           {canEdit && <button onClick={() => setOpen({ horizon: first })} className="btn-primary btn-sm text-[12px]"><Plus size={12} /> Nuevo objetivo</button>}
@@ -657,7 +660,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
         <select value={fLever} onChange={(e) => setFLever(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.lever}><option value="">{V.leversAll}</option>{levers.map((l) => <option key={l.id} value={l.id}>{l.order}. {l.name}</option>)}</select>
         {!acomp && <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>}
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
-        {acomp && <span className="ml-auto flex items-center gap-2"><AyudaMetodologica tema="resultados-clave" /><span className="hidden text-[12px] text-faint lg:inline">Los objetivos se definen en «{V.tabs.direccion}»; aquí se vinculan sus resultados clave.</span></span>}
+        {acomp && <span className="ml-auto flex items-center gap-2"><DescargarDecisiones modulo="resultados-clave" /><AyudaMetodologica tema="resultados-clave" /><span className="hidden text-[12px] text-faint lg:inline">Los objetivos se definen en «{V.tabs.direccion}»; aquí se vinculan sus resultados clave.</span></span>}
         {canEdit && !convencion && !acomp && <button type="button" onClick={() => setObj({ lever: fLever || undefined })} className="btn-primary ml-auto btn-sm text-[12px]"><Plus size={12} /> Objetivo</button>}
         {!canEdit && <span className="ml-auto text-[12px] text-faint">{acomp ? "Solo lectura: registra el advisor." : "Solo lectura: el líder de cada tribu registra con el QR de edición."}</span>}
       </div>
@@ -950,6 +953,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         <select value={fTribe} onChange={(e) => setFTribe(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[260px]" title={V.group}><option value="">{V.groupsAll}</option>{tribes.map((t) => <option key={t.id} value={t.id}>{t.dependencia || t.cargo}</option>)}</select>
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
         {acomp && <AyudaMetodologica tema="iniciativas" />}
+        {acomp && <DescargarDecisiones modulo="iniciativas" />}
         {acomp && canEdit && <button type="button" onClick={validarInis} disabled={valBusy || val?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={val?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por iniciativa: formulación, vínculo al KR, responsable, plazo, capacidad y duplicidades"}>{valBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {val?.validacion ? "Volver a validar iniciativas" : "Validar iniciativas"} <span className="text-faint">(IA)</span></button>}
         {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary btn-sm text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
         <span className="text-[12px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
@@ -1251,7 +1255,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[12px] text-faint">se refresca cada 15 s</span>
       </div>
-      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
+      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><DescargarDecisiones modulo="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       {!prio && <SkeletonCards n={4} className="mb-5" />}
       <div className={`mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4 ${prio ? "" : "hidden"}`}>
@@ -1392,6 +1396,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {acomp && <AyudaMetodologica tema="portafolio" />}
+        {acomp && <DescargarDecisiones modulo="portafolio" />}
         <p className="text-[12.5px] text-muted">{acomp ? `El portafolio se lee por ${V.leverLow} y ${V.groupLow}. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa.` : convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
         <button onClick={download} className="btn-ghost w-full justify-center btn-sm text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>
       </div>
