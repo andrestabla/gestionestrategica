@@ -5,10 +5,11 @@
 //   Con L = 1 o 2, se resuelve primero la capacidad de la siguiente etapa.
 //   El puntaje ordena alternativas dentro de cada horizonte; la aprobación
 //   exige impacto estratégico, capacidad y recursos disponibles.
-//   El puntaje consolidado también sugiere el horizonte (suggestHorizon):
-//   elegible, con capacidad y ≥ 65 puntos → primer horizonte; elegible pero
-//   con capacidad por resolver o entre 50 y 64 → siguiente horizonte; no
-//   elegible o < 50 → último horizonte. La gerencia confirma o mueve.
+//   Orden (F16): dentro de cada horizonte, de mayor a menor puntaje entre las
+//   estratégicas elegibles; empates por impacto y luego por evidencia. Lo
+//   táctico, lo no elegible y lo sin evaluar se lista aparte, sin posición.
+//   suggestHorizon se conserva como regla, pero la plataforma no sugiere
+//   horizonte: la decisión de tiempo la toma quien gobierna el portafolio.
 // Reglas puras: sin estado, sin permisos (los exige el store).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -242,18 +243,26 @@ export function suggestHorizon(c: Consolidated, horizons: string[]): string | nu
   return last;
 }
 
-/** Orden del portafolio: dentro de cada horizonte, por puntaje consolidado;
-    las no evaluadas al final. Cada fila trae el horizonte sugerido. */
+/** Por qué una iniciativa queda fuera del orden de su horizonte (F16: solo se ordenan las estratégicas elegibles). */
+export type FueraDelOrden = "sin-evaluar" | "tactica" | "no-elegible";
+export const FUERA_LABEL: Record<FueraDelOrden, string> = { "sin-evaluar": "sin evaluar", tactica: "táctica: se transfiere al área", "no-elegible": "impacto consolidado menor que 3" };
+export const fueraDelOrden = (c: Consolidated): FueraDelOrden | null => (c.n === 0 ? "sin-evaluar" : c.type !== "ESTRATEGICO" ? "tactica" : !c.eligible ? "no-elegible" : null);
+
+/** Orden del portafolio (F16): dentro de cada horizonte, las estratégicas elegibles de mayor a menor puntaje
+    consolidado; los empates se deshacen por impacto y luego por evidencia. Las demás (tácticas, no elegibles,
+    sin evaluar) van después, sin posición y con su motivo. `suggested` queda en null: no se sugiere horizonte. */
 export function rank<T extends { id: string; horizon: string }>(
   items: T[], consolidatedOf: (id: string) => Consolidated, horizons: string[] = ["CORTO", "MEDIANO"],
-): (T & { c: Consolidated; position: number; suggested: string | null })[] {
-  const out: (T & { c: Consolidated; position: number; suggested: string | null })[] = [];
+): (T & { c: Consolidated; position: number; suggested: string | null; fuera: FueraDelOrden | null })[] {
+  const out: (T & { c: Consolidated; position: number; suggested: string | null; fuera: FueraDelOrden | null })[] = [];
   const extra = [...new Set(items.map((i) => i.horizon))].filter((h) => !horizons.includes(h));
+  const cmp = (a: Consolidated, b: Consolidated) => (b.score - a.score) || (b.avg.D - a.avg.D) || (b.avg.E - a.avg.E);
   for (const h of [...horizons, ...extra]) {
-    const group = items.filter((i) => i.horizon === h).map((i) => { const c = consolidatedOf(i.id); return { ...i, c, position: 0, suggested: suggestHorizon(c, horizons) }; })
-      .sort((a, b) => (b.c.n === 0 ? -1 : b.c.score) - (a.c.n === 0 ? -1 : a.c.score));
-    group.forEach((g, i) => { g.position = i + 1; });
-    out.push(...group);
+    const group = items.filter((i) => i.horizon === h).map((i) => { const c = consolidatedOf(i.id); return { ...i, c, position: 0, suggested: null as string | null, fuera: fueraDelOrden(c) }; });
+    const enOrden = group.filter((g) => !g.fuera).sort((a, b) => cmp(a.c, b.c));
+    enOrden.forEach((g, i) => { g.position = i + 1; });
+    const resto = group.filter((g) => g.fuera).sort((a, b) => (a.c.n === 0 ? 1 : 0) - (b.c.n === 0 ? 1 : 0) || cmp(a.c, b.c));
+    out.push(...enOrden, ...resto);
   }
   return out;
 }

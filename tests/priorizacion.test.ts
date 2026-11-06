@@ -60,8 +60,10 @@ test("el portafolio demo queda ordenado por puntaje dentro de cada horizonte", (
   assert.equal(getEvaluations().length, EVALUATIONS_SEED.length);
   const r = rank(INITIATIVES_FULL.map((i) => ({ id: i.id, horizon: i.horizon })), consolidatedOf);
   const corto = r.filter((x) => x.horizon === "CORTO");
-  for (let i = 1; i < corto.length; i++) assert.ok(corto[i - 1].c.score >= corto[i].c.score);
-  assert.equal(corto[0].position, 1);
+  const enOrden = corto.filter((x) => x.position > 0);
+  for (let i = 1; i < enOrden.length; i++) assert.ok(enOrden[i - 1].c.score >= enOrden[i].c.score, "orden por puntaje entre las estratégicas elegibles");
+  assert.ok(enOrden.length > 0 && enOrden[0].position === 1);
+  assert.ok(corto.slice(enOrden.length).every((x) => x.position === 0 && x.fuera), "lo táctico, no elegible o sin evaluar va después, sin posición");
   // las decisiones demo son admisibles con sus consolidados
   for (const d of DECISIONS_SEED) assert.ok(decisionCheck(d.decision, consolidatedOf(d.iniId), d.rationale).ok, `${d.iniId} ${d.decision}`);
 });

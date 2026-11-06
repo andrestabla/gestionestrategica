@@ -24,9 +24,9 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => null);
   const cat = catalog();
   const lever = leversOf(cat.company).find((l) => l.id === String(body?.lever ?? ""));
-  if (!lever) return NextResponse.json({ error: "Indica la palanca." }, { status: 422 });
+  if (!lever) return NextResponse.json({ error: "Indica la prioridad estratégica." }, { status: 422 });
   const tribeId = String(body?.tribe ?? lever.ownerId ?? "");
-  const tribeName = cat.responsibles.find((r) => r.id === tribeId)?.dependencia ?? "la tribu de la palanca";
+  const tribeName = cat.responsibles.find((r) => r.id === tribeId)?.dependencia ?? "el sponsor de la prioridad";
   const leverOf = (oe: string) => cat.objectives.find((o) => o.id === oe)?.lever;
   const templates = (cat.company.krTemplates ?? []).filter((t) => leverOf(t.oe) === lever.id);
   const o = body?.objective && typeof body.objective === "object" ? body.objective as Record<string, unknown> : null;

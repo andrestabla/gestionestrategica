@@ -13,8 +13,7 @@ import { horizonLabel, typeRuleOf, isConvencion, horizonsOf } from "@/data/catal
 import { vocabOf, yearOfFirstHorizon, startQuarters } from "@/lib/vocabulario";
 import {
   CRITERIA, DECISIONS, LEVEL_NAMES, decisionLabel, typeOf, typeRuleLabel, validationCriteriaCount, validationLabel,
-  type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks,
-} from "@/lib/priorizacion";
+  type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks, FUERA_LABEL, type FueraDelOrden } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
 import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2, Trash2 } from "lucide-react";
 import { confirmar, avisar } from "@/components/feedback";
@@ -28,7 +27,7 @@ export type PriorizacionData = {
   me: string;
   evaluations: Evaluation[];
   decisions: Record<string, DecisionRecord>;
-  ranking: { id: string; horizon: string; line: number; name: string; c: Consolidated; position: number; suggested: string | null }[];
+  ranking: { id: string; horizon: string; line: number; name: string; c: Consolidated; position: number; suggested: string | null; fuera: FueraDelOrden | null }[];
   sessions?: PrioSessions;   // modo convención: sesión de calificación por tribu
 };
 
@@ -133,7 +132,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const c = row?.c;
   const mine = data?.evaluations.find((e) => e.by === user.email.toLowerCase());
   const decision = data?.decisions[iniId] ?? null;
-  const sameHorizon = data?.ranking.filter((r) => r.horizon === horizon).length ?? 0;
+  const sameHorizon = data?.ranking.filter((r) => r.horizon === horizon && r.position > 0).length ?? 0;   // solo las que entran al orden
   const convMode = isConvencion(cv.catalog.company);   // modo convención: todo se desarrolla a 2027, sin horizonte sugerido ni «mover a»
   const rule = typeRuleOf(cv.catalog.company);
 
@@ -145,24 +144,13 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
           <div className="text-[14px] font-extrabold tracking-tight text-ink">Validación con {validationCriteriaCount(rule)} criterios</div>
           <div className="text-[12px] text-muted">{validationLabel(rule)} · tipo: {typeRuleLabel(rule)} · puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4, {convMode ? "ordena el portafolio (todo a 2027)" : "ordena dentro del horizonte y sugiere el horizonte"} · la decisión de tiempo la registra la gerencia</div>
         </div>
-        {c && c.n > 0 && row && (
-          <span className="chip chip-cyan" title="Posición por puntaje entre las iniciativas del mismo horizonte">
+        {c && c.n > 0 && row && row.position > 0 && (
+          <span className="chip chip-cyan" title="Posición por puntaje entre las estratégicas elegibles del mismo horizonte (empates por impacto y luego evidencia)">
             {row.position}.º de {sameHorizon}{convMode ? "" : ` · ${horizonLabel(cv.catalog.company, horizon).toLowerCase()}`}
           </span>
         )}
-        {!convMode && row && row.suggested && row.suggested !== horizon && (
-          <span className="flex items-center gap-1.5">
-            <span className="chip chip-gold" title="Según el puntaje consolidado y las reglas de la matriz">Sugerido: {horizonLabel(cv.catalog.company, row.suggested)}</span>
-            {canDecide && (
-              <button type="button" disabled={saving} onClick={() => post({ horizon: row.suggested })}
-                className="btn-ghost btn-sm text-[12px]" title="Mover la iniciativa al horizonte sugerido (decisión de tiempo)">
-                Mover a {horizonLabel(cv.catalog.company, row.suggested)}
-              </button>
-            )}
-          </span>
-        )}
-        {!convMode && row && row.suggested && row.suggested === horizon && (
-          <span className="chip chip-ok" title="El puntaje consolidado confirma el horizonte actual">Horizonte confirmado</span>
+        {c && c.n > 0 && row && row.fuera && (
+          <span className="chip chip-gold" title="F16: solo las estratégicas elegibles entran al orden del horizonte">Fuera del orden · {FUERA_LABEL[row.fuera]}</span>
         )}
         {decision && <span className={DECISION_CLS[decision.decision]}>{decisionLabel(decision.decision)}</span>}
         {convMode && ini && (canDecide

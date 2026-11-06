@@ -32,7 +32,7 @@ import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } fr
 import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
-import { usePriorizacion, DECISION_CLS, HorizonHint, type PriorizacionData } from "@/components/priorizacion";
+import { usePriorizacion, DECISION_CLS, type PriorizacionData } from "@/components/priorizacion";
 import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
@@ -539,7 +539,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
           </div>
         )}
         <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
-        <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder="¿Cómo mediremos ese avance? (complementa el indicador de la palanca)" className={INPUT} /></Field>
+        <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder={`¿Cómo mediremos ese avance? (complementa el indicador de la ${Vb(cat).leverLow})`} className={INPUT} /></Field>
         {okr && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -593,7 +593,7 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
   return (
     <Modal title={Vb(cat).levers} sub={isAcompanamiento(cat.company) ? "el orden es la jerarquía acordada por la dirección; cada prioridad tiene un sponsor" : "el orden es la jerarquía acordada por la dirección; cada tribu trabaja una palanca"} onClose={onCancel} wide
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
-        <button type="button" disabled={saving || rows.some((r) => !r.id.trim() || r.name.trim().length < 3)} onClick={() => onSubmit(rows)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar palancas</button></>}>
+        <button type="button" disabled={saving || rows.some((r) => !r.id.trim() || r.name.trim().length < 3)} onClick={() => onSubmit(rows)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar {Vb(cat).leversLow}</button></>}>
       <div className="space-y-2">
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[28px_80px_1fr_1fr_1fr_60px] items-start gap-1.5">
@@ -605,7 +605,7 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
             <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="pt-1.5 text-[12px] text-faint hover:text-bad">Quitar</button>
           </div>
         ))}
-        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "", indicator: "", desc: "" }])} className="text-[12px] font-bold text-cyan-deep hover:underline">+ añadir palanca</button>}
+        {rows.length < 8 && <button onClick={() => setRows([...rows, { id: "", name: "", ownerId: "", indicator: "", desc: "" }])} className="text-[12px] font-bold text-cyan-deep hover:underline">+ añadir {Vb(cat).leverLow}</button>}
       </div>
     </Modal>
   );
@@ -1306,7 +1306,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                         {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[11px]">consenso</span>}
                         {c && c.n > 0 && c.eligible && !c.capacityFirst && !c.lowConsensus && <span className="chip chip-ok !py-0 text-[11px]">elegible</span>}
                       </span></td>
-                      <td className="px-2 py-2"><span className="num text-[12px] text-muted">{convencion ? (levers.find((l) => l.id === cat.objectives.find((o) => o.id === i.cmi)?.lever)?.name ?? "—") : horizonLabel(cat.company, i.horizon)}</span> {r && !convencion && <HorizonHint compact current={i.horizon} suggested={r.suggested} company={cat.company} />}</td>
+                      <td className="px-2 py-2"><span className="num text-[12px] text-muted">{convencion ? (levers.find((l) => l.id === cat.objectives.find((o) => o.id === i.cmi)?.lever)?.name ?? "—") : horizonLabel(cat.company, i.horizon)}</span> </td>
                       <td className="px-2 py-2">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );
@@ -1440,7 +1440,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                     <span className="num shrink-0 text-[18px] font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {convencion ? <span className="chip !py-0 text-[11px]">Inicio {quarterLabel(r.start)}</span> : <HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} />}
+                    {convencion ? <span className="chip !py-0 text-[11px]">Inicio {quarterLabel(r.start)}</span> : <span className="chip !py-0 text-[11px]">{horizonLabel(cat.company, r.horizon)}</span>}
                     {r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}
                   </div>
                   {r.rationale && <p className="mt-1 text-[12px] leading-snug text-ink-soft">{r.rationale}</p>}
@@ -1457,7 +1457,7 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
                       <td className="px-4 py-2"><Link href={`${base}/panel/iniciativas/${r.id}`} className="font-bold text-ink hover:text-cyan-deep">{r.name}</Link><div className="num text-[12px] text-faint">{r.id} · {r.owner ?? "—"}</div></td>
                       <td className="px-2 py-2 text-[12px] text-muted">{r.lever ?? "—"}</td>
                       <td className="num px-2 py-2 text-right font-extrabold" style={{ color: r.c.n ? SCORE_COLOR(r.c.score) : "var(--faint)" }}>{r.c.n ? r.c.score : "—"}</td>
-                      {convencion ? <td className="num px-2 py-2 text-[12px] text-muted">{quarterLabel(r.start)}</td> : <td className="px-2 py-2"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={cat.company} /></td>}
+                      {convencion ? <td className="num px-2 py-2 text-[12px] text-muted">{quarterLabel(r.start)}</td> : <td className="num px-2 py-2 text-[12px] text-muted">{horizonLabel(cat.company, r.horizon)}</td>}
                       <td className="px-2 py-2">{r.decision ? <span className={DECISION_CLS[r.decision]}>{decisionLabel(r.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
                       <td className="px-2 py-2 text-[12px] leading-snug text-ink-soft">{r.rationale ?? ""}</td>
                     </tr>
@@ -1496,10 +1496,10 @@ function FieldHelp({ text }: { text: string }) {
 
 /** Ayuda de cada campo del resultado clave. */
 const KR_AYUDA = {
-  code: "Identificador único: prefijo de la palanca y número consecutivo (p. ej. MS-01). Se asigna solo; no hace falta cambiarlo.",
+  code: "Identificador único: prefijo de la prioridad estratégica y número consecutivo (p. ej. EXC-01). Se asigna solo; no hace falta cambiarlo.",
   name: "Qué resultado verificable se logra y cuánto, con la cifra real (p. ej. «Market Share de farmacia del 12 % al 15 %», «45 PDV en funcionamiento»). Sin una cifra en el nombre el KR queda incompleto: no se valida ni recibe iniciativas. Si empieza por implementar, diseñar o capacitar, es una iniciativa, no un KR.",
   baseline: "El valor real de hoy, con fecha y fuente en la definición. Si aún no se conoce, no inventes un número: anota en la definición quién lo consigue y cuándo, y deja 0 mientras tanto (el KR quedará marcado como incompleto).",
-  target: "El valor a alcanzar a 2027-T4: ambicioso pero alcanzable, coherente con el sentido (sube o baja), con el objetivo rector y con las metas de las otras palancas. Debe ser distinto de la línea base.",
+  target: "El valor a alcanzar a 2027-T4: ambicioso pero alcanzable, coherente con el sentido (sube o baja), con el objetivo y con las metas de las otras prioridades. Debe ser distinto de la línea base.",
   unit: "En qué se mide: %, PDV, días, puntos, USD, clientes. La misma unidad para la línea base y la meta.",
   goodDirection: "Sentido del indicador: «sube» cuando más es mejor (ventas, NPS, cobertura); «baja» cuando menos es mejor (rotación, días al punto de equilibrio, tiempo de espera).",
   ownerId: "Quien responde por el resultado y tiene autoridad para moverlo: la tribu o el líder de escuadrón. Un solo dueño por KR.",

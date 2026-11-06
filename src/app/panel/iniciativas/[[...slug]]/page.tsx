@@ -21,8 +21,9 @@ import { horizonsOf, horizonTitle } from "@/data/catalogo";
 import { initiativesOf, responsible, type InitiativeView } from "@/lib/vista";
 import { initiativeRisk } from "@/lib/logic";
 import { initiativeTaskStats } from "@/lib/proyectos";
-import { MatrizPanel, PrioChip, HorizonHint, usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
-import { CRITERIA, LEVEL_NAMES, decisionLabel } from "@/lib/priorizacion";
+import { MatrizPanel, PrioChip, usePriorizacion, DECISION_CLS } from "@/components/priorizacion";
+import { CRITERIA, LEVEL_NAMES, decisionLabel, FUERA_LABEL } from "@/lib/priorizacion";
+import { horizonLabel } from "@/data/catalogo";
 import {
   ChevronRight, CircleCheck, CircleDashed, Circle, Flag, AlertTriangle,
   StickyNote, CalendarClock, User, Target, ArrowLeft, ArrowRight,
@@ -524,7 +525,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
                   const cap = LINES.find((l) => l.n === r.line);
                   return (
                     <tr key={r.id} onClick={() => onOpen(r.id)} className="cursor-pointer border-t border-line transition-colors hover:bg-surface-2/50">
-                      <td className="num px-4 py-2.5 font-extrabold text-cyan-deep">{r.c.n > 0 ? r.position : "—"}</td>
+                      <td className="num px-4 py-2.5 font-extrabold text-cyan-deep">{r.position > 0 ? r.position : <span className="text-faint" title={r.fuera ? FUERA_LABEL[r.fuera] : ""}>—</span>}</td>
                       <td className="px-2 py-2.5">
                         <div className="font-bold text-ink">{r.name}</div>
                         <div className="num text-[12px] text-faint">{r.id.toUpperCase()} · {cap?.name} · {r.c.n} evaluador{r.c.n === 1 ? "" : "es"}</div>
@@ -544,7 +545,7 @@ function PriorizacionView({ onOpen, onBack }: { onOpen: (id: string) => void; on
                           {r.c.n > 0 && r.c.eligible && !r.c.capacityFirst && !r.c.lowConsensus && <span className="chip chip-ok !py-0 text-[11px]">elegible</span>}
                         </span>
                       </td>
-                      <td className="px-2 py-2.5"><HorizonHint compact current={r.horizon} suggested={r.suggested} company={pv.catalog.company} /></td>
+                      <td className="px-2 py-2.5">{r.fuera && r.c.n > 0 ? <span className="chip chip-gold !py-0 text-[11px]" title="F16: solo las estratégicas elegibles entran al orden">{FUERA_LABEL[r.fuera]}</span> : <span className="text-[12px] text-faint">{horizonLabel(pv.catalog.company, r.horizon)}</span>}</td>
                       <td className="px-2 py-2.5">{d ? <span className={DECISION_CLS[d.decision]}>{decisionLabel(d.decision)}</span> : <span className="text-[12px] italic text-faint">pendiente</span>}</td>
                     </tr>
                   );

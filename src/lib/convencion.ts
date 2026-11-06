@@ -91,7 +91,7 @@ export function okrChecks(cat: Catalog, horizon: string): OkrIssue[] {
   const out: OkrIssue[] = [];
   const objectives = okrObjectivesOf(cat, horizon);
   for (const o of objectives) {
-    if (!o.lever) out.push({ level: "medio", kind: "objetivo-sin-palanca", ref: o.id, text: `${o.id} no tiene palanca asignada.` });
+    if (!o.lever) out.push({ level: "medio", kind: "objetivo-sin-palanca", ref: o.id, text: `${o.id} no tiene prioridad estratégica asignada.` });
     const krs = keyResultsOf(cat, o);
     if (krs.length === 0) out.push({ level: "alto", kind: "objetivo-sin-kr", ref: o.id, text: `${o.id} no tiene resultados clave: no es medible.` });
     else if (krs.length < KR_MIN) out.push({ level: "medio", kind: "objetivo-pocos-kr", ref: o.id, text: `${o.id} tiene un solo resultado clave; la regla pide de 2 a 4 (máximo 5).` });

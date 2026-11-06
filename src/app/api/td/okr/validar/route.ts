@@ -25,8 +25,8 @@ export const POST = withTenant(async (req: Request) => {
   const o = cat.objectives.find((x) => x.id === String(body?.objective ?? "") && x.okr);
   if (!o) return NextResponse.json({ error: "Indica un objetivo de tribu registrado." }, { status: 422 });
   const lever = leversOf(cat.company).find((l) => l.id === o.lever);
-  if (!lever) return NextResponse.json({ error: "El objetivo no tiene palanca." }, { status: 422 });
-  const tribeName = cat.responsibles.find((r) => r.id === lever.ownerId)?.dependencia ?? "la tribu de la palanca";
+  if (!lever) return NextResponse.json({ error: "El objetivo no tiene prioridad estratégica." }, { status: 422 });
+  const tribeName = cat.responsibles.find((r) => r.id === lever.ownerId)?.dependencia ?? "el sponsor de la prioridad";
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "";
   const krs: KrDatos[] = keyResultsOf(cat, o).map((k) => ({ code: k.code, name: k.name, unit: k.unit, goodDirection: k.goodDirection, frequency: k.frequency, baseline: k.baseline, target: k.target, owner: owner(k.ownerId), due: k.due ?? "", definition: k.definition, formula: k.formula, initiatives: initiativesOfKr(cat, k.code).length }));
   if (!krs.length) return NextResponse.json({ error: "Este objetivo aún no tiene resultados clave que validar; créalos con «+ Resultado clave» o «Sugerir KR»." }, { status: 422 });

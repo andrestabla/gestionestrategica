@@ -36,7 +36,7 @@ test("rank: agrupa por los horizontes de la empresa, en su orden, y los desconoc
   const items = [{ id: "a", horizon: "H3" }, { id: "b", horizon: "H1" }, { id: "c", horizon: "ZZ" }, { id: "d", horizon: "H2" }];
   const out = rank(items, () => none, ["H1", "H2", "H3"]);
   assert.deepEqual(out.map((o) => o.id), ["b", "d", "a", "c"]);
-  assert.ok(out.every((o) => o.position === 1));
+  assert.ok(out.every((o) => o.position === 0 && o.fuera === "sin-evaluar"), "sin evaluación no hay posición: quedan fuera del orden");
 });
 
 test("gantt: el eje de trimestres se adapta al rango de las iniciativas", () => {
