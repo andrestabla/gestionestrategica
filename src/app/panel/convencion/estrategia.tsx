@@ -38,7 +38,7 @@ import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle, Trash2 } from "lucide-react";
 import { confirmar, avisar } from "@/components/feedback";
 
 type Tab = "itinerario" | "guia" | "prioridades" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
@@ -156,7 +156,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
 
       {tab === "itinerario" && <ItinerarioTab />}
       {tab === "guia" && <GuiaTab me={me} />}
-      {tab === "prioridades" && <PrioridadesTab cat={cat} levers={levers} canEdit={canEdit} saving={saving} mutate={mutate} />}
+      {tab === "prioridades" && <PrioridadesTab cat={cat} levers={levers} canEdit={canEdit} canDelete={me.role === "ADMIN" || me.role === "CONSULTOR"} saving={saving} mutate={mutate} />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} myTribe={me.responsibleId} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} myTribe={me.responsibleId} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
@@ -173,7 +173,7 @@ const Vb = (cat: Cat) => vocabOf(cat.company);
 
 /* ═══ Prioridades estratégicas (las palancas como sección propia, acompañamiento) ═══ */
 
-function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
+function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { cat: Cat; levers: Lever[]; canEdit: boolean; canDelete: boolean; saving: boolean; mutate: Mutate }) {
   const V = useVocab();
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Lever | null>(null);
@@ -217,7 +217,16 @@ function PrioridadesTab({ cat, levers, canEdit, saving, mutate }: { cat: Cat; le
         </div>
       )}
       {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setOpen(false); return ok; }} />}
-      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setEditando(null); return ok; }} />}
+      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setEditando(null); return ok; }}
+        onDelete={canDelete ? async () => {
+          const l = editando; const nObj = objs(l).length, nKr = krs(l).length, nIni = inis(l).length;
+          const cuelga = [nObj ? `${nObj} objetivo${nObj === 1 ? "" : "s"}` : "", nKr ? `${nKr} KR` : "", nIni ? `${nIni} iniciativa${nIni === 1 ? "" : "s"}` : ""].filter(Boolean).join(", ");
+          const ok = await confirmar({ title: `¿Eliminar la ${V.leverLow} «${l.name}»?`, body: cuelga ? `De ella cuelgan ${cuelga}: no se borran, pero quedan sin ${V.leverLow} hasta que se reasignen. No se puede deshacer.` : "No tiene objetivos, resultados clave ni iniciativas asociados. No se puede deshacer.", confirmLabel: "Eliminar", danger: true });
+          if (!ok) return;
+          const resto = [...levers].sort((a, b) => a.order - b.order).filter((x) => x.id !== l.id);
+          const done = await mutate("levers", "upsert", resto.length ? resto : []);
+          if (done) setEditando(null);
+        } : undefined} />}
     </>
   );
 }
@@ -232,7 +241,7 @@ export function splitIndicadores(s?: string): string[] {
 const joinIndicadores = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean).join(" · ");
 
 /** Edición de una sola prioridad (lápiz de la tarjeta): nombre, sponsor, resultado del ciclo y renuncia, y un campo por indicador. */
-function LeverForm({ cat, lever, levers, saving, onCancel, onSubmit }: { cat: Cat; lever: Lever; levers: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean> }) {
+function LeverForm({ cat, lever, levers, saving, onCancel, onSubmit, onDelete }: { cat: Cat; lever: Lever; levers: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean>; onDelete?: () => Promise<void> }) {
   const V = Vb(cat); const acomp = isAcompanamiento(cat.company);
   const [f, setF] = useState({ id: lever.id, name: lever.name, ownerId: lever.ownerId ?? "", desc: lever.desc ?? "" });
   const [inds, setInds] = useState<string[]>(() => { const x = splitIndicadores(lever.indicator); return x.length ? x : [""]; });
@@ -247,7 +256,8 @@ function LeverForm({ cat, lever, levers, saving, onCancel, onSubmit }: { cat: Ca
   };
   return (
     <Modal title={`${lever.order}. ${lever.name}`} sub={`editar esta ${V.leverLow} · el orden y las demás se cambian en «Editar ${V.leversLow}»`} onClose={onCancel}
-      footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+      footer={<>{onDelete && <button type="button" disabled={saving} onClick={() => void onDelete()} className="btn-ghost mr-auto !py-2 text-[12px] text-bad hover:text-bad"><Trash2 size={13} /> Eliminar</button>}
+        <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !valido} onClick={() => void guardar()} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar</button></>}>
       <div className="space-y-4">
         <div className="grid grid-cols-[96px_1fr] gap-3">
