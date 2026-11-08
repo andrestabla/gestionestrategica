@@ -16,6 +16,21 @@ const Bien = ({ children }: { children: ReactNode }) => <div className="flex ite
 const Mal = ({ children }: { children: ReactNode }) => <div className="flex items-start gap-2 rounded-xl px-3 py-2 text-[12.5px] leading-snug" style={{ background: "color-mix(in srgb, var(--bad) 9%, var(--surface))" }}><XCircle size={14} className="mt-0.5 shrink-0 text-bad" /><span>{children}</span></div>;
 const Li = ({ children }: { children: ReactNode }) => <li className="flex gap-2 text-[13px] leading-relaxed text-ink"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-deep" /><span>{children}</span></li>;
 
+/** Lámina común de cierre: quién hace qué en la etapa. En el acompañamiento el comité directivo define y decide,
+    el advisor conduce el método y los responsables de área ejecutan su parte. */
+const quienes = (etapa: string, comite: string, advisor: string, areas: string): Lamina => ({ k: "Quién hace qué", t: `Quién hace qué en ${etapa}`, body: <>
+  <p className="text-[14px] leading-relaxed text-ink">En las sesiones de acompañamiento <b>el comité directivo es quien define</b>: la plataforma le da edición completa en esta etapa. El advisor conduce el método y las herramientas de IA; los responsables de área ejecutan y reportan lo suyo.</p>
+  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+    {[["Comité directivo", comite, "var(--cyan-deep)"], ["Advisor", advisor, "var(--gold, #A87A14)"], ["Responsables de área", areas, "var(--ink-soft)"]].map(([t, d, c]) => (
+      <div key={t} className="rounded-xl border border-line p-3.5" style={{ borderTopWidth: 3, borderTopColor: c }}>
+        <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-faint">{t}</div>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink">{d}</p>
+      </div>
+    ))}
+  </div>
+  <p className="mt-4 text-[12.5px] leading-relaxed text-muted">Todo cambio queda en la auditoría con autor y fecha. El administrador de la plataforma y el líder de la empresa tienen la misma edición que el comité; el directivo de una empresa en otro modo (convención) solo lee.</p>
+</> });
+
 const OBJETIVOS: Lamina[] = [
   { k: "Qué es", t: "Un objetivo directivo baja una prioridad al año", body: <>
     <p className="text-[14px] leading-relaxed text-ink">Un <b>objetivo directivo</b> es el resultado concreto que la dirección se compromete a lograr en el horizonte (el año de planeación) para hacer avanzar una <b>prioridad estratégica</b>. La prioridad dice hacia dónde va la empresa en 3 a 5 años; el objetivo dice qué tiene que ser cierto al cierre del año para que esa prioridad avance.</p>
@@ -63,6 +78,7 @@ const OBJETIVOS: Lamina[] = [
     </div>
     <p className="mt-3 text-[12.5px] leading-relaxed text-muted">La validación es exigente: solo es verde el objetivo que aporta de forma inequívoca a su prioridad, tiene los cuatro elementos de la estructura, es un objetivo (no un KR ni una iniciativa), no duplica a otro y es coherente con el mercado y la posición de la empresa. Al pulsar cada semáforo se ve la justificación, qué elementos faltan, qué hacer y una redacción propuesta que se puede aplicar con un clic. La lectura se marca desactualizada cuando cambian las prioridades o los objetivos.</p>
   </> },
+  quienes("Objetivos directivos", "Escribe, edita y elimina los objetivos directivos de cada prioridad; decide la redacción final tras la validación.", "Conduce la sesión, corre la validación con IA (alineación con la prioridad, verbo de logro, indicador impulsor, solapes) y propone reformulaciones.", "Aportan la evidencia y la línea base 2026 de su área; no editan los objetivos."),
 ];
 
 const KR: Lamina[] = [
@@ -103,6 +119,7 @@ const KR: Lamina[] = [
     <Li>Resultado clave que repite el objetivo con otras palabras.</Li>
     <Li>Más de cinco resultados clave: ya no es foco, es un tablero.</Li>
   </ul> },
+  quienes("Resultados clave", "Define, edita y elimina los resultados clave de cada objetivo: línea base, meta, unidad, dueño y fórmula.", "Valida cada KR con IA, cuida que haya de 2 a 3 por objetivo y que ninguno sea una iniciativa disfrazada.", "El dueño de cada KR reporta su valor en el ritmo acordado."),
 ];
 
 const INICIATIVAS: Lamina[] = [
@@ -143,6 +160,7 @@ const INICIATIVAS: Lamina[] = [
     <Li>Más de dos iniciativas por KR: el esfuerzo se dispersa.</Li>
     <Li>Sin trimestre de inicio o de fin: no cabe en la cascada trimestral.</Li>
   </ul> },
+  quienes("Iniciativas", "Crea, edita y elimina iniciativas con sus ocho elementos y las vincula al resultado clave que mueven.", "Valida con IA los ocho elementos, el alcance y el nombre como entrega; vela por el máximo de dos iniciativas por KR.", "Proponen y completan las iniciativas de su área; el responsable asignado responde por su ejecución."),
 ];
 
 const PORTAFOLIO: Lamina[] = [
@@ -158,7 +176,7 @@ const PORTAFOLIO: Lamina[] = [
   </ul> },
   { k: "Decisión de tiempo", t: "Cuatro decisiones y sus condiciones", body: <>
     <div className="grid gap-2 sm:grid-cols-2">{DECISIONS.map((d) => <div key={d.key} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold text-ink">{d.label}</div><div className="mt-0.5 text-[12px] leading-snug text-ink-soft">{d.rule}</div></div>)}</div>
-    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Implementar exige impacto consolidado de 3 o 4 y capacidad resuelta; preparar o validar exige al menos una calificación; renunciar exige motivo. Las tácticas (según la regla de tipo de la empresa) no compiten en el portafolio: se transfieren al área con responsable. Decide la gerencia o el advisor; queda autor, fecha y sustento.</p>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-muted">Implementar exige impacto consolidado de 3 o 4 y capacidad resuelta; preparar o validar exige al menos una calificación; renunciar exige motivo. Las tácticas (según la regla de tipo de la empresa) no compiten en el portafolio: se transfieren al área con responsable. Decide el comité directivo con el advisor; queda autor, fecha y sustento.</p>
   </> },
   { k: "Lectura", t: "Cómo se lee el portafolio", body: <ul className="space-y-2">
     <Li><b>Por prioridad:</b> cada prioridad debería tener de 2 a 4 iniciativas en «implementar» o «preparar». Una prioridad sin iniciativas decididas es una apuesta sin brazos; una con diez es dispersión.</Li>
@@ -183,10 +201,11 @@ const PORTAFOLIO: Lamina[] = [
   </> },
   { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
     <Li>El portafolio parte del 100 % de las iniciativas; el ranking consolidado de Priorización se superpone cuando llega. Filtros por objetivo, sponsor, prioridad y decisión; exportación a CSV.</Li>
-    <Li>La decisión de tiempo se registra en la ficha de cada iniciativa (gerencia o advisor), con sustento; las condiciones de cada decisión se verifican contra el consolidado.</Li>
+    <Li>La decisión de tiempo se registra en la ficha de cada iniciativa (comité directivo o advisor), con sustento; las condiciones de cada decisión se verifican contra el consolidado.</Li>
     <Li>Resumen por prioridad y decisión, y lista ordenada por puntaje consolidado dentro de cada horizonte.</Li>
     <Li>Lo decidido en «implementar» o «preparar» entra a <b>Capacidades para ejecutar</b> y al árbol de la <b>Cascada trimestral</b>, donde cada iniciativa se articula entre áreas ({Object.values(ROL_AREA).join(" y ").toLowerCase()}).</Li>
   </ul> },
+  quienes("Portafolio", "Decide el tiempo de cada iniciativa (implementar, preparar o validar, backlog, renunciar) con sustento, a partir del consolidado de la priorización.", "Prepara la sesión, muestra el consolidado y las condiciones de cada decisión, y registra las decisiones que el comité toma en la mesa.", "Reciben las iniciativas tácticas transferidas a su área y las decididas para ejecutarlas."),
 ];
 
 const CASCADA: Lamina[] = [
@@ -243,14 +262,15 @@ const CASCADA: Lamina[] = [
   </> },
   { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
     <Li><b>Árbol de la cascada</b> (vista principal): las siete capas plegables por prioridad y filtrables por área, con las metas de cada área en columnas T1 a T4. Entran las iniciativas con decisión «implementar» o «preparar», las articuladas y las que ya tienen metas.</Li>
-    <Li><b>Articular áreas</b> en cada iniciativa (advisor, líder o responsable del área dueña): áreas, rol, prioridad, persona o equipo, qué debe hacer y entrega. <b>Articular áreas con IA</b> (advisor): una sola acción que propone la articulación de todas las iniciativas sin articular; después se edita.</Li>
+    <Li><b>Articular áreas</b> en cada iniciativa (comité directivo, advisor o responsable del área dueña): áreas, rol, prioridad, persona o equipo, qué debe hacer y entrega. <b>Articular áreas con IA</b> (advisor): una sola acción que propone la articulación de todas las iniciativas sin articular; después se edita.</Li>
     <Li><b>Regla:</b> una meta de una iniciativa solo se registra en un área declarada en su articulación; así ninguna queda fuera del árbol.</Li>
-    <Li><b>Proponer metas desde el portafolio</b> (advisor o líder): crea una meta por iniciativa articulada y por área que participa, en su trimestre de inicio, con la contribución del área como meta; después cada área completa criterio, hitos y dependencias.</Li>
-    <Li><b>Nueva meta</b> (advisor y responsables de área): una meta por área y trimestre, con prioridad, objetivo, KR e iniciativa.</Li>
+    <Li><b>Proponer metas desde el portafolio</b> (comité directivo o advisor): crea una meta por iniciativa articulada y por área que participa, en su trimestre de inicio, con la contribución del área como meta; después cada área completa criterio, hitos y dependencias.</Li>
+    <Li><b>Nueva meta</b> (comité directivo, advisor y responsables de área): una meta por área y trimestre, con prioridad, objetivo, KR e iniciativa.</Li>
     <Li><b>Ciclo del trimestre:</b> metas, áreas, hitos hechos, dependencias y, al cerrar, el cumplimiento promedio y los aprendizajes.</Li>
     <Li><b>Interdependencias:</b> la vista de quién necesita qué de quién en el trimestre, para la reunión mensual.</Li>
     <Li><b>Cierre:</b> cada meta se cierra con su porcentaje y su aprendizaje; el estado queda en cumplida, parcial o no cumplida.</Li>
   </ul> },
+  quienes("Cascada y plan trimestral", "Articula las áreas de cada iniciativa (quién lidera, quién contribuye, qué debe hacer cada una) y crea, edita o elimina las metas trimestrales.", "Propone la articulación con IA de todas las iniciativas en una sola acción y propone las metas desde el portafolio; después el comité y las áreas las afinan.", "Cada responsable registra y actualiza las metas, hitos y dependencias de su propia área, y cierra el trimestre."),
 ];
 
 const CAPACIDADES: Lamina[] = [
@@ -289,9 +309,10 @@ const CAPACIDADES: Lamina[] = [
   { k: "En la plataforma", t: "Cómo se usa aquí", body: <ul className="space-y-2">
     <Li>Entran solo las iniciativas con decisión <b>implementar</b> o <b>preparar</b> en el portafolio.</Li>
     <Li><b>Personalizar con IA</b> (advisor o administrador): el modelo adapta las afirmaciones, las preguntas guía y los niveles a la iniciativa y a la empresa, con todo el contexto cargado. Los frentes no cambian. Si se personaliza después de una revisión, la revisión queda marcada para hacerse de nuevo.</Li>
-    <Li><b>Revisar</b> (advisor, sponsor de la prioridad o responsable de la iniciativa): a pantalla completa, una afirmación por paso, con «Lectura inicial con IA» opcional que propone niveles y justificaciones para confirmar o corregir.</Li>
+    <Li><b>Revisar</b> (comité directivo, advisor, sponsor de la prioridad o responsable de la iniciativa): a pantalla completa, una afirmación por paso, con «Lectura inicial con IA» opcional que propone niveles y justificaciones para confirmar o corregir.</Li>
     <Li>El resultado queda registrado con autor y fecha; el listado muestra el semáforo y las brechas de cada iniciativa, y el detalle enlaza con la cascada trimestral para programar lo que falta.</Li>
   </ul> },
+  quienes("Capacidades para ejecutar", "Revisa el checklist de cualquier iniciativa decidida: nivel por afirmación, qué haría falta por frente y notas.", "Personaliza los checklists con IA (solo advisor o administrador) y pide la lectura inicial con IA que el revisor confirma o corrige.", "El responsable de la iniciativa y el sponsor de su prioridad revisan la suya."),
 ];
 
 const PRIORIDADES: Lamina[] = [
@@ -384,6 +405,7 @@ const PRIORIDADES: Lamina[] = [
     <Li>El sponsor de la prioridad es el dueño por defecto de sus resultados clave e iniciativas y abre la sesión de priorización de su prioridad.</Li>
     <Li>Objetivos directivos, resultados clave, iniciativas, priorización, portafolio y cascada trimestral se leen por prioridad: es el eje de toda la cadena.</Li>
   </ul> },
+  quienes("Prioridades estratégicas", "Define, edita, ordena y elimina las prioridades: nombre, resultado del ciclo, indicadores, sponsor y renuncia.", "Facilita la sesión F01, cuida la prueba de exigencia de los siete criterios y que cada prioridad tenga un sponsor distinto.", "Los sponsors responden por su prioridad en el ritmo trimestral; no editan las de los demás por fuera de la sesión."),
 ];
 
 /** Simulación de una priorización con la misma experiencia del usuario: la iniciativa de ejemplo se califica en
@@ -451,7 +473,7 @@ function SimuladorPriorizacion({ rule = DEFAULT_TYPE_RULE }: { rule?: TypeRule }
             <div className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[11px] font-bold uppercase tracking-wider text-faint">Decisiones admisibles</div>
               <ul className="mt-1 space-y-0.5 text-[12px]">{DECISIONS.map((d) => { const r = decisionCheck(d.key, c, d.key === "RENUNCIAR" ? "motivo registrado" : undefined); return <li key={d.key} className="flex items-start gap-1.5"><span className={r.ok ? "text-ok" : "text-bad"}>{r.ok ? "✓" : "✗"}</span><span className="text-ink">{d.label}{!r.ok && <span className="block text-[11px] leading-snug text-muted">{r.reason}</span>}</span></li>; })}</ul></div>
           </div>
-          <p className="text-[12px] leading-relaxed text-muted">Así se vería en Priorización: el consolidado se recalcula con cada calificación registrada; entre las estratégicas elegibles del horizonte se ordena de mayor a menor puntaje, con empates por impacto y luego por evidencia. {c.lowConsensus ? "Hay bajo consenso: en la sesión real conviene conversar el criterio con mayor diferencia antes de decidir." : "Hay consenso: la gerencia o el advisor puede registrar la decisión de tiempo."}</p>
+          <p className="text-[12px] leading-relaxed text-muted">Así se vería en Priorización: el consolidado se recalcula con cada calificación registrada; entre las estratégicas elegibles del horizonte se ordena de mayor a menor puntaje, con empates por impacto y luego por evidencia. {c.lowConsensus ? "Hay bajo consenso: en la sesión real conviene conversar el criterio con mayor diferencia antes de decidir." : "Hay consenso: el comité directivo puede registrar la decisión de tiempo con el advisor."}</p>
         </>
       )}
     </div>
@@ -494,10 +516,11 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
   { k: "Simulación", t: "Simula una priorización", body: <SimuladorPriorizacion rule={rule} /> },
   { k: "En la plataforma", t: "Cómo se hace aquí", body: <ul className="space-y-2">
     <Li>El advisor abre la calificación de una prioridad, o de todas a la vez; mientras está abierta, cada miembro del comité califica una sola vez cada iniciativa y el ranking se actualiza en vivo.</Li>
-    <Li>Al cerrar, el advisor revisa el orden (puede ajustarlo a mano), propone el trimestre de inicio y guarda; la dirección ratifica.</Li>
+    <Li>Al cerrar, el advisor revisa el orden (puede ajustarlo a mano), propone el trimestre de inicio y guarda; el comité directivo ratifica y decide el tiempo en Portafolio.</Li>
     <Li>Las decisiones de tiempo se registran en Portafolio con autor, fecha y motivo; las renuncias exigen motivo.</Li>
     <Li>Una iniciativa que cambia después de calificada conserva su calificación; si cambia de fondo, se reinicia su sesión y se vuelve a calificar.</Li>
   </ul> },
+  quienes("Priorización", "Cada miembro califica una sola vez cada iniciativa con los criterios D·E·M·L; con el consolidado, el comité decide el tiempo en Portafolio.", "Abre y cierra la calificación por prioridad (o todas a la vez), ajusta el orden si hace falta, propone el trimestre de inicio y guarda.", "El responsable de una capacidad califica las iniciativas de la suya.")
 ];
 
 export function AyudaMetodologica({ tema, rule }: { tema: "objetivos" | "resultados-clave" | "iniciativas" | "prioridades" | "priorizacion" | "capacidades" | "cascada" | "portafolio"; rule?: TypeRule }) {
