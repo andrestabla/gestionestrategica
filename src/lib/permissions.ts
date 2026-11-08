@@ -22,8 +22,8 @@
 //                modo acompañamiento, donde el comité directivo es quien define
 //                la estrategia en las sesiones: edita el catálogo (prioridades,
 //                objetivos, resultados clave, iniciativas), revisa capacidades
-//                y construye la cascada. Personalizar con IA y decidir el tiempo
-//                del portafolio siguen siendo del advisor y la gerencia.
+//                construye la cascada y decide el tiempo del portafolio con el
+//                advisor. Personalizar con IA sigue siendo del advisor.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { SessionUser } from "@/lib/session";
@@ -96,7 +96,7 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
 /** ¿Puede el usuario ejecutar la acción? `target` (línea o recurso con
     dueño) restringe al ámbito del responsable. */
 /** En acompañamiento el directivo define la estrategia: estas acciones se le abren por completo. */
-const DIRECTIVO_ACOMPANAMIENTO: ReadonlySet<Action> = new Set<Action>(["manage_catalog", "edit_initiatives", "edit_tasks", "report_kpi"]);
+const DIRECTIVO_ACOMPANAMIENTO: ReadonlySet<Action> = new Set<Action>(["manage_catalog", "edit_initiatives", "edit_tasks", "report_kpi", "decide_initiatives"]);
 
 export function can(user: SessionUser | null, action: Action, target?: number | Scope): boolean {
   if (!user) return false;

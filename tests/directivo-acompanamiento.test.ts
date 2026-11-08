@@ -1,5 +1,5 @@
 // En acompañamiento el comité directivo define la estrategia: prioridades, objetivos, resultados clave,
-// iniciativas, capacidades y cascada. Fuera de ese modo el directivo sigue en lectura; la IA la dispara el advisor.
+// iniciativas, capacidades, cascada y la decisión de tiempo del portafolio. Fuera de ese modo el directivo sigue en lectura; la IA la dispara el advisor.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -14,8 +14,9 @@ const directivo = (mode: "acompanamiento" | "convencion" | "completa"): SessionU
 
 test("permisos: el directivo edita la estrategia solo en acompañamiento; la IA y la plataforma siguen cerradas", () => {
   const d = directivo("acompanamiento");
-  for (const a of ["manage_catalog", "edit_initiatives", "edit_tasks", "report_kpi", "create_initiatives", "evaluate_initiatives"] as const) assert.ok(can(d, a), a);
-  for (const a of ["decide_initiatives", "manage_users", "manage_platform", "publish_maturity", "undo_any"] as const) assert.ok(!can(d, a), a);
+  for (const a of ["manage_catalog", "edit_initiatives", "edit_tasks", "report_kpi", "decide_initiatives", "create_initiatives", "evaluate_initiatives"] as const) assert.ok(can(d, a), a);
+  for (const a of ["manage_users", "manage_platform", "publish_maturity", "undo_any"] as const) assert.ok(!can(d, a), a);
+  assert.ok(!can(directivo("convencion"), "decide_initiatives"));
   assert.ok(!can(directivo("convencion"), "manage_catalog"));
   assert.ok(!can(directivo("completa"), "manage_catalog"));
   assert.ok(!can({ email: "d@sf.example", name: "Directiva", role: "DIRECTIVO" }, "manage_catalog"));
