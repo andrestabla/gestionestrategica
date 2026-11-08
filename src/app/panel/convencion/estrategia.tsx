@@ -156,7 +156,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
 
       {tab === "itinerario" && <ItinerarioTab />}
       {tab === "guia" && <GuiaTab me={me} />}
-      {tab === "prioridades" && <PrioridadesTab cat={cat} levers={levers} canEdit={canEdit} canDelete={me.role === "ADMIN" || me.role === "CONSULTOR"} saving={saving} mutate={mutate} />}
+      {tab === "prioridades" && <PrioridadesTab cat={cat} levers={levers} canEdit={canEdit} canDelete={canEdit && (isAcompanamiento(v.catalog.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "direccion" && <DireccionTab cat={cat} levers={levers} horizons={horizons} canEdit={canEdit && (!isConvencion(cat.company) || me.role === "ADMIN" || me.role === "CONSULTOR")} saving={saving} mutate={mutate} />}
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} myTribe={me.responsibleId} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} myTribe={me.responsibleId} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}

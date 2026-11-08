@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     role: membresia ? membresia.role : found.user.role,
     line: membresia ? membresia.line : found.user.line,
     responsibleId: membresia ? membresia.responsibleId : found.user.responsibleId,
-    company: company ? { slug: company.slug, name: company.name, shortName: company.shortName } : undefined,
+    company: company ? { slug: company.slug, name: company.name, shortName: company.shortName, mode: company.mode } : undefined,
     ...(empresas.length > 1 ? { empresas: empresas.map((e) => ({ slug: e.slug, shortName: e.shortName, role: e.role })) } : {}),
   };
   await setSession(session);

@@ -9,7 +9,9 @@ const COOKIE = "pgtd_session";
 import { INACTIVIDAD_MIN } from "@/lib/inactividad";
 const MAX_AGE = 60 * INACTIVIDAD_MIN; // 30 minutos de inactividad: cada petición a la API renueva la cookie (renewSession)
 
-export type SessionCompany = { slug: string; name: string; shortName: string };
+import type { CompanyMode } from "@/lib/acceso";
+/** Empresa activa de la sesión; `mode` permite que los permisos distingan el acompañamiento (el directivo define la estrategia). */
+export type SessionCompany = { slug: string; name: string; shortName: string; mode?: CompanyMode };
 
 export type SessionUser = {
   email: string;
@@ -48,7 +50,7 @@ export function decodeSession(token: string | undefined): SessionUser | null {
     const data = JSON.parse(Buffer.from(body, "base64url").toString());
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
     const company = data.company && typeof data.company.slug === "string"
-      ? { slug: String(data.company.slug), name: String(data.company.name ?? ""), shortName: String(data.company.shortName ?? "") }
+      ? { slug: String(data.company.slug), name: String(data.company.name ?? ""), shortName: String(data.company.shortName ?? ""), ...(typeof data.company.mode === "string" ? { mode: data.company.mode as CompanyMode } : {}) }
       : undefined;
     const empresas = Array.isArray(data.empresas)
       ? (data.empresas as unknown[]).flatMap((e) => (e && typeof e === "object" && typeof (e as { slug?: unknown }).slug === "string" ? [{ slug: String((e as { slug: string }).slug), shortName: String((e as { shortName?: unknown }).shortName ?? ""), role: (e as { role?: SessionUser["role"] }).role ?? "DIRECTIVO" }] : []))

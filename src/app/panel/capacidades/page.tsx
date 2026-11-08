@@ -33,6 +33,7 @@ export default function CapacidadesPage() {
   const base = useBase();
   const V = vocabOf(cat.company);
   const canAll = useCan("manage_catalog");
+  const puedePersonalizar = canAll && (user.role === "ADMIN" || user.role === "CONSULTOR");   // la IA la dispara el advisor; los directivos revisan
   const levers = leversOf(cat.company);
   const [datos, setDatos] = useState<Datos | null>(null);
   const [fOwner, setFOwner] = useState(user.role === "RESPONSABLE" && user.responsibleId ? user.responsibleId : "");
@@ -131,7 +132,7 @@ export default function CapacidadesPage() {
       <PageHeader kicker={V.kicker} title="Capacidades para ejecutar"
         desc="Con el portafolio decidido, cada iniciativa en «implementar» o «preparar» se recorre con un checklist de cinco frentes: unidad, proceso, procedimiento, conocimiento y tecnología. El resultado dice si la capacidad está instalada o qué haría falta antes de arrancar."
         actions={<div className="flex flex-wrap items-center gap-2">
-          {canAll && <button type="button" onClick={() => void personalizarTodas()} disabled={personalizando !== null || todas.length === 0} className="btn-primary btn-sm inline-flex items-center gap-1.5 text-[12px] disabled:opacity-50" title="El modelo adapta las afirmaciones, preguntas y niveles de cada iniciativa elegible a su contexto y al de la empresa">{personalizando ? <><Loader2 size={12} className="animate-spin" /> Personalizando {personalizando.n + 1} de {personalizando.total}…</> : <><Sparkles size={12} /> Personalizar checklists con IA</>}</button>}
+          {puedePersonalizar && <button type="button" onClick={() => void personalizarTodas()} disabled={personalizando !== null || todas.length === 0} className="btn-primary btn-sm inline-flex items-center gap-1.5 text-[12px] disabled:opacity-50" title="El modelo adapta las afirmaciones, preguntas y niveles de cada iniciativa elegible a su contexto y al de la empresa">{personalizando ? <><Loader2 size={12} className="animate-spin" /> Personalizando {personalizando.n + 1} de {personalizando.total}…</> : <><Sparkles size={12} /> Personalizar checklists con IA</>}</button>}
           <AyudaMetodologica tema="capacidades" />
           <DescargarDecisiones modulo="capacidades" />
         </div>} />

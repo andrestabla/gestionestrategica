@@ -46,10 +46,13 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
     const t = await tenantOf(user);
     if (t instanceof NextResponse) return t;
     await renewSession(user).catch(() => undefined);
+    // el modo de la empresa viaja en la sesión; si la cookie es anterior o la empresa cambió de modo, se toma de la empresa
+    const modo = companyBySlug(t.slug)?.mode;
+    const actor: SessionUser = user.company && user.company.slug === t.slug && modo && user.company.mode !== modo ? { ...user, company: { ...user.company, mode: modo } } : user;
     return runWithTenant(t.slug, async () => {
       // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
       await hydrateFromDb({ force: req.method !== "GET" });
-      return handler(req, ctx, user);
+      return handler(req, ctx, actor);
     });
   };
 }

@@ -11,7 +11,7 @@ import { contextoCapacidades } from "../_contexto";
 // iniciativa y a la empresa (frentes fijos; afirmaciones, preguntas y niveles adaptados). Se guarda y rige desde ya.
 export const maxDuration = 90;
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
-  if (!can(user, "manage_catalog")) return NextResponse.json({ error: "El checklist lo personaliza el advisor o el administrador." }, { status: 403 });
+  if (!(can(user, "manage_catalog") && (user.role === "ADMIN" || user.role === "CONSULTOR"))) return NextResponse.json({ error: "El checklist lo personaliza el advisor o el administrador." }, { status: 403 });
   if (!iaDisponible()) return NextResponse.json({ error: "El modelo no está configurado en Administración → Integraciones (OpenAI)." }, { status: 503 });
   const body = await req.json().catch(() => ({}));
   const ctx = contextoCapacidades(String(body?.iniId ?? ""));

@@ -18,7 +18,12 @@
 //                del catálogo —tribu, área, dependencia— (`responsibleId`), o
 //                ambos: lo que tiene dueño se decide por el responsable; lo
 //                que no (las prácticas del diagnóstico), por la capacidad.
-//  DIRECTIVO   — junta o directivo: lectura de todo, edición de nada.
+//  DIRECTIVO   — junta o directivo: lectura de todo, edición de nada… salvo en
+//                modo acompañamiento, donde el comité directivo es quien define
+//                la estrategia en las sesiones: edita el catálogo (prioridades,
+//                objetivos, resultados clave, iniciativas), revisa capacidades
+//                y construye la cascada. Personalizar con IA y decidir el tiempo
+//                del portafolio siguen siendo del advisor y la gerencia.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { SessionUser } from "@/lib/session";
@@ -90,8 +95,12 @@ const MATRIX: Record<Action, Record<Role, Grant>> = {
 
 /** ¿Puede el usuario ejecutar la acción? `target` (línea o recurso con
     dueño) restringe al ámbito del responsable. */
+/** En acompañamiento el directivo define la estrategia: estas acciones se le abren por completo. */
+const DIRECTIVO_ACOMPANAMIENTO: ReadonlySet<Action> = new Set<Action>(["manage_catalog", "edit_initiatives", "edit_tasks", "report_kpi"]);
+
 export function can(user: SessionUser | null, action: Action, target?: number | Scope): boolean {
   if (!user) return false;
+  if (user.role === "DIRECTIVO" && user.company?.mode === "acompanamiento" && DIRECTIVO_ACOMPANAMIENTO.has(action)) return true;
   const grant = MATRIX[action][user.role];
   if (grant === true) return true;
   if (grant === "line") {
@@ -126,12 +135,14 @@ export function describeAccess(user: SessionUser | null, module: ModuleKey, scop
   if (actions.length === 0) {
     return { level: "read", label: "Lectura" };
   }
-  const grants = actions.map((a) => MATRIX[a][user.role]);
+  // el nivel efectivo: la matriz más las aperturas por modo (el directivo en acompañamiento edita la estrategia)
+  const grantOf = (a: Action): Grant => { const g = MATRIX[a][user.role]; return g === "line" ? g : can(user, a); };
+  const grants = actions.map(grantOf);
   if (grants.every((g) => g === false)) return { level: "read", label: "Lectura" };
   if (grants.every((g) => g === true)) return { level: "full", label: "Edición completa" };
   if (grants.some((g) => g === true) && grants.every((g) => g !== "line")) {
     // algunas acciones sí, otras no (p. ej. la junta evalúa pero no edita)
-    const yes = actions.filter((a) => MATRIX[a][user.role] === true);
+    const yes = actions.filter((a) => grantOf(a) === true);
     if (yes.every((a) => a === "evaluate_initiatives" || a === "create_initiatives")) return { level: "partial", label: yes.includes("create_initiatives") ? "Evalúa la priorización y crea iniciativas" : "Evalúa la priorización" };
     return { level: "full", label: "Edición completa" };
   }

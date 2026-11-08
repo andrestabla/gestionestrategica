@@ -2576,7 +2576,7 @@ const int = (v: unknown, lo: number, hi: number, fallback: number) => Math.min(h
 const QUARTER = /^\d{4}-T[1-4]$/;
 
 function canCatalog(user: SessionUser): CatResult | null {
-  return can(user, "manage_catalog") ? null : fail(403, "El catálogo lo editan el advisor y el líder de la empresa (o el admin de la plataforma).");
+  return can(user, "manage_catalog") ? null : fail(403, cat().company.mode === "acompanamiento" ? "La estrategia la definen el comité directivo, el advisor y el líder de la empresa." : "El catálogo lo editan el advisor y el líder de la empresa (o el admin de la plataforma).");
 }
 
 /** Ámbito de tribu en la convención: el líder de tribu (LIDER con tribu asignada, p. ej. por el QR) solo toca su OKR,
@@ -4050,7 +4050,7 @@ function guardarInformeCap(user: SessionUser, kind: "capacidades" | "capacidades
 }
 
 export function saveChecklistCap(user: SessionUser, iniId: string, frentes: Frente[], resumen: string, model: string): { ok: true; checklist: ChecklistCap } | { ok: false; status: number; error: string } {
-  if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "El checklist lo personaliza el advisor o el administrador." };
+  if (!(can(user, "manage_catalog") && (user.role === "ADMIN" || user.role === "CONSULTOR"))) return { ok: false, status: 403, error: "El checklist lo personaliza el advisor o el administrador." };
   const i = cat().initiatives.find((x) => x.id === iniId);
   if (!i) return { ok: false, status: 404, error: "La iniciativa no existe." };
   if (!elegiblesCapacidades().some((e) => e.id === iniId)) return { ok: false, status: 422, error: "Solo se revisan las iniciativas con decisión «implementar» o «preparar» en el portafolio." };

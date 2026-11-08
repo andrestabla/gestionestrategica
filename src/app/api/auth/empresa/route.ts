@@ -8,7 +8,7 @@ import type { SessionUser } from "@/lib/session";
 async function sesionEn(user: SessionUser, slug: string): Promise<SessionUser | null> {
   const c = companyBySlug(slug);
   if (!c) return null;
-  const company = { slug: c.slug, name: c.name, shortName: c.shortName };
+  const company = { slug: c.slug, name: c.name, shortName: c.shortName, mode: c.mode };
   if (can(user, "manage_companies")) return { ...user, company };
   if (!c.active) return null;
   const m = await membershipOf(user.email, slug);

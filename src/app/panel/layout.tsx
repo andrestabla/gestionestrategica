@@ -43,7 +43,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   // el proveedor envuelve también al shell (buscador, notificaciones): sin
   // empresa activa, una vista vacía deja la interfaz utilizable para el admin
   return (
-    <UserProvider user={user}>
+    <UserProvider user={company && user.company ? { ...user, company: { ...user.company, mode: company.mode } } : user}>
       <CatalogProvider initial={view ?? emptyView()}>
         <FeedbackProvider>
         <AppShell user={user} companies={companies} mode={company?.mode ?? "completa"} modulesOff={company?.modulesOff ?? []} modulesPending={company?.modulesPending ?? []}>
