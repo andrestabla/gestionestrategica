@@ -112,7 +112,7 @@ export default function CascadaPage() {
         actions={<>
           <AyudaMetodologica tema="cascada" />
           <DescargarDecisiones modulo="cascada" />
-          {canAll && <button onClick={() => void articularTodas()} disabled={busy || articulando !== null} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="El modelo propone, para cada iniciativa del portafolio sin articular, qué áreas participan y qué hace cada una">{articulando ? <><Loader2 size={13} className="animate-spin" /> Articulando {articulando.n + 1} de {articulando.total}…</> : <><Users2 size={13} /> Articular áreas con IA</>}</button>}
+          {canAll && user.role !== "DIRECTIVO" && <button onClick={() => void articularTodas()} disabled={busy || articulando !== null} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="El modelo propone, para cada iniciativa del portafolio sin articular, qué áreas participan y qué hace cada una">{articulando ? <><Loader2 size={13} className="animate-spin" /> Articulando {articulando.n + 1} de {articulando.total}…</> : <><Users2 size={13} /> Articular áreas con IA</>}</button>}
           {canAll && <button onClick={proponer} disabled={busy} className="btn-ghost btn-sm text-[12px]"><Sparkles size={13} /> Proponer metas desde el portafolio</button>}
           {(canAll || user.role === "RESPONSABLE") && <button onClick={() => nueva()} disabled={busy} className="btn-primary btn-sm text-[12px]"><Plus size={13} /> Nueva meta</button>}
         </>} />

@@ -341,6 +341,7 @@ function HistorialPalancas({ onClose, saving, onRestore }: { onClose: () => void
 /* ═══ Dirección 3x3: palanca × horizonte ═══ */
 
 function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat: Cat; levers: Lever[]; horizons: { id: string; label: string; months: number }[]; canEdit: boolean; saving: boolean; mutate: Mutate }) {
+  const esDirectivo = useUser().role === "DIRECTIVO";   // las validaciones con IA de todo el módulo las conduce el advisor o el líder
   const m = objectivesMatrix(cat);
   const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   const [open, setOpen] = useState<CmiObjective | { lever?: string; horizon?: string } | null>(null);
@@ -394,7 +395,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
           {acomp && <AyudaMetodologica tema="objetivos" />}
           {acomp && <DescargarDecisiones modulo="objetivos" />}
-          {acomp && canEdit && <button onClick={validar} disabled={aliBusy || ali?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={ali?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por objetivo frente a las prioridades, con justificación y recomendaciones"}>{aliBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {ali?.alineacion ? "Volver a validar alineación" : "Validar alineación"} <span className="text-faint">(IA)</span></button>}
+          {acomp && canEdit && !esDirectivo && <button onClick={validar} disabled={aliBusy || ali?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={ali?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por objetivo frente a las prioridades, con justificación y recomendaciones"}>{aliBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {ali?.alineacion ? "Volver a validar alineación" : "Validar alineación"} <span className="text-faint">(IA)</span></button>}
           {canEdit && !acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> {V.levers}</button>}
           {canEdit && <button onClick={() => setOpen({ horizon: first })} className="btn-primary btn-sm text-[12px]"><Plus size={12} /> Nuevo objetivo</button>}
         </span>
@@ -1014,6 +1015,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
 /* ═══ Iniciativas → resultado clave ═══ */
 
 function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTribe, me, saving, mutate, base, defaultOwner }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; canCreate: boolean; scope: string | null; myTribe?: string; me: string; saving: boolean; mutate: Mutate; base: string; defaultOwner?: string }) {
+  const esDirectivo = useUser().role === "DIRECTIVO";   // las validaciones con IA de todo el módulo las conduce el advisor o el líder
   const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   const objectives = okrObjectivesOf(cat, horizon);
   // en esta sección solo entran los resultados clave completos; los incompletos se terminan en «OKR»
@@ -1077,7 +1079,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         {(fLever || fTribe) && <button type="button" onClick={() => { setFLever(""); setFTribe(""); }} className="btn-ghost btn-sm text-[12px]"><X size={12} /> Quitar filtros</button>}
         {acomp && <AyudaMetodologica tema="iniciativas" />}
         {acomp && <DescargarDecisiones modulo="iniciativas" />}
-        {acomp && canEdit && <button type="button" onClick={validarInis} disabled={valBusy || val?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={val?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por iniciativa: formulación, vínculo al KR, responsable, plazo, capacidad y duplicidades"}>{valBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {val?.validacion ? "Volver a validar iniciativas" : "Validar iniciativas"} <span className="text-faint">(IA)</span></button>}
+        {acomp && canEdit && !esDirectivo && <button type="button" onClick={validarInis} disabled={valBusy || val?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={val?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por iniciativa: formulación, vínculo al KR, responsable, plazo, capacidad y duplicidades"}>{valBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {val?.validacion ? "Volver a validar iniciativas" : "Validar iniciativas"} <span className="text-faint">(IA)</span></button>}
         {(canEdit || canCreate) && <button type="button" onClick={() => setNueva(true)} className="btn-primary btn-sm text-[12px]" title={acomp ? "Crear una iniciativa nueva, vinculada a un resultado clave" : "Crear una iniciativa nueva, vinculada a un OKR de la tribu"}><Plus size={12} /> Iniciativa</button>}
         <span className="text-[12px] text-faint">{canEdit ? (acomp ? "Vincula cada iniciativa al resultado clave que mueve: así queda habilitada para calificar." : "Vincula cada iniciativa de tu tribu al resultado clave que mueve: así queda habilitada para calificar.") : canCreate ? "Crea iniciativas asociadas a un resultado clave; puedes editar o eliminar las que creaste." : acomp ? "Solo lectura: una iniciativa sin KR no se puede calificar." : "Solo lectura: el líder de cada tribu vincula con el QR de edición; una iniciativa sin KR no se puede calificar."}</span>
       </div>

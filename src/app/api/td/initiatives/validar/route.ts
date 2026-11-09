@@ -22,7 +22,7 @@ export const GET = withTenant(async (req: Request) => {
 });
 
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
-  if (!can(user, "manage_catalog")) return NextResponse.json({ error: "La validación la lanza quien administra la estrategia (advisor o líder)." }, { status: 403 });
+  if (!can(user, "manage_catalog") || user.role === "DIRECTIVO") return NextResponse.json({ error: "La validación con IA la lanza el advisor o el líder de la empresa; el comité revisa el resultado." }, { status: 403 });
   if (!iaDisponible()) return NextResponse.json({ error: "El modelo no está configurado en Administración → Integraciones (OpenAI)." }, { status: 503 });
   const body = await req.json().catch(() => ({}));
   const c = catalog();

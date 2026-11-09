@@ -12,7 +12,7 @@ import { lecturaCapacidades, FRENTES } from "@/lib/capacidades";
 // entre áreas (quién lidera, quién contribuye, qué hace cada una) y se guarda; después se edita a mano.
 export const maxDuration = 90;
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
-  if (!can(user, "manage_catalog")) return NextResponse.json({ error: "La articulación con IA la pide el advisor o el líder." }, { status: 403 });
+  if (!can(user, "manage_catalog") || user.role === "DIRECTIVO") return NextResponse.json({ error: "La articulación con IA la pide el advisor o el líder; el comité edita cada articulación." }, { status: 403 });
   if (!iaDisponible()) return NextResponse.json({ error: "El modelo no está configurado en Administración → Integraciones (OpenAI)." }, { status: 503 });
   const body = await req.json().catch(() => ({}));
   const c = catalog();
