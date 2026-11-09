@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { urlTenant } from "@/server/request-tenant";
 import { getSession, type SessionUser, renewSession } from "@/lib/session";
-import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion } from "@/server/store";
+import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion, flushOrError } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 
 /** Todas las rutas /api/td/* exigen sesión (compatibilidad). */
@@ -52,7 +52,13 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
     return runWithTenant(t.slug, async () => {
       // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
       await hydrateFromDb({ force: req.method !== "GET" });
-      return handler(req, ctx, actor);
+      const res = await handler(req, ctx, actor);
+      // ninguna mutación responde «guardado» hasta que la base confirmó la escritura: si falló, el usuario lo ve y puede reintentar
+      if (req.method !== "GET" && res.ok) {
+        const error = await flushOrError();
+        if (error) return NextResponse.json({ error }, { status: 503 });
+      }
+      return res;
     });
   };
 }

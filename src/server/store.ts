@@ -1008,15 +1008,28 @@ export function finalId(id: string): string {
   for (let n = 0; n < 5; n++) { const next = rekeyed.get(`${currentTenant()}|${cur}`); if (!next) break; cur = next; }
   return cur;
 }
+/** Fallos pasajeros de la conexión (arranque en frío de Neon, conexión cortada, pool saturado): se reintenta. */
+const esTransitorio = (e: unknown) => /timeout exceeded when trying to connect|ECONNRESET|ECONNREFUSED|ETIMEDOUT|Connection terminated|terminating connection|server closed the connection|57P01|53300|too many clients|Can't reach database server/i.test(String((e as Error)?.message ?? e));
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Ejecuta una escritura con hasta tres intentos cuando el fallo es de conexión. */
+async function conReintentos<T>(what: string, fn: () => Promise<T>): Promise<T> {
+  const pausas = [400, 1500];
+  for (let n = 0; ; n++) {
+    try { return await fn(); }
+    catch (e) {
+      if (n >= pausas.length || !esTransitorio(e)) throw e;
+      console.warn(`[4shine] ${what}: fallo de conexión (${(e as Error).message.slice(0, 80)}), reintento ${n + 1}`);
+      await espera(pausas[n]);
+    }
+  }
+}
 async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
   const st = g.tenants.get(currentTenant());   // empresa activa (si la escritura es de una empresa)
   if (st) st.writes++;
   const run = (async (): Promise<Error | null> => {
     try {
-      const db = await prisma();
-      await fn(db);
-      await bumpVersion(db, st);
+      await conReintentos(what, async () => { const db = await prisma(); await fn(db); await bumpVersion(db, st); });
       return null;
     } catch (e) { console.error(`[4shine] write-through (${what}) falló:`, (e as Error).message); return e as Error; }
   })();
@@ -1030,7 +1043,7 @@ async function persist(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
 /** Escritura que no cambia los datos de la empresa (auditoría): no sube la versión ni cuenta como error de la petición. */
 async function persistQuiet(what: string, fn: (db: AnyPrisma) => Promise<unknown>) {
   if (!hasDb()) return;
-  const run = (async () => { try { await fn(await prisma()); } catch (e) { console.error(`[4shine] escritura (${what}) falló:`, (e as Error).message); } })();
+  const run = (async () => { try { await conReintentos(what, async () => fn(await prisma())); } catch (e) { console.error(`[4shine] escritura (${what}) falló:`, (e as Error).message); } })();
   try { const { after } = await serverImport("next/server") as { after?: (task: Promise<unknown>) => void }; after?.(run); } catch { /* sin ámbito de petición */ }
   await run;
 }
