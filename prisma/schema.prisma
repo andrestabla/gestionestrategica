@@ -150,6 +150,8 @@ model CmiObjective {
   indicator   String? // indicador impulsor
   okr         Boolean @default(false) // objetivo definido por la tribu en el laboratorio de OKR
   parent      String? // objetivo directivo que concreta
+  descartado  Boolean @default(false) // descartado por la dirección: queda en el registro, no avanza a KR, iniciativas ni cascada
+  motivoDescarte String? // por qué se descartó
 
   @@id([companyId, id])
 }

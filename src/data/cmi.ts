@@ -56,7 +56,12 @@ export type CmiObjective = {
   indicator?: string;  // indicador impulsor (texto) propuesto para el objetivo
   okr?: boolean;       // objetivo definido por la tribu en el laboratorio de OKR (no es un objetivo directivo)
   parent?: string;     // objetivo directivo que concreta (id de otro objetivo)
+  descartado?: boolean;     // la dirección lo descartó: queda en el registro, pero no avanza a resultados clave, iniciativas, priorización ni cascada
+  motivoDescarte?: string;  // por qué se descartó (sesión, fecha, razón)
 };
+
+/** ¿El objetivo sigue vigente (no descartado)? Las fases posteriores solo trabajan con los vigentes. */
+export const objetivoVigente = (o: Pick<CmiObjective, "descartado">): boolean => !o.descartado;
 
 export const CMI_OBJECTIVES: CmiObjective[] = [
   { id: "OE-01", perspective: "financiera", name: "Crecer 25 % en ventas abriendo Barranquilla sin deteriorar el margen", kpis: ["DIR-01", "MUL-03"], line: 1 },

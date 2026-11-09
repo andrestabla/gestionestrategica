@@ -2784,15 +2784,19 @@ export function upsertObjective(user: SessionUser, input: Partial<CmiObjective>)
   }
   const parent = str(input.parent, 10).toUpperCase() || undefined;
   if (parent && !c.objectives.some((x) => x.id === parent && !x.okr)) return fail(422, "El objetivo directivo que concreta no existe.");
+  // descartado: queda en el registro con su motivo; las fases siguientes lo ignoran
+  const descartado = input.descartado === true;
+  const motivoDescarte = descartado ? (str(input.motivoDescarte, 300) || undefined) : undefined;
   const id = str(input.id, 10) || (okr ? nextCode(`${lever ?? "OK"}-O`, c.objectives.map((o) => o.id), 1) : nextCode("OE-", c.objectives.map((o) => o.id), 2));
   const o: CmiObjective = {
     id, perspective, name, kpis, ...(line ? { line } : {}),
     ...(lever ? { lever } : {}), ...(horizon ? { horizon } : {}), ...(pillar ? { pillar } : {}), ...(desc ? { desc } : {}), ...(indicator ? { indicator } : {}),
-    ...(okr ? { okr: true } : {}), ...(parent ? { parent } : {}),
+    ...(okr ? { okr: true } : {}), ...(parent ? { parent } : {}), ...(descartado ? { descartado: true } : {}), ...(motivoDescarte ? { motivoDescarte } : {}),
   };
   const idx = c.objectives.findIndex((x) => x.id === id);
+  const antesDescartado = idx >= 0 && !!c.objectives[idx].descartado;
   if (idx >= 0) c.objectives[idx] = o; else c.objectives.push(o);
-  audit(user, "task", `cat:${id}`, `objetivo ${idx >= 0 ? "actualizado" : "creado"}`);
+  audit(user, "task", `cat:${id}`, `objetivo ${idx < 0 ? "creado" : descartado && !antesDescartado ? `descartado${motivoDescarte ? ` (${motivoDescarte})` : ""}` : !descartado && antesDescartado ? "reactivado (ya no está descartado)" : "actualizado"}`);
   const generated = !str(input.id, 10);
   void persist("catálogo", (db) => idx >= 0 || !generated ? writeObjective(db, cid(), o) : createRekeying(db, "objetivo", () => o.id,
     (fresh) => { const old = o.id; o.id = fresh; for (const k of c.kpis) if (k.cmi === old) k.cmi = fresh; },
@@ -4122,8 +4126,11 @@ export function saveAlineacion(user: SessionUser, horizon: string, inputHash: st
 
 export type ElegibleCap = { id: string; decision: Decision };
 /** Iniciativas del portafolio con decisión «implementar» o «preparar»: solo esas se revisan. */
-export const elegiblesCapacidades = (): ElegibleCap[] =>
-  cat().initiatives.flatMap((i) => { const d = decisions().get(i.id)?.decision; return d === "IMPLEMENTAR" || d === "PREPARAR" ? [{ id: i.id, decision: d }] : []; });
+export const elegiblesCapacidades = (): ElegibleCap[] => {
+  // las iniciativas de un objetivo descartado no avanzan a capacidades aunque tuvieran decisión
+  const descartados = new Set(cat().objectives.filter((o) => o.descartado).map((o) => o.id));
+  return cat().initiatives.flatMap((i) => { const d = decisions().get(i.id)?.decision; return !descartados.has(i.cmi) && (d === "IMPLEMENTAR" || d === "PREPARAR") ? [{ id: i.id, decision: d }] : []; });
+};
 
 export const getChecklistCap = (iniId: string): ChecklistCap | null => {
   const g = informes().get(`capacidades-checklist|${iniId}`);
@@ -4197,6 +4204,8 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
   if (!i.kpi) return { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" };
   const k = c.kpis.find((x) => x.code === i.kpi);
   if (!k) return { ok: false, etapa: "kr", motivo: "el resultado clave vinculado ya no existe" };
+  const obj = c.objectives.find((o) => o.id === i.cmi || o.id === k.cmi);
+  if (obj?.descartado) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} está descartado` };
   const faltanKr = krFaltantes(k);
   if (faltanKr.length) return { ok: false, etapa: "kr", motivo: `resultado clave ${k.code} incompleto (sin ${faltanKr.join(", ")})` };
   const Q = /^\d{4}-T[1-4]$/;

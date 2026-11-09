@@ -530,12 +530,14 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
 function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: Cat; onEdit?: () => void; ali?: AlineacionItem; onAli?: () => void }) {
   const krs = keyResultsOf(cat, o);
   return (
-    <div className="panel group px-3.5 py-3" style={ali ? { boxShadow: `inset 3px 0 0 ${SEMAFORO[ali.color].color}` } : undefined}>
-      {ali && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.naturaleza !== "objetivo" ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{(ali.faltan ?? []).length ? ` · falta ${ali.faltan.map((f) => ELEMENTOS[f] ?? f).join(", ")}` : ""}{ali.reformulacion ? " · redacción propuesta" : ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
+    <div className={`panel group px-3.5 py-3 ${o.descartado ? "opacity-70" : ""}`} style={ali && !o.descartado ? { boxShadow: `inset 3px 0 0 ${SEMAFORO[ali.color].color}` } : undefined}>
+      {o.descartado && <span className="chip chip-gold mb-2 !py-0 text-[11px]" title={o.motivoDescarte ?? "Descartado por la dirección"}>Descartado · no avanza</span>}
+      {ali && !o.descartado && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.naturaleza !== "objetivo" ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{(ali.faltan ?? []).length ? ` · falta ${ali.faltan.map((f) => ELEMENTOS[f] ?? f).join(", ")}` : ""}{ali.reformulacion ? " · redacción propuesta" : ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
-          <div className="text-[12.5px] font-bold leading-snug text-ink">{o.name}</div>
+          <div className={`text-[12.5px] font-bold leading-snug ${o.descartado ? "text-muted line-through" : "text-ink"}`}>{o.name}</div>
+          {o.descartado && o.motivoDescarte && <p className="mt-1 text-[12px] leading-snug text-ink-soft"><span className="font-semibold">Motivo:</span> {o.motivoDescarte}</p>}
           {o.desc && <p className="mt-1 text-[12px] leading-snug text-muted">{o.desc}</p>}
           {o.indicator && <p className="mt-1 text-[12px] text-ink-soft"><span className="font-semibold">Indicador:</span> {o.indicator}</p>}
         </div>
@@ -594,6 +596,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
     name: initial?.name ?? preset?.name ?? "", desc: initial?.desc ?? preset?.desc ?? "", indicator: initial?.indicator ?? preset?.indicator ?? "", pillar: initial?.pillar ?? "",
     lever: initial?.lever ?? preset?.lever ?? levers[0]?.id ?? "", horizon: initial?.horizon ?? preset?.horizon ?? horizons[0]?.id ?? "",
     perspective: initial?.perspective ?? "clientes", line: String(initial?.line ?? ""),
+    descartado: initial?.descartado ?? false, motivoDescarte: initial?.motivoDescarte ?? "",
   });
   const parents = directive.filter((o) => !f.lever || o.lever === f.lever);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
@@ -630,7 +633,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
         {onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}
         <button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || f.name.trim().length < 5} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => onSubmit({ name: f.name.trim(), desc: f.desc.trim(), indicator: f.indicator.trim(), pillar: f.pillar.trim(), lever: f.lever, horizon: f.horizon, perspective: f.perspective, kpis: initial?.kpis ?? [], ...(f.line ? { line: Number(f.line) } : {}), ...(krsElegidos.length ? { krs: krsElegidos } : {}) })}>
+          onClick={() => onSubmit({ name: f.name.trim(), desc: f.desc.trim(), indicator: f.indicator.trim(), pillar: f.pillar.trim(), lever: f.lever, horizon: f.horizon, perspective: f.perspective, kpis: initial?.kpis ?? [], descartado: f.descartado, motivoDescarte: f.descartado ? f.motivoDescarte.trim() : "", ...(f.line ? { line: Number(f.line) } : {}), ...(krsElegidos.length ? { krs: krsElegidos } : {}) })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} {initial ? "Guardar" : "Crear"}{krsElegidos.length ? ` + ${krsElegidos.length} KR` : ""}
         </button>
       </>}>
@@ -668,6 +671,15 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
         )}
         <Field label="Aspiración (estado deseado)"><textarea value={f.desc} onChange={set("desc")} rows={3} placeholder="¿Qué necesitamos lograr o dejar habilitado?" className={`${INPUT} resize-y`} /></Field>
         <Field label="Indicador impulsor"><input value={f.indicator} onChange={set("indicator")} placeholder={`¿Cómo mediremos ese avance? (complementa el indicador de la ${Vb(cat).leverLow})`} className={INPUT} /></Field>
+        {initial && (
+          <div className="rounded-xl border border-line px-3.5 py-3" style={f.descartado ? { background: "color-mix(in srgb, var(--warn) 10%, var(--surface))" } : undefined}>
+            <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px] text-ink">
+              <input type="checkbox" checked={f.descartado} onChange={(e) => setF({ ...f, descartado: e.target.checked })} className="mt-0.5" />
+              <span><b>Descartado.</b> El objetivo queda en el registro con su historia, pero no avanza a resultados clave, iniciativas, priorización ni cascada. Se puede reactivar quitando la marca.</span>
+            </label>
+            {f.descartado && <textarea value={f.motivoDescarte} onChange={set("motivoDescarte")} rows={2} maxLength={300} placeholder="Por qué se descarta: decisión del comité, fecha, razón" className={`${INPUT} mt-2 resize-y`} />}
+          </div>
+        )}
         {okr && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -745,7 +757,7 @@ function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; in
 function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate, base }: { cat: Cat; levers: Lever[]; horizon: string; canEdit: boolean; scope: string | null; myTribe?: string; saving: boolean; mutate: Mutate; base: string }) {
   // primero los objetivos (los escribe cada tribu, a partir del objetivo directivo de su palanca), después sus resultados clave
   const allObjectives = okrObjectivesOf(cat, horizon);
-  const directive = cat.objectives.filter((o) => o.horizon === horizon && !o.okr);
+  const directive = cat.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado);
   const issues = okrChecks(cat, horizon);
   const [kr, setKr] = useState<{ obj: CmiObjective; kpi: KpiFull | null } | null>(null);
   const [obj, setObj] = useState<CmiObjective | { lever?: string; name?: string; desc?: string; indicator?: string } | null>(null);

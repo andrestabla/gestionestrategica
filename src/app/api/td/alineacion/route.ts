@@ -25,7 +25,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => ({}));
   const c = catalog();
   const horizon = String(body?.horizon ?? horizonsOf(c.company)[0]?.id ?? "");
-  const objetivos = c.objectives.filter((o) => o.horizon === horizon && !o.okr);
+  const objetivos = c.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado);
   if (!objetivos.length) return NextResponse.json({ error: `No hay objetivos directivos en ${horizonLabel(c.company, horizon)}.` }, { status: 422 });
   const soloId = typeof body?.id === "string" && objetivos.some((o) => o.id === body.id) ? String(body.id) : undefined;
   const levers = leversOf(c.company);

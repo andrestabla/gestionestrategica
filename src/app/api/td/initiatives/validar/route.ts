@@ -27,13 +27,14 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   const body = await req.json().catch(() => ({}));
   const c = catalog();
   const horizon = String(body?.horizon ?? horizonsOf(c.company)[0]?.id ?? "");
-  const inis = c.initiatives.filter((i) => i.horizon === horizon);
+  const descartados = new Set(c.objectives.filter((o) => o.descartado).map((o) => o.id));
+  const inis = c.initiatives.filter((i) => i.horizon === horizon && !descartados.has(i.cmi));
   if (!inis.length) return NextResponse.json({ error: `No hay iniciativas en ${horizonLabel(c.company, horizon)}.` }, { status: 422 });
   // revalidación de una sola iniciativa (tras guardarla): el modelo evalúa solo esa y el item se funde en la lectura guardada
   const soloId = typeof body?.id === "string" && inis.some((i) => i.id === body.id) ? String(body.id) : undefined;
   const Q = /^\d{4}-T[1-4]$/;
   const hechos: Record<string, HechosIni> = Object.fromEntries(inis.map((i) => [i.id, { plazo: Q.test(i.start ?? "") && Q.test(i.end ?? ""), kr: !!i.kpi, responsable: !!i.ownerId, capacidad: !!i.capability, recursos: (i.budgetPlanned ?? 0) > 0, logro: (i.objetivo ?? "").trim().length >= 15 }]));
-  const objetivos = c.objectives.filter((o) => o.horizon === horizon && !o.okr);
+  const objetivos = c.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado);
   const owner = (id?: string) => c.responsibles.find((r) => r.id === id)?.dependencia;
   const { system, user: u } = encargoValidacionIniciativas({
     empresa: { name: c.company.name, sector: c.company.sector, size: c.company.size }, horizonte: horizonLabel(c.company, horizon),

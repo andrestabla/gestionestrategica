@@ -79,9 +79,9 @@ export const initiativesOfKr = (cat: Catalog, code: string): InitiativeFull[] =>
 /** Objetivos sobre los que se construyen OKR en un horizonte: en modo convención, solo los definidos por las tribus (okr): los directivos
     viven en Dirección 3x3 y no se muestran en OKR. Fuera de la convención, si la empresa no usa ese nivel, todos los del horizonte. */
 export const okrObjectivesOf = (cat: Catalog, horizon: string): CmiObjective[] => {
-  const own = cat.objectives.filter((o) => o.horizon === horizon && o.okr);
+  const own = cat.objectives.filter((o) => o.horizon === horizon && o.okr && !o.descartado);
   if (cat.company.mode === "convencion") return own;
-  return cat.objectives.some((o) => o.okr) ? own : cat.objectives.filter((o) => o.horizon === horizon);
+  return cat.objectives.some((o) => o.okr) ? own : cat.objectives.filter((o) => o.horizon === horizon && !o.descartado);   // los descartados quedan en el registro, no en las fases siguientes
 };
 /** Regla de resultados clave por objetivo: de 2 a 4; 5 se admite como máximo. */
 export const KR_MIN = 2, KR_IDEAL_MAX = 4, KR_MAX = 5;

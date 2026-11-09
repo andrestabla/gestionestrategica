@@ -9,7 +9,7 @@ import { leversOf } from "@/data/catalogo";
 export const huellaAlineacion = (horizon: string) => {
   const c = catalog();
   const levers = leversOf(c.company).map((l) => [l.id, l.name, l.indicator ?? "", l.desc ?? ""]);
-  const objs = c.objectives.filter((o) => o.horizon === horizon && !o.okr).map((o) => [o.id, o.lever ?? "", o.name, o.desc ?? "", o.indicator ?? "", o.pillar ?? ""]);
+  const objs = c.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado).map((o) => [o.id, o.lever ?? "", o.name, o.desc ?? "", o.indicator ?? "", o.pillar ?? ""]);
   return createHash("sha256").update(JSON.stringify({ v: 3, levers, objs })).digest("hex").slice(0, 24);
 };
 

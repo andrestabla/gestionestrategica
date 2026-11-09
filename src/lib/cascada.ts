@@ -161,7 +161,7 @@ export type NodoPrioridad = { id: string; name: string; order: number; objetivos
 
 export function arbolCascada(args: {
   levers: { id: string; name: string; order: number }[];
-  objectives: { id: string; name: string; lever?: string; horizon?: string; kpis: string[] }[];
+  objectives: { id: string; name: string; lever?: string; horizon?: string; kpis: string[]; descartado?: boolean }[];
   kpis: { code: string; name: string; cmi: string }[];
   initiatives: { id: string; name: string; ownerId: string; kpi: string; cmi: string }[];
   metas: MetaTrimestral[]; articulaciones: Record<string, Articulacion>; decisions?: Record<string, { decision?: string | null }>;
@@ -182,7 +182,7 @@ export function arbolCascada(args: {
     return { id: i.id, name: i.name, ownerId: i.ownerId, kpi: i.kpi, decision: args.decisions?.[i.id]?.decision ?? null, articulada: !!art, areas, sueltas };
   };
   return [...args.levers].sort((a, b) => a.order - b.order).map((l) => {
-    const objetivos: NodoObjetivo[] = args.objectives.filter((o) => o.lever === l.id && (o.horizon ?? "").toUpperCase() !== "LB" && !/l[ií]nea base/i.test(o.name)).map((o) => {
+    const objetivos: NodoObjetivo[] = args.objectives.filter((o) => o.lever === l.id && !o.descartado && (o.horizon ?? "").toUpperCase() !== "LB" && !/l[ií]nea base/i.test(o.name)).map((o) => {
       const codes = new Set([...o.kpis, ...args.kpis.filter((k) => k.cmi === o.id).map((k) => k.code)]);
       const krs: NodoKr[] = [...codes].map((code) => {
         const k = args.kpis.find((x) => x.code === code);

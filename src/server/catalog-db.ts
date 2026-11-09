@@ -47,7 +47,7 @@ export async function writeResponsible(db: Db, companyId: string, r: Responsible
 export const deleteResponsible = (db: Db, companyId: string, id: string) => db.responsible.deleteMany({ where: { companyId, id } });
 
 export async function writeObjective(db: Db, companyId: string, o: CmiObjective, mode: "upsert" | "create" = "upsert") {
-  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null, lever: o.lever ?? null, horizon: o.horizon ?? null, pillar: o.pillar ?? null, desc: o.desc ?? null, indicator: o.indicator ?? null, okr: !!o.okr, parent: o.parent ?? null };
+  const data = { perspective: o.perspective, name: o.name, kpis: o.kpis as never, line: o.line ?? null, lever: o.lever ?? null, horizon: o.horizon ?? null, pillar: o.pillar ?? null, desc: o.desc ?? null, indicator: o.indicator ?? null, okr: !!o.okr, parent: o.parent ?? null, descartado: !!o.descartado, motivoDescarte: o.motivoDescarte ?? null };
   if (mode === "create") { await db.cmiObjective.create({ data: { companyId, id: o.id, ...data } }); return; }
   await db.cmiObjective.upsert({ where: { companyId_id: { companyId, id: o.id } }, update: data, create: { companyId, id: o.id, ...data } });
 }
@@ -187,9 +187,9 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
   const responsibles: Responsible[] = respRows
     .map((r: Responsible) => ({ id: r.id, cargo: r.cargo, dependencia: r.dependencia, rolPlataforma: r.rolPlataforma }));
   const objectives: CmiObjective[] = objRows
-    .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null; lever: string | null; horizon: string | null; pillar: string | null; desc: string | null; indicator: string | null; okr?: boolean | null; parent?: string | null }) => ({
+    .map((o: { id: string; perspective: string; name: string; kpis: unknown; line: number | null; lever: string | null; horizon: string | null; pillar: string | null; desc: string | null; indicator: string | null; okr?: boolean | null; parent?: string | null; descartado?: boolean | null; motivoDescarte?: string | null }) => ({
       id: o.id, perspective: o.perspective, name: o.name, kpis: (o.kpis as string[]) ?? [], line: o.line ?? undefined,
-      ...(o.lever ? { lever: o.lever } : {}), ...(o.horizon ? { horizon: o.horizon } : {}), ...(o.pillar ? { pillar: o.pillar } : {}), ...(o.desc ? { desc: o.desc } : {}), ...(o.indicator ? { indicator: o.indicator } : {}), ...(o.okr ? { okr: true } : {}), ...(o.parent ? { parent: o.parent } : {}),
+      ...(o.lever ? { lever: o.lever } : {}), ...(o.horizon ? { horizon: o.horizon } : {}), ...(o.pillar ? { pillar: o.pillar } : {}), ...(o.desc ? { desc: o.desc } : {}), ...(o.indicator ? { indicator: o.indicator } : {}), ...(o.okr ? { okr: true } : {}), ...(o.parent ? { parent: o.parent } : {}), ...(o.descartado ? { descartado: true } : {}), ...(o.motivoDescarte ? { motivoDescarte: o.motivoDescarte } : {}),
     }));
   const kpiCodeById = new Map<string, string>();
   const kpis: KpiFull[] = kpiRows.map((k: Record<string, unknown> & { values: { period: string; value: number; note: string | null }[] }) => {
