@@ -22,7 +22,7 @@ import {
   type Task, type TaskStatus, type Person,
 } from "@/data/proyectos";
 import type { TaskAlert, Workload } from "@/lib/proyectos";
-import { confirmar, avisar } from "@/components/feedback";
+import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
   KanbanSquare, CalendarRange, Users, X, Link2, FileText, ShieldCheck,
   AlertTriangle, Lock, ChevronRight, Loader2, Save, History, Paperclip,
@@ -111,6 +111,7 @@ export default function ProyectosPage() {
   useEffect(() => { refetch(); }, [refetch]);
 
   const patchTask = useCallback(async (id: string, patch: Record<string, unknown>) => {
+    if (!(await confirmarGuardar("los cambios de la tarea"))) return;
     setSaving(true); setError(null);
     const res = await fetch(`/api/td/tasks/${id}`, {
       method: "PATCH",
@@ -127,6 +128,7 @@ export default function ProyectosPage() {
   }, [refetchAll]);
 
   const verifyEv = useCallback(async (id: string) => {
+    if (!(await confirmarGuardar("la verificación de la evidencia"))) return;
     setSaving(true); setError(null);
     const res = await fetch(`/api/td/evidence/${id}`, { method: "PATCH" });
     if (!res.ok) {
@@ -140,6 +142,7 @@ export default function ProyectosPage() {
 
   const [creating, setCreating] = useState(false);
   const createTask = useCallback(async (input: Record<string, unknown>) => {
+    if (!(await confirmarGuardar("la nueva tarea"))) return false;
     setSaving(true); setError(null);
     const res = await fetch("/api/td/tasks", {
       method: "POST",
@@ -966,7 +969,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
           {editable && (
             <button
               onClick={async () => {
-                if (await confirmar(`¿Archivar «${task.title}»? Sale del plan activo pero conserva su auditoría.`)) {
+                if (await confirmarEliminar(`(archivar) «${task.title}»`, "Sale del plan activo pero conserva su auditoría.")) {
                   onArchive(task.id);
                 }
               }}
@@ -1102,6 +1105,7 @@ function CascadeBlock({ task, allTasks, editable, onRefetch }: {
   if (!editable || dependents.length === 0) return null;
 
   const call = async (apply: boolean) => {
+    if (apply && !(await confirmarGuardar(`las nuevas fechas de ${dependents.length} tarea${dependents.length === 1 ? "" : "s"} dependiente${dependents.length === 1 ? "" : "s"}`))) return;
     setBusy(true); setErr(null);
     const res = await fetch(`/api/td/tasks/${task.id}/cascade`, {
       method: "POST", headers: { "Content-Type": "application/json" },

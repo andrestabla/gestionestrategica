@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, Field, Modal } from "@/components/ui";
 import { useUser } from "@/components/user-context";
-import { avisar } from "@/components/feedback";
+import { avisar, confirmarGuardar } from "@/components/feedback";
 import { consentRights } from "@/lib/consentimiento";
 import { UserCircle2, KeyRound, Trash2, Loader2, Save, ShieldCheck, AlertTriangle } from "lucide-react";
 
@@ -37,6 +37,7 @@ export default function PerfilPage() {
   }, []);
 
   const guardar = async () => {
+    if (!(await confirmarGuardar("tus datos"))) return;
     setSaving(true);
     try { const r = await api<{ name: string }>("/api/td/perfil", { method: "PATCH", body: JSON.stringify({ name }) }); setP((x) => x ? { ...x, name: r.name } : x); avisar("Datos actualizados"); router.refresh(); }
     catch (e) { avisar((e as Error).message, "warn"); }
@@ -44,6 +45,7 @@ export default function PerfilPage() {
   };
   const cambiar = async () => {
     if (nueva !== repite) { avisar("La contraseña nueva y su repetición no coinciden.", "warn"); return; }
+    if (!(await confirmarGuardar("la nueva contraseña"))) return;
     setCambiando(true);
     try { await api("/api/td/perfil/contrasena", { method: "POST", body: JSON.stringify({ actual, nueva }) }); avisar("Contraseña cambiada"); setActual(""); setNueva(""); setRepite(""); setP((x) => x ? { ...x, tienePassword: true } : x); }
     catch (e) { avisar((e as Error).message, "warn"); }

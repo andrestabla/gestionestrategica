@@ -111,8 +111,8 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
 
   const mutate = async (entity: string, op: string, data: unknown, extra?: Record<string, unknown> & { confirmado?: boolean }) => {
     const { confirmado, ...resto } = extra ?? {};
-    // en el acompañamiento cada guardado y cada borrado se confirma: varias personas trabajan a la vez sobre lo mismo
-    if (isAcompanamiento(v.catalog.company) && !confirmado) {
+    // cada guardado y cada borrado se confirma: varias personas trabajan a la vez sobre lo mismo
+    if (!confirmado) {
       const ok = op === "delete" ? await confirmarEliminar("este elemento") : await confirmarGuardar();
       if (!ok) return false;
     }
@@ -225,7 +225,7 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
         </div>
       )}
       {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (rows) => {
-        if (isAcompanamiento(cat.company) && !(await confirmarGuardar(`los cambios en la lista de ${V.leversLow}`))) return false;
+        if (!(await confirmarGuardar(`los cambios en la lista de ${V.leversLow}`))) return false;
         // operaciones por prioridad sobre la lista vigente del servidor: lo que otros guardaron entre tanto no se pierde
         const antes = [...levers].sort((a, b) => a.order - b.order);
         const ids = rows.map((r) => r.id.trim().toUpperCase());
@@ -238,7 +238,7 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
         setOpen(false); return true;
       }} />}
       {historial && <HistorialPalancas onClose={() => setHistorial(false)} saving={saving} onRestore={async (id) => { const ok = await mutate("levers", "restore", { id }, { confirmado: true }); if (ok) setHistorial(false); return ok; }} />}
-      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { if (isAcompanamiento(cat.company) && !(await confirmarGuardar(`la ${V.leverLow} «${editando.name}»`))) return false; const ok = await mutate("lever", "upsert", d, { prevId: editando.id, confirmado: true }); if (ok) setEditando(null); return ok; }}
+      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { if (!(await confirmarGuardar(`la ${V.leverLow} «${editando.name}»`))) return false; const ok = await mutate("lever", "upsert", d, { prevId: editando.id, confirmado: true }); if (ok) setEditando(null); return ok; }}
         onDelete={canDelete ? async () => {
           const l = editando; const nObj = objs(l).length, nKr = krs(l).length, nIni = inis(l).length;
           const cuelga = [nObj ? `${nObj} objetivo${nObj === 1 ? "" : "s"}` : "", nKr ? `${nKr} KR` : "", nIni ? `${nIni} iniciativa${nIni === 1 ? "" : "s"}` : ""].filter(Boolean).join(", ");
@@ -882,7 +882,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
           const { krs, ...data } = d as Record<string, unknown> & { krs?: KrSugerido[] };
           const body = { ...data, ...(editingObj ? { id: editingObj.id } : {}), okr: !acomp, horizon };
           if (!krs?.length) { const ok = await mutate("objective", "upsert", body); if (ok) setObj(null); return ok; }
-          if (acomp && !(await confirmarGuardar(`el objetivo${krs.length ? ` y sus ${krs.length} resultados clave` : ""}`))) return false;
+          if (!(await confirmarGuardar(`el objetivo${krs.length ? ` y sus ${krs.length} resultados clave` : ""}`))) return false;
           const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "objective", op: "upsert", data: body }) });
           const j = await res.json().catch(() => null);
           if (!res.ok || !j?.id) { window.alert(j?.error ?? `Error ${res.status}`); return false; }
@@ -2000,7 +2000,7 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
   const startOf = (id: string) => cat.initiatives.find((i) => i.id === id)?.start ?? "";
   const setStart = async (id: string, start: string) => {
     const ini = cat.initiatives.find((i) => i.id === id); if (!ini) return;
-    if (isAcompanamiento(cat.company) && !(await confirmarGuardar(`el trimestre de inicio de «${ini.name}»`))) return;
+    if (!(await confirmarGuardar(`el trimestre de inicio de «${ini.name}»`))) return;
     setBusy(true); setErr(null);
     const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
     const j = await res.json().catch(() => null); setBusy(false);

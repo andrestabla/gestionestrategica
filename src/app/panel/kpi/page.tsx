@@ -4,6 +4,7 @@
 // con notas, dueño del dato, fuente, periodicidad y objetivo CMI.
 
 import { useCallback, useEffect, useState } from "react";
+import { confirmarGuardar } from "@/components/feedback";
 import Link from "next/link";
 import { PageHeader, Card } from "@/components/ui";
 import { AccessChip, useCan } from "@/components/user-context";
@@ -334,6 +335,7 @@ function KpiImport({ onDone, onClose }: {
   const valid = (rows ?? []).filter((r) => !r.problem);
 
   const runImport = async () => {
+    if (!(await confirmarGuardar(`${(rows ?? []).filter((r) => !r.problem).length} valores importados`))) return;
     setBusy(true);
     const next = [...(rows ?? [])];
     for (const r of next) {
@@ -457,6 +459,7 @@ function ReportForm({ kpi, onReported }: {
   }
 
   const submit = async () => {
+    if (!(await confirmarGuardar(`el valor de ${kpi.code} para ${period.trim()}`))) return;
     setSaving(true);
     setError(null);
     setOkMsg(null);

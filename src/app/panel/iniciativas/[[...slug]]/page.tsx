@@ -9,6 +9,7 @@
 // bitácora — con navegación anterior/siguiente (también flechas del teclado).
 
 import { useCallback, useEffect, useState } from "react";
+import { confirmarGuardar } from "@/components/feedback";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, StateDot, StatusChip, StatCard } from "@/components/ui";
@@ -190,6 +191,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mutate = async (patch: Record<string, unknown>) => {
+    if (!(await confirmarGuardar("los cambios de la iniciativa"))) return false;
     setSaving(true);
     setError(null);
     const res = await fetch("/api/td/initiatives", {

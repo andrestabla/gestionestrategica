@@ -24,7 +24,7 @@ import { LINES, type Territory } from "@/data/demo";
 import { DIMS, frameworkOfPractice } from "@/data/mapa";
 import { CO_PATHS } from "@/data/geo";
 import { EC_PATHS } from "@/data/geo-ec";
-import { confirmar, avisar } from "@/components/feedback";
+import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
   Briefcase, Users, Target, Gauge, Rocket, Landmark, Pencil, Trash2, Plus, Loader2, Save,
   AlertTriangle, X, ListOrdered, Minus,
@@ -80,6 +80,8 @@ export function CatalogoTab() {
   const [error, setError] = useState<string | null>(null);
 
   const mutate: Mutate = async (entity, op, data) => {
+    // los borrados ya confirmaron con su propio aviso; los guardados confirman aquí
+    if (op !== "delete" && !(await confirmarGuardar())) return false;
     setSaving(true); setError(null);
     try {
       const res = await fetch("/api/td/catalogo", {
@@ -197,7 +199,7 @@ function ResponsablesSection({ v, saving, mutate }: SectionProps) {
                   <td className="px-4 py-2.5"><span className="chip">{ROL_PLATAFORMA[r.rolPlataforma]}</span></td>
                   <td className="num whitespace-nowrap px-4 py-2.5 text-[12px] text-muted">{u.kpis} KPI · {u.inis} inic. · {u.people} pers.</td>
                   <RowActions saving={saving} onEdit={() => setOpen(r)}
-                    onDelete={async () => { if (await confirmar(`¿Eliminar el cargo «${r.cargo}» (${r.id})?`)) mutate("responsible", "delete", { id: r.id }); }} />
+                    onDelete={async () => { if (await confirmarEliminar(`el cargo «${r.cargo}» (${r.id})`)) mutate("responsible", "delete", { id: r.id }); }} />
                 </tr>
               );
             })}
@@ -265,7 +267,7 @@ function PersonasSection({ v, saving, mutate }: SectionProps) {
                 <td className="px-4 py-2.5 text-muted">{respName(p.responsibleId)}</td>
                 <td className="num px-4 py-2.5 text-[12px] text-muted">{tasksOf(p.id)}</td>
                 <RowActions saving={saving} onEdit={() => setOpen(p)}
-                  onDelete={async () => { if (await confirmar(`¿Eliminar a «${p.name}» (${p.id})?`)) mutate("person", "delete", { id: p.id }); }} />
+                  onDelete={async () => { if (await confirmarEliminar(`a «${p.name}» (${p.id})`)) mutate("person", "delete", { id: p.id }); }} />
               </tr>
             ))}
           </Table>
@@ -346,7 +348,7 @@ function ObjetivosSection({ v, saving, mutate }: SectionProps) {
                 </td>
                 <td className="num px-4 py-2.5 text-[12px] text-muted">{inisOf(o.id)}</td>
                 <RowActions saving={saving} onEdit={() => setOpen(o)}
-                  onDelete={async () => { if (await confirmar(`¿Eliminar el objetivo «${o.name}» (${o.id})?`)) mutate("objective", "delete", { id: o.id }); }} />
+                  onDelete={async () => { if (await confirmarEliminar(`el objetivo «${o.name}» (${o.id})`)) mutate("objective", "delete", { id: o.id }); }} />
               </tr>
             ))}
           </Table>
@@ -444,7 +446,7 @@ function KpiSection({ v, saving, mutate }: SectionProps) {
                 <td className="num whitespace-nowrap px-4 py-2.5 text-muted">{k.baseline} → <b className="text-ink">{k.target}</b> <span className="text-faint">{k.goodDirection === "up" ? "↑" : "↓"}</span></td>
                 <td className="num px-4 py-2.5 text-[12px] text-muted">{k.series.length} pts</td>
                 <RowActions saving={saving} onEdit={() => setOpen(k)}
-                  onDelete={async () => { if (await confirmar(`¿Eliminar el KPI «${k.name}» (${k.code})?`)) mutate("kpi", "delete", { code: k.code }); }} />
+                  onDelete={async () => { if (await confirmarEliminar(`el KPI «${k.name}» (${k.code})`)) mutate("kpi", "delete", { code: k.code }); }} />
               </tr>
             ))}
           </Table>
@@ -615,7 +617,7 @@ function IniciativasSection({ v, saving, mutate }: SectionProps) {
                 <td className="num px-4 py-2.5 text-muted">{i.progress} %</td>
                 <td className="num px-4 py-2.5 text-[12px] text-muted">{tasksOf(i.id)}</td>
                 <RowActions saving={saving} onEdit={() => setOpen(i)}
-                  onDelete={async () => { if (await confirmar(`¿Eliminar la iniciativa «${i.name}» (${i.id})?`)) mutate("initiative", "delete", { id: i.id }); }} />
+                  onDelete={async () => { if (await confirmarEliminar(`la iniciativa «${i.name}» (${i.id})`)) mutate("initiative", "delete", { id: i.id }); }} />
               </tr>
             ))}
           </Table>

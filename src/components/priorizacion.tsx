@@ -112,7 +112,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const INICIO = startQuarters(yearOfFirstHorizon(horizonsOf(cv.catalog.company))).map(([v, l]) => [v, l === "Después" ? l : `${l} ${v.slice(0, 4)}`] as const);
   const setStart = async (start: string) => {
     if (!ini) return;
-    if (cv.catalog.company.mode === "acompanamiento" && !(await confirmarGuardar("el trimestre de inicio"))) return;
+    if (!(await confirmarGuardar("el trimestre de inicio"))) return;
     setSaving(true); setError(null);
     const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
     if (!res.ok) setError((await res.json().catch(() => ({}))).error ?? "Error al guardar"); else await refetchCatalog();
@@ -124,7 +124,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
 
   const post = async (body: Record<string, unknown>) => {
     // la decisión de tiempo se confirma (la calificación ya pide su propia confirmación al registrarse)
-    if (body.decision !== undefined && cv.catalog.company.mode === "acompanamiento" && !(await confirmarGuardar("la decisión de tiempo"))) return false;
+    if (body.decision !== undefined && !(await confirmarGuardar("la decisión de tiempo"))) return false;
     setSaving(true); setError(null);
     const res = await fetch("/api/td/priorizacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: iniId, ...body }) });
     if (!res.ok) setError((await res.json()).error ?? "Error al guardar");

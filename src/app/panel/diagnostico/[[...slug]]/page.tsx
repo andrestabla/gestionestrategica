@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, CardHeader, StatCard, LevelBadge, Skeleton, SkeletonCards, ResponsiveTable } from "@/components/ui";
 import { DescargarDecisiones } from "@/components/descargar-decisiones";
-import { avisar, confirmar } from "@/components/feedback";
+import { avisar, confirmar, confirmarGuardar } from "@/components/feedback";
 import { AccessChip, useCan, useUser, useBase } from "@/components/user-context";
 import { MaturityRadar, MaturityHeatmap, MiniRadar, type ScoresMap } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
@@ -588,6 +588,7 @@ function ResponderTest() {
   };
   const submit = async () => {
     setBusy(true); setMsg(null);
+    if (!(await confirmarGuardar("el test y enviarlo"))) return;
     const res = await fetch("/api/td/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, cargo, objetivo }) });
     const j = await res.json();
     if (!res.ok) setMsg(j.error ?? "No se pudo guardar."); else { setSaved(j.response); await refetch(); window.scrollTo({ top: 0 }); }
@@ -1451,6 +1452,7 @@ function Captura() {
     await load(); setBusy(null);
   };
   const publish = async () => {
+    if (!(await confirmarGuardar("y publicar el corte como medición vigente"))) return;
     setBusy("publish"); setMsg(null);
     const r = await fetch("/api/td/captura/publicar", { method: "POST" });
     const j = await r.json();

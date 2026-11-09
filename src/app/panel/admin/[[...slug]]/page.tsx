@@ -21,7 +21,7 @@ import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "
 import { BrandingTab } from "./branding-tab";
 import { CorreosTab } from "./correos-tab";
 import { CatalogoTab } from "../catalogo-tab";
-import { confirmar, avisar } from "@/components/feedback";
+import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
   Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles } from "lucide-react"
@@ -218,7 +218,8 @@ function EmpresasTab() {
       avisar(`Demo creada: ${r.objetivos ?? 0} objetivos, ${r.resultadosClave ?? 0} resultados clave, ${r.iniciativas ?? 0} iniciativas, ${r.calificaciones ?? 0} calificaciones, ${r.decisiones ?? 0} decisiones, ${r.revisionesCapacidades ?? 0} revisiones de capacidades, ${r.metasTrimestrales ?? 0} metas.${j.avisos?.length ? ` Avisos: ${j.avisos.slice(0, 2).join(" · ")}` : ""}`, j.avisos?.length ? "warn" : "ok");
     } finally { setSaving(false); }
   };
-  const call = async (method: string, body?: Record<string, unknown>, query = "") => {
+  const call = async (method: string, body?: Record<string, unknown>, query = "", confirmado = false) => {
+    if (!confirmado && !(await (method === "DELETE" ? confirmarEliminar("la empresa") : confirmarGuardar("los cambios de la empresa")))) return false;
     setSaving(true); setError(null);
     const res = await fetch(`/api/td/empresas${query}`, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
     const ok = res.ok;
@@ -256,7 +257,7 @@ function EmpresasTab() {
                   <button disabled={saving} onClick={() => call("PATCH", { slug: c.slug, active: !c.active })} title={c.active ? "Desactivar" : "Reactivar"} aria-label={c.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-40">{c.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                   {c.slug !== "andina" && (
                     <button disabled={saving} title="Eliminar con todos sus datos" aria-label="Eliminar con todos sus datos"
-                      onClick={async () => { if (await confirmar(`¿Eliminar «${c.name}» con todos sus usuarios, diagnóstico, portafolio y archivos? No se puede deshacer.`)) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`); }}
+                      onClick={async () => { if (await confirmarEliminar(`«${c.name}»`, "Se borran todos sus usuarios, su diagnóstico, su portafolio y sus archivos.")) call("DELETE", undefined, `?slug=${encodeURIComponent(c.slug)}`, true); }}
                       className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
                   )}
                 </span>
@@ -306,7 +307,8 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
   }, [canCompanies]);
   useEffect(() => { refetch(); }, [refetch]);
 
-  const mutate = async (method: "POST" | "PATCH" | "DELETE", body: Record<string, unknown>) => {
+  const mutate = async (method: "POST" | "PATCH" | "DELETE", body: Record<string, unknown>, confirmado = false) => {
+    if (!confirmado && !(await (method === "DELETE" ? confirmarEliminar("la cuenta") : confirmarGuardar("los cambios de la cuenta")))) return;
     setSaving(true); setError(null);
     const res = await fetch(method === "DELETE" ? `/api/td/users?email=${encodeURIComponent(String(body.email))}` : "/api/td/users", {
       method, headers: { "Content-Type": "application/json" },
@@ -376,7 +378,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                 <span className="inline-flex flex-wrap items-center justify-end gap-0.5">
                   {canCompanies && companies.length > 1 && !u.membresia && (
                     <select value={me.company?.slug ?? ""} disabled={saving} title="Mover a otra empresa" aria-label={`Empresa de ${u.name}`}
-                      onChange={async (e) => { if (e.target.value && e.target.value !== me.company?.slug && await confirmar(`¿Mover a ${u.name} a otra empresa?`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }); }}
+                      onChange={async (e) => { if (e.target.value && e.target.value !== me.company?.slug && await confirmarGuardar(`el traslado de ${u.name} a otra empresa`)) mutate("PATCH", { email: u.email, companySlug: e.target.value }, true); }}
                       className="input mr-1 w-auto max-w-[130px] !py-1 pr-6 !text-[12px]">
                       {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
                     </select>
@@ -384,7 +386,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                   <button disabled={saving || !u.active} onClick={() => void sendReset(u)} title="Enviar por correo un enlace para restablecer la contraseña (vale 60 minutos)" aria-label="Enviar enlace para restablecer la contraseña" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40"><KeyRound size={14} /></button>
                   <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, active: !u.active })} title={u.active ? "Desactivar" : "Reactivar"} aria-label={u.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">{u.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                   <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
-                    onClick={async () => { if (await confirmar(`¿Eliminar la cuenta de ${u.name} (${u.email})? Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.`)) void mutate("DELETE", { email: u.email }); }}
+                    onClick={async () => { if (await confirmarEliminar(`la cuenta de ${u.name} (${u.email})`, "Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.")) void mutate("DELETE", { email: u.email }, true); }}
                     title={u.membresia ? "Quitar de esta empresa (la cuenta sigue en su empresa principal)" : "Eliminar la cuenta"} aria-label={u.membresia ? "Quitar de esta empresa" : "Eliminar la cuenta"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-bad disabled:opacity-40"><Trash2 size={14} /></button>
                 </span>
               ) },
@@ -662,6 +664,7 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
   };
 
   const post = async (body: Record<string, unknown>) => {
+    if (!(await confirmarGuardar("la configuración de la integración"))) return;
     setSaving(true);
     onError(null);
     const res = await fetch("/api/td/settings", {
