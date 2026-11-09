@@ -6,7 +6,7 @@ import { CAPS, DIMS, LEVELS, FRAMEWORKS, STAGES, THRESHOLD, type Dimension } fro
 import type { Consolidated, Recommendation } from "@/lib/od";
 import type { LecturaF1 } from "@/lib/f1";
 
-export type InformeKind = "f1" | "consolidado" | "alineacion" | "alineacion-ini" | "capacidades" | "capacidades-checklist" | "articulacion";   // alineacion: validación de objetivos; alineacion-ini: de iniciativas; capacidades: revisión y checklist por iniciativa (misma tabla)
+export type InformeKind = "f1" | "consolidado" | "alineacion" | "alineacion-ini" | "capacidades" | "capacidades-checklist" | "articulacion" | "palancas";   // palancas: historial de versiones de las prioridades (restaurable)   // alineacion: validación de objetivos; alineacion-ini: de iniciativas; capacidades: revisión y checklist por iniciativa (misma tabla)
 
 export type InformeIA = {
   titulo: string;

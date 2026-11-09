@@ -17,7 +17,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ItinerarioView } from "@/components/itinerario";
 import type { Itinerary as ItineraryT, ItineraryComment } from "@/lib/itinerario";
 import Link from "next/link";
-import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea, SkeletonCards, Field as UiField } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatCard, Modal, EmptyNote, AutoTextarea, Skeleton, SkeletonCards, Field as UiField } from "@/components/ui";
 import { AccessChip, useCan, useBase, useUser } from "@/components/user-context";
 import { ACCESS_SECTIONS, type AccessSection } from "@/lib/acceso";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
@@ -38,7 +38,7 @@ import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
-import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle, Trash2 } from "lucide-react";
+import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle, Trash2, History } from "lucide-react";
 import { confirmar, avisar } from "@/components/feedback";
 
 type Tab = "itinerario" | "guia" | "prioridades" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
@@ -109,12 +109,12 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
     return () => clearInterval(t);
   }, [tab, refetchPrio]);
 
-  const mutate = async (entity: string, op: "upsert" | "delete", data: unknown) => {
+  const mutate = async (entity: string, op: string, data: unknown, extra?: Record<string, unknown>) => {
     setSaving(true); setError(null);
     try {
-      const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, op, data }) });
+      const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, op, data, ...(extra ?? {}) }) });
       if (!res.ok) { const msg = (await res.json().catch(() => null))?.error ?? `Error ${res.status}`; setError(msg); avisar(msg, "bad"); setSaving(false); return false; }
-      await refetch(); setSaving(false); avisar(op === "delete" ? "Eliminado" : "Guardado"); return true;
+      await refetch(); setSaving(false); avisar(op === "delete" ? "Eliminado" : op === "restore" ? "Versión restaurada" : "Guardado"); return true;
     } catch { setError("No se pudo conectar con el servidor."); setSaving(false); return false; }
   };
 
@@ -166,7 +166,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
   );
 }
 
-type Mutate = (entity: string, op: "upsert" | "delete", data: unknown) => Promise<boolean>;
+type Mutate = (entity: string, op: string, data: unknown, extra?: Record<string, unknown>) => Promise<boolean>;
 type Cat = ReturnType<typeof useCatalog>["catalog"];
 const useVocab = () => vocabOf(useCatalog().catalog.company);
 const Vb = (cat: Cat) => vocabOf(cat.company);
@@ -177,6 +177,7 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
   const V = useVocab();
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Lever | null>(null);
+  const [historial, setHistorial] = useState(false);
   const owner = (id?: string) => cat.responsibles.find((r) => r.id === id);
   const objs = (l: Lever) => cat.objectives.filter((o) => o.lever === l.id);
   const krs = (l: Lever) => cat.kpis.filter((k) => objs(l).some((o) => o.id === k.cmi));
@@ -188,6 +189,7 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
         <span className="ml-auto flex flex-wrap items-center gap-2">
           {isAcompanamiento(cat.company) && <AyudaMetodologica tema="prioridades" />}
           {isAcompanamiento(cat.company) && <DescargarDecisiones modulo="prioridades" />}
+          {canEdit && levers.length > 0 && <button onClick={() => setHistorial(true)} className="btn-ghost btn-sm text-[12px]" title="Versiones anteriores de las prioridades: quién cambió qué y cuándo; cualquiera se puede restaurar"><History size={12} /> Historial</button>}
           {canEdit && <button onClick={() => setOpen(true)} className="btn-primary btn-sm text-[12px]"><Pencil size={12} /> {levers.length ? `Editar ${V.leversLow}` : `Definir ${V.leversLow}`}</button>}
         </span>
       </div>
@@ -202,7 +204,7 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
               <div className="mt-0.5 pr-8 text-[16px] font-extrabold leading-tight text-ink">{l.name}</div>
               {l.propuesta && <span className="chip chip-gold mt-1.5 w-fit !py-0 text-[11px]" title={l.observaciones ?? "Propuesta pendiente de aprobación"}>Propuesta · pendiente de aprobación</span>}
               {l.desc && <p className="mt-2 text-[12.5px] leading-snug text-ink-soft">{l.desc}</p>}
-              {l.propuesta && l.observaciones && <p className="mt-1.5 text-[12px] leading-snug text-muted">{l.observaciones}</p>}
+              {l.observaciones && <p className="mt-1.5 text-[12px] leading-snug text-muted"><b className="text-ink">Observaciones.</b> {l.observaciones}</p>}
               {l.indicator && (() => { const inds = splitIndicadores(l.indicator); return inds.length > 1
                 ? <div className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicadores.</b><ol className="mt-0.5 list-decimal space-y-0.5 pl-4">{inds.map((x, k) => <li key={k}>{x}</li>)}</ol></div>
                 : <p className="mt-2 text-[12px] leading-snug text-muted"><b className="text-ink">Indicador.</b> {inds[0]}</p>; })()}
@@ -216,15 +218,26 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
           ); })}
         </div>
       )}
-      {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setOpen(false); return ok; }} />}
-      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setEditando(null); return ok; }}
+      {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (rows) => {
+        // operaciones por prioridad sobre la lista vigente del servidor: lo que otros guardaron entre tanto no se pierde
+        const antes = [...levers].sort((a, b) => a.order - b.order);
+        const ids = rows.map((r) => r.id.trim().toUpperCase());
+        for (const l of antes) if (!ids.includes(l.id)) { if (!(await mutate("lever", "delete", { id: l.id }))) return false; }
+        for (const r of rows) {
+          const previo = antes.find((l) => l.id === r.id.trim().toUpperCase());
+          if (!previo || previo.name !== r.name.trim() || (previo.ownerId ?? "") !== (r.ownerId ?? "")) { if (!(await mutate("lever", "upsert", { ...r, id: r.id.trim().toUpperCase(), name: r.name.trim(), ownerId: r.ownerId || undefined }))) return false; }
+        }
+        if (antes.map((l) => l.id).join("|") !== ids.join("|")) { if (!(await mutate("levers", "order", { ids }))) return false; }
+        setOpen(false); return true;
+      }} />}
+      {historial && <HistorialPalancas onClose={() => setHistorial(false)} saving={saving} onRestore={async (id) => { const ok = await mutate("levers", "restore", { id }); if (ok) setHistorial(false); return ok; }} />}
+      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { const ok = await mutate("lever", "upsert", d, { prevId: editando.id }); if (ok) setEditando(null); return ok; }}
         onDelete={canDelete ? async () => {
           const l = editando; const nObj = objs(l).length, nKr = krs(l).length, nIni = inis(l).length;
           const cuelga = [nObj ? `${nObj} objetivo${nObj === 1 ? "" : "s"}` : "", nKr ? `${nKr} KR` : "", nIni ? `${nIni} iniciativa${nIni === 1 ? "" : "s"}` : ""].filter(Boolean).join(", ");
           const ok = await confirmar({ title: `¿Eliminar la ${V.leverLow} «${l.name}»?`, body: cuelga ? `De ella cuelgan ${cuelga}: no se borran, pero quedan sin ${V.leverLow} hasta que se reasignen. No se puede deshacer.` : "No tiene objetivos, resultados clave ni iniciativas asociados. No se puede deshacer.", confirmLabel: "Eliminar", danger: true });
           if (!ok) return;
-          const resto = [...levers].sort((a, b) => a.order - b.order).filter((x) => x.id !== l.id);
-          const done = await mutate("levers", "upsert", resto.length ? resto : []);
+          const done = await mutate("lever", "delete", { id: l.id });
           if (done) setEditando(null);
         } : undefined} />}
     </>
@@ -243,17 +256,13 @@ const joinIndicadores = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean
 /** Edición de una sola prioridad (lápiz de la tarjeta): nombre, sponsor, resultado del ciclo y renuncia, y un campo por indicador. */
 function LeverForm({ cat, lever, levers, saving, onCancel, onSubmit, onDelete }: { cat: Cat; lever: Lever; levers: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean>; onDelete?: () => Promise<void> }) {
   const V = Vb(cat); const acomp = isAcompanamiento(cat.company);
-  const [f, setF] = useState({ id: lever.id, name: lever.name, ownerId: lever.ownerId ?? "", desc: lever.desc ?? "" });
+  const [f, setF] = useState({ id: lever.id, name: lever.name, ownerId: lever.ownerId ?? "", desc: lever.desc ?? "", observaciones: lever.observaciones ?? "" });
   const [inds, setInds] = useState<string[]>(() => { const x = splitIndicadores(lever.indicator); return x.length ? x : [""]; });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const idRepetido = levers.some((l) => l.id !== lever.id && l.id === f.id.trim().toUpperCase());
   const valido = f.id.trim().length > 0 && !idRepetido && f.name.trim().length >= 3;
-  const guardar = () => {
-    const rows = [...levers].sort((a, b) => a.order - b.order).map((l) => l.id === lever.id
-      ? { ...l, id: f.id.trim().toUpperCase(), name: f.name.trim(), ownerId: f.ownerId || undefined, desc: f.desc.trim() || undefined, indicator: joinIndicadores(inds) || undefined }
-      : l);
-    return onSubmit(rows);
-  };
+  // solo esta prioridad: el servidor la funde con la lista vigente (lo que otros guardaron entre tanto se conserva)
+  const guardar = () => onSubmit({ ...lever, id: f.id.trim().toUpperCase(), name: f.name.trim(), ownerId: f.ownerId || undefined, desc: f.desc.trim() || undefined, indicator: joinIndicadores(inds) || undefined, observaciones: f.observaciones.trim() || undefined });
   return (
     <Modal title={`${lever.order}. ${lever.name}`} sub={`editar esta ${V.leverLow} · el orden y las demás se cambian en «Editar ${V.leversLow}»`} onClose={onCancel}
       footer={<>{onDelete && <button type="button" disabled={saving} onClick={() => void onDelete()} className="btn-ghost mr-auto !py-2 text-[12px] text-bad hover:text-bad"><Trash2 size={13} /> Eliminar</button>}
@@ -286,7 +295,38 @@ function LeverForm({ cat, lever, levers, saving, onCancel, onSubmit, onDelete }:
           </div>
           {inds.length < 4 && <button type="button" onClick={() => setInds([...inds, ""])} className="mt-1.5 text-[12px] font-bold text-cyan-deep hover:underline">+ añadir indicador</button>}
         </div>
+        <Field label="Observaciones" help="propuestas del comité, acuerdos pendientes o notas de la sesión; se ven en la tarjeta">
+          <textarea value={f.observaciones} onChange={set("observaciones")} rows={3} maxLength={1000} placeholder="Por ejemplo: el comité propone renombrarla «…»; pendiente de decisión en la próxima sesión." className={`${INPUT} resize-y`} />
+        </Field>
       </div>
+    </Modal>
+  );
+}
+
+/** Historial de versiones de las prioridades: quién cambió qué y cuándo; cualquier versión se puede restaurar. */
+function HistorialPalancas({ onClose, saving, onRestore }: { onClose: () => void; saving: boolean; onRestore: (id: string) => Promise<boolean> }) {
+  const V = useVocab();
+  const [items, setItems] = useState<{ id: string; at: string; by: string; motivo: string; nombres: string[]; n: number }[] | null>(null);
+  useEffect(() => { fetch("/api/td/catalogo/palancas").then((r) => (r.ok ? r.json() : null)).then((j) => setItems(j?.historial ?? [])).catch(() => setItems([])); }, []);
+  const fecha = (iso: string) => new Date(iso).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+  return (
+    <Modal title={`Historial de ${V.leversLow}`} sub="cada cambio guarda la versión anterior; restaurar una vuelve a esa lista (la actual también queda en el historial)" onClose={onClose}>
+      {items === null ? <Skeleton className="h-24" /> : items.length === 0 ? <EmptyNote>Todavía no hay versiones anteriores.</EmptyNote> : (
+        <ol className="space-y-2">
+          {items.map((v) => (
+            <li key={v.id} className="rounded-xl border border-line p-3">
+              <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                <span className="num font-bold text-ink">{fecha(v.at)}</span>
+                <span className="text-muted">{v.by}</span>
+                <span className="chip !py-0 text-[11px]">{v.n} {v.n === 1 ? V.leverLow : V.leversLow}</span>
+                <span className="ml-auto text-[11.5px] text-faint">antes de: {v.motivo}</span>
+              </div>
+              <p className="mt-1 text-[12px] leading-snug text-ink-soft">{v.nombres.join(" · ") || "sin prioridades"}</p>
+              <button type="button" disabled={saving} onClick={async () => { if (await confirmar({ title: "¿Restaurar esta versión?", body: `La lista vigente se reemplaza por la de ${fecha(v.at)} (${v.n} ${v.n === 1 ? V.leverLow : V.leversLow}); la versión actual queda en el historial y se puede volver a ella.`, confirmLabel: "Restaurar" })) await onRestore(v.id); }} className="btn-ghost btn-sm mt-2 text-[12px]"><History size={12} /> Restaurar esta versión</button>
+            </li>
+          ))}
+        </ol>
+      )}
     </Modal>
   );
 }
@@ -666,8 +706,9 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
   );
 }
 
-function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; initial: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (d: unknown) => Promise<boolean> }) {
-  const [rows, setRows] = useState<(Partial<Lever> & { id: string; name: string; ownerId: string })[]>(initial.map((l) => ({ ...l, ownerId: l.ownerId ?? "" })));
+type FilaPalanca = Partial<Lever> & { id: string; name: string; ownerId: string };
+function LeversForm({ cat, initial, saving, onCancel, onSubmit }: { cat: Cat; initial: Lever[]; saving: boolean; onCancel: () => void; onSubmit: (rows: FilaPalanca[]) => Promise<boolean> }) {
+  const [rows, setRows] = useState<FilaPalanca[]>([...initial].sort((a, b) => a.order - b.order).map((l) => ({ ...l, ownerId: l.ownerId ?? "" })));
   const upd = (i: number, k: string, v: string) => setRows(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= rows.length) return; const c = [...rows]; [c[i], c[j]] = [c[j], c[i]]; setRows(c); };
   return (

@@ -4,7 +4,7 @@
 // layout (servidor) la entrega ya resuelta para la empresa de la sesión; las
 // páginas la leen con useCatalog() y la refrescan tras mutar.
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { TenantView } from "@/lib/vista";
 
 type Ctx = { view: TenantView; refetch: () => Promise<void> };
@@ -18,6 +18,13 @@ export function CatalogProvider({ initial, children }: { initial: TenantView; ch
       if (res.ok) setView(await res.json());
     } catch { /* se conserva la vista actual */ }
   }, []);
+  // en las sesiones varias personas editan a la vez: la vista se refresca sola cada 30 s mientras la pestaña está visible
+  useEffect(() => {
+    const t = setInterval(() => { if (document.visibilityState === "visible") void refetch(); }, 30_000);
+    const onShow = () => { if (document.visibilityState === "visible") void refetch(); };
+    document.addEventListener("visibilitychange", onShow);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onShow); };
+  }, [refetch]);
   return <CatalogCtx.Provider value={{ view, refetch }}>{children}</CatalogCtx.Provider>;
 }
 

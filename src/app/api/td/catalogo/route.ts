@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
-import { tenantView, upsertResponsible, removeResponsible, upsertPerson, removePerson, upsertObjective, removeObjective, upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, setLevers, evaluateInitiative, flushOrError, finalId } from "@/server/store";
+import { tenantView, upsertResponsible, removeResponsible, upsertPerson, removePerson, upsertObjective, removeObjective, upsertKpi, removeKpi, upsertInitiative, removeInitiative, setFinancials, setTerritories, setLevers, setLever, removeLever, reorderLevers, restoreLevers, evaluateInitiative, flushOrError, finalId } from "@/server/store";
 
 // GET /api/td/catalogo — la vista completa de la empresa activa: catálogo
 // (objetivos, KPI, iniciativas, personas, tareas, mediciones, evidencias,
@@ -40,7 +40,12 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     case "initiative:delete": r = removeInitiative(user, String(data.id ?? "")); break;
     case "financials:upsert": r = setFinancials(user, data === null ? null : data); break;
     case "territories:upsert": r = setTerritories(user, data); break;
-    case "levers:upsert": r = setLevers(user, data); break;
+    case "levers:upsert": r = setLevers(user, data, Array.isArray(body?.base) ? body.base : undefined); break;
+    // prioridades de una en una: se aplican sobre la lista vigente, sin pisar lo que otros guardaron
+    case "lever:upsert": r = setLever(user, data, typeof body?.prevId === "string" ? body.prevId : undefined); break;
+    case "lever:delete": r = removeLever(user, String(data.id ?? "")); break;
+    case "levers:order": r = reorderLevers(user, data.ids); break;
+    case "levers:restore": r = restoreLevers(user, String(data.id ?? "")); break;
     default: return NextResponse.json({ error: "Entidad u operación desconocida." }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

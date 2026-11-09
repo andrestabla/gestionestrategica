@@ -625,24 +625,114 @@ export function parseLevers(input: unknown): { ok: true; levers?: Lever[] } | { 
   return { ok: true, levers: out };
 }
 
-/** Palancas estratégicas de la empresa activa (manage_catalog): las guarda en
-    la empresa y las refleja en el catálogo y el registro. */
-export function setLevers(user: SessionUser, input: unknown): CatResult {
-  const denied = canCatalog(user); if (denied) return denied;
-  const parsed = parseLevers(input);
-  if (!parsed.ok) return fail(422, parsed.error);
+/* ═══ Prioridades estratégicas (palancas): se cambian de una en una y cada versión queda en el historial ═══
+   Varias personas editan a la vez en la sesión de acompañamiento: por eso ninguna operación reemplaza la lista
+   completa a partir de lo que un navegador tenía cargado (eso borraba lo que otros acababan de guardar). Cada
+   cambio se aplica sobre la lista vigente en el servidor y la versión anterior queda guardada para restaurarla. */
+
+const HISTORIAL_PALANCAS_MAX = 60;
+export type VersionPalancas = { id: string; at: string; by: string; motivo: string; levers: Lever[] };
+let histSeq = 0;
+
+/** Guarda la lista vigente como versión del historial antes de cambiarla. */
+function snapshotPalancas(user: SessionUser, motivo: string) {
+  const previo = (cat().company.levers ?? []).map((l) => ({ ...l }));
+  const at = new Date().toISOString();
+  const id = `${at}-${(++histSeq).toString(36)}`;   // varios cambios en el mismo instante no se pisan
+  informes().set(`palancas|${id}`, { kind: "palancas", subject: id, inputHash: motivo.slice(0, 200), informe: { levers: previo } as unknown as InformeIA, model: "manual", by: user.email, at });
+  const todas = [...informes().entries()].filter(([k]) => k.startsWith("palancas|")).sort((a, b) => (a[1].at < b[1].at ? 1 : -1));
+  const sobran = todas.slice(HISTORIAL_PALANCAS_MAX);
+  for (const [k] of sobran) informes().delete(k);
+  if (!hasDb()) return;
+  void persistQuiet("historial de prioridades", async (db) => {
+    const companyId = cid();
+    const data = { inputHash: motivo.slice(0, 200), content: { levers: previo }, model: "manual", by: user.email, at: new Date(at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind: "palancas", subject: id } }, update: data, create: { companyId, kind: "palancas", subject: id, ...data } });
+    if (sobran.length) await db.diagnosticReport.deleteMany({ where: { companyId, kind: "palancas", subject: { in: sobran.map(([, v]) => v.subject) } } });
+  });
+}
+
+/** Versiones anteriores de las prioridades, de la más reciente a la más antigua. */
+export function getHistorialPalancas(): VersionPalancas[] {
+  return [...informes().values()].filter((i) => i.kind === "palancas")
+    .map((i) => ({ id: i.subject, at: i.at, by: i.by, motivo: i.inputHash, levers: ((i.informe as unknown as { levers?: Lever[] }).levers ?? []) }))
+    .sort((a, b) => (a.id < b.id ? 1 : -1));
+}
+
+/** Aplica una lista ya validada: historial, memoria, auditoría y base. */
+function commitLevers(user: SessionUser, levers: Lever[] | undefined, motivo: string): CatResult {
   const c = cat();
-  const levers = parsed.levers;
   if (levers) {
     const bad = levers.filter((l) => l.ownerId && !c.responsibles.some((r) => r.id === l.ownerId));
     if (bad.length) return fail(422, `Responsable inexistente en la palanca ${bad[0].id}.`);
   }
+  snapshotPalancas(user, motivo);
   c.company.levers = levers;
   const rec = g.companies.get(currentTenant());
   if (rec) rec.levers = levers;
-  audit(user, "task", "cat:palancas", `palancas: ${levers ? levers.map((l) => l.name).join(" · ") : "sin palancas"}`);
+  audit(user, "task", "cat:palancas", `palancas: ${motivo} · lista: ${levers ? levers.map((l) => l.name).join(" · ") : "sin palancas"}`);
   void persist("catálogo", (db) => writeLevers(db, cid(), levers));
   return { ok: true };
+}
+const renumerar = (ls: Lever[]): Lever[] => ls.map((l, i) => ({ ...l, order: i + 1 }));
+
+/** Reemplaza la lista completa (importaciones y scripts). Si llega `base` (las siglas que el cliente tenía
+    cargadas) y la lista vigente ya cambió, se rechaza con 409 para no pisar lo que otros guardaron. */
+export function setLevers(user: SessionUser, input: unknown, base?: string[]): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  if (base) {
+    const vigentes = (cat().company.levers ?? []).map((l) => l.id).sort().join("|");
+    if (vigentes !== [...base].map((x) => String(x).toUpperCase()).sort().join("|")) return fail(409, "La lista de prioridades cambió mientras la editabas (alguien más guardó). Recarga la página y vuelve a intentarlo.");
+  }
+  const parsed = parseLevers(input);
+  if (!parsed.ok) return fail(422, parsed.error);
+  return commitLevers(user, parsed.levers, "lista completa reemplazada");
+}
+
+/** Crea o actualiza una sola prioridad sobre la lista vigente; las demás no se tocan. */
+export function setLever(user: SessionUser, input: unknown, prevId?: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const parsed = parseLevers([input]);
+  if (!parsed.ok || !parsed.levers?.length) return fail(422, parsed.ok ? "La prioridad llega vacía." : parsed.error);
+  const nueva = parsed.levers[0];
+  const actual = [...(cat().company.levers ?? [])].sort((a, b) => a.order - b.order);
+  const viejoId = (prevId ?? nueva.id).toUpperCase();
+  const idx = actual.findIndex((l) => l.id === viejoId);
+  if (nueva.id !== viejoId && actual.some((l) => l.id === nueva.id)) return fail(422, `Ya existe una prioridad con la sigla ${nueva.id}.`);
+  if (idx < 0 && actual.length >= 8) return fail(422, "Máximo ocho prioridades.");
+  const lista = idx >= 0 ? actual.map((l, i) => (i === idx ? { ...nueva, order: l.order } : l)) : [...actual, { ...nueva, order: actual.length + 1 }];
+  return commitLevers(user, renumerar(lista), idx >= 0 ? `«${nueva.name}» actualizada` : `«${nueva.name}» añadida`);
+}
+
+/** Quita una prioridad; objetivos, KR e iniciativas que cuelgan de ella quedan sin prioridad hasta reasignarse. */
+export function removeLever(user: SessionUser, id: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const actual = [...(cat().company.levers ?? [])].sort((a, b) => a.order - b.order);
+  const l = actual.find((x) => x.id === id.toUpperCase());
+  if (!l) return fail(404, "La prioridad no existe (quizá alguien ya la quitó).");
+  const resto = renumerar(actual.filter((x) => x.id !== l.id));
+  return commitLevers(user, resto.length ? resto : undefined, `«${l.name}» eliminada`);
+}
+
+/** Reordena por siglas; las que no se nombran conservan su posición relativa al final. */
+export function reorderLevers(user: SessionUser, ids: unknown): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  if (!Array.isArray(ids)) return fail(422, "El orden debe ser una lista de siglas.");
+  const actual = [...(cat().company.levers ?? [])].sort((a, b) => a.order - b.order);
+  const orden = (ids as unknown[]).map((x) => String(x).toUpperCase());
+  const primero = orden.map((id) => actual.find((l) => l.id === id)).filter((l): l is Lever => !!l);
+  const resto = actual.filter((l) => !orden.includes(l.id));
+  return commitLevers(user, renumerar([...primero, ...resto]), "orden cambiado");
+}
+
+/** Vuelve a una versión del historial (la lista vigente queda, a su vez, en el historial). */
+export function restoreLevers(user: SessionUser, id: string): CatResult {
+  const denied = canCatalog(user); if (denied) return denied;
+  const v = getHistorialPalancas().find((x) => x.id === id);
+  if (!v) return fail(404, "Esa versión ya no está en el historial.");
+  const parsed = parseLevers(v.levers);
+  if (!parsed.ok) return fail(422, parsed.error);
+  return commitLevers(user, parsed.levers, `versión del ${v.at.slice(0, 16).replace("T", " ")} restaurada`);
 }
 
 /** Valida los horizontes de una empresa: 1–6, id corto y único, etiqueta y meses crecientes. */
