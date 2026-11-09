@@ -41,6 +41,17 @@ function fromMessage(message: string): ConfirmOptions {
   return { title: first.replace(/^¿|\?$/g, "").trim() ? first : "¿Confirmas?", body: rest.join(" ") || undefined, confirmLabel: label, danger };
 }
 
+/** Aviso común en las sesiones de acompañamiento: varias personas trabajan a la vez sobre los mismos componentes. */
+export const AVISO_CONCURRENCIA = "Ten en cuenta que algún otro directivo puede estar editando o trabajando este componente.";
+/** Confirmación estándar antes de guardar: qué se guarda («los cambios», «la decisión», «la meta»). */
+export function confirmarGuardar(que = "los cambios"): Promise<boolean> {
+  return confirmar({ title: `¿Guardar ${que}?`, body: `${AVISO_CONCURRENCIA} Tu cambio se aplica sobre la versión vigente y queda registrado en la auditoría con tu nombre.`, confirmLabel: "Guardar" });
+}
+/** Confirmación estándar antes de eliminar: qué se elimina y, si hace falta, qué consecuencia tiene. */
+export function confirmarEliminar(que: string, consecuencia?: string): Promise<boolean> {
+  return confirmar({ title: `¿Estás seguro de eliminar ${que}?`, body: `${AVISO_CONCURRENCIA}${consecuencia ? ` ${consecuencia}` : ""} No se puede deshacer.`, confirmLabel: "Eliminar", danger: true });
+}
+
 /** Diálogo de confirmación. Acepta el mismo texto que antes recibía window.confirm. */
 export function confirmar(message: string | ConfirmOptions): Promise<boolean> {
   const opts = typeof message === "string" ? fromMessage(message) : message;

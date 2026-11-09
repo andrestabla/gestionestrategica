@@ -13,7 +13,7 @@ import { useCatalog } from "@/components/catalog-context";
 import { leversOf } from "@/data/catalogo";
 import { vocabOf, estrategiaHref } from "@/lib/vocabulario";
 import { DIMS } from "@/data/mapa";
-import { avisar, confirmar } from "@/components/feedback";
+import { avisar, confirmar, confirmarGuardar } from "@/components/feedback";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
 import { DescargarDecisiones } from "@/components/descargar-decisiones";
 import { RevisionCapacidadesFocal, SEMAFORO_CLS, type RevisionBorrador } from "@/components/revision-capacidades";
@@ -75,6 +75,7 @@ export default function CapacidadesPage() {
   const cuenta = (e: Estado) => todas.filter((x) => estadoDe(x.id) === e).length;
 
   const guardar = async (iniId: string, r: RevisionBorrador) => {
+    if (!(await confirmarGuardar("la revisión de capacidades"))) return false;
     setSaving(true); setError(null);
     try {
       const res = await fetch("/api/td/capacidades", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ iniId, revision: r }) });

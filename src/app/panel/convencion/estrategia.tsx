@@ -39,7 +39,7 @@ import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
 import { CRITERIA, decisionLabel, validationLabel, validationCriteriaCount, type Decision } from "@/lib/priorizacion";
 import { Presentation, Target, Gauge, Rocket, Scale, Layers, Plus, Pencil, Loader2, Save, AlertTriangle, X, Download, RefreshCw, Users, CheckCircle2, Link2, QrCode, Copy, CalendarDays, Upload, Filter, Lock, ArrowUp, ArrowDown, Sparkles, BookOpen, HelpCircle, Trash2, History } from "lucide-react";
-import { confirmar, avisar } from "@/components/feedback";
+import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 
 type Tab = "itinerario" | "guia" | "prioridades" | "direccion" | "okr" | "iniciativas" | "priorizacion" | "portafolio";
 type TabDef = { id: Tab; label: string; icon: typeof Target; agenda: string };
@@ -109,10 +109,16 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
     return () => clearInterval(t);
   }, [tab, refetchPrio]);
 
-  const mutate = async (entity: string, op: string, data: unknown, extra?: Record<string, unknown>) => {
+  const mutate = async (entity: string, op: string, data: unknown, extra?: Record<string, unknown> & { confirmado?: boolean }) => {
+    const { confirmado, ...resto } = extra ?? {};
+    // en el acompañamiento cada guardado y cada borrado se confirma: varias personas trabajan a la vez sobre lo mismo
+    if (isAcompanamiento(v.catalog.company) && !confirmado) {
+      const ok = op === "delete" ? await confirmarEliminar("este elemento") : await confirmarGuardar();
+      if (!ok) return false;
+    }
     setSaving(true); setError(null);
     try {
-      const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, op, data, ...(extra ?? {}) }) });
+      const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, op, data, ...resto }) });
       if (!res.ok) { const msg = (await res.json().catch(() => null))?.error ?? `Error ${res.status}`; setError(msg); avisar(msg, "bad"); setSaving(false); return false; }
       await refetch(); setSaving(false); avisar(op === "delete" ? "Eliminado" : op === "restore" ? "Versión restaurada" : "Guardado"); return true;
     } catch { setError("No se pudo conectar con el servidor."); setSaving(false); return false; }
@@ -166,7 +172,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
   );
 }
 
-type Mutate = (entity: string, op: string, data: unknown, extra?: Record<string, unknown>) => Promise<boolean>;
+type Mutate = (entity: string, op: string, data: unknown, extra?: Record<string, unknown> & { confirmado?: boolean }) => Promise<boolean>;
 type Cat = ReturnType<typeof useCatalog>["catalog"];
 const useVocab = () => vocabOf(useCatalog().catalog.company);
 const Vb = (cat: Cat) => vocabOf(cat.company);
@@ -219,25 +225,26 @@ function PrioridadesTab({ cat, levers, canEdit, canDelete, saving, mutate }: { c
         </div>
       )}
       {open && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setOpen(false)} onSubmit={async (rows) => {
+        if (isAcompanamiento(cat.company) && !(await confirmarGuardar(`los cambios en la lista de ${V.leversLow}`))) return false;
         // operaciones por prioridad sobre la lista vigente del servidor: lo que otros guardaron entre tanto no se pierde
         const antes = [...levers].sort((a, b) => a.order - b.order);
         const ids = rows.map((r) => r.id.trim().toUpperCase());
-        for (const l of antes) if (!ids.includes(l.id)) { if (!(await mutate("lever", "delete", { id: l.id }))) return false; }
+        for (const l of antes) if (!ids.includes(l.id)) { if (!(await mutate("lever", "delete", { id: l.id }, { confirmado: true }))) return false; }
         for (const r of rows) {
           const previo = antes.find((l) => l.id === r.id.trim().toUpperCase());
-          if (!previo || previo.name !== r.name.trim() || (previo.ownerId ?? "") !== (r.ownerId ?? "")) { if (!(await mutate("lever", "upsert", { ...r, id: r.id.trim().toUpperCase(), name: r.name.trim(), ownerId: r.ownerId || undefined }))) return false; }
+          if (!previo || previo.name !== r.name.trim() || (previo.ownerId ?? "") !== (r.ownerId ?? "")) { if (!(await mutate("lever", "upsert", { ...r, id: r.id.trim().toUpperCase(), name: r.name.trim(), ownerId: r.ownerId || undefined }, { confirmado: true }))) return false; }
         }
-        if (antes.map((l) => l.id).join("|") !== ids.join("|")) { if (!(await mutate("levers", "order", { ids }))) return false; }
+        if (antes.map((l) => l.id).join("|") !== ids.join("|")) { if (!(await mutate("levers", "order", { ids }, { confirmado: true }))) return false; }
         setOpen(false); return true;
       }} />}
-      {historial && <HistorialPalancas onClose={() => setHistorial(false)} saving={saving} onRestore={async (id) => { const ok = await mutate("levers", "restore", { id }); if (ok) setHistorial(false); return ok; }} />}
-      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { const ok = await mutate("lever", "upsert", d, { prevId: editando.id }); if (ok) setEditando(null); return ok; }}
+      {historial && <HistorialPalancas onClose={() => setHistorial(false)} saving={saving} onRestore={async (id) => { const ok = await mutate("levers", "restore", { id }, { confirmado: true }); if (ok) setHistorial(false); return ok; }} />}
+      {editando && <LeverForm cat={cat} lever={editando} levers={levers} saving={saving} onCancel={() => setEditando(null)} onSubmit={async (d) => { if (isAcompanamiento(cat.company) && !(await confirmarGuardar(`la ${V.leverLow} «${editando.name}»`))) return false; const ok = await mutate("lever", "upsert", d, { prevId: editando.id, confirmado: true }); if (ok) setEditando(null); return ok; }}
         onDelete={canDelete ? async () => {
           const l = editando; const nObj = objs(l).length, nKr = krs(l).length, nIni = inis(l).length;
           const cuelga = [nObj ? `${nObj} objetivo${nObj === 1 ? "" : "s"}` : "", nKr ? `${nKr} KR` : "", nIni ? `${nIni} iniciativa${nIni === 1 ? "" : "s"}` : ""].filter(Boolean).join(", ");
-          const ok = await confirmar({ title: `¿Eliminar la ${V.leverLow} «${l.name}»?`, body: cuelga ? `De ella cuelgan ${cuelga}: no se borran, pero quedan sin ${V.leverLow} hasta que se reasignen. No se puede deshacer.` : "No tiene objetivos, resultados clave ni iniciativas asociados. No se puede deshacer.", confirmLabel: "Eliminar", danger: true });
+          const ok = await confirmarEliminar(`la ${V.leverLow} «${l.name}»`, cuelga ? `De ella cuelgan ${cuelga}: no se borran, pero quedan sin ${V.leverLow} hasta que se reasignen.` : "No tiene objetivos, resultados clave ni iniciativas asociados.");
           if (!ok) return;
-          const done = await mutate("lever", "delete", { id: l.id });
+          const done = await mutate("lever", "delete", { id: l.id }, { confirmado: true });
           if (done) setEditando(null);
         } : undefined} />}
     </>
@@ -513,7 +520,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
       )}
       {open && <ObjectiveForm cat={cat} levers={levers} horizons={horizons} initial={editing} preset={editing ? undefined : (open as { lever?: string; horizon?: string })} saving={saving}
         onCancel={() => setOpen(null)} onSubmit={async (d) => { const ok = await mutate("objective", "upsert", editing ? { id: editing.id, ...d } : d); if (ok) { setOpen(null); if (editing) void revalidarObj(editing.id); } return ok; }}
-        onDelete={editing ? async () => { if (await confirmar(`¿Eliminar el objetivo ${editing.id}?`)) { const ok = await mutate("objective", "delete", { id: editing.id }); if (ok) setOpen(null); } } : undefined} />}
+        onDelete={editing ? async () => { if (await confirmarEliminar(`el objetivo ${editing.id}`)) { const ok = await mutate("objective", "delete", { id: editing.id }, { confirmado: true }); if (ok) setOpen(null); } } : undefined} />}
       {leversOpen && <LeversForm cat={cat} initial={levers} saving={saving} onCancel={() => setLeversOpen(false)} onSubmit={async (d) => { const ok = await mutate("levers", "upsert", d); if (ok) setLeversOpen(false); return ok; }} />}
     </>
   );
@@ -875,6 +882,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
           const { krs, ...data } = d as Record<string, unknown> & { krs?: KrSugerido[] };
           const body = { ...data, ...(editingObj ? { id: editingObj.id } : {}), okr: !acomp, horizon };
           if (!krs?.length) { const ok = await mutate("objective", "upsert", body); if (ok) setObj(null); return ok; }
+          if (acomp && !(await confirmarGuardar(`el objetivo${krs.length ? ` y sus ${krs.length} resultados clave` : ""}`))) return false;
           const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "objective", op: "upsert", data: body }) });
           const j = await res.json().catch(() => null);
           if (!res.ok || !j?.id) { window.alert(j?.error ?? `Error ${res.status}`); return false; }
@@ -882,10 +890,10 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
           const ok = await crearKrs(cat, j.id, String(data.lever), tribeId, horizon, krs, mutate, j.view?.catalog?.kpis);
           if (ok) setObj(null); return ok;
         }}
-        onDelete={editingObj && keyResultsOf(cat, editingObj).length === 0 ? async () => { if (await confirmar(`¿Eliminar el objetivo ${editingObj.id}?`)) { const ok = await mutate("objective", "delete", { id: editingObj.id }); if (ok) setObj(null); } } : undefined} />}
+        onDelete={editingObj && keyResultsOf(cat, editingObj).length === 0 ? async () => { if (await confirmarEliminar(`el objetivo ${editingObj.id}`)) { const ok = await mutate("objective", "delete", { id: editingObj.id }, { confirmado: true }); if (ok) setObj(null); } } : undefined} />}
       {kr && <KrForm cat={cat} obj={kr.obj} initial={kr.kpi} saving={saving} onCancel={() => setKr(null)}
         onSubmit={async (d) => { const ok = await mutate("kpi", "upsert", d); if (ok) setKr(null); return ok; }}
-        onDelete={kr.kpi ? async () => { if (await confirmar(`¿Eliminar el resultado clave ${kr.kpi!.code}?`)) { const ok = await mutate("kpi", "delete", { code: kr.kpi!.code }); if (ok) setKr(null); } } : undefined} />}
+        onDelete={kr.kpi ? async () => { if (await confirmarEliminar(`el resultado clave ${kr.kpi!.code}`)) { const ok = await mutate("kpi", "delete", { code: kr.kpi!.code }, { confirmado: true }); if (ok) setKr(null); } } : undefined} />}
     </>
   );
 }
@@ -1135,7 +1143,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", d); if (ok) setNueva(false); return ok; }} />}
       {edit && <InitiativeForm cat={cat} horizon={edit.horizon} initial={edit} defaultOwner={defaultOwner} lockOwner={!!scope} scope={scope} saving={saving} onCancel={() => setEdit(null)}
         onSubmit={async (d) => { const ok = await mutate("initiative", "upsert", { ...edit, ...d }); if (ok) { setEdit(null); void revalidar(edit.id); } return ok; }}
-        onDelete={async () => { if (await confirmar(`¿Eliminar la iniciativa «${edit.name}»?`)) { const ok = await mutate("initiative", "delete", { id: edit.id }); if (ok) setEdit(null); } }} />}
+        onDelete={async () => { if (await confirmarEliminar(`la iniciativa «${edit.name}»`)) { const ok = await mutate("initiative", "delete", { id: edit.id }, { confirmado: true }); if (ok) setEdit(null); } }} />}
       {link && (() => {
         const ini = cat.initiatives.find((i) => i.id === link)!;
         return (
@@ -1992,6 +2000,7 @@ function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { ca
   const startOf = (id: string) => cat.initiatives.find((i) => i.id === id)?.start ?? "";
   const setStart = async (id: string, start: string) => {
     const ini = cat.initiatives.find((i) => i.id === id); if (!ini) return;
+    if (isAcompanamiento(cat.company) && !(await confirmarGuardar(`el trimestre de inicio de «${ini.name}»`))) return;
     setBusy(true); setErr(null);
     const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
     const j = await res.json().catch(() => null); setBusy(false);

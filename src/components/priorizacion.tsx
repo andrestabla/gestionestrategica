@@ -16,7 +16,7 @@ import {
   type Consolidated, type CriterionKey, type Decision, type Evaluation, type Level, type TypeMark, type TypeRule, type TypeMarks, FUERA_LABEL, type FueraDelOrden } from "@/lib/priorizacion";
 import type { Catalog } from "@/data/catalogo";
 import { Loader2, Save, AlertTriangle, X, Scale, Users, Gavel, Info, CheckCircle2, Trash2 } from "lucide-react";
-import { confirmar, avisar } from "@/components/feedback";
+import { confirmar, avisar, confirmarGuardar, AVISO_CONCURRENCIA } from "@/components/feedback";
 import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { pedirPantallaCompleta } from "@/components/modo-focal";
 
@@ -99,7 +99,7 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const canUndo = useCan("undo_any");
   // el administrador deshace: borra la evaluación de una persona o deja la iniciativa sin decisión
   const deshacer = async (body: Record<string, unknown>, pregunta: string) => {
-    if (!(await confirmar(pregunta))) return;
+    if (!(await confirmar({ title: pregunta, body: `${AVISO_CONCURRENCIA} No se puede deshacer.`, confirmLabel: "Eliminar", danger: true }))) return;
     setSaving(true); setError(null);
     const res = await fetch("/api/td/priorizacion", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: iniId, ...body }) });
     if (!res.ok) setError((await res.json()).error ?? "No se pudo deshacer");
@@ -111,7 +111,9 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   // convención: trimestre de inicio (propuesto por la tribu, ratificado por el directorio) en lugar del horizonte
   const INICIO = startQuarters(yearOfFirstHorizon(horizonsOf(cv.catalog.company))).map(([v, l]) => [v, l === "Después" ? l : `${l} ${v.slice(0, 4)}`] as const);
   const setStart = async (start: string) => {
-    if (!ini) return; setSaving(true); setError(null);
+    if (!ini) return;
+    if (cv.catalog.company.mode === "acompanamiento" && !(await confirmarGuardar("el trimestre de inicio"))) return;
+    setSaving(true); setError(null);
     const res = await fetch("/api/td/catalogo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "initiative", op: "upsert", data: { ...ini, start, end: start > (ini.end || "") ? start : ini.end } }) });
     if (!res.ok) setError((await res.json().catch(() => ({}))).error ?? "Error al guardar"); else await refetchCatalog();
     setSaving(false);
@@ -121,6 +123,8 @@ export function MatrizPanel({ iniId, line, horizon }: { iniId: string; line: num
   const [evaluando, setEvaluando] = useState(false);   // evaluación en modo focal, un criterio por pantalla
 
   const post = async (body: Record<string, unknown>) => {
+    // la decisión de tiempo se confirma (la calificación ya pide su propia confirmación al registrarse)
+    if (body.decision !== undefined && cv.catalog.company.mode === "acompanamiento" && !(await confirmarGuardar("la decisión de tiempo"))) return false;
     setSaving(true); setError(null);
     const res = await fetch("/api/td/priorizacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: iniId, ...body }) });
     if (!res.ok) setError((await res.json()).error ?? "Error al guardar");

@@ -11,7 +11,7 @@ import { useCan, useUser } from "@/components/user-context";
 import { useCatalog } from "@/components/catalog-context";
 import { leversOf, horizonsOf } from "@/data/catalogo";
 import { vocabOf, yearOfFirstHorizon } from "@/lib/vocabulario";
-import { confirmar, avisar } from "@/components/feedback";
+import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import { AyudaMetodologica } from "@/components/ayuda-metodologica";
 import { DescargarDecisiones } from "@/components/descargar-decisiones";
 import { trimestresDe, trimestreLabel, cicloTrimestre, interdependencias, arbolCascada, METAS_ESTADOS, HITO_ESTADOS, type MetaTrimestral, type Hito, type Dependencia, type MetaEstado, type Articulacion, type AreaArticulada, type NodoIniciativa } from "@/lib/cascada";
@@ -57,7 +57,9 @@ export default function CascadaPage() {
   const load = useCallback(() => fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then(aplicar).catch(() => setMetas([])), [aplicar]);
   useEffect(() => { let alive = true; fetch("/api/td/cascada").then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive) aplicar(j); }).catch(() => { if (alive) setMetas([]); }); return () => { alive = false; }; }, [aplicar]);
 
-  const post = async (body: Record<string, unknown>, okMsg: string) => {
+  const post = async (body: Record<string, unknown>, okMsg: string, confirmado = false) => {
+    // cada guardado se confirma: varias áreas trabajan la cascada a la vez (las acciones con su propio diálogo ya vienen confirmadas)
+    if (!confirmado && body.op !== "delete" && !(await confirmarGuardar(body.op === "articulacion" ? "la articulación entre áreas" : body.op === "cerrar" ? "el cierre del trimestre" : "la meta trimestral"))) return false;
     setBusy(true);
     try {
       const res = await fetch("/api/td/cascada", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -78,7 +80,7 @@ export default function CascadaPage() {
   const years = useMemo(() => [...new Set([yearBase, yearBase + 1, ...(metas ?? []).map((m) => Number(m.quarter.slice(0, 4)))])].sort(), [metas, yearBase]);
 
   const nueva = (pre?: Partial<Draft>) => setEdit({ quarter, areaId: user.role === "RESPONSABLE" && user.responsibleId ? user.responsibleId : (areas[0]?.id ?? ""), lever: lever || levers[0]?.id || "", meta: "", criterio: "", hitos: [], depende: [], estado: "PLANEADA", ...pre });
-  const borrar = async (m: MetaTrimestral) => { if (await confirmar(`¿Eliminar la meta «${m.meta.slice(0, 60)}» de ${areaName(m.areaId)}?`)) await post({ op: "delete", id: m.id }, "Meta eliminada."); };
+  const borrar = async (m: MetaTrimestral) => { if (await confirmarEliminar(`la meta «${m.meta.slice(0, 60)}» de ${areaName(m.areaId)}`)) await post({ op: "delete", id: m.id }, "Meta eliminada.", true); };
   const arbol = arbolCascada({ levers, objectives: cat.objectives, kpis: cat.kpis, initiatives: cat.initiatives, metas: metas ?? [], articulaciones, decisions, year, soloPortafolio: true });
   const puedeArticular = (ini: NodoIniciativa) => canAll || (user.role === "RESPONSABLE" && user.responsibleId === ini.ownerId);
   const guardarArticulacion = async (iniId: string, areas: AreaArticulada[]) => { if (await post({ op: "articulacion", iniId, data: { areas } }, "Articulación guardada.")) setArtIni(null); };
@@ -101,7 +103,7 @@ export default function CascadaPage() {
   };
   const proponer = async () => {
     if (!(await confirmar({ title: `Proponer la cascada ${year} desde el portafolio`, body: "Se crea una meta por cada iniciativa articulada del año y por cada área que participa, en su trimestre de inicio, con la contribución del área como meta. Las iniciativas sin articulación se omiten; las metas que ya existen no se duplican; después se ajusta cada una.", confirmLabel: "Proponer" }))) return;
-    await post({ op: "proponer", year }, "Cascada propuesta desde el portafolio.");
+    await post({ op: "proponer", year }, "Cascada propuesta desde el portafolio.", true);
   };
 
   return (
