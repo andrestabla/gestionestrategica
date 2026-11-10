@@ -10,7 +10,7 @@
 //   /panel/admin/integraciones  → OpenAI · Cloudflare R2 · AWS SES
 //   /panel/admin/branding       → identidad de la plataforma (aplicada en vivo)
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader, Card, CardHeader, Modal, StatCard , ResponsiveTable } from "@/components/ui";
 import { AccessChip, useCan, useUser } from "@/components/user-context";
@@ -24,7 +24,7 @@ import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles } from "lucide-react"
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
 
@@ -58,6 +58,10 @@ function ActividadTab() {
   const q = filtro.trim().toLowerCase();
   const lista = events.filter((e) => (!rol || e.role === rol) && (!q || `${e.actor} ${e.email} ${e.change} ${e.entityId}`.toLowerCase().includes(q)));
   const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  // el día de cada acción, en la hora local de quien consulta: en la fila (corto) y como separador entre días (completo)
+  const diaCorto = (iso: string) => new Date(iso).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "").replace(",", "").replace(" de ", " ");
+  const diaLargo = (iso: string) => { const t = new Date(iso).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); return t[0].toUpperCase() + t.slice(1); };
+  const claveDia = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
   const ahora = at ? Date.parse(at) : 0;   // la hora la pone el servidor en cada carga (nada impuro en el render)
   const ultimos10 = events.filter((e) => ahora - Date.parse(e.at) < 10 * 60_000).length;
   return (
@@ -66,7 +70,7 @@ function ActividadTab() {
         <StatCard label="Personas activas" value={activeUsers} foot="con alguna acción en los últimos 10 min" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Acciones · 10 min" value={ultimos10} foot="registradas en la base" />
         <StatCard label="Acciones cargadas" value={events.length} foot="las 300 más recientes" />
-        <Card className="rise p-4"><div className="label !text-[11px]">Actualizado</div><div className="num mt-1 text-[20px] font-extrabold text-ink">{at ? hora(at) : "—"}</div><div className="text-[12px] text-faint">{vivo ? "cada 10 segundos" : "en pausa"}</div></Card>
+        <Card className="rise p-4"><div className="label !text-[11px]">Actualizado</div><div className="num mt-1 text-[20px] font-extrabold text-ink">{at ? hora(at) : "—"}</div><div className="text-[12px] text-faint">{at ? `${diaCorto(at)} · ` : ""}{vivo ? "cada 10 segundos" : "en pausa"}</div></Card>
       </div>
       <Card className="rise p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-3">
@@ -80,7 +84,7 @@ function ActividadTab() {
         {verif.r && (
           <div className="mt-3">
             <p className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold text-ink" style={{ background: `color-mix(in srgb, var(${verif.r.ok ? "--ok" : "--bad"}) 10%, var(--surface))` }}>
-              {verif.r.ok ? "Todo lo que se ve en pantalla está guardado en la base." : "Hay diferencias entre lo que se ve y lo guardado: revisa el detalle y vuelve a guardar esos elementos."} <span className="font-normal text-muted">Verificado a las {hora(verif.r.at)}.</span>
+              {verif.r.ok ? "Todo lo que se ve en pantalla está guardado en la base." : "Hay diferencias entre lo que se ve y lo guardado: revisa el detalle y vuelve a guardar esos elementos."} <span className="font-normal text-muted">Verificado el {diaCorto(verif.r.at)} a las {hora(verif.r.at)}.</span>
             </p>
             <ul className="mt-2 grid gap-x-6 gap-y-1 text-[12px] sm:grid-cols-2">
               {verif.r.secciones.map((x) => (
@@ -100,12 +104,19 @@ function ActividadTab() {
         {error && <p className="px-5 py-3 text-[12px] text-bad">{error}</p>}
         {lista.length === 0 && !error && <p className="px-5 py-6 text-[12.5px] text-muted">Sin actividad todavía{q || rol ? " con ese filtro" : ""}.</p>}
         <ul className="divide-y divide-line">
-          {lista.map((e) => (
-            <li key={e.id} className="grid grid-cols-[64px_1fr] gap-x-3 gap-y-0.5 px-4 py-2 text-[12px] sm:grid-cols-[72px_200px_1fr] sm:px-5">
-              <span className="num text-[12px] text-faint">{hora(e.at)}</span>
+          {lista.map((e, n) => (
+            <Fragment key={e.id}>
+            {(n === 0 || claveDia(lista[n - 1].at) !== claveDia(e.at)) && (
+              <li className="flex items-center gap-2 bg-surface-2/70 px-4 py-1.5 text-[12px] font-bold text-ink sm:px-5">
+                <CalendarDays size={12} className="text-faint" /> {diaLargo(e.at)} <span className="num font-normal text-faint">· {lista.filter((x) => claveDia(x.at) === claveDia(e.at)).length} acciones</span>
+              </li>
+            )}
+            <li className="grid grid-cols-[84px_1fr] gap-x-3 gap-y-0.5 px-4 py-2 text-[12px] sm:grid-cols-[96px_200px_1fr] sm:px-5">
+              <span className="num text-[12px] leading-snug text-faint"><span className="block font-semibold text-muted">{diaCorto(e.at)}</span>{hora(e.at)}</span>
               <span className="min-w-0 truncate"><span className="font-semibold text-ink">{e.actor}</span> <span className="chip !py-0 text-[11px]">{ROLE_SHORT[e.role] ?? e.role}</span><span className="num block truncate text-[12px] text-faint sm:hidden">{e.email}</span></span>
               <span className="col-start-2 min-w-0 text-ink-soft sm:col-start-3"><span className="num mr-1 text-[12px] text-faint">{e.entityId}</span>{e.change}</span>
             </li>
+            </Fragment>
           ))}
         </ul>
       </Card>
