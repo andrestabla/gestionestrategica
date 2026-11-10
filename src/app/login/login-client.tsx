@@ -7,8 +7,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlgoritmoMark } from "@/components/logo";
-import { LogIn, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, LogIn, Loader2 } from "lucide-react";
 import { MarcaGE, DESARROLLADO_POR } from "@/components/logo";
 
 type Branding = {
@@ -28,6 +28,11 @@ type Branding = {
   backgroundImages: string[]; panelImages: string[];
   loader: string | null; loaderText: string; showLoaderText: boolean;
 };
+
+/** Titular del sitio público: es el del acceso mientras la empresa no escriba uno propio. */
+const TITULAR = "De la estrategia declarada a la estrategia cumplida.";
+const LEMA = "Estrategia · Priorización · Proyectos · Inteligencia";
+const titularSitio = <>De la estrategia <span className="text-white/60">declarada</span> a la estrategia <span style={{ color: "#F1BA5B" }}>cumplida</span>.</>;
 
 const pick = <T,>(xs: T[] | undefined): T | null => (xs?.length ? xs[Math.floor(Math.random() * xs.length)] : null);
 
@@ -119,10 +124,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           // eslint-disable-next-line @next/next/no-img-element
           <img src={(b!.logoDark ?? b!.logoLight)!} alt="" className="h-8 max-w-[200px] object-contain" />
         ) : (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <MarcaGE oscura alto="32px" />
-          </>
+          <MarcaGE oscura firma={false} alto="32px" />
         )}
         {b?.showPlatformName && !b?.logoDark && !b?.logoLight && b.platformName !== "Gestión estratégica" && (
           <span className="font-mono text-[12px] uppercase tracking-[0.18em] text-white/60">
@@ -133,10 +135,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       <div>
         {(b?.showHeroTitle ?? true) && (
           <h1 className="mt-4 max-w-[20ch] text-[34px] font-extrabold leading-[1.15] tracking-tight text-white">
-            {b ? b.heroTitle : (
-              <>Plataforma de gestión estratégica{" "}
-                <span style={{ color: "#F1BA5B" }}>de 4Shine Empresas</span></>
-            )}
+            {b && b.heroTitle !== TITULAR ? b.heroTitle : titularSitio}
           </h1>
         )}
         {heroMsg && (
@@ -147,7 +146,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
         )}
       </div>
       <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/60">
-        {b?.showHeroSupport && b.heroSupport ? b.heroSupport : (b?.tagline ?? "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.")}
+        {b?.showHeroSupport && b.heroSupport ? b.heroSupport : (b?.tagline ?? LEMA)}
       </div>
     </div>
   );
@@ -161,8 +160,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           <img src={b.logoLight} alt="" className="h-9 max-w-[220px] object-contain" />
         ) : (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <MarcaGE oscura={false} alto="32px" />
+            <MarcaGE oscura={false} firma={false} alto="32px" />
             {b?.showPlatformName && b.platformName !== "Gestión estratégica" && (
               <span className="text-[15px] font-extrabold text-ink">{b.platformName}</span>
             )}
@@ -250,7 +248,10 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           </div>
         )}
       </div>
-      <p className="mt-8 border-t border-line pt-4 text-[12px] text-faint">{DESARROLLADO_POR}</p>
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line pt-4 text-[12px] text-faint">
+        <span>{DESARROLLADO_POR}</span>
+        <Link href="/" className="inline-flex items-center gap-1.5 font-semibold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Volver al sitio</Link>
+      </div>
     </div>
   );
 

@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { hydrateCompanies, companyBySlug } from "@/server/store";
 import { LoginClient, type LoginCompany } from "./login-client";
+
+export const metadata: Metadata = { title: "Iniciar sesión · Gestión estratégica" };
 
 // /login (admin y acceso genérico) y /<empresa>/login (acceso de esa empresa:
 // el proxy reescribe la ruta y deja la empresa en la cabecera x-tenant).

@@ -3792,11 +3792,18 @@ export type Branding = {
   customCss: string;
 };
 
+// Textos del acceso anteriores al sitio público: si una empresa todavía los tiene
+// guardados, se leen como los vigentes (no nombran el método ni su firma).
+const BRANDING_ANTERIOR: Partial<Record<keyof Branding, string>> = {
+  heroTitle: "Plataforma de gestión estratégica de 4Shine Empresas",
+  tagline: "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.",
+};
+
 export const DEFAULT_BRANDING: Branding = {
   platformName: "Gestión estratégica", showPlatformName: true,
   institutionName: "Andina Suministros",
   shortName: "Andina",
-  tagline: "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.",
+  tagline: "Estrategia · Priorización · Proyectos · Inteligencia",
   logoLight: null, logoDark: null, favicon: null,
   timezone: "America/Bogota",
   primary: "#0D1B2A", secondary: "#08111c", accent: "#8a6d1f",
@@ -3805,7 +3812,7 @@ export const DEFAULT_BRANDING: Branding = {
   loginTitle: "Iniciar sesión", showLoginTitle: true,
   loginWelcome: "Entra con la cuenta que te asignó el advisor de tu empresa.", showLoginWelcome: true,
   loginSupport: "Soporte: soporte@algoritmot.com", showLoginSupport: false,
-  heroTitle: "Plataforma de gestión estratégica de 4Shine Empresas", showHeroTitle: true,
+  heroTitle: "De la estrategia declarada a la estrategia cumplida.", showHeroTitle: true,
   heroMessages: [], showHeroMessages: true,
   heroSupport: "", showHeroSupport: false,
   overlayColor: "#0d1830", overlayOpacity: 55,
@@ -3833,6 +3840,11 @@ const branding = () => {
   for (const [k, v] of Object.entries(DEFAULT_BRANDING)) {
     if ((gb.branding as Record<string, unknown>)[k] === undefined) {
       (gb.branding as Record<string, unknown>)[k] = structuredClone(v);
+    }
+  }
+  for (const [k, viejo] of Object.entries(BRANDING_ANTERIOR)) {
+    if ((gb.branding as Record<string, unknown>)[k] === viejo) {
+      (gb.branding as Record<string, unknown>)[k] = DEFAULT_BRANDING[k as keyof Branding];
     }
   }
   return gb.branding;
