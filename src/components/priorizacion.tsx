@@ -47,10 +47,11 @@ export function HorizonHint({ current, suggested, company, compact = false }: {
 
 export function usePriorizacion(iniId?: string) {
   const [data, setData] = useState<PriorizacionData | null>(null);
+  const [at, setAt] = useState<number | null>(null);   // hora de la última lectura que llegó bien (para «en vivo»)
   const refetch = useCallback(async () => {
     try {
-      const res = await fetch(`/api/td/priorizacion${iniId ? `?id=${iniId}` : ""}`);
-      if (res.ok) setData(await res.json());
+      const res = await fetch(`/api/td/priorizacion${iniId ? `?id=${iniId}` : ""}`, { cache: "no-store" });
+      if (res.ok) { setData(await res.json()); setAt(Date.now()); }
     } catch { /* sin red: la ficha sigue mostrándose */ }
   }, [iniId]);
   useEffect(() => {
@@ -58,11 +59,11 @@ export function usePriorizacion(iniId?: string) {
     let alive = true;
     fetch(`/api/td/priorizacion${iniId ? `?id=${iniId}` : ""}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (alive && j) setData(j); })
+      .then((j) => { if (alive && j) { setData(j); setAt(Date.now()); } })
       .catch(() => { /* sin red */ });
     return () => { alive = false; };
   }, [iniId]);
-  return { data, refetch };
+  return { data, refetch, at };
 }
 
 const SCORE_COLOR = (s: number) => s >= 80 ? "var(--ok)" : s >= 65 ? "var(--cyan-deep)" : s >= 50 ? "var(--warn)" : "var(--bad)";

@@ -102,14 +102,19 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
   const [qr, setQr] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: prio, refetch: refetchPrio } = usePriorizacion();
+  const { data: prio, refetch: refetchPrio, at: prioAt } = usePriorizacion();
 
-  // en vivo: la priorización se refresca sola mientras se proyecta
+  // en vivo: calificaciones y decisiones se leen cada 5 s mientras la pestaña está a la vista, y al volver a ella.
+  // En Portafolio también se trae el catálogo (iniciativas nuevas, vínculos, responsables) cada 15 s: ahí no hay formularios abiertos.
   useEffect(() => {
     if (tab !== "priorizacion" && tab !== "portafolio") return;
-    const t = setInterval(() => { void refetchPrio(); }, 15_000);
-    return () => clearInterval(t);
-  }, [tab, refetchPrio]);
+    const visible = () => document.visibilityState === "visible";
+    const t = setInterval(() => { if (visible()) void refetchPrio(); }, PRIO_VIVO_MS);
+    const tc = tab === "portafolio" ? setInterval(() => { if (visible()) void refetch(); }, 15_000) : null;
+    const alVolver = () => { if (visible()) { void refetchPrio(); if (tab === "portafolio") void refetch(); } };
+    document.addEventListener("visibilitychange", alVolver); window.addEventListener("focus", alVolver);
+    return () => { clearInterval(t); if (tc) clearInterval(tc); document.removeEventListener("visibilitychange", alVolver); window.removeEventListener("focus", alVolver); };
+  }, [tab, refetchPrio, refetch]);
 
   const mutate = async (entity: string, op: string, data: unknown, extra?: Record<string, unknown> & { confirmado?: boolean }) => {
     const { confirmado, ...resto } = extra ?? {};
@@ -169,7 +174,7 @@ export function EstrategiaPage({ seccion }: { seccion?: EstrategiaTab } = {}) {
       {tab === "okr" && <OkrTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} scope={tribeScope} myTribe={me.responsibleId} saving={saving} mutate={mutate} base={base} />}
       {tab === "iniciativas" && <IniciativasTab cat={cat} levers={levers} horizon={first} canEdit={canEdit} canCreate={canCreate} scope={tribeScope} myTribe={me.responsibleId} me={me.email} saving={saving} mutate={mutate} base={base} defaultOwner={me.responsibleId} />}
       {tab === "priorizacion" && <PriorizacionTab cat={cat} levers={levers} prio={prio} base={base} onRefresh={() => void refetchPrio()} onCatalogRefresh={() => void refetch()} me={me} />}
-      {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} />}
+      {tab === "portafolio" && <PortafolioTab cat={cat} levers={levers} horizons={horizons.map((h) => h.id)} prio={prio} base={base} at={prioAt} onRefresh={() => { void refetchPrio(); void refetch(); }} />}
     </div>
   );
 }
@@ -1458,7 +1463,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <select value={sel} onChange={(e) => setSel(e.target.value)} className="input w-full !py-1.5 pr-7 !text-[12px] sm:w-auto sm:max-w-[360px]"><option value="">{mode === "tribu" ? (acomp ? V.leversAll : V.groupsAll) : "Todos los resultados clave"}</option>{groupDefs.filter((g) => g.key).map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}</select>
         <label className="flex items-center gap-1.5 text-[12px] text-muted">Evaluadores esperados <input type="number" min={1} max={20} value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value) || 1))} className="input w-14 !py-1 text-center !text-[12px]" /></label>
         <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
-        <span className="text-[12px] text-faint">se refresca cada 15 s</span>
+        <span className="text-[12px] text-faint">se refresca cada {PRIO_VIVO_MS / 1000} s</span>
       </div>
       {fuera.length > 0 && (
         <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>
@@ -1573,7 +1578,10 @@ const PORT_STATUS: { key: PortStatus; label: string }[] = [
 const matchStatus = (r: PortRow, st: PortStatus) =>
   st === "" ? true : st === "PENDIENTE" ? !r.decision : st === "TACTICA" ? r.c.transfer : st === "SIN_DUENO" ? !r.ownerId : st === "SIN_KR" ? !r.kpi : st === "SIN_EVAL" ? r.c.n === 0 : r.decision === st;
 
-function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers: Lever[]; horizons: string[]; prio: PriorizacionData | null; base: string }) {
+/** Cada cuánto se leen calificaciones y decisiones en Priorización y Portafolio mientras la pestaña está a la vista. */
+const PRIO_VIVO_MS = 5_000;
+
+function PortafolioTab({ cat, levers, horizons, prio, base, at, onRefresh }: { cat: Cat; levers: Lever[]; horizons: string[]; prio: PriorizacionData | null; base: string; at: number | null; onRefresh: () => void }) {
   const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   // el portafolio parte del 100 % de las iniciativas del catálogo; el ranking consolidado se superpone cuando llega
   const all: PortRow[] = useMemo(() => cat.initiatives.filter((i) => pasaAPriorizacion(cat, i)).map((i) => {
@@ -1598,6 +1606,12 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
   const gLabel = (g: string) => convencion ? (levers.find((l) => l.id === g)?.name ?? `Sin ${V.leverLow}`) : (g ? horizonLabel(cat.company, g) : "Sin horizonte");
   const sum = portfolioSummary(convencion ? rows.map((r) => ({ ...r, horizon: r.leverId ?? "" })) : rows, groups);
   const tactical = rows.filter((r) => r.c.transfer);
+  // avance de la calificación, en vivo: cuántas iniciativas tienen ya al menos una calificación y cuántas calificaciones hay
+  const calificadasDe = (g: string) => { const gr = rows.filter((r) => gKey(r) === g); return { con: gr.filter((r) => r.c.n > 0).length, total: gr.length }; };
+  const idsFila = new Set(rows.map((r) => r.id));
+  const evalsFila = (prio?.evaluations ?? []).filter((e) => idsFila.has(e.iniId));
+  const evaluadores = new Set(evalsFila.map((e) => e.by)).size;
+  const conDecision = rows.filter((r) => r.decision).length;
   const DEC: (Decision | "PENDIENTE")[] = ["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR", "PENDIENTE"];
   const label = (d: Decision | "PENDIENTE") => d === "PENDIENTE" ? "Pendiente" : decisionLabel(d);
   const download = () => {
@@ -1611,6 +1625,17 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
         {acomp && <DescargarDecisiones modulo="portafolio" />}
         <p className="text-[12.5px] text-muted">{acomp ? `El portafolio se lee por ${V.leverLow} y ${V.groupLow}. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa.` : convencion ? "Todas las iniciativas se desarrollan en 2027: el portafolio se lee por palanca y tribu. Aprobar, condicionar, posponer o descartar; las decisiones se registran en la ficha de cada iniciativa." : "Separar la naturaleza de la apuesta (horizonte), la fecha de inicio y el momento de captura de valor; aprobar, condicionar, posponer o descartar. Las decisiones se registran en la ficha de cada iniciativa."}</p>
         {!acomp && <button onClick={download} className="btn-ghost w-full justify-center btn-sm text-[12px] sm:ml-auto sm:w-auto"><Download size={12} /> Exportar CSV{filtered ? ` (${rows.length})` : ""}</button>}
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-[12px]" aria-live="polite">
+        <span className="chip chip-ok !py-0.5"><span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--ok)" }} /> En vivo</span>
+        <span className="num text-muted">{at ? `Actualizado a las ${new Date(at).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : "Cargando…"} · se actualiza solo cada {PRIO_VIVO_MS / 1000} s</span>
+        <button type="button" onClick={onRefresh} className="btn-ghost btn-sm ml-auto text-[12px]"><RefreshCw size={12} /> Actualizar ahora</button>
+      </div>
+      <div className={`mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4 ${prio ? "" : "hidden"}`}>
+        <StatCard label="Iniciativas calificadas" value={rows.filter((r) => r.c.n > 0).length} unit={`de ${rows.length}`} foot="con al menos una calificación" accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
+        <StatCard label="Calificaciones registradas" value={evalsFila.length} foot={`${evaluadores} evaluador${evaluadores === 1 ? "" : "es"} activo${evaluadores === 1 ? "" : "s"}`} />
+        <StatCard label="Con decisión de tiempo" value={conDecision} unit={`de ${rows.length}`} foot="implementar, preparar, backlog o renunciar" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
+        <StatCard label="Pendientes de decisión" value={rows.length - conDecision} unit={`de ${rows.length}`} foot="aún sin decisión del comité" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
       <Card className="rise mb-5 overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
@@ -1634,15 +1659,15 @@ function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers
           {groups.map((h) => (
             <div key={h} className="rounded-xl bg-surface-2/60 px-3 py-2">
               <div className="flex items-baseline justify-between text-[12.5px]"><b className="text-ink">{gLabel(h)}</b><span className="num text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)} iniciativas</span></div>
-              <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-muted">{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
+              <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-muted"><span>Calificadas <b className="text-ink">{calificadasDe(h).con} de {calificadasDe(h).total}</b></span>{DEC.map((d) => <span key={d}>{label(d)} <b className="text-ink">{sum[h]?.[d] ?? 0}</b></span>)}</div>
             </div>
           ))}
         </div>
         <div className="hidden overflow-x-auto px-2 pb-3 sm:block">
-          <table className="w-full min-w-[560px] text-[12px]">
-            <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? V.lever : "Horizonte"}</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
+          <table className="w-full min-w-[640px] text-[12px]">
+            <thead><tr className="text-left text-[11px] uppercase tracking-wider text-faint"><th className="px-3 py-2">{convencion ? V.lever : "Horizonte"}</th><th className="num px-2 py-2 text-center">Calificadas</th>{DEC.map((d) => <th key={d} className="num px-2 py-2 text-center">{label(d)}</th>)}<th className="num px-2 py-2 text-right">Total</th></tr></thead>
             <tbody>
-              {groups.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{gLabel(h)}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
+              {groups.map((h) => <tr key={h} className="border-t border-line"><td className="px-3 py-2 font-bold text-ink">{gLabel(h)}</td><td className="num px-2 py-2 text-center text-muted"><b className="text-ink">{calificadasDe(h).con}</b> de {calificadasDe(h).total}</td>{DEC.map((d) => <td key={d} className="num px-2 py-2 text-center font-bold text-ink">{sum[h]?.[d] ?? 0}</td>)}<td className="num px-2 py-2 text-right text-muted">{DEC.reduce((a, d) => a + (sum[h]?.[d] ?? 0), 0)}</td></tr>)}
             </tbody>
           </table>
           <p className="px-3 pt-2 text-[12px] text-muted">
