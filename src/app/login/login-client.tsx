@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlgoritmoMark } from "@/components/logo";
 import { LogIn, Loader2 } from "lucide-react";
-import { MarcaGE } from "@/components/logo";
+import { MarcaGE, DESARROLLADO_POR } from "@/components/logo";
 
 type Branding = {
   platformName: string; showPlatformName: boolean;
@@ -250,6 +250,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           </div>
         )}
       </div>
+      <p className="mt-8 border-t border-line pt-4 text-[12px] text-faint">{DESARROLLADO_POR}</p>
     </div>
   );
 
