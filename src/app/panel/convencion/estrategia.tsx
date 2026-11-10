@@ -30,6 +30,7 @@ import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
+import { mejorSi } from "@/data/cmi";
 import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
@@ -704,7 +705,7 @@ function ObjectiveForm({ cat, levers, horizons, initial, preset, saving, onCance
                   <label key={n} className="flex cursor-pointer items-start gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
                     <input type="checkbox" checked={!!sug.chosen[n]} onChange={(e) => setSug({ ...sug, chosen: sug.chosen.map((c, m) => (m === n ? e.target.checked : c)) })} className="mt-0.5" />
                     <span className="min-w-0">
-                      <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span><Refs n={k.sources} />
+                      <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {mejorSi(k.goodDirection)} · {k.frequency}</span><Refs n={k.sources} />
                       {(k.formula || k.definition) && <span className="block text-[12px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
                       {k.why && <span className="block text-[12px] italic text-faint">{k.why}</span>}
                     </span>
@@ -989,7 +990,7 @@ function KrForm({ cat, obj, initial, saving, onCancel, onSubmit, onDelete }: { c
           <Field label="Línea base" help={KR_AYUDA.baseline}><input type="number" step="any" value={f.baseline} onChange={set("baseline")} className={`${INPUT} num`} /></Field>
           <Field label="Meta" help={KR_AYUDA.target}><input type="number" step="any" value={f.target} onChange={set("target")} className={`${INPUT} num`} /></Field>
           <Field label="Unidad" help={KR_AYUDA.unit}><input value={f.unit} onChange={set("unit")} className={INPUT} /></Field>
-          <Field label="Mejor si" help={KR_AYUDA.goodDirection}><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option></select></Field>
+          <Field label="Mejor si" help={KR_AYUDA.goodDirection}><select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}><option value="up">sube</option><option value="down">baja</option><option value="keep">se mantiene</option></select></Field>
         </div>
         {acompKr && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
@@ -1653,7 +1654,7 @@ const KR_AYUDA = {
   baseline: "El valor real de hoy, con fecha y fuente en la definición. Si aún no se conoce, no inventes un número: anota en la definición quién lo consigue y cuándo, y deja 0 mientras tanto (el KR quedará marcado como incompleto).",
   target: "El valor a alcanzar a 2027-T4: ambicioso pero alcanzable, coherente con el sentido (sube o baja), con el objetivo y con las metas de las otras prioridades. Debe ser distinto de la línea base.",
   unit: "En qué se mide: %, PDV, días, puntos, USD, clientes. La misma unidad para la línea base y la meta.",
-  goodDirection: "Sentido del indicador: «sube» cuando más es mejor (ventas, NPS, cobertura); «baja» cuando menos es mejor (rotación, días al punto de equilibrio, tiempo de espera).",
+  goodDirection: "Sentido del indicador: «sube» cuando más es mejor (ventas, NPS, cobertura); «baja» cuando menos es mejor (rotación, días al punto de equilibrio, tiempo de espera); «se mantiene» cuando el resultado es sostener un nivel ya alcanzado (una participación, un cumplimiento, una certificación): ahí la meta puede ser igual a la línea base.",
   ownerId: "Quien responde por el resultado y tiene autoridad para moverlo: la tribu o el líder de escuadrón. Un solo dueño por KR.",
   due: "Cuándo se cumple la meta: un año (2027) o un trimestre (2027-T4). En la convención todos los resultados clave cierran a 2027-T4.",
   frequency: "Cada cuánto se mide y se revisa: mensual para resultados operativos, trimestral para los de negocio; anual solo si no existe una fuente intermedia.",
@@ -2090,7 +2091,7 @@ function OkrCard({ okr }: { okr: OkrSugerido }) {
       <ol className="mt-1 space-y-1.5">
         {okr.krs.map((k, n) => (
           <li key={n} className="rounded-lg bg-surface-2/60 px-3 py-2 text-[12px]">
-            <div className="font-semibold text-ink">{n + 1}. {k.name} <span className="num font-normal text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span></div>
+            <div className="font-semibold text-ink">{n + 1}. {k.name} <span className="num font-normal text-muted">· {k.unit} · mejor si {mejorSi(k.goodDirection)} · {k.frequency}</span></div>
             {(k.formula || k.definition) && <div className="mt-0.5 text-[12px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</div>}
             {k.why && <div className="num mt-0.5 text-[12px] text-faint">{k.why}{k.target !== undefined && k.target !== null && !/→/.test(k.why) ? ` · meta sugerida ${k.target}` : ""}</div>}
           </li>
@@ -2173,7 +2174,7 @@ function KrChecklist({ krs, chosen, onToggle, onCrear, creando, nota }: { krs: K
         <label key={n} className={`flex items-start gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-[12px] ${onCrear ? "cursor-pointer" : ""}`}>
           {onCrear && <input type="checkbox" checked={!!chosen[n]} onChange={(e) => onToggle(n, e.target.checked)} className="mt-0.5" />}
           <span className="min-w-0">
-            <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {k.goodDirection === "down" ? "baja" : "sube"} · {k.frequency}</span><Refs n={k.sources} />
+            <span className="font-semibold text-ink">{k.name}</span> <span className="num text-muted">· {k.unit} · mejor si {mejorSi(k.goodDirection)} · {k.frequency}</span><Refs n={k.sources} />
             {(k.formula || k.definition) && <span className="block text-[12px] text-muted">{k.definition ? k.definition + " " : ""}{k.formula ? `Fórmula: ${k.formula}` : ""}</span>}
             {k.why && <span className="block text-[12px] italic text-faint">{k.why}</span>}
           </span>
@@ -2257,7 +2258,7 @@ function AsistenteKr({ cat, o, krs, tribeId, horizon, canEdit, mutate, onEditKr 
                 {e.propuesta && (
                   <div className="mt-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5">
                     <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{e.estado === "reemplazar" ? "Resultado clave que lo sustituye" : "Redacción sugerida"}</div>
-                    <div className="text-[12px] font-semibold text-ink">{e.propuesta.name}{e.propuesta.unit ? <span className="num font-normal text-muted"> · {e.propuesta.unit}{e.propuesta.goodDirection ? ` · mejor si ${e.propuesta.goodDirection === "down" ? "baja" : "sube"}` : ""}</span> : null}</div>
+                    <div className="text-[12px] font-semibold text-ink">{e.propuesta.name}{e.propuesta.unit ? <span className="num font-normal text-muted"> · {e.propuesta.unit}{e.propuesta.goodDirection ? ` · mejor si ${mejorSi(e.propuesta.goodDirection)}` : ""}</span> : null}</div>
                     {(e.propuesta.formula || e.propuesta.definition) && <div className="text-[12px] text-muted">{e.propuesta.definition ? e.propuesta.definition + " " : ""}{e.propuesta.formula ? `Fórmula: ${e.propuesta.formula}` : ""}</div>}
                     {canEdit && <button type="button" onClick={() => aplicar(k, e.propuesta!)} className="mt-1 text-[12px] font-semibold text-cyan-deep hover:underline">Aplicar en {e.code} y revisar antes de guardar</button>}
                   </div>

@@ -2839,7 +2839,7 @@ export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult
   const ownerId = str(input.ownerId, 10);
   if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable del dato no existe en el catálogo.");
   const frequency = (["Mensual", "Trimestral", "Semestral", "Anual"] as const).find((f) => f === input.frequency) ?? "Trimestral";
-  const goodDirection = input.goodDirection === "down" ? "down" : "up";
+  const goodDirection = input.goodDirection === "down" ? "down" : input.goodDirection === "keep" ? "keep" : "up";
   const series = (Array.isArray(input.series) ? input.series : [])
     .map((v) => ({ period: str(v?.period, 12), value: num(v?.value, NaN), ...(str(v?.note, 200) ? { note: str(v?.note, 200) } : {}) }))
     .filter((v) => v.period && Number.isFinite(v.value));

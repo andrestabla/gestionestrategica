@@ -91,7 +91,7 @@ export type KpiFull = {
   ownerId: string;           // responsable del dato (directorio)
   baseline: number;
   target: number;
-  goodDirection: "up" | "down";
+  goodDirection: SentidoKr;   // up: mejor si sube · down: mejor si baja · keep: mejor si se mantiene (la meta es sostener el nivel)
   due?: string;              // plazo del resultado clave (AAAA o AAAA-Tn)
   series: { period: string; value: number; note?: string }[];
 };
@@ -545,3 +545,20 @@ export const previousAssessment = () => {
 /** Framework que instala cada iniciativa, resuelto por el mapa. */
 export const frameworkOfInitiative = (i: InitiativeFull) =>
   frameworkOfPractice(DIMS.find((d) => d.code === i.capability)!.prac[0].code);
+
+/** Sentido de un indicador: mejor si sube, si baja o si se mantiene en el nivel de la meta. */
+export type SentidoKr = "up" | "down" | "keep";
+export const esSentidoKr = (x: unknown): x is SentidoKr => x === "up" || x === "down" || x === "keep";
+/** «sube», «baja» o «se mantiene», para la frase «mejor si …». */
+export const mejorSi = (d: SentidoKr | string | undefined): string => (d === "down" ? "baja" : d === "keep" ? "se mantiene" : "sube");
+/** Avance hacia la meta en porcentaje. En «se mantiene» mide la cercanía al nivel de la meta: 100 es exactamente en la meta. */
+export function avanceAMeta(d: SentidoKr | string | undefined, valor: number, meta: number): number {
+  if (d === "keep") return Math.max(0, 100 - (Math.abs(valor - meta) / Math.max(Math.abs(meta), 0.0001)) * 100);
+  return d === "down" ? (meta / Math.max(valor, 0.0001)) * 100 : (valor / meta) * 100;
+}
+/** ¿El último movimiento mejora? En «se mantiene» mejora si se acerca a la meta o no se aleja de ella. */
+export function mejora(d: SentidoKr | string | undefined, valor: number, previo: number | undefined, meta: number): boolean {
+  if (previo === undefined) return true;
+  if (d === "keep") return Math.abs(valor - meta) <= Math.abs(previo - meta);
+  return d === "down" ? valor <= previo : valor >= previo;
+}

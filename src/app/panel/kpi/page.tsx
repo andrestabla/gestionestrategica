@@ -4,6 +4,7 @@
 // con notas, dueño del dato, fuente, periodicidad y objetivo CMI.
 
 import { useCallback, useEffect, useState } from "react";
+import { avanceAMeta, mejora } from "@/data/cmi";
 import { confirmarGuardar } from "@/components/feedback";
 import Link from "next/link";
 import { PageHeader, Card } from "@/components/ui";
@@ -103,10 +104,8 @@ export default function KpiPage() {
             const last = series[series.length - 1] ?? { period: "", value: 0 };
             const prev = series[series.length - 2];
             const delta = prev ? last.value - prev.value : 0;
-            const improving = k.goodDirection === "up" ? delta >= 0 : delta <= 0;
-            const ratio = k.goodDirection === "up"
-              ? (last.value / k.target) * 100
-              : (k.target / last.value) * 100;
+            const improving = mejora(k.goodDirection, last.value, prev?.value, k.target);
+            const ratio = avanceAMeta(k.goodDirection, last.value, k.target);
             const toTarget = Number.isFinite(ratio) ? ratio : 0;
             const line = LINES.find((l) => l.n === k.line)!;
             const active = open === k.code;

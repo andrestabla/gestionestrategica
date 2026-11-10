@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { KpiFull, InitiativeFull } from "@/data/cmi";
+import { avanceAMeta, mejora } from "@/data/cmi";
 import { LINES, DIMENSIONS } from "@/data/demo";
 import { taskAlerts } from "@/lib/proyectos";
 // Toda regla que lea datos de la empresa recibe su vista (lib/vista): el
@@ -64,16 +65,9 @@ export function kpiHealth(k: KpiFull): KpiHealth {
   const last = series[series.length - 1];
   const prev = series[series.length - 2];
   const delta = prev ? last.value - prev.value : 0;
-  const improving = k.goodDirection === "up" ? delta >= 0 : delta <= 0;
+  const improving = mejora(k.goodDirection, last.value, prev?.value, k.target);
 
-  const pctToTarget = Math.min(
-    999,
-    Math.round(
-      k.goodDirection === "up"
-        ? (last.value / k.target) * 100
-        : (k.target / Math.max(last.value, 0.0001)) * 100,
-    ),
-  );
+  const pctToTarget = Math.min(999, Math.round(avanceAMeta(k.goodDirection, last.value, k.target)));
   const semaphore = pctToTarget >= 85 ? "OK" : pctToTarget >= 55 ? "WARN" : "BAD";
 
   // rezago de captura: si pasaron > 1.5 periodos desde el último dato
@@ -89,7 +83,8 @@ export function kpiHealth(k: KpiFull): KpiHealth {
   const den = pts.reduce((a, p) => a + (p.x - mx) ** 2, 0) || 1;
   const slope = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / den;
   const projected = last.value + slope * (TARGET_DATE_INDEX - periodIndex(last.period));
-  const willReach = k.goodDirection === "up" ? projected >= k.target : projected <= k.target;
+  // «se mantiene»: se cumple si la proyección queda dentro del 5 % del nivel de la meta
+  const willReach = k.goodDirection === "keep" ? Math.abs(projected - k.target) <= Math.abs(k.target) * 0.05 : k.goodDirection === "up" ? projected >= k.target : projected <= k.target;
 
   return {
     code: k.code,

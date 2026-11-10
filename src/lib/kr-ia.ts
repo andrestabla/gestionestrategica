@@ -27,7 +27,7 @@ export function encargoLineaBase(args: {
     args.contexto ? `CONTEXTO DE LA EMPRESA:\n${args.contexto}` : "",
     args.prioridad ? `PRIORIDAD: ${args.prioridad.id} «${args.prioridad.name}»${args.prioridad.indicator ? ` · indicadores ${args.prioridad.indicator}` : ""}.` : "",
     `OBJETIVO: ${args.objetivo.id} «${args.objetivo.name}».`,
-    `RESULTADO CLAVE: ${args.kr.code} «${args.kr.name}»${args.kr.unit ? ` · unidad ${args.kr.unit}` : ""}${args.kr.goodDirection ? ` · mejor si ${args.kr.goodDirection === "down" ? "baja" : "sube"}` : ""}${args.kr.definition ? `\n  definición: ${args.kr.definition}` : ""}`,
+    `RESULTADO CLAVE: ${args.kr.code} «${args.kr.name}»${args.kr.unit ? ` · unidad ${args.kr.unit}` : ""}${args.kr.goodDirection ? ` · mejor si ${args.kr.goodDirection === "down" ? "baja" : args.kr.goodDirection === "keep" ? "se mantiene (la meta es sostener el nivel de la línea base: propón como meta ese mismo nivel)" : "sube"}` : ""}${args.kr.definition ? `\n  definición: ${args.kr.definition}` : ""}`,
     `INDICADORES DE LÍNEA BASE (resultados cerrados):\n${args.base.map((b) => `- ${b.code}${b.lever ? ` [${b.lever}]` : ""} «${b.name}» · unidad ${b.unit ?? "—"} · último valor ${b.ultimo ?? "—"}${b.periodo ? ` (${b.periodo})` : ""} · meta anterior ${b.meta ?? "—"}${b.definition ? ` · ${b.definition.slice(0, 160)}` : ""}`).join("\n")}`,
   ].filter(Boolean).join("\n\n");
   return { system, user };

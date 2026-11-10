@@ -200,7 +200,7 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
       frequency: FREQ[(k.frequency as string) ?? "TRIMESTRAL"] ?? "Trimestral", source: (k.source as string) ?? "",
       ownerId: (k.ownerRole as string) ?? "", baseline: (k.baseline as number) ?? 0, target: (k.target as number) ?? 0,
       ...(k.due ? { due: k.due as string } : {}),
-      goodDirection: (k.goodDirection as "up" | "down") ?? "up",
+      goodDirection: (k.goodDirection as "up" | "down" | "keep") ?? "up",
       series: k.values.map((v) => ({ period: v.period, value: v.value, ...(v.note ? { note: v.note } : {}) })).sort((a, b) => a.period.localeCompare(b.period)),
     };
   });

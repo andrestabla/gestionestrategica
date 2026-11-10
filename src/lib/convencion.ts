@@ -14,15 +14,15 @@ import type { CmiObjective, InitiativeFull, KpiFull } from "@/data/cmi";
 import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
 
 /** Qué le falta a un resultado clave para estar completo: nombre con una cifra real (cuánto), línea base,
-    meta distinta de la base, unidad, dueño, plazo y definición con fórmula y fuente. Solo un KR completo
-    se valida y recibe iniciativas. */
+    meta distinta de la base (salvo cuando es mejor si «se mantiene»: ahí la meta es sostener el nivel), unidad,
+    dueño, plazo y definición con fórmula y fuente. Solo un KR completo se valida y recibe iniciativas. */
 export function krFaltantes(k: KpiFull): string[] {
   const out: string[] = [];
   const nombre = (k.name ?? "").replace(k.code, "").trim();
   if (nombre.length < 3) out.push("resultado clave");
   if (!(k.baseline > 0 || (k.series ?? []).length > 0)) out.push("línea base");
   if (!(k.target > 0)) out.push("meta");
-  else if (k.target === k.baseline) out.push("meta distinta de la línea base");
+  else if (k.target === k.baseline && k.goodDirection !== "keep") out.push("meta distinta de la línea base");
   if (!k.unit?.trim()) out.push("unidad");
   if (!k.ownerId) out.push("dueño");
   if (!/^\d{4}(-T[1-4])?$/i.test((k.due ?? "").trim())) out.push("plazo");

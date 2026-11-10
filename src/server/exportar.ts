@@ -63,7 +63,7 @@ export function documentoDecisiones(modulo: ModuloExport, user: SessionUser): Do
     const objs = c.objectives.filter((o) => o.horizon === h1?.id && !o.okr);
     const filas = [...levers].sort((a, b) => a.order - b.order).flatMap((l) => objs.filter((o) => o.lever === l.id).flatMap((o) => keyResultsOf(c, o).map((k) => [l.name, o.id, k.code, k.name, n(k.baseline), n(k.target), k.unit, area(k.ownerId), k.due ?? "—", String(initiativesOfKr(c, k.code).length)])));
     return { ...base, modulo, titulo: V.tabs.okr, subtitulo: `Resultados clave de ${h1?.label ?? ""} por objetivo: línea base, meta, dueño y plazo`, secciones: [
-      { titulo: `${V.tabs.okr} (${filas.length})`, columnas: [V.lever, "Objetivo", "KR", "Resultado clave", "Base", "Meta", "Unidad", "Dueño", "Plazo", "Inic."], anchos: [13, 7, 9, 28, 6, 6, 7, 12, 7, 5], filas, notas: ["De 2 a 4 resultados clave por objetivo (máximo 5); cada uno con línea base, meta distinta de la base, unidad, dueño, plazo y fórmula."] },
+      { titulo: `${V.tabs.okr} (${filas.length})`, columnas: [V.lever, "Objetivo", "KR", "Resultado clave", "Base", "Meta", "Unidad", "Dueño", "Plazo", "Inic."], anchos: [13, 7, 9, 28, 6, 6, 7, 12, 7, 5], filas, notas: ["De 2 a 4 resultados clave por objetivo (máximo 5); cada uno con línea base, meta distinta de la base (salvo los de sostenimiento, «mejor si se mantiene»), unidad, dueño, plazo y fórmula."] },
     ] };
   }
 

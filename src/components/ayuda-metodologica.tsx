@@ -486,7 +486,7 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
     <p className="mt-3 text-[13px] leading-relaxed text-muted">Resultado: pocas iniciativas, con dueño y con una decisión de tiempo. Lo táctico no se desecha: se transfiere al área con responsable nombrado.</p>
   </> },
   { k: "Condición de entrada", t: "Qué se puede calificar", body: <ul className="space-y-2">
-    <Li><b>Vinculada a un resultado clave completo:</b> cifra, línea base, meta distinta de la base, unidad, dueño, plazo y fórmula. Máximo dos iniciativas por resultado clave.</Li>
+    <Li><b>Vinculada a un resultado clave completo:</b> cifra, línea base, meta distinta de la base (salvo que sea de sostenimiento, «mejor si se mantiene»), unidad, dueño, plazo y fórmula. Máximo dos iniciativas por resultado clave.</Li>
     <Li><b>Formulación completa:</b> qué logra, responsable, inicio y fin, capacidad que instala y presupuesto planeado (los elementos de la ayuda de Iniciativas).</Li>
     <Li><b>Validada en la etapa anterior:</b> la validación de iniciativas la deja en verde. Lo amarillo se corrige y se revalida; lo rojo se replantea.</Li>
     <Li>Lo que no cumple aparece en el ranking con el motivo («sin KR», «incompleta», «sin validar») y no se puede calificar.</Li>

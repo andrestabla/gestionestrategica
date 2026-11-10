@@ -443,7 +443,7 @@ function KpiSection({ v, saving, mutate }: SectionProps) {
                 <td className="px-4 py-2.5 text-muted"><span className="num text-[12px] text-faint">{k.cmi}</span> {objName(k.cmi)}</td>
                 <td className="px-4 py-2.5 text-muted">{owner(k.ownerId)}</td>
                 <td className="px-4 py-2.5 text-muted">{k.unit} · {k.frequency}</td>
-                <td className="num whitespace-nowrap px-4 py-2.5 text-muted">{k.baseline} → <b className="text-ink">{k.target}</b> <span className="text-faint">{k.goodDirection === "up" ? "↑" : "↓"}</span></td>
+                <td className="num whitespace-nowrap px-4 py-2.5 text-muted">{k.baseline} → <b className="text-ink">{k.target}</b> <span className="text-faint">{k.goodDirection === "up" ? "↑" : k.goodDirection === "keep" ? "=" : "↓"}</span></td>
                 <td className="num px-4 py-2.5 text-[12px] text-muted">{k.series.length} pts</td>
                 <RowActions saving={saving} onEdit={() => setOpen(k)}
                   onDelete={async () => { if (await confirmarEliminar(`el KPI «${k.name}» (${k.code})`)) mutate("kpi", "delete", { code: k.code }); }} />
@@ -539,6 +539,7 @@ function KpiForm({ v, saving, initial, onSubmit, onCancel }: {
           <select value={f.goodDirection} onChange={set("goodDirection")} className={INPUT}>
             <option value="up">Sube (↑)</option>
             <option value="down">Baja (↓)</option>
+            <option value="keep">Se mantiene (=)</option>
           </select>
         </Field>
       </div>
