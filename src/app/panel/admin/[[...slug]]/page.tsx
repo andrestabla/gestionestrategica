@@ -84,7 +84,7 @@ function ActividadTab() {
         {verif.r && (
           <div className="mt-3">
             <p className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold text-ink" style={{ background: `color-mix(in srgb, var(${verif.r.ok ? "--ok" : "--bad"}) 10%, var(--surface))` }}>
-              {verif.r.ok ? "Todo lo que se ve en pantalla está guardado en la base." : "Hay diferencias entre lo que se ve y lo guardado: revisa el detalle y vuelve a guardar esos elementos."} <span className="font-normal text-muted">Verificado el {diaCorto(verif.r.at)} a las {hora(verif.r.at)}.</span>
+              {verif.r.ok ? "Todo lo que se ve en pantalla está guardado en la base." : "Hay diferencias entre lo que se ve y lo guardado: revisa el detalle y vuelve a guardar esos elementos."} <span className="font-normal text-muted">Verificado el {diaCorto(verif.r.at)}, {hora(verif.r.at)}</span>
             </p>
             <ul className="mt-2 grid gap-x-6 gap-y-1 text-[12px] sm:grid-cols-2">
               {verif.r.secciones.map((x) => (
