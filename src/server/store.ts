@@ -21,6 +21,7 @@ import { lecturaF1 } from "@/lib/f1";
 import { avg } from "@/lib/od";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import { krFaltantes, KR_INI_MAX, objetivoConPrioridad, iniciativaConKr } from "@/lib/convencion";
+import { firmaObjetivo } from "@/server/firma";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -35,7 +36,7 @@ import { isMailTemplateKey, validarPlantilla, type MailTemplateKey } from "@/lib
 import { parseInstruments, hasInstrument, instrumentLabel } from "@/lib/instrumentos";
 import { parseModulesOff, parseModulesStored } from "@/lib/modulos";
 import { normalizarMeta, proponerDesdePortafolio, type MetaTrimestral } from "@/lib/cascada";
-import type { AlineacionIA } from "@/lib/alineacion";
+import type { AlineacionIA, AlineacionItem } from "@/lib/alineacion";
 import { RESERVED } from "@/lib/tenant-url";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
@@ -4113,8 +4114,58 @@ export async function registrarSinSesion(slug: string | null, path: string) {
 
 export const getAlineacion = (horizon: string, kind: InformeKind = "alineacion"): (Omit<InformeGuardado, "informe"> & { informe: AlineacionIA }) | null => {
   const g = informes().get(`${kind}|${horizon}`); if (!g) return null;
-  return { ...g, informe: g.informe as unknown as AlineacionIA };
+  const informe = g.informe as unknown as AlineacionIA;
+  if (kind !== "alineacion") return { ...g, informe };
+  // la aprobación del comité vale mientras el objetivo no cambie: si cambió (o ya no existe), vuelve la lectura del modelo
+  const objs = cat().objectives;
+  const items = informe.items.map((x) => {
+    if (!x.aprobado) return x;
+    const o = objs.find((y) => y.id === x.id);
+    if (o && !o.descartado && firmaObjetivo(o) === x.aprobado.firma) return x;
+    const { aprobado: _a, colorIA, ...resto } = x; void _a;
+    return { ...resto, color: colorIA ?? "amarillo" };
+  });
+  return { ...g, informe: { ...informe, items } };
 };
+
+/** Aprobación del comité directivo sobre la validación de objetivos: los marcados quedan en verde y conservan la lectura
+    del modelo (color, justificación y recomendaciones) como referencia. La registra quien conduce la validación
+    (advisor, líder o admin). Solo se aprueba un objetivo vigente y vinculado a una prioridad. */
+export function aprobarObjetivos(user: SessionUser, horizon: string, ids: string[], accion: "aprobar" | "quitar", hashSiNuevo: string): { ok: true; aprobados: string[]; omitidos: { id: string; motivo: string }[] } | { ok: false; status: number; error: string } {
+  if (!can(user, "manage_catalog") || user.role === "DIRECTIVO") return { ok: false, status: 403, error: "La aprobación del comité la registra el advisor, el líder de la empresa o el administrador." };
+  const c = cat();
+  const previa = informes().get(`alineacion|${horizon}`);
+  const informe: AlineacionIA = previa ? (previa.informe as unknown as AlineacionIA) : { horizon, items: [], resumen: "" };
+  const items = [...informe.items];
+  const aprobados: string[] = [], omitidos: { id: string; motivo: string }[] = [];
+  const at = new Date().toISOString();
+  for (const id of [...new Set(ids.map((x) => String(x).toUpperCase()))]) {
+    const o = c.objectives.find((x) => x.id === id && x.horizon === horizon && !x.okr);
+    if (!o) { omitidos.push({ id, motivo: "no es un objetivo directivo de este horizonte" }); continue; }
+    const idx = items.findIndex((x) => x.id === id);
+    if (accion === "quitar") {
+      if (idx >= 0 && items[idx].aprobado) { const { aprobado: _a, colorIA, ...resto } = items[idx]; void _a; items[idx] = { ...resto, color: colorIA ?? "amarillo" }; aprobados.push(id); }
+      continue;
+    }
+    if (o.descartado) { omitidos.push({ id, motivo: "está descartado" }); continue; }
+    if (!objetivoConPrioridad(c, o)) { omitidos.push({ id, motivo: "no está vinculado a una prioridad estratégica" }); continue; }
+    const base: AlineacionItem = idx >= 0 ? items[idx] : { id, color: "verde", justificacion: "Sin lectura del modelo: aprobado directamente por el comité directivo.", recomendaciones: [], naturaleza: "objetivo", duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: [] };
+    const nuevo: AlineacionItem = { ...base, colorIA: base.aprobado ? base.colorIA : (idx >= 0 ? base.color : undefined), color: "verde", aprobado: { by: user.email.toLowerCase(), name: user.name, at, firma: firmaObjetivo(o) } };
+    if (idx >= 0) items[idx] = nuevo; else items.push(nuevo);
+    aprobados.push(id);
+  }
+  if (!aprobados.length) return { ok: true, aprobados, omitidos };
+  const nuevoInforme: AlineacionIA = { ...informe, items };
+  const saved: InformeGuardado = previa ? { ...previa, informe: nuevoInforme as unknown as InformeIA } : { kind: "alineacion", subject: horizon, inputHash: hashSiNuevo, informe: nuevoInforme as unknown as InformeIA, model: "manual", by: user.email, at };
+  informes().set(`alineacion|${horizon}`, saved);
+  audit(user, "task", `alineacion:${horizon}`, `${accion === "aprobar" ? "objetivos aprobados por el comité" : "aprobación del comité retirada"}: ${aprobados.join(" · ")}`);
+  void persist("aprobación de objetivos", async (db) => {
+    const companyId = cid();
+    const data = { inputHash: saved.inputHash, content: nuevoInforme as unknown as object, model: saved.model, by: saved.by, at: new Date(saved.at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind: "alineacion", subject: horizon } }, update: data, create: { companyId, kind: "alineacion", subject: horizon, ...data } });
+  });
+  return { ok: true, aprobados, omitidos };
+}
 
 export function saveAlineacion(user: SessionUser, horizon: string, inputHash: string, informe: AlineacionIA, model = "openai", kind: InformeKind = "alineacion"): { ok: true; saved: InformeGuardado } | { ok: false; status: number; error: string } {
   if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "La validación la lanza quien administra la estrategia." };

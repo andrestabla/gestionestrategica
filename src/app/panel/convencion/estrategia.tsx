@@ -33,7 +33,7 @@ import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } fr
 import { mejorSi } from "@/data/cmi";
 import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
-import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, objetivosSinPrioridad, pasaAPriorizacion, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
+import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, objetivosSinPrioridad, pasaAPriorizacion, objetivoConPrioridad, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, type PriorizacionData } from "@/components/priorizacion";
 import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
@@ -387,6 +387,22 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
     } catch { avisar("No se pudo revalidar el objetivo.", "warn"); }
   };
   const conteo = (c: AlineacionItem["color"]) => ali?.alineacion?.items.filter((i) => i.color === c).length ?? 0;
+  // aprobación del comité: deja el objetivo en verde y conserva la lectura del modelo como referencia (advisor, líder o admin)
+  const puedeAprobar = acomp && canEdit && !esDirectivo;
+  const porAprobar = cat.objectives.filter((o) => o.horizon === first && !o.okr && !o.descartado && objetivoConPrioridad(cat, o) && aliDe(o.id)?.color !== "verde");
+  const aprobacion = async (body: Record<string, unknown>, ok: string) => {
+    setAliBusy(true);
+    try {
+      const res = await fetch("/api/td/alineacion", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ horizon: first, ...body }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { avisar(j.error ?? "No se pudo registrar la aprobación.", "bad"); return; }
+      setAli(j); avisar(ok);
+    } finally { setAliBusy(false); }
+  };
+  const aprobarTodos = async () => {
+    if (!(await confirmar({ title: `¿Aprobar ${porAprobar.length} objetivo${porAprobar.length === 1 ? "" : "s"} como validado${porAprobar.length === 1 ? "" : "s"} por el comité?`, body: `${porAprobar.map((o) => o.id).join(" · ")}. Quedan en verde por decisión del comité directivo; la lectura y las recomendaciones del modelo se conservan como referencia. Si un objetivo cambia después, su aprobación deja de valer.`, confirmLabel: "Aprobar" }))) return;
+    await aprobacion({ aprobar: porAprobar.map((o) => o.id) }, "Objetivos aprobados por el comité.");
+  };
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -396,6 +412,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         <span className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
           {acomp && <AyudaMetodologica tema="objetivos" />}
           {acomp && <DescargarDecisiones modulo="objetivos" />}
+          {puedeAprobar && porAprobar.length > 0 && <button onClick={() => void aprobarTodos()} disabled={aliBusy} className="btn-ghost btn-sm text-[12px]" title="Deja en verde, por decisión del comité directivo, los objetivos vigentes con prioridad que aún no lo están; la lectura del modelo se conserva"><CheckCircle2 size={12} /> Aprobar {porAprobar.length} (comité)</button>}
           {acomp && canEdit && !esDirectivo && <button onClick={validar} disabled={aliBusy || ali?.disponible === false} className="btn-ghost btn-sm text-[12px]" title={ali?.disponible === false ? "El modelo no está configurado en Administración → Integraciones" : "Semáforo por objetivo frente a las prioridades, con justificación y recomendaciones"}>{aliBusy ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {ali?.alineacion ? "Volver a validar alineación" : "Validar alineación"} <span className="text-faint">(IA)</span></button>}
           {canEdit && !acomp && <button onClick={() => setLeversOpen(true)} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> {V.levers}</button>}
           {canEdit && <button onClick={() => setOpen({ horizon: first })} className="btn-primary btn-sm text-[12px]"><Plus size={12} /> Nuevo objetivo</button>}
@@ -407,6 +424,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           <span className="chip chip-ok">{conteo("verde")} alineado{conteo("verde") === 1 ? "" : "s"}</span>
           <span className="chip chip-gold">{conteo("amarillo")} parcial{conteo("amarillo") === 1 ? "" : "es"}</span>
           <span className="chip chip-bad">{conteo("rojo")} no alineado{conteo("rojo") === 1 ? "" : "s"}</span>
+          {(() => { const n = ali.alineacion.items.filter((i) => i.aprobado).length; return n ? <span className="chip chip-cyan" title="En verde por decisión del comité directivo; la lectura del modelo se conserva en cada objetivo">{n} aprobado{n === 1 ? "" : "s"} por el comité</span> : null; })()}
           {ali.desactualizado && <span className="chip chip-warn">desactualizada: cambiaron prioridades u objetivos</span>}
           {ali.at && <span className="text-faint">· {new Date(ali.at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</span>}
           {ali.alineacion.resumen && <p className="w-full leading-relaxed text-ink-soft">{ali.alineacion.resumen}</p>}
@@ -510,7 +528,9 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
           </div>
         );
       })}
-      {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined}
+      {aliOpen && <AlineacionModal o={aliOpen} item={aliDe(aliOpen.id)} lever={levers.find((l) => l.id === aliOpen.lever)} onClose={() => setAliOpen(null)}
+        onAprobar={puedeAprobar && objetivoConPrioridad(cat, aliOpen) && !aliOpen.descartado ? () => void aprobacion({ aprobar: [aliOpen.id] }, `${aliOpen.id} aprobado por el comité.`) : undefined}
+        onQuitar={puedeAprobar ? () => void aprobacion({ quitar: [aliOpen.id] }, `Aprobación de ${aliOpen.id} retirada.`) : undefined} onEdit={canEdit ? () => { setAliOpen(null); setOpen(aliOpen); } : undefined}
         onAplicar={canEdit ? async (patch) => { const ok = await mutate("objective", "upsert", { id: aliOpen.id, ...patch }); if (ok) { setAliOpen(null); void revalidarObj(aliOpen.id); } } : undefined} saving={saving} />}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
@@ -533,7 +553,7 @@ function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: C
   return (
     <div className={`panel group px-3.5 py-3 ${o.descartado ? "opacity-70" : ""}`} style={ali && !o.descartado ? { boxShadow: `inset 3px 0 0 ${SEMAFORO[ali.color].color}` } : undefined}>
       {o.descartado && <span className="chip chip-gold mb-2 !py-0 text-[11px]" title={o.motivoDescarte ?? "Descartado por la dirección"}>Descartado · no avanza</span>}
-      {ali && !o.descartado && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.naturaleza !== "objetivo" ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{(ali.faltan ?? []).length ? ` · falta ${ali.faltan.map((f) => ELEMENTOS[f] ?? f).join(", ")}` : ""}{ali.reformulacion ? " · redacción propuesta" : ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
+      {ali && !o.descartado && <button type="button" onClick={onAli} className={`${SEMAFORO[ali.color].chip} mb-2 !py-0 text-[11px]`} title="Ver la justificación y las recomendaciones">● {SEMAFORO[ali.color].label}{ali.aprobado ? " · comité" : ""}{ali.naturaleza !== "objetivo" && !ali.aprobado ? ` · ${NATURALEZA[ali.naturaleza]}` : ""}{ali.duplicaDe.length ? ` · duplica ${ali.duplicaDe.join(", ")}` : ""}{(ali.faltan ?? []).length ? ` · falta ${ali.faltan.map((f) => ELEMENTOS[f] ?? f).join(", ")}` : ""}{ali.reformulacion ? " · redacción propuesta" : ali.recomendaciones.length ? ` · ${ali.recomendaciones.length} rec.` : ""}</button>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="num text-[11px] font-bold uppercase tracking-wider text-faint">{o.id}{o.pillar ? ` · ${o.pillar.split(" · ")[0]}` : ""}</div>
@@ -552,16 +572,24 @@ function ObjectiveCard({ o, cat, onEdit, ali, onAli }: { o: CmiObjective; cat: C
   );
 }
 
-function AlineacionModal({ o, item, lever, onClose, onEdit, onAplicar, saving }: { o: CmiObjective; item?: AlineacionItem; lever?: Lever; onClose: () => void; onEdit?: () => void; onAplicar?: (patch: { name?: string; indicator?: string }) => Promise<void>; saving?: boolean }) {
+function AlineacionModal({ o, item, lever, onClose, onEdit, onAplicar, saving, onAprobar, onQuitar }: { o: CmiObjective; item?: AlineacionItem; lever?: Lever; onClose: () => void; onEdit?: () => void; onAplicar?: (patch: { name?: string; indicator?: string }) => Promise<void>; saving?: boolean; onAprobar?: () => void; onQuitar?: () => void }) {
   return (
     <Modal title={`${o.id} · alineación`} sub={lever ? `${lever.order}. ${lever.name}` : undefined} onClose={onClose}
-      footer={<>{onEdit && <button type="button" onClick={onEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar el objetivo</button>}<button type="button" onClick={onClose} className="btn-primary btn-sm text-[12px]">Cerrar</button></>}>
+      footer={<>
+        {onQuitar && item?.aprobado && <button type="button" disabled={saving} onClick={onQuitar} className="btn-ghost btn-sm mr-auto text-[12px]">Quitar aprobación del comité</button>}
+        {onAprobar && !item?.aprobado && item?.color !== "verde" && <button type="button" disabled={saving} onClick={onAprobar} className="btn-ghost btn-sm mr-auto text-[12px]"><CheckCircle2 size={12} /> Aprobar (comité)</button>}
+        {onEdit && <button type="button" onClick={onEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar el objetivo</button>}<button type="button" onClick={onClose} className="btn-primary btn-sm text-[12px]">Cerrar</button></>}>
       <div className="text-[14px] font-extrabold leading-snug text-ink">{o.name}</div>
       {o.desc && <p className="mt-1 text-[12.5px] leading-snug text-muted">{o.desc}</p>}
       {o.indicator && <p className="mt-1 text-[12.5px] text-ink-soft"><span className="font-semibold">Indicador impulsor:</span> {o.indicator}</p>}
       {item ? (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2"><span className={SEMAFORO[item.color].chip}>● {SEMAFORO[item.color].label}</span>{item.naturaleza !== "objetivo" && <span className="chip chip-warn">{NATURALEZA[item.naturaleza]}</span>}{item.duplicaDe.length > 0 && <span className="chip chip-warn">duplica o se solapa con {item.duplicaDe.join(", ")}</span>}{(item.faltan ?? []).map((f) => <span key={f} className="chip chip-bad">falta {ELEMENTOS[f] ?? f}</span>)}</div>
+          {item.aprobado && (
+            <div className="mt-3 rounded-xl px-4 py-3 text-[12.5px] leading-relaxed text-ink" style={{ background: "color-mix(in srgb, var(--ok) 10%, var(--surface))" }}>
+              <b>Aprobado por el comité directivo.</b> Lo registró {item.aprobado.name} el {new Date(item.aprobado.at).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}.{item.colorIA && item.colorIA !== "verde" ? ` La lectura del modelo era «${SEMAFORO[item.colorIA].label.toLowerCase()}»; sus observaciones quedan abajo como referencia.` : ""} Si el objetivo cambia, la aprobación deja de valer.
+            </div>
+          )}
           <p className="mt-2 text-[13px] leading-relaxed text-ink">{item.justificacion}</p>
           {item.recomendaciones.length > 0 && (
             <div className="mt-4">

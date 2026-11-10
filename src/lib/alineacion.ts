@@ -6,7 +6,10 @@ import { AYUDA_OBJETIVOS } from "@/lib/metodologia-ayuda";
 
 export type Semaforo = "verde" | "amarillo" | "rojo";
 export type Naturaleza = "objetivo" | "resultado_clave" | "iniciativa" | "ambiguo";
-export type AlineacionItem = { id: string; color: Semaforo; justificacion: string; recomendaciones: string[]; naturaleza: Naturaleza; duplicaDe: string[]; reformulacion: string; indicadorPropuesto: string; faltan: string[] };
+export type AlineacionItem = { id: string; color: Semaforo; justificacion: string; recomendaciones: string[]; naturaleza: Naturaleza; duplicaDe: string[]; reformulacion: string; indicadorPropuesto: string; faltan: string[];
+  /** Aprobación del comité directivo: deja el objetivo en verde aunque la lectura del modelo fuera otra (se conserva en `colorIA`).
+      `firma` es la huella del objetivo aprobado: si el objetivo cambia, la aprobación deja de valer. */
+  aprobado?: { by: string; name: string; at: string; firma: string }; colorIA?: Semaforo };
 /** Elementos de la estructura metodológica que el modelo marca como ausentes. */
 export const ELEMENTOS: Record<string, string> = { verbo: "verbo de logro", resultado: "resultado concreto", indicador: "indicador impulsor", plazo: "para cuándo", prioridad: "aporte claro a la prioridad" };
 export const NATURALEZA: Record<Naturaleza, string> = { objetivo: "objetivo", resultado_clave: "parece un resultado clave", iniciativa: "parece una iniciativa", ambiguo: "enunciado ambiguo" };

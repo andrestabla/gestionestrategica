@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { huellaAlineacion } from "@/server/huellas";
 import { withTenant } from "../_helpers";
-import { catalog, getAlineacion, saveAlineacion, flushOrError } from "@/server/store";
+import { catalog, getAlineacion, saveAlineacion, flushOrError, aprobarObjetivos } from "@/server/store";
+import { firmaObjetivo } from "@/server/firma";
+import { objetivoConPrioridad } from "@/lib/convencion";
 import { chatJson, iaDisponible } from "@/server/ia";
 import { can } from "@/lib/permissions";
 import { leversOf, horizonsOf, horizonLabel, horizonesBase } from "@/data/catalogo";
@@ -61,8 +63,35 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     const items = (previa?.items ?? []).filter((x) => objetivos.some((o) => o.id === x.id) && x.id !== soloId);
     informe = { horizon, items: [...items, informe.items[0]].sort((a, b) => objetivos.findIndex((o) => o.id === a.id) - objetivos.findIndex((o) => o.id === b.id)), resumen: previa?.resumen ?? "" };
   }
+  // la aprobación del comité sobrevive a la revalidación mientras el objetivo no haya cambiado: sigue en verde y se actualiza la lectura del modelo
+  const antes = getAlineacion(horizon)?.informe.items ?? [];
+  informe = { ...informe, items: informe.items.map((x) => {
+    const p = antes.find((y) => y.id === x.id), o = objetivos.find((y) => y.id === x.id);
+    if (!p?.aprobado || !o || firmaObjetivo(o) !== p.aprobado.firma) return x;
+    return x.aprobado ? x : { ...x, colorIA: x.color, color: "verde" as const, aprobado: p.aprobado };
+  }) };
   const r = saveAlineacion(user, horizon, huella(horizon), informe);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
   return NextResponse.json({ horizon, alineacion: informe, at: r.saved.at, by: r.saved.by, desactualizado: false, disponible: true });
+});
+
+// PATCH /api/td/alineacion { horizon, aprobar: ids | "todos" } o { horizon, quitar: ids } — aprobación del comité directivo:
+// los objetivos indicados quedan en verde y conservan la lectura del modelo como referencia. «todos» son los vigentes con
+// prioridad que aún no están en verde.
+export const PATCH = withTenant(async (req: Request, _ctx: unknown, user) => {
+  const body = await req.json().catch(() => ({}));
+  const c = catalog();
+  const horizon = String(body?.horizon ?? horizonsOf(c.company)[0]?.id ?? "");
+  const actual = getAlineacion(horizon)?.informe.items ?? [];
+  const quitar = Array.isArray(body?.quitar) ? (body.quitar as unknown[]).map(String) : null;
+  const ids = quitar ?? (body?.aprobar === "todos"
+    ? c.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado && objetivoConPrioridad(c, o) && actual.find((x) => x.id === o.id)?.color !== "verde").map((o) => o.id)
+    : Array.isArray(body?.aprobar) ? (body.aprobar as unknown[]).map(String) : []);
+  if (!ids.length) return NextResponse.json({ error: quitar ? "Indica de qué objetivos se retira la aprobación." : "No hay objetivos por aprobar: todos los vigentes con prioridad ya están en verde." }, { status: 422 });
+  const r = aprobarObjetivos(user, horizon, ids, quitar ? "quitar" : "aprobar", huella(horizon));
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
+  const g = getAlineacion(horizon);
+  return NextResponse.json({ horizon, alineacion: g?.informe ?? null, at: g?.at ?? null, by: g?.by ?? null, desactualizado: !!g && g.inputHash !== huella(horizon), disponible: iaDisponible(), aprobados: r.aprobados, omitidos: r.omitidos });
 });
