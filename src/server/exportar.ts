@@ -4,7 +4,7 @@
 
 import { catalog, getAlineacion, getDecisions, consolidatedOf, getRevisionesCap, getChecklistsCap, getMetas, getArticulaciones, getF1Responses } from "@/server/store";
 import { leversOf, horizonsOf, horizonesBase } from "@/data/catalogo";
-import { keyResultsOf, initiativesOfKr } from "@/lib/convencion";
+import { keyResultsOf, initiativesOfKr, pasaAPriorizacion } from "@/lib/convencion";
 import { rank, decisionLabel, LEVEL_NAMES, type Decision } from "@/lib/priorizacion";
 import { lecturaCapacidades, FRENTES, SEMAFORO, NIVEL_CAP } from "@/lib/capacidades";
 import { ROL_AREA, trimestreLabel, type MetaTrimestral } from "@/lib/cascada";
@@ -80,7 +80,7 @@ export function documentoDecisiones(modulo: ModuloExport, user: SessionUser): Do
 
   if (modulo === "priorizacion" || modulo === "portafolio") {
     const decisions = getDecisions();
-    const ranking = rank(c.initiatives.map((i) => ({ id: i.id, horizon: i.horizon, name: i.name })), consolidatedOf, hz.map((h) => h.id));
+    const ranking = rank(c.initiatives.filter((i) => pasaAPriorizacion(c, i)).map((i) => ({ id: i.id, horizon: i.horizon, name: i.name })), consolidatedOf, hz.map((h) => h.id));
     const filas = ranking.map((r) => { const d = decisions[r.id]; const i = c.initiatives.find((x) => x.id === r.id)!; return [r.position ? String(r.position) : "—", i.name, leverOfIni(i.id), area(i.ownerId), r.c.n ? n(r.c.score) : "—", r.c.n ? `D ${r.c.rounded.D} · E ${r.c.rounded.E} · M ${r.c.rounded.M} · L ${r.c.rounded.L}` : "sin calificar", r.c.n ? (r.c.type === "ESTRATEGICO" ? "Estratégica" : "Táctica") : "—", String(r.c.n), d ? decisionLabel(d.decision as Decision) : "Sin decisión", d?.rationale ?? "—"]; });
     const secciones: Seccion[] = [{ titulo: modulo === "priorizacion" ? "Ranking consolidado" : "Portafolio decidido", intro: modulo === "priorizacion" ? `Puntaje = (40·D + 30·E + 20·M + 10·L) ÷ 4 sobre los promedios redondeados; niveles ${Object.entries(LEVEL_NAMES).map(([k, v]) => `${k} ${v}`).join(", ")}. Orden solo entre estratégicas elegibles (impacto ≥ 3).` : "Decisión de tiempo de cada iniciativa con su sustento; las tácticas se transfieren al área y no compiten en el portafolio.",
       columnas: ["Pos.", "Iniciativa", V.lever, "Responsable", "Puntaje", "Consolidado", "Tipo", "Eval.", "Decisión", "Sustento"], anchos: [4, 20, 12, 10, 6, 14, 8, 4, 10, 12], filas }];

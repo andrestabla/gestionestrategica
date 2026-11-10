@@ -20,7 +20,7 @@ import { PRACTICES, DIMS, dimOf, F2_GENERAL, THRESHOLD } from "@/data/mapa";
 import { lecturaF1 } from "@/lib/f1";
 import { avg } from "@/lib/od";
 import { periodIndex, isValidPeriod } from "@/lib/period";
-import { krFaltantes, KR_INI_MAX } from "@/lib/convencion";
+import { krFaltantes, KR_INI_MAX, objetivoConPrioridad, iniciativaConKr } from "@/lib/convencion";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -2334,6 +2334,8 @@ export function decideInitiative(
   if (!["IMPLEMENTAR", "PREPARAR", "BACKLOG", "RENUNCIAR"].includes(d)) {
     return { ok: false, status: 422, error: "Decisión inválida: implementar, preparar, backlog o renunciar." };
   }
+  // acompañamiento: una iniciativa sin resultado clave no pasa a priorización ni al portafolio
+  if (cat().company.mode === "acompanamiento" && !iniciativaConKr(cat(), base)) return { ok: false, status: 422, error: "La iniciativa no está vinculada a un resultado clave: vincúlala en Iniciativas antes de priorizarla o decidir su tiempo." };
   const rationale = typeof input.rationale === "string" ? input.rationale.trim() : "";
   const check = decisionCheck(d, consolidatedOf(iniId), rationale);
   if (!check.ok) return { ok: false, status: 422, error: check.reason };
@@ -2832,6 +2834,16 @@ export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult
   const line = int(input.line, 1, 4, 1);
   const cmi = str(input.cmi, 10);
   if (cmi && !c.objectives.some((o) => o.id === cmi)) return fail(422, "El objetivo del cuadro de mando no existe.");
+  // acompañamiento: un objetivo sin prioridad (o descartado) no pasa a resultados clave; los resultados de la línea base se cargan igual
+  if (cmi && c.company.mode === "acompanamiento") {
+    const o = c.objectives.find((x) => x.id === cmi)!;
+    const previo = c.kpis.find((x) => x.code === code);
+    const esBase = horizonesTodos(c.company).some((h) => h.id === o.horizon && (h as { baseline?: boolean }).baseline);
+    if (!esBase && (!previo || previo.cmi !== cmi)) {
+      if (o.descartado) return fail(422, `El objetivo ${o.id} está descartado: no admite resultados clave. Reactívalo en Objetivos directivos si vuelve a estar vigente.`);
+      if (!objetivoConPrioridad(c, o)) return fail(422, `El objetivo ${o.id} no está vinculado a una prioridad estratégica: vincúlalo en Objetivos directivos antes de definir sus resultados clave.`);
+    }
+  }
   if (tribeScope(user)) {
     const prevKpi = c.kpis.find((x) => x.code === code);
     if (tribeOfObjective(c, cmi) !== tribeScope(user) || (prevKpi && tribeOfObjective(c, prevKpi.cmi) !== tribeScope(user))) return fail(403, OTRA_TRIBU);
@@ -4206,6 +4218,7 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
   if (!k) return { ok: false, etapa: "kr", motivo: "el resultado clave vinculado ya no existe" };
   const obj = c.objectives.find((o) => o.id === i.cmi || o.id === k.cmi);
   if (obj?.descartado) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} está descartado` };
+  if (obj && !objetivoConPrioridad(c, obj)) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} no está vinculado a una prioridad estratégica` };
   const faltanKr = krFaltantes(k);
   if (faltanKr.length) return { ok: false, etapa: "kr", motivo: `resultado clave ${k.code} incompleto (sin ${faltanKr.join(", ")})` };
   const Q = /^\d{4}-T[1-4]$/;

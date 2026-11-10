@@ -33,7 +33,7 @@ import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } fr
 import { mejorSi } from "@/data/cmi";
 import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
-import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
+import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, objetivosSinPrioridad, pasaAPriorizacion, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
 import { usePriorizacion, DECISION_CLS, type PriorizacionData } from "@/components/priorizacion";
 import { EvaluacionFocal } from "@/components/evaluacion-focal";
 import { CapacidadesPortafolio } from "@/components/capacidades-portafolio";
@@ -514,7 +514,7 @@ function DireccionTab({ cat, levers, horizons, canEdit, saving, mutate }: { cat:
         onAplicar={canEdit ? async (patch) => { const ok = await mutate("objective", "upsert", { id: aliOpen.id, ...patch }); if (ok) { setAliOpen(null); void revalidarObj(aliOpen.id); } } : undefined} saving={saving} />}
       {m.orphan.length > 0 && (
         <Card className="rise rise-2 mt-5">
-          <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la ruta" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
+          <CardHeader title={`Objetivos sin ${V.leverLow} u horizonte (${m.orphan.length})`} sub={acomp ? "no pasan a Resultados clave hasta que se vinculen a una prioridad: abre cada uno y elige su prioridad y horizonte" : "siguen en el cuadro de mando; ubícalos en la matriz para que entren a la convención"} />
           <div className="flex flex-wrap gap-2 px-5 pb-5">
             {m.orphan.map((o) => <button key={o.id} onClick={canEdit ? () => setOpen(o) : undefined} className="chip !py-1 text-[12px]">{o.id} · {o.name.slice(0, 60)}{o.name.length > 60 ? "…" : ""}</button>)}
           </div>
@@ -782,8 +782,14 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
   const leversOrdenadas = [...levers].sort((a, b) => Number(b.ownerId === myTribe) - Number(a.ownerId === myTribe) || a.order - b.order);
   const byLever = [...leversOrdenadas.filter((l) => !fLever || l.id === fLever).map((l) => ({ key: l.id, label: `${l.order}. ${l.name}`, objs: objectives.filter((o) => o.lever === l.id) })), { key: "", label: `Sin ${V.leverLow}`, objs: objectives.filter((o) => !o.lever || !levers.some((l) => l.id === o.lever)) }].filter((g) => g.objs.length || (convencion && g.key));   // en la convención, las palancas se ven siempre (con o sin tribu elegida)
   const high = issues.filter((i) => i.level === "alto").length;
+  const sinPrioridad = objetivosSinPrioridad(cat, horizon);
   return (
     <>
+      {sinPrioridad.length > 0 && (
+        <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>
+          <b className="text-ink">{sinPrioridad.length} objetivo{sinPrioridad.length === 1 ? "" : "s"} no {sinPrioridad.length === 1 ? "pasa" : "pasan"} a resultados clave</b> por no estar {sinPrioridad.length === 1 ? "vinculado" : "vinculados"} a una {V.leverLow}: {sinPrioridad.slice(0, 4).map((o) => o.id).join(" · ")}{sinPrioridad.length > 4 ? ` y ${sinPrioridad.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "direccion", base)} className="font-bold text-cyan-deep hover:underline">Vincularlos en Objetivos directivos</Link>
+        </div>
+      )}
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <StatCard label={`Objetivos ${horizonLabel(cat.company, horizon)}`} value={allObjectives.length} foot={`${allObjectives.filter((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 5).length} con 2 a 4 resultados clave (máximo 5)`} accent={allObjectives.every((o) => keyResultsOf(cat, o).length >= 2 && keyResultsOf(cat, o).length <= 5) ? "linear-gradient(90deg, var(--ok), #2f8f5b)" : undefined} />
         <StatCard label="Resultados clave" value={objectives.reduce((a, o) => a + keyResultsOf(cat, o).length, 0)} foot="indicador, base, meta, dueño y plazo" />
@@ -1359,7 +1365,9 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const groupDefs: { key: string; label: string }[] = mode === "tribu"
     ? [...leversOrdenadas.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: `Sin ${V.leverLow}` }]
     : [...krs.map((k) => ({ key: k.code, label: `${k.code} · ${k.name}` })), { key: "", label: "Sin resultado clave" }];
-  const list = cat.initiatives.filter((i) => !sel || groupKey(i) === sel);
+  // acompañamiento: solo pasan a priorización las iniciativas vinculadas a un resultado clave
+  const fuera = cat.initiatives.filter((i) => !pasaAPriorizacion(cat, i));
+  const list = cat.initiatives.filter((i) => pasaAPriorizacion(cat, i) && (!sel || groupKey(i) === sel));
   const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
   const rank = (items: Ini[]) => items.map((i) => ({ i, r: rows.find((r) => r.id === i.id) })).sort((a, b) => ((b.r?.c.n ? b.r.c.score : -1) - (a.r?.c.n ? a.r.c.score : -1)));
   // con la priorización de una tribu guardada (o en revisión con orden), el ranking de esa tribu sigue el orden fijado por el líder
@@ -1393,6 +1401,11 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[12px] text-faint">se refresca cada 15 s</span>
       </div>
+      {fuera.length > 0 && (
+        <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>
+          <b className="text-ink">{fuera.length} iniciativa{fuera.length === 1 ? "" : "s"} no {fuera.length === 1 ? "pasa" : "pasan"} a priorización</b> por no estar {fuera.length === 1 ? "vinculada" : "vinculadas"} a un resultado clave: {fuera.slice(0, 4).map((i) => i.name).join(" · ")}{fuera.length > 4 ? ` y ${fuera.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "iniciativas", base)} className="font-bold text-cyan-deep hover:underline">Vincularlas en Iniciativas</Link>
+        </div>
+      )}
       {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><DescargarDecisiones modulo="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       {!prio && <SkeletonCards n={4} className="mb-5" />}
@@ -1502,7 +1515,7 @@ const matchStatus = (r: PortRow, st: PortStatus) =>
 function PortafolioTab({ cat, levers, horizons, prio, base }: { cat: Cat; levers: Lever[]; horizons: string[]; prio: PriorizacionData | null; base: string }) {
   const V = useVocab(); const acomp = isAcompanamiento(cat.company);
   // el portafolio parte del 100 % de las iniciativas del catálogo; el ranking consolidado se superpone cuando llega
-  const all: PortRow[] = useMemo(() => cat.initiatives.map((i) => {
+  const all: PortRow[] = useMemo(() => cat.initiatives.filter((i) => pasaAPriorizacion(cat, i)).map((i) => {
     const r = prio?.ranking.find((x) => x.id === i.id);
     const d = prio?.decisions[i.id];
     const o = cat.objectives.find((x) => x.id === i.cmi);
@@ -1965,14 +1978,14 @@ function CalificacionGuiada({ cat, prio, email, tribe, onDone }: { cat: Cat; pri
 }
 
 function TribeSessionPanel({ cat, sessions, me, rank, scoreOf, onChanged }: { cat: Cat; sessions: NonNullable<Cat["company"]["prioSessions"]>; me: { role: string; responsibleId?: string }; rank: (items: Cat["initiatives"]) => Cat["initiatives"]; scoreOf: (id: string) => number | null; onChanged: () => void }) {
-  const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
+  const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id && pasaAPriorizacion(cat, i)));
   const V = vocabOf(cat.company); const acomp = isAcompanamiento(cat.company);
   const leverOf = (id: string) => leversOf(cat.company).find((l) => l.ownerId === id);
   const groupName = (id: string) => { const t = tribes.find((x) => x.id === id); const l = leverOf(id); return acomp && l ? `${l.name}${t ? ` · ${t.dependencia || t.cargo}` : ""}` : (t?.dependencia || t?.cargo || id); };
   const leaderOnly = me.role === "LIDER" && !!me.responsibleId;
   const [tribe, setTribe] = useState(me.responsibleId && tribes.some((t) => t.id === me.responsibleId) ? me.responsibleId : (tribes[0]?.id ?? ""));
   const ses = sessionOf(sessions, tribe);
-  const own = cat.initiatives.filter((i) => i.ownerId === tribe);
+  const own = cat.initiatives.filter((i) => i.ownerId === tribe && pasaAPriorizacion(cat, i));
   const idx = (id: string) => { const n = ses.order ? ses.order.indexOf(id) : -1; return n === -1 ? 999 : n; };
   const base = ses.order ? [...own].sort((a, b) => idx(a.id) - idx(b.id)) : rank(own);
   const [order, setOrder] = useState<string[] | null>(null);

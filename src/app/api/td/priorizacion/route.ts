@@ -3,12 +3,14 @@ import { withTenant } from "../_helpers";
 import { rank } from "@/lib/priorizacion";
 import { horizonsOf } from "@/data/catalogo";
 import { getEvaluations, getDecisions, consolidatedOf, evaluateInitiative, decideInitiative, setInitiativeHorizon, setPrioSession, resetPrioSession, catalog, flushOrError, removeEvaluation, clearDecision, calificables } from "@/server/store";
+import { pasaAPriorizacion } from "@/lib/convencion";
 
 // GET /api/td/priorizacion[?id=] — evaluaciones de la matriz de priorización, el
 // consolidado por iniciativa, la decisión de tiempo y el orden del portafolio.
 export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
   const id = new URL(req.url).searchParams.get("id");
-  const ranking = rank(catalog().initiatives.map((i) => ({ id: i.id, horizon: i.horizon, line: i.line, name: i.name })), consolidatedOf, horizonsOf(catalog().company).map((h) => h.id));
+  // en el acompañamiento solo entran al ranking las iniciativas vinculadas a un resultado clave
+  const ranking = rank(catalog().initiatives.filter((i) => pasaAPriorizacion(catalog(), i)).map((i) => ({ id: i.id, horizon: i.horizon, line: i.line, name: i.name })), consolidatedOf, horizonsOf(catalog().company).map((h) => h.id));
   return NextResponse.json({
     me: user?.email.toLowerCase(),
     evaluations: getEvaluations(id ?? undefined),

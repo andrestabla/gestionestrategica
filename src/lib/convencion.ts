@@ -81,8 +81,23 @@ export const initiativesOfKr = (cat: Catalog, code: string): InitiativeFull[] =>
 export const okrObjectivesOf = (cat: Catalog, horizon: string): CmiObjective[] => {
   const own = cat.objectives.filter((o) => o.horizon === horizon && o.okr && !o.descartado);
   if (cat.company.mode === "convencion") return own;
-  return cat.objectives.some((o) => o.okr) ? own : cat.objectives.filter((o) => o.horizon === horizon && !o.descartado);   // los descartados quedan en el registro, no en las fases siguientes
+  // los descartados quedan en el registro y, en el acompañamiento, los que no están vinculados a una prioridad no pasan a resultados clave
+  return (cat.objectives.some((o) => o.okr) ? own : cat.objectives.filter((o) => o.horizon === horizon && !o.descartado)).filter((o) => pasaAResultadosClave(cat, o));
 };
+
+/* ═══ Reglas de paso entre etapas (acompañamiento) ═══
+   Un objetivo solo pasa a Resultados clave si está vinculado a una prioridad estratégica vigente;
+   una iniciativa solo pasa a Priorización (y de ahí al portafolio) si está vinculada a un resultado clave que existe. */
+
+/** ¿El objetivo está vinculado a una prioridad que existe en la empresa? (al eliminar una prioridad, sus objetivos quedan sin ella) */
+export const objetivoConPrioridad = (cat: Catalog, o: Pick<CmiObjective, "lever">): boolean => !!o.lever && (cat.company.levers ?? []).some((l) => l.id === o.lever);
+export const pasaAResultadosClave = (cat: Catalog, o: CmiObjective): boolean => !o.descartado && (cat.company.mode !== "acompanamiento" || objetivoConPrioridad(cat, o));
+/** Objetivos del horizonte que se quedan en Objetivos directivos por no tener prioridad (no descartados). */
+export const objetivosSinPrioridad = (cat: Catalog, horizon: string): CmiObjective[] =>
+  cat.company.mode === "acompanamiento" ? cat.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado && !objetivoConPrioridad(cat, o)) : [];
+/** ¿La iniciativa está vinculada a un resultado clave que existe? */
+export const iniciativaConKr = (cat: Catalog, i: Pick<InitiativeFull, "kpi">): boolean => !!i.kpi && cat.kpis.some((k) => k.code === i.kpi);
+export const pasaAPriorizacion = (cat: Catalog, i: Pick<InitiativeFull, "kpi">): boolean => cat.company.mode !== "acompanamiento" || iniciativaConKr(cat, i);
 /** Regla de resultados clave por objetivo: de 2 a 4; 5 se admite como máximo. */
 export const KR_MIN = 2, KR_IDEAL_MAX = 4, KR_MAX = 5;
 
