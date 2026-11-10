@@ -4,7 +4,7 @@
 // con notas, dueño del dato, fuente, periodicidad y objetivo CMI.
 
 import { useCallback, useEffect, useState } from "react";
-import { avanceAMeta, mejora } from "@/data/cmi";
+import { avanceAMeta, mejora, mueveKr } from "@/data/cmi";
 import { confirmarGuardar } from "@/components/feedback";
 import Link from "next/link";
 import { PageHeader, Card } from "@/components/ui";
@@ -57,7 +57,7 @@ export default function KpiPage() {
   const kpiSeries = kpi ? seriesOf(kpi) : [];
   const health = kpi && kpiSeries.length > 0 ? kpiHealth({ ...kpi, series: kpiSeries }) : null;
   const kpiObj = kpi ? v.catalog.objectives.find((o) => o.id === kpi.cmi) : null;
-  const kpiInis = kpi ? v.initiatives.filter((i) => i.kpi === kpi.code) : [];
+  const kpiInis = kpi ? v.initiatives.filter((i) => mueveKr(i, kpi.code)) : [];
 
   return (
     <>

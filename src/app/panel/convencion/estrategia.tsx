@@ -30,7 +30,7 @@ import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
-import { mejorSi } from "@/data/cmi";
+import { mejorSi, krsDeIniciativa, mueveKr, INI_KR_MAX } from "@/data/cmi";
 import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
 import { objectivesMatrix, keyResultsOf, healthKpisOf, initiativesOfKr, okrChecks, okrObjectivesOf, krCompleto, krFaltantes, KR_MAX, KR_INI_MAX, objetivosSinPrioridad, pasaAPriorizacion, objetivoConPrioridad, evaluationCoverage, portfolioSummary, portfolioCsv, type PortfolioRow } from "@/lib/convencion";
@@ -1177,7 +1177,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
           <div className="divide-y divide-line">
             {unlinked.map((i) => (
               <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
-                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><span className="truncate font-semibold text-ink">{i.name}</span><ChipVal i={i} /></div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · KPI ${i.kpi}` : ""}</div></div>
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><span className="truncate font-semibold text-ink">{i.name}</span><ChipVal i={i} /></div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}{i.kpi ? ` · mueve ${krsDeIniciativa(i).join(" · ")}` : ""}</div></div>
                 {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 btn-sm text-[12px] sm:btn-sm sm:text-[12px]"><Link2 size={11} /> Vincular</button>}
                 {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
               </div>
@@ -1197,7 +1197,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
         const ini = cat.initiatives.find((i) => i.id === link)!;
         return (
           <LinkForm cat={cat} horizon={horizon} ini={ini} scope={scope} saving={saving} onCancel={() => setLink(null)}
-            onSubmit={async (cmi, kpi) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi, cmi }); if (ok) { setLink(null); void revalidar(ini.id); } return ok; }} />
+            onSubmit={async (cmi, kpi, krExtra) => { const ok = await mutate("initiative", "upsert", { ...ini, kpi, krExtra, cmi }); if (ok) { setLink(null); void revalidar(ini.id); } return ok; }} />
         );
       })()}
     </>
@@ -1206,9 +1206,13 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
 
 /** Iniciativa nueva creada en la convención: nombre, qué logra, tribu dueña y, obligatorio, el resultado clave principal que mueve. */
 /** Selector del OKR al que se vincula una iniciativa: objetivo de la tribu y, si ya tiene resultados clave, el KR principal. Con la IA, sugiere el vínculo a partir del nombre y de lo que logra. */
-function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; horizon: string; value: { cmi: string; kpi: string }; onChange: (v: { cmi: string; kpi: string }) => void; scope?: string | null; iniId?: string }) {
-  // cada resultado clave recibe como máximo dos iniciativas (sin contar la que se está editando)
-  const ocupadas = (code: string) => cat.initiatives.filter((i) => i.kpi === code && i.id !== iniId).length;
+type VinculoKr = { cmi: string; kpi: string; krExtra?: string[] };
+function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; horizon: string; value: VinculoKr; onChange: (v: VinculoKr) => void; scope?: string | null; iniId?: string }) {
+  // cada resultado clave recibe como máximo dos iniciativas (sin contar la que se está editando); cuenta principal y adicionales
+  const ocupadas = (code: string) => cat.initiatives.filter((i) => mueveKr(i, code) && i.id !== iniId).length;
+  // una iniciativa mueve de 1 a 3 resultados clave: el principal y hasta dos adicionales
+  const extras = (value.krExtra ?? []).filter((x) => x && x !== value.kpi);
+  const setExtra = (n: number, code: string) => { const next = [...extras]; if (code) next[n] = code; else next.splice(n, 1); onChange({ ...value, krExtra: [...new Set(next.filter(Boolean))].slice(0, INI_KR_MAX - 1) }); };
   // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
   const objectives = okrObjectivesOf(cat, horizon).filter((o) => !scope || (cat.company.levers ?? []).find((l) => l.id === o.lever)?.ownerId === scope);
   // solo los resultados clave completos reciben iniciativas (nombre con cifra, base, meta, dueño, plazo y definición)
@@ -1220,7 +1224,7 @@ function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; 
   return (
     <div className="space-y-2">
       <Field label={scope ? `Resultado clave de tu ${Vb(cat).groupLow} que mueve (obligatorio)` : "Resultado clave que mueve (obligatorio)"}>
-        <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => krsDe(x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code }); }} className={INPUT}>
+        <select value={value.kpi} onChange={(e) => { const code = e.target.value; const o = objectives.find((x) => krsDe(x).some((k) => k.code === code)); onChange({ cmi: o?.id ?? "", kpi: code, krExtra: code ? extras.filter((x) => x !== code) : [] }); }} className={INPUT}>
           <option value="">— elegir el resultado clave —</option>
           {objectives.map((o) => { const ks = krsDe(o); return (
             <optgroup key={o.id} label={`${o.id} · ${o.name.slice(0, 80)}`}>
@@ -1228,13 +1232,30 @@ function OkrPicker({ cat, horizon, value, onChange, scope, iniId }: { cat: Cat; 
             </optgroup>
           ); })}
         </select>
-        <span className="mt-1 block text-[12px] leading-snug text-faint">Una iniciativa mueve un resultado clave concreto y completo; el objetivo se toma del KR elegido. Cada KR recibe máximo {KR_INI_MAX} iniciativas; los incompletos no aparecen hasta completarse en «OKR».</span>
+        <span className="mt-1 block text-[12px] leading-snug text-faint">Es el resultado clave principal: el objetivo de la iniciativa se toma de él. Cada KR recibe máximo {KR_INI_MAX} iniciativas; los incompletos no aparecen hasta completarse.</span>
       </Field>
+      {value.kpi && (
+        <Field label={`Otros resultados clave que también mueve (opcional · hasta ${INI_KR_MAX - 1} más)`}>
+          <div className="space-y-1.5">
+            {[...extras, ...(extras.length < INI_KR_MAX - 1 ? [""] : [])].map((sel, n) => (
+              <select key={n} value={sel} onChange={(e) => setExtra(n, e.target.value)} className={INPUT} aria-label={`Resultado clave adicional ${n + 1}`}>
+                <option value="">{sel ? "— quitar este resultado clave —" : "— añadir otro resultado clave —"}</option>
+                {objectives.map((o) => { const ks = krsDe(o).filter((k) => k.code !== value.kpi && (k.code === sel || !extras.includes(k.code))); return ks.length === 0 ? null : (
+                  <optgroup key={o.id} label={`${o.id} · ${o.name.slice(0, 80)}`}>
+                    {ks.map((k) => { const m = ocupadas(k.code); const lleno = m >= KR_INI_MAX && sel !== k.code; return <option key={k.code} value={k.code} disabled={lleno}>{k.code} · {k.name} · {m} de {KR_INI_MAX}{lleno ? " · completo" : ""}</option>; })}
+                  </optgroup>
+                ); })}
+              </select>
+            ))}
+          </div>
+          <span className="mt-1 block text-[12px] leading-snug text-faint">Una iniciativa mueve de 1 a {INI_KR_MAX} resultados clave. Añade solo los que realmente cambian con esta entrega; pueden ser de otro objetivo.</span>
+        </Field>
+      )}
     </div>
   );
 }
 /** ¿El vínculo está completo? Un resultado clave concreto de un OKR de la tribu (el objetivo se deriva del KR). */
-function okrLinkOk(cat: Cat, horizon: string, v: { cmi: string; kpi: string }): boolean {
+function okrLinkOk(cat: Cat, horizon: string, v: VinculoKr): boolean {
   const o = okrObjectivesOf(cat, horizon).find((x) => x.id === v.cmi); if (!o) return false;
   return keyResultsOf(cat, o).some((k) => k.code === v.kpi);
 }
@@ -1244,7 +1265,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
   const tribes = isAcompanamiento(cat.company) ? cat.responsibles : cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
   const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "",
     capability: initial?.capability ?? "", status: (initial?.status ?? "PLANEADA") as InitiativeFull["status"], start: initial?.start ?? "", end: initial?.end ?? "", metaResultado: initial?.metaResultado ?? "", budgetPlanned: initial?.budgetPlanned ? String(initial.budgetPlanned) : "", observaciones: initial?.observaciones ?? "" });
-  const [link, setLink] = useState({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "" });
+  const [link, setLink] = useState<VinculoKr>({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "", krExtra: initial?.krExtra ?? [] });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const acompIni = isAcompanamiento(cat.company);
   // toda iniciativa nueva nace asociada a un resultado clave; el asistente propone tres a partir de ese KR
@@ -1265,7 +1286,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
     <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub={isAcompanamiento(cat.company) ? "lo que se hace para mover un resultado clave; con él queda habilitada para calificar" : "lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar"} onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, cmi: link.cmi, horizon, capability: f.capability || sugIni.capability || initial?.capability || "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: f.status, start: (f.start || sugIni.start || "").trim().toUpperCase(), end: (f.end || sugIni.end || "").trim().toUpperCase(), metaResultado: f.metaResultado.trim(), budgetPlanned: Number(f.budgetPlanned.replace(/[^\d.,]/g, "").replace(",", ".")) || 0, observaciones: f.observaciones.trim(), ...(initial ? { impact: initial.impact, feasibility: initial.feasibility, urgency: initial.urgency, dependency: initial.dependency, progress: initial.progress, budgetCommitted: initial.budgetCommitted, budgetExecuted: initial.budgetExecuted, actions: initial.actions, log: initial.log, nextMilestone: initial.nextMilestone, factors: initial.factors } : {}) })}>
+          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, krExtra: link.kpi ? (link.krExtra ?? []) : [], cmi: link.cmi, horizon, capability: f.capability || sugIni.capability || initial?.capability || "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: f.status, start: (f.start || sugIni.start || "").trim().toUpperCase(), end: (f.end || sugIni.end || "").trim().toUpperCase(), metaResultado: f.metaResultado.trim(), budgetPlanned: Number(f.budgetPlanned.replace(/[^\d.,]/g, "").replace(",", ".")) || 0, observaciones: f.observaciones.trim(), ...(initial ? { impact: initial.impact, feasibility: initial.feasibility, urgency: initial.urgency, dependency: initial.dependency, progress: initial.progress, budgetCommitted: initial.budgetCommitted, budgetExecuted: initial.budgetExecuted, actions: initial.actions, log: initial.log, nextMilestone: initial.nextMilestone, factors: initial.factors } : {}) })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
@@ -1282,7 +1303,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
         <Field label="Observaciones"><textarea value={f.observaciones} onChange={set("observaciones")} rows={3} placeholder="Restricciones, supuestos, dependencias de otras áreas, pendientes de aprobación" className={`${INPUT} resize-y`} /></Field>
         <Field label={isAcompanamiento(cat.company) ? "Sponsor" : "Tribu dueña"}><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
         <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} />
-        <p className="text-[12px] text-faint">{acompIni ? "El resultado clave es obligatorio: toda iniciativa nace para mover uno." : "Queda asociada al resultado clave elegido"} Queda asociada a {horizonLabel(cat.company, horizon)}; así se califica en Priorización como las demás.</p>
+        <p className="text-[12px] text-faint">{acompIni ? "El resultado clave principal es obligatorio: toda iniciativa nace para mover al menos uno y puede mover hasta tres." : "Queda asociada al resultado clave elegido"} Queda asociada a {horizonLabel(cat.company, horizon)}; así se califica en Priorización como las demás.</p>
         {acompIni && !initial && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1314,7 +1335,7 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
 
 function ValidacionIniModal({ i, item, onClose, onEdit, onAplicar, saving }: { i: InitiativeFull; item?: IniItem; onClose: () => void; onEdit?: () => void; onAplicar?: (patch: { name?: string; objetivo?: string }) => Promise<void>; saving?: boolean }) {
   return (
-    <Modal title={`${i.id} · formulación`} sub={i.kpi ? `mueve ${i.kpi}` : "sin resultado clave"} onClose={onClose}
+    <Modal title={`${i.id} · formulación`} sub={i.kpi ? `mueve ${krsDeIniciativa(i).join(" · ")}` : "sin resultado clave"} onClose={onClose}
       footer={<>{onEdit && <button type="button" onClick={onEdit} className="btn-ghost btn-sm text-[12px]"><Pencil size={12} /> Editar la iniciativa</button>}<button type="button" onClick={onClose} className="btn-primary btn-sm text-[12px]">Cerrar</button></>}>
       <div className="text-[14px] font-extrabold leading-snug text-ink">{i.name}</div>
       {i.objetivo && <p className="mt-1 text-[12.5px] leading-snug text-muted">{i.objetivo}</p>}
@@ -1344,15 +1365,15 @@ function ValidacionIniModal({ i, item, onClose, onEdit, onAplicar, saving }: { i
   );
 }
 
-function LinkForm({ cat, horizon, ini, scope = null, saving, onCancel, onSubmit }: { cat: Cat; horizon: string; ini: InitiativeFull; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (cmi: string, kpi: string) => Promise<boolean> }) {
-  const [link, setLink] = useState({ cmi: okrObjectivesOf(cat, horizon).some((o) => o.id === ini.cmi) ? ini.cmi : "", kpi: ini.kpi });
+function LinkForm({ cat, horizon, ini, scope = null, saving, onCancel, onSubmit }: { cat: Cat; horizon: string; ini: InitiativeFull; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (cmi: string, kpi: string, krExtra: string[]) => Promise<boolean> }) {
+  const [link, setLink] = useState<VinculoKr>({ cmi: okrObjectivesOf(cat, horizon).some((o) => o.id === ini.cmi) ? ini.cmi : "", kpi: ini.kpi, krExtra: ini.krExtra ?? [] });
   const ok = okrLinkOk(cat, horizon, link);
   return (
     <Modal title={`Vincular · ${ini.id}`} sub={ini.name} onClose={onCancel}
       footer={<><button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
-        <button type="button" disabled={saving || !ok} onClick={() => ok && onSubmit(link.cmi, link.kpi)} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
+        <button type="button" disabled={saving || !ok} onClick={() => ok && onSubmit(link.cmi, link.kpi, link.krExtra ?? [])} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Vincular</button></>}>
       <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={ini.id} />
-      <p className="mt-2 text-[12px] text-faint">Al vincular, la iniciativa queda asociada al resultado clave elegido (y al objetivo al que pertenece) y habilitada para calificar.</p>
+      <p className="mt-2 text-[12px] text-faint">Al vincular, la iniciativa queda asociada al resultado clave principal (y al objetivo al que pertenece) y a los adicionales que elijas, y pasa a Priorización.</p>
     </Modal>
   );
 }
@@ -1408,7 +1429,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   };
   const groups = groupDefs.map((g) => { const ses = mode === "tribu" ? sessionOf(sessions, tribeOfLever(g.key)) : null; const tag = ses && ses.status === "guardada" && ses.order ? ` · orden guardado por ${V.manager}` : ses && ses.status === "abierta" ? " · calificación abierta" : ""; return { ...g, label: g.label + tag, items: applyOrder(g.key, rank(list.filter((i) => groupKey(i) === g.key))) }; }).filter((g) => g.items.length > 0);
   const ranked = groups.flatMap((g) => g.items);
-  const sub = (i: Ini) => (mode === "tribu" ? (i.kpi ? `KR ${i.kpi}` : "sin KR") : owner(i.ownerId));
+  const sub = (i: Ini) => (mode === "tribu" ? (i.kpi ? `KR ${krsDeIniciativa(i).join(" · ")}` : "sin KR") : owner(i.ownerId));
   return (
     <>
       {enTribu && mySession?.status === "abierta" && <CalificacionGuiada cat={cat} prio={prio} email={me.email} tribe={me.responsibleId!} onDone={() => { onRefresh(); }} />}

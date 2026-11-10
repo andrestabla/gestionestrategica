@@ -22,6 +22,7 @@ import { avg } from "@/lib/od";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import { krFaltantes, KR_INI_MAX, objetivoConPrioridad, iniciativaConKr } from "@/lib/convencion";
 import { firmaObjetivo } from "@/server/firma";
+import { INI_KR_MAX, mueveKr } from "@/data/cmi";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -2870,7 +2871,7 @@ export function upsertKpi(user: SessionUser, input: Partial<KpiFull>): CatResult
   if (idx >= 0) c.kpis[idx] = k; else c.kpis.push(k);
   audit(user, "task", `cat:${code}`, `KPI ${idx >= 0 ? "actualizado" : "creado"} (${name})`);
   void persist("catálogo", (db) => idx >= 0 ? writeKpi(db, cid(), k) : createRekeying(db, "KPI", () => k.code,
-    (fresh) => { const old = k.code; k.code = fresh; for (const i of c.initiatives) if (i.kpi === old) i.kpi = fresh; },
+    (fresh) => { const old = k.code; k.code = fresh; for (const i of c.initiatives) { if (i.kpi === old) i.kpi = fresh; if (i.krExtra?.includes(old)) i.krExtra = i.krExtra.map((x) => (x === old ? fresh : x)); } },
     async () => (await db.kpi.findMany({ where: { companyId: cid() }, select: { code: true } })).map((x: { code: string }) => x.code),
     (used) => { const m = /^(.*?)(\d+)$/.exec(k.code); return m ? nextCode(m[1], used, m[2].length) : nextCode(`${k.code}-`, used, 1); },
     () => writeKpi(db, cid(), k, "create")));
@@ -2883,7 +2884,7 @@ export function removeKpi(user: SessionUser, code: string): CatResult {
   if (!c.kpis.some((k) => k.code === code)) return fail(404, "El KPI no existe.");
   if (tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === code)?.cmi) !== tribeScope(user)) return fail(403, OTRA_TRIBU);
   // un resultado clave pertenece a su objetivo: al eliminarlo se desvincula de él; lo que sí bloquea es una iniciativa que lo mueve (primero se desvincula)
-  const refs = c.initiatives.filter((i) => i.kpi === code).map((i) => `${i.id} ${i.name}`);
+  const refs = c.initiatives.filter((i) => mueveKr(i, code)).map((i) => `${i.id} ${i.name}`);
   if (refs.length) return fail(422, `No se puede eliminar: lo mueven ${refs.length === 1 ? "la iniciativa" : "las iniciativas"} ${refs.slice(0, 3).join("; ")}${refs.length > 3 ? "…" : ""}. Desvincúlalas o elimínalas primero.`);
   const objs = c.objectives.filter((o) => o.kpis.includes(code));
   for (const o of objs) o.kpis = o.kpis.filter((k) => k !== code);
@@ -2903,7 +2904,7 @@ export function clearOkr(user: SessionUser): CatResult & { removed?: number; unl
   const touchedObjectives = c.objectives.filter((o) => o.kpis.length);
   const touchedInitiatives = c.initiatives.filter((i) => i.kpi);
   for (const o of touchedObjectives) o.kpis = [];
-  for (const i of touchedInitiatives) i.kpi = "";
+  for (const i of touchedInitiatives) { i.kpi = ""; delete i.krExtra; }
   const codes = c.kpis.map((k) => k.code);
   c.kpis = [];
   kpiReports().clear();
@@ -2941,16 +2942,26 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (tribeScope(user) && ownerId !== tribeScope(user)) return fail(403, "Solo registras iniciativas de tu tribu: elige tu tribu como dueña.");
   const kpi = str(input.kpi, 20).toUpperCase();
   if (kpi && !c.kpis.some((k) => k.code === kpi)) return fail(422, "El KPI asociado no existe.");
+  // una iniciativa mueve de 1 a 3 resultados clave: el principal (kpi) y hasta dos más. Si la petición no trae la lista
+  // de adicionales (formularios que solo editan el principal), se conservan los que ya tenía.
+  const previa = c.initiatives.find((i) => i.id === str(input.id, 10));
+  const extraIn = Array.isArray(input.krExtra) ? input.krExtra.map((x) => str(x, 20).toUpperCase()).filter(Boolean) : (previa?.krExtra ?? []);
+  const krExtra = [...new Set(extraIn)].filter((x) => x !== kpi);
+  if (krExtra.length && !kpi) return fail(422, "Elige primero el resultado clave principal; los adicionales se suman a él.");
+  if (1 + krExtra.length > INI_KR_MAX && kpi) return fail(422, `Una iniciativa mueve como máximo ${INI_KR_MAX} resultados clave.`);
+  const sinExistir = krExtra.find((x) => !c.kpis.some((k) => k.code === x));
+  if (sinExistir) return fail(422, `El resultado clave ${sinExistir} no existe.`);
   // convención: una iniciativa solo se vincula a un resultado clave completo (nombre con cifra, base, meta, dueño, plazo y definición)
-  if (kpi && isGuiada(c.company)) {
-    const faltan = krFaltantes(c.kpis.find((k) => k.code === kpi)!);
-    if (faltan.length) return fail(422, `El resultado clave ${kpi} está incompleto (sin ${faltan.join(", ")}): complétalo en OKR antes de vincularle iniciativas.`);
-    // y recibe como máximo dos iniciativas
-    const otras = c.initiatives.filter((i) => i.kpi === kpi && i.id !== str(input.id, 10)).length;
-    if (otras >= KR_INI_MAX) return fail(422, `El resultado clave ${kpi} ya tiene ${otras} iniciativas (máximo ${KR_INI_MAX} por KR): desvincula una o elige otro resultado clave.`);
+  if (isGuiada(c.company)) for (const code of [kpi, ...krExtra].filter(Boolean)) {
+    const yaLoMovia = !!previa && mueveKr(previa, code);
+    const faltan = krFaltantes(c.kpis.find((k) => k.code === code)!);
+    if (faltan.length && !(yaLoMovia && code !== kpi)) return fail(422, `El resultado clave ${code} está incompleto (sin ${faltan.join(", ")}): complétalo en OKR antes de vincularle iniciativas.`);
+    // y recibe como máximo dos iniciativas (cuenta las que lo mueven como principal o como adicional)
+    const otras = c.initiatives.filter((i) => mueveKr(i, code) && i.id !== str(input.id, 10)).length;
+    if (otras >= KR_INI_MAX) return fail(422, `El resultado clave ${code} ya tiene ${otras} iniciativas (máximo ${KR_INI_MAX} por KR): desvincula una o elige otro resultado clave.`);
   }
   // el líder de tribu vincula únicamente a los resultados clave del OKR de su tribu-palanca
-  if (kpi && tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === kpi)?.cmi) !== tribeScope(user)) return fail(403, "Vincula la iniciativa a un resultado clave del OKR de tu tribu.");
+  for (const code of [kpi, ...krExtra].filter(Boolean)) if (tribeScope(user) && tribeOfObjective(c, c.kpis.find((k) => k.code === code)?.cmi) !== tribeScope(user)) return fail(403, "Vincula la iniciativa a un resultado clave del OKR de tu tribu.");
   const start = str(input.start, 8), end = str(input.end, 8);
   if ((start && !QUARTER.test(start)) || (end && !QUARTER.test(end))) return fail(422, "Inicio y fin van en trimestres (AAAA-Tn).");
   if (start && end && periodIndex(start) > periodIndex(end)) return fail(422, "El fin no puede ser anterior al inicio.");
@@ -2966,7 +2977,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
     impact: int(input.impact, 1, 5, 3), feasibility: int(input.feasibility, 1, 5, 3), urgency: int(input.urgency, 1, 5, 3), dependency: int(input.dependency, 1, 5, 3),
     status: STATUS.find((x) => x === input.status) ?? "PLANEADA", start, end, ownerId, metaResultado: str(input.metaResultado, 400),
     budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted),
-    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi, createdBy: prev?.createdBy ?? user.email, observaciones: str(input.observaciones, 1500) || undefined,
+    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi, ...(krExtra.length ? { krExtra } : {}), createdBy: prev?.createdBy ?? user.email, observaciones: str(input.observaciones, 1500) || undefined,
     actions: (Array.isArray(input.actions) ? input.actions : []).map((a) => ({ name: str(a?.name, 200), meta: str(a?.meta, 200), status: ACT.find((x) => x === a?.status) ?? "PENDIENTE", quarter: str(a?.quarter, 8) })).filter((a) => a.name),
     log: Array.isArray(input.log) ? input.log.filter((l) => l && typeof l.text === "string") : (prev?.log ?? []),
     nextMilestone: { date: str(input.nextMilestone?.date, 12), text: str(input.nextMilestone?.text, 200) },
@@ -4270,6 +4281,12 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
   const obj = c.objectives.find((o) => o.id === i.cmi || o.id === k.cmi);
   if (obj?.descartado) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} está descartado` };
   if (obj && !objetivoConPrioridad(c, obj)) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} no está vinculado a una prioridad estratégica` };
+  // los resultados clave adicionales que mueve también deben existir y estar completos
+  for (const code of (i.krExtra ?? [])) {
+    const kx = c.kpis.find((x) => x.code === code);
+    if (!kx) return { ok: false, etapa: "kr", motivo: `el resultado clave adicional ${code} ya no existe` };
+    const fx = krFaltantes(kx); if (fx.length) return { ok: false, etapa: "kr", motivo: `resultado clave adicional ${code} incompleto (sin ${fx.join(", ")})` };
+  }
   const faltanKr = krFaltantes(k);
   if (faltanKr.length) return { ok: false, etapa: "kr", motivo: `resultado clave ${k.code} incompleto (sin ${faltanKr.join(", ")})` };
   const Q = /^\d{4}-T[1-4]$/;

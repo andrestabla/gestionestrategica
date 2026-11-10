@@ -9,6 +9,7 @@ import { keyResultsOf } from "@/lib/convencion";
 import { DIMS } from "@/data/mapa";
 import { encargoValidacionIniciativas, parseValidacionIniciativas, type HechosIni, type ValidacionIni } from "@/lib/iniciativas-ia";
 import { contextoEmpresa } from "@/server/contexto-empresa";
+import { krsDeIniciativa } from "@/data/cmi";
 
 // GET  /api/td/initiatives/validar?horizon=H1 — validación guardada de las iniciativas del horizonte.
 // POST /api/td/initiatives/validar { horizon } — la genera con el modelo (quien administra el catálogo) y la guarda.
@@ -41,7 +42,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     prioridades: leversOf(c.company).map((l) => ({ id: l.id, name: l.name, indicator: l.indicator })),
     objetivos: objetivos.map((o) => ({ id: o.id, lever: o.lever, name: o.name })),
     krs: objetivos.flatMap((o) => keyResultsOf(c, o).map((k) => ({ code: k.code, name: k.name, objective: o.id, baseline: k.baseline != null ? String(k.baseline) : undefined, target: k.target != null ? String(k.target) : undefined, unit: k.unit, due: k.due }))),
-    iniciativas: inis.map((i) => ({ id: i.id, name: i.name, objetivo: i.objetivo, metaResultado: i.metaResultado, cmi: i.cmi, kpi: i.kpi, owner: owner(i.ownerId), start: i.start, end: i.end, capability: i.capability, capabilityName: DIMS.find((d) => d.code === i.capability)?.name, status: i.status, budget: i.budgetPlanned, observaciones: i.observaciones })),
+    iniciativas: inis.map((i) => ({ id: i.id, name: i.name, objetivo: i.objetivo, metaResultado: i.metaResultado, cmi: i.cmi, kpi: krsDeIniciativa(i).join(" + "), owner: owner(i.ownerId), start: i.start, end: i.end, capability: i.capability, capabilityName: DIMS.find((d) => d.code === i.capability)?.name, status: i.status, budget: i.budgetPlanned, observaciones: i.observaciones })),
     contexto: contextoEmpresa(), fecha: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }), soloId,
   });
   let raw: unknown;

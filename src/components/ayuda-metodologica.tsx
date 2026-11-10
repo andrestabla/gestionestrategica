@@ -43,9 +43,9 @@ const PASOS: { de: string; a: string; regla: string; detalle: string; etapas: Et
     detalle: "Un objetivo sin prioridad o marcado «Descartado» se queda en Objetivos directivos; no admite resultados clave nuevos." },
   { de: "Resultados clave", a: "Iniciativas", etapas: ["kr", "iniciativas"],
     regla: "Recibe iniciativas el resultado clave completo: cifra, línea base, meta, unidad, dueño, plazo y definición con fórmula.",
-    detalle: "La meta debe ser distinta de la base, salvo en los de sostenimiento («mejor si se mantiene»). Máximo dos iniciativas por resultado clave." },
+    detalle: "La meta debe ser distinta de la base, salvo en los de sostenimiento («mejor si se mantiene»). Máximo dos iniciativas por resultado clave; cada iniciativa mueve de 1 a 3." },
   { de: "Iniciativas", a: "Priorización", etapas: ["iniciativas", "priorizacion"],
-    regla: "Pasa la iniciativa vinculada a un resultado clave que existe.",
+    regla: "Pasa la iniciativa vinculada al menos a un resultado clave que existe (puede mover hasta tres).",
     detalle: "Para calificarse debe además estar completa (qué logra, responsable, inicio y fin, capacidad, presupuesto), validada en verde y con la sesión de su prioridad abierta." },
   { de: "Priorización", a: "Portafolio", etapas: ["priorizacion", "portafolio"],
     regla: "Entra al portafolio la iniciativa que pasó por priorización; la decisión de tiempo exige al menos una calificación.",
@@ -535,7 +535,7 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
     <p className="mt-3 text-[13px] leading-relaxed text-muted">Resultado: pocas iniciativas, con dueño y con una decisión de tiempo. Lo táctico no se desecha: se transfiere al área con responsable nombrado.</p>
   </> },
   { k: "Condición de entrada", t: "Qué se puede calificar", body: <ul className="space-y-2">
-    <Li><b>Vinculada a un resultado clave completo:</b> cifra, línea base, meta distinta de la base (salvo que sea de sostenimiento, «mejor si se mantiene»), unidad, dueño, plazo y fórmula. Máximo dos iniciativas por resultado clave.</Li>
+    <Li><b>Vinculada a un resultado clave completo:</b> cifra, línea base, meta distinta de la base (salvo que sea de sostenimiento, «mejor si se mantiene»), unidad, dueño, plazo y fórmula. Máximo dos iniciativas por resultado clave; una iniciativa puede mover de uno a tres.</Li>
     <Li><b>Formulación completa:</b> qué logra, responsable, inicio y fin, capacidad que instala y presupuesto planeado (los elementos de la ayuda de Iniciativas).</Li>
     <Li><b>Validada en la etapa anterior:</b> la validación de iniciativas la deja en verde. Lo amarillo se corrige y se revalida; lo rojo se replantea.</Li>
     <Li>Lo que no cumple aparece en el ranking con el motivo («sin KR», «incompleta», «sin validar») y no se puede calificar.</Li>

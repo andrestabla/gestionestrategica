@@ -9,6 +9,7 @@
 //   · resumen y exportación del portafolio por horizonte y decisión
 
 import type { Catalog, Lever } from "@/data/catalogo";
+import { mueveKr } from "@/data/cmi";
 import { horizonsOf, leversOf, isConvencion, horizonesBase } from "@/data/catalogo";
 import type { CmiObjective, InitiativeFull, KpiFull } from "@/data/cmi";
 import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
@@ -74,7 +75,7 @@ export const healthKpisOf = (cat: Catalog, o: CmiObjective): KpiFull[] => {
 };
 
 /** Iniciativas que mueven un resultado clave. */
-export const initiativesOfKr = (cat: Catalog, code: string): InitiativeFull[] => cat.initiatives.filter((i) => i.kpi === code);
+export const initiativesOfKr = (cat: Catalog, code: string): InitiativeFull[] => cat.initiatives.filter((i) => mueveKr(i, code));   // como principal o como adicional
 
 /** Objetivos sobre los que se construyen OKR en un horizonte: en modo convención, solo los definidos por las tribus (okr): los directivos
     viven en Dirección 3x3 y no se muestran en OKR. Fuera de la convención, si la empresa no usa ese nivel, todos los del horizonte. */

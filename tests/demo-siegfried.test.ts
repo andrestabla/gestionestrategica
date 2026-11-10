@@ -4,7 +4,7 @@ import { runWithTenant } from "../src/server/tenant";
 import { resetStore, catalog, getDecisions, getRevisionesCap, getChecklistsCap, getMetas, getAlineacion, getArticulaciones, listCompanies, calificables } from "../src/server/store";
 import { crearDemoSiegfried } from "../src/server/demo-siegfried";
 import { lecturaCapacidades } from "../src/lib/capacidades";
-import { okrObjectivesOf, objetivosSinPrioridad, pasaAPriorizacion, krFaltantes } from "../src/lib/convencion";
+import { okrObjectivesOf, objetivosSinPrioridad, pasaAPriorizacion, krFaltantes, initiativesOfKr } from "../src/lib/convencion";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "admin@plataforma.test", name: "Admin", role: "ADMIN" };
@@ -28,6 +28,9 @@ test("la instancia DEMO SIEGFRIED se crea con el recorrido ideal completo, un ca
     assert.deepEqual(okrObjectivesOf(c, "H1").length, 16, "a Resultados clave pasan los dieciséis vigentes con prioridad");
     assert.deepEqual(objetivosSinPrioridad(c, "H1").map((o) => o.id), ["OE-18"]);
     assert.deepEqual(c.initiatives.filter((i) => !pasaAPriorizacion(c, i)).map((i) => i.id), ["in23"]);
+    // iniciativas que mueven más de un resultado clave (de 1 a 3)
+    assert.deepEqual(c.initiatives.find((i) => i.id === "in01")!.krExtra, ["EXC-27-05"]);
+    assert.deepEqual(initiativesOfKr(c, "OPE-27-04").map((i) => i.id), ["in08"]);
     const sost = c.kpis.find((k) => k.code === "FIN-27-04")!;
     assert.equal(sost.goodDirection, "keep"); assert.equal(sost.target, sost.baseline); assert.deepEqual(krFaltantes(sost), []);
     assert.ok(c.objectives.filter((o) => o.horizon === "H1").every((o) => /^(Aumentar|Elevar|Consolidar|Obtener|Garantizar|Reducir|Mantener|Lograr|Acortar|Asegurar|Anticipar)\b/.test(o.name) && !!o.indicator));

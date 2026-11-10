@@ -542,6 +542,7 @@ model Initiative {
   kpi             Kpi?            @relation(fields: [kpiId], references: [id])
   createdBy       String? // correo de quien la creó
   observaciones   String? // notas libres de la iniciativa (restricciones, supuestos, pendientes)
+  krExtra         Json? // códigos de los otros resultados clave que mueve (además del principal, kpiId); hasta dos
   successFactors  SuccessFactor[]
 
   @@unique([companyId, code])

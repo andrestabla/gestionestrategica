@@ -258,6 +258,8 @@ export const evidenceOfPractice = (code: string) => EVIDENCE_CATALOG.find((e) =>
 export type ActionStatus = "HECHA" | "EN_CURSO" | "PENDIENTE";
 
 export type InitiativeFull = {
+  /** Otros resultados clave que mueve además del principal (`kpi`): una iniciativa mueve de 1 a 3. */
+  krExtra?: string[];
   id: string;
   line: number;
   subsistema: "Dirección" | "Comercial" | "Operación" | "Administración" | "Talento";
@@ -562,3 +564,11 @@ export function mejora(d: SentidoKr | string | undefined, valor: number, previo:
   if (d === "keep") return Math.abs(valor - meta) <= Math.abs(previo - meta);
   return d === "down" ? valor <= previo : valor >= previo;
 }
+
+/** Máximo de resultados clave que puede mover una iniciativa (mínimo 1 para pasar a priorización). */
+export const INI_KR_MAX = 3;
+/** Resultados clave que mueve una iniciativa: el principal primero y hasta dos más, sin repetir. */
+export const krsDeIniciativa = (i: { kpi?: string; krExtra?: string[] }): string[] =>
+  [...new Set([i.kpi ?? "", ...(i.krExtra ?? [])].filter(Boolean))].slice(0, INI_KR_MAX);
+/** ¿La iniciativa mueve este resultado clave (como principal o como adicional)? */
+export const mueveKr = (i: { kpi?: string; krExtra?: string[] }, code: string): boolean => krsDeIniciativa(i).includes(code);
