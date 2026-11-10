@@ -31,6 +31,48 @@ const quienes = (etapa: string, comite: string, advisor: string, areas: string):
   <p className="mt-4 text-[12.5px] leading-relaxed text-muted">Todo cambio queda en la auditoría con autor y fecha. El administrador de la plataforma y el líder de la empresa tienen la misma edición que el comité; el directivo de una empresa en otro modo (convención) solo lee.</p>
 </> });
 
+/** Lámina común: reglas de paso entre etapas. Lo que no cumple la condición se queda en su etapa (nada se borra)
+    y pasa en cuanto se corrige; la plataforma lo avisa en la etapa siguiente y el servidor aplica la misma regla. */
+type Etapa = "prioridades" | "objetivos" | "kr" | "iniciativas" | "priorizacion" | "portafolio" | "capacidades" | "cascada";
+const PASOS: { de: string; a: string; regla: string; detalle: string; etapas: Etapa[] }[] = [
+  { de: "Prioridades estratégicas", a: "Objetivos directivos", etapas: ["prioridades", "objetivos"],
+    regla: "Todo objetivo nace dentro de una prioridad vigente y de un horizonte.",
+    detalle: "Si una prioridad se elimina, sus objetivos no se borran: quedan sin prioridad y hay que reubicarlos o descartarlos." },
+  { de: "Objetivos directivos", a: "Resultados clave", etapas: ["objetivos", "kr"],
+    regla: "Pasa el objetivo vinculado a una prioridad vigente y que no esté descartado.",
+    detalle: "Un objetivo sin prioridad o marcado «Descartado» se queda en Objetivos directivos; no admite resultados clave nuevos." },
+  { de: "Resultados clave", a: "Iniciativas", etapas: ["kr", "iniciativas"],
+    regla: "Recibe iniciativas el resultado clave completo: cifra, línea base, meta, unidad, dueño, plazo y definición con fórmula.",
+    detalle: "La meta debe ser distinta de la base, salvo en los de sostenimiento («mejor si se mantiene»). Máximo dos iniciativas por resultado clave." },
+  { de: "Iniciativas", a: "Priorización", etapas: ["iniciativas", "priorizacion"],
+    regla: "Pasa la iniciativa vinculada a un resultado clave que existe.",
+    detalle: "Para calificarse debe además estar completa (qué logra, responsable, inicio y fin, capacidad, presupuesto), validada en verde y con la sesión de su prioridad abierta." },
+  { de: "Priorización", a: "Portafolio", etapas: ["priorizacion", "portafolio"],
+    regla: "Entra al portafolio la iniciativa que pasó por priorización; la decisión de tiempo exige al menos una calificación.",
+    detalle: "Implementar exige impacto consolidado de 3 o 4 y capacidad resuelta; renunciar exige motivo; las tácticas se transfieren al área." },
+  { de: "Portafolio", a: "Capacidades para ejecutar", etapas: ["portafolio", "capacidades"],
+    regla: "Se revisan las capacidades de las iniciativas con decisión «implementar» o «preparar».",
+    detalle: "Backlog y renuncia no se revisan. Si el objetivo de la iniciativa se descarta, sale de la revisión." },
+  { de: "Portafolio y capacidades", a: "Cascada trimestral", etapas: ["capacidades", "cascada"],
+    regla: "Llegan a la cascada las iniciativas decididas; primero se declara la articulación entre áreas y después las metas.",
+    detalle: "Una meta solo se registra en un área que participa en la articulación. Las brechas de capacidad no bloquean, pero se resuelven antes o en paralelo." },
+];
+const pasos = (actual: Etapa): Lamina => ({ k: "Reglas de paso", t: "Qué debe cumplirse para pasar de una etapa a la siguiente", body: <>
+  <p className="text-[14px] leading-relaxed text-ink">La ruta es una cadena: cada etapa trabaja solo con lo que la anterior dejó bien formado. <b>Lo que no cumple la condición se queda en su etapa</b>; no se borra y pasa en cuanto se corrige. Resaltadas, las reglas que tocan esta etapa.</p>
+  <ol className="mt-4 space-y-2">
+    {PASOS.map((x, i) => { const on = x.etapas.includes(actual); return (
+      <li key={i} className="rounded-xl border px-3.5 py-2.5" style={on ? { borderColor: "var(--cyan-deep)", background: "color-mix(in srgb, var(--cyan) 8%, var(--surface))" } : { borderColor: "var(--line)" }}>
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-faint">
+          <span className={on ? "text-cyan-deep" : ""}>{x.de}</span><ArrowRight size={11} /><span className={on ? "text-cyan-deep" : ""}>{x.a}</span>
+        </div>
+        <p className="mt-1 text-[13px] font-semibold leading-snug text-ink">{x.regla}</p>
+        <p className="mt-0.5 text-[12.5px] leading-snug text-muted">{x.detalle}</p>
+      </li>
+    ); })}
+  </ol>
+  <p className="mt-4 text-[12.5px] leading-relaxed text-muted">La etapa siguiente avisa cuántos elementos se quedaron atrás y enlaza a donde se corrigen. El servidor aplica las mismas reglas, así que no se saltan por otra vía.</p>
+</> });
+
 const OBJETIVOS: Lamina[] = [
   { k: "Qué es", t: "Un objetivo directivo baja una prioridad al año", body: <>
     <p className="text-[14px] leading-relaxed text-ink">Un <b>objetivo directivo</b> es el resultado concreto que la dirección se compromete a lograr en el horizonte (el año de planeación) para hacer avanzar una <b>prioridad estratégica</b>. La prioridad dice hacia dónde va la empresa en 3 a 5 años; el objetivo dice qué tiene que ser cierto al cierre del año para que esa prioridad avance.</p>
@@ -78,6 +120,7 @@ const OBJETIVOS: Lamina[] = [
     </div>
     <p className="mt-3 text-[12.5px] leading-relaxed text-muted">La validación es exigente: solo es verde el objetivo que aporta de forma inequívoca a su prioridad, tiene los cuatro elementos de la estructura, es un objetivo (no un KR ni una iniciativa), no duplica a otro y es coherente con el mercado y la posición de la empresa. Al pulsar cada semáforo se ve la justificación, qué elementos faltan, qué hacer y una redacción propuesta que se puede aplicar con un clic. La lectura se marca desactualizada cuando cambian las prioridades o los objetivos.</p>
   </> },
+  pasos("objetivos"),
   quienes("Objetivos directivos", "Escribe, edita y elimina los objetivos directivos de cada prioridad; decide la redacción final tras la validación.", "Conduce la sesión, corre la validación con IA (alineación con la prioridad, verbo de logro, indicador impulsor, solapes) y propone reformulaciones.", "Aportan la evidencia y la línea base 2026 de su área; no editan los objetivos."),
 ];
 
@@ -119,6 +162,7 @@ const KR: Lamina[] = [
     <Li>Resultado clave que repite el objetivo con otras palabras.</Li>
     <Li>Más de cinco resultados clave: ya no es foco, es un tablero.</Li>
   </ul> },
+  pasos("kr"),
   quienes("Resultados clave", "Define, edita y elimina los resultados clave de cada objetivo: línea base, meta, unidad, dueño y fórmula.", "Valida cada KR con IA, cuida que haya de 2 a 3 por objetivo y que ninguno sea una iniciativa disfrazada.", "El dueño de cada KR reporta su valor en el ritmo acordado."),
 ];
 
@@ -160,6 +204,7 @@ const INICIATIVAS: Lamina[] = [
     <Li>Más de dos iniciativas por KR: el esfuerzo se dispersa.</Li>
     <Li>Sin trimestre de inicio o de fin: no cabe en la cascada trimestral.</Li>
   </ul> },
+  pasos("iniciativas"),
   quienes("Iniciativas", "Crea, edita y elimina iniciativas con sus ocho elementos y las vincula al resultado clave que mueven.", "Valida con IA los ocho elementos, el alcance y el nombre como entrega; vela por el máximo de dos iniciativas por KR.", "Proponen y completan las iniciativas de su área; el responsable asignado responde por su ejecución."),
 ];
 
@@ -205,6 +250,7 @@ const PORTAFOLIO: Lamina[] = [
     <Li>Resumen por prioridad y decisión, y lista ordenada por puntaje consolidado dentro de cada horizonte.</Li>
     <Li>Lo decidido en «implementar» o «preparar» entra a <b>Capacidades para ejecutar</b> y al árbol de la <b>Cascada trimestral</b>, donde cada iniciativa se articula entre áreas ({Object.values(ROL_AREA).join(" y ").toLowerCase()}).</Li>
   </ul> },
+  pasos("portafolio"),
   quienes("Portafolio", "Decide el tiempo de cada iniciativa (implementar, preparar o validar, backlog, renunciar) con sustento, a partir del consolidado de la priorización.", "Prepara la sesión, muestra el consolidado y las condiciones de cada decisión, y registra las decisiones que el comité toma en la mesa.", "Reciben las iniciativas tácticas transferidas a su área y las decididas para ejecutarlas."),
 ];
 
@@ -270,6 +316,7 @@ const CASCADA: Lamina[] = [
     <Li><b>Interdependencias:</b> la vista de quién necesita qué de quién en el trimestre, para la reunión mensual.</Li>
     <Li><b>Cierre:</b> cada meta se cierra con su porcentaje y su aprendizaje; el estado queda en cumplida, parcial o no cumplida.</Li>
   </ul> },
+  pasos("cascada"),
   quienes("Cascada y plan trimestral", "Articula las áreas de cada iniciativa (quién lidera, quién contribuye, qué debe hacer cada una) y crea, edita o elimina las metas trimestrales.", "Propone la articulación con IA de todas las iniciativas en una sola acción y propone las metas desde el portafolio; después el comité y las áreas las afinan.", "Cada responsable registra y actualiza las metas, hitos y dependencias de su propia área, y cierra el trimestre."),
 ];
 
@@ -312,6 +359,7 @@ const CAPACIDADES: Lamina[] = [
     <Li><b>Revisar</b> (comité directivo, advisor, sponsor de la prioridad o responsable de la iniciativa): a pantalla completa, una afirmación por paso, con «Lectura inicial con IA» opcional que propone niveles y justificaciones para confirmar o corregir.</Li>
     <Li>El resultado queda registrado con autor y fecha; el listado muestra el semáforo y las brechas de cada iniciativa, y el detalle enlaza con la cascada trimestral para programar lo que falta.</Li>
   </ul> },
+  pasos("capacidades"),
   quienes("Capacidades para ejecutar", "Revisa el checklist de cualquier iniciativa decidida: nivel por afirmación, qué haría falta por frente y notas.", "Personaliza los checklists con IA (solo advisor o administrador) y pide la lectura inicial con IA que el revisor confirma o corrige.", "El responsable de la iniciativa y el sponsor de su prioridad revisan la suya."),
 ];
 
@@ -405,6 +453,7 @@ const PRIORIDADES: Lamina[] = [
     <Li>El sponsor de la prioridad es el dueño por defecto de sus resultados clave e iniciativas y abre la sesión de priorización de su prioridad.</Li>
     <Li>Objetivos directivos, resultados clave, iniciativas, priorización, portafolio y cascada trimestral se leen por prioridad: es el eje de toda la cadena.</Li>
   </ul> },
+  pasos("prioridades"),
   quienes("Prioridades estratégicas", "Define, edita, ordena y elimina las prioridades: nombre, resultado del ciclo, indicadores, sponsor y renuncia.", "Facilita la sesión F01, cuida la prueba de exigencia de los siete criterios y que cada prioridad tenga un sponsor distinto.", "Los sponsors responden por su prioridad en el ritmo trimestral; no editan las de los demás por fuera de la sesión."),
 ];
 
@@ -520,6 +569,7 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
     <Li>Las decisiones de tiempo se registran en Portafolio con autor, fecha y motivo; las renuncias exigen motivo.</Li>
     <Li>Una iniciativa que cambia después de calificada conserva su calificación; si cambia de fondo, se reinicia su sesión y se vuelve a calificar.</Li>
   </ul> },
+  pasos("priorizacion"),
   quienes("Priorización", "Cada miembro califica una sola vez cada iniciativa con los criterios D·E·M·L; con el consolidado, el comité decide el tiempo en Portafolio.", "Abre y cierra la calificación por prioridad (o todas a la vez), ajusta el orden si hace falta, propone el trimestre de inicio y guarda.", "El responsable de una capacidad califica las iniciativas de la suya.")
 ];
 
