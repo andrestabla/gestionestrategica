@@ -6,7 +6,7 @@
 
 import base from "@/data/demo-siegfried/base.json";
 import { DEMO_SLUG, DEMO_NAME, DEMO_SHORT, LEVERS, OBJETIVOS, KRS, INICIATIVAS, OBJETIVO_SIN_PRIORIDAD, INICIATIVA_SIN_KR, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
-import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError } from "@/server/store";
+import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError, leerMembresias, restaurarMembresias, type MembresiaGuardada } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 import { huellaAlineacion, huellaIniciativas } from "@/server/huellas";
 import { PRACTICES } from "@/data/mapa";
@@ -22,8 +22,11 @@ const demoUser = (u: { email: string; name: string; role: SessionUser["role"] })
 function rng(seed: number) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: boolean } = {}): Promise<{ ok: true; slug: string; resumen: Record<string, number>; avisos: string[] } | { ok: false; status: number; error: string }> {
+  let membresias: MembresiaGuardada[] = [];
   if (listCompanies().some((c) => c.slug === DEMO_SLUG)) {
     if (!opts.recrear) return { ok: false, status: 409, error: `La instancia «${DEMO_NAME}» ya existe (/${DEMO_SLUG}). Elimínala o pide recrearla.` };
+    // los accesos ya concedidos a la demo (advisors y directivos de otras empresas) se conservan al recrearla
+    membresias = await leerMembresias(DEMO_SLUG);
     const d = await deleteCompany(actor, DEMO_SLUG);
     if (!d.ok) return d;
   }
@@ -108,5 +111,10 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
     return { responsables: cc.responsibles.length, objetivos: cc.objectives.length, resultadosClave: cc.kpis.length, iniciativas: cc.initiatives.length, autoevaluaciones: F1_DIRECTIVOS.length, calificaciones: evaluaciones, decisiones, revisionesCapacidades: revisiones, articulaciones, metasTrimestrales: metas };
   });
   const bad = await flushOrError(); if (bad) avisos.push(`escritura en la base: ${bad}`);
+  if (membresias.length) {
+    const n = await restaurarMembresias(DEMO_SLUG, membresias);
+    if (n < membresias.length) avisos.push(`membresías: se conservaron ${n} de ${membresias.length}`);
+    (resumen as Record<string, number>).membresias = n;
+  }
   return { ok: true, slug: DEMO_SLUG, resumen, avisos };
 }

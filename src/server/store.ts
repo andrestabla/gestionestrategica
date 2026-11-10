@@ -360,8 +360,11 @@ export async function hydrateCompanies() {
         itinerary: readItinerary(c.itinerary),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
+      // misma dirección pero otra empresa en la base (se eliminó y se volvió a crear, p. ej. la demo): lo que esta
+      // instancia tenía en memoria es de la anterior; se descarta para que la próxima petición cargue la nueva desde la base
       const t = g.tenants.get(c.slug);
-      if (t) t.dbId = c.id;
+      if (t && t.dbId && t.dbId !== c.id) g.tenants.delete(c.slug);
+      else if (t) t.dbId = c.id;
     }
     // empresas que ya no están en la base con ese identificador (renombradas o eliminadas en otra instancia)
     const seen = new Set(rows.map((c: { slug: string }) => c.slug));
@@ -407,9 +410,27 @@ export async function hydrateFromDb(opts: { force?: boolean } = {}) {
       const row = await db.company.findUnique({ where: { id: st.dbId }, select: { dataVersion: true } });
       remote = row?.dataVersion ?? null;
     } catch (e) { console.error("[4shine] chequeo de versión falló:", (e as Error).message); return; }
-    if (remote === null || remote === st.version) return;
+    if (remote !== null && remote === st.version) return;
     g.companiesHydratedAt = 0;   // el registro (palancas, sesiones, itinerario…) también pudo cambiar
     await hydrateCompanies();
+    // la fila de la empresa ya no existe con ese identificador: otra instancia la eliminó o la recreó. Si sigue en el
+    // registro con otro identificador, se parte de cero con la nueva; si no, no hay nada que recargar
+    if (remote === null) {
+      if (!g.companies.has(st.slug)) return;
+      g.tenants.delete(st.slug);
+      const nuevo = S();
+      nuevo.hydrating = loadTenant(nuevo);
+      try { await nuevo.hydrating; } finally { nuevo.hydrating = undefined; }
+      return;
+    }
+    // el registro pudo descartar este estado (la empresa se recreó): se carga el vigente
+    const vigente = S();
+    if (vigente !== st) {
+      if (vigente.hydrating) { await vigente.hydrating; return; }
+      vigente.hydrating = loadTenant(vigente);
+      try { await vigente.hydrating; } finally { vigente.hydrating = undefined; }
+      return;
+    }
   }
   st.hydrating = loadTenant(st);
   try { await st.hydrating; } finally { st.hydrating = undefined; }
@@ -963,6 +984,34 @@ export async function membershipOf(email: string, slug: string): Promise<Membres
   if (!f) return null;
   if (f.company?.slug === slug) return { company: f.company, role: f.user.role, line: f.user.line, responsibleId: f.user.responsibleId };
   return f.otras.find((o) => o.company.slug === slug) ?? null;
+}
+
+/** Membresías de una empresa tal como están en la base: se leen antes de recrearla para no perder los accesos ya concedidos. */
+export type MembresiaGuardada = { userId: string; role: string; line: number | null; responsibleId: string | null; active: boolean; createdBy: string | null };
+export async function leerMembresias(slug: string): Promise<MembresiaGuardada[]> {
+  const companyId = g.companies.get(slug)?.dbId;
+  if (!hasDb() || !companyId) return [];
+  try {
+    const db = await prisma();
+    const rows = await db.userMembership.findMany({ where: { companyId } });
+    return rows.map((m: MembresiaGuardada) => ({ userId: m.userId, role: m.role, line: m.line, responsibleId: m.responsibleId, active: m.active, createdBy: m.createdBy }));
+  } catch (e) { console.error("[4shine] lectura de membresías falló:", (e as Error).message); return []; }
+}
+/** Vuelve a crear en la empresa (ya recreada) las membresías que tenía; devuelve cuántas quedaron. */
+export async function restaurarMembresias(slug: string, rows: MembresiaGuardada[]): Promise<number> {
+  const companyId = g.companies.get(slug)?.dbId;
+  if (!hasDb() || !companyId || !rows.length) return 0;
+  let n = 0;
+  const db = await prisma();
+  for (const m of rows) {
+    try {
+      await conReintentos("membresía", () => db.userMembership.upsert({ where: { userId_companyId: { userId: m.userId, companyId } }, update: { role: m.role, line: m.line, responsibleId: m.responsibleId, active: m.active }, create: { userId: m.userId, companyId, role: m.role, line: m.line, responsibleId: m.responsibleId, active: m.active, createdBy: m.createdBy } }));
+      n++;
+    } catch (e) { console.error("[4shine] no se pudo restaurar una membresía:", (e as Error).message); }
+  }
+  const st = g.tenants.get(slug);
+  if (st) st.version = -1;   // la próxima petición recarga la empresa, con sus cuentas
+  return n;
 }
 
 /** Agrega a la empresa activa una cuenta que ya existe en otra empresa (membresía con rol y ámbito propios). */
