@@ -46,7 +46,7 @@ const PASOS: { de: string; a: string; regla: string; detalle: string; etapas: Et
     detalle: "La meta debe ser distinta de la base, salvo en los de sostenimiento («mejor si se mantiene»). Máximo dos iniciativas por resultado clave; cada iniciativa mueve de 1 a 3." },
   { de: "Iniciativas", a: "Priorización", etapas: ["iniciativas", "priorizacion"],
     regla: "Pasa la iniciativa vinculada al menos a un resultado clave que existe (puede mover hasta tres).",
-    detalle: "Una iniciativa puede quedar momentáneamente sin resultado clave: espera en la columna de pendientes y no pasa. Para calificarse debe además estar completa (qué logra, responsable, inicio y fin, capacidad, presupuesto), validada en verde y con la sesión de su prioridad abierta." },
+    detalle: "Una iniciativa puede quedar momentáneamente sin resultado clave: espera en la columna de pendientes y no pasa. Una vez vinculada se puede calificar con la sesión de su prioridad abierta, aunque la validación la deje parcialmente alineada o le falten datos de formulación: eso aparece como «con pendientes» y no la frena." },
   { de: "Priorización", a: "Portafolio", etapas: ["priorizacion", "portafolio"],
     regla: "Entra al portafolio la iniciativa que pasó por priorización; la decisión de tiempo exige al menos una calificación.",
     detalle: "Implementar exige impacto consolidado de 3 o 4 y capacidad resuelta; renunciar exige motivo; las tácticas se transfieren al área." },
@@ -535,10 +535,10 @@ const priorizacionLaminas = (rule: TypeRule): Lamina[] => [
     <p className="mt-3 text-[13px] leading-relaxed text-muted">Resultado: pocas iniciativas, con dueño y con una decisión de tiempo. Lo táctico no se desecha: se transfiere al área con responsable nombrado.</p>
   </> },
   { k: "Condición de entrada", t: "Qué se puede calificar", body: <ul className="space-y-2">
-    <Li><b>Vinculada a un resultado clave completo:</b> cifra, línea base, meta distinta de la base (salvo que sea de sostenimiento, «mejor si se mantiene»), unidad, dueño, plazo y fórmula. Máximo dos iniciativas por resultado clave; una iniciativa puede mover de uno a tres.</Li>
-    <Li><b>Formulación completa:</b> qué logra, responsable, inicio y fin, capacidad que instala y presupuesto planeado (los elementos de la ayuda de Iniciativas).</Li>
-    <Li><b>Validada en la etapa anterior:</b> la validación de iniciativas la deja en verde. Lo amarillo se corrige y se revalida; lo rojo se replantea.</Li>
-    <Li>Lo que no cumple aparece en el ranking con el motivo («sin KR», «incompleta», «sin validar») y no se puede calificar.</Li>
+    <Li><b>Vinculada a un resultado clave:</b> es la única condición para calificar. El objetivo de ese resultado clave debe seguir en pie: con prioridad y sin descartar. Máximo dos iniciativas por resultado clave; una iniciativa puede mover de uno a tres.</Li>
+    <Li><b>Parcialmente alineada también se califica:</b> si la validación de iniciativas la deja en amarillo o en rojo, o aún no se ha validado, la iniciativa entra igual a la calificación. La lectura queda como referencia para el comité.</Li>
+    <Li><b>Con pendientes:</b> si al resultado clave o a la formulación les falta algo (qué logra, responsable, inicio y fin, capacidad que instala, presupuesto planeado), el ranking la marca «con pendientes» y dice qué falta. No impide calificar; conviene completarlo antes de decidir el tiempo.</Li>
+    <Li>Lo que no está vinculado a un resultado clave aparece con el motivo «sin KR» y no se puede calificar.</Li>
   </ul> },
   { k: "Criterios y pesos", t: "Cuatro criterios con peso fijo", body: <>
     <p className="text-[12.5px] leading-relaxed text-muted">Los pesos expresan la tesis del método: primero el resultado y la evidencia, después la réplica; la capacidad pesa poco porque se resuelve, no se premia. Puntaje = (40·I + 30·E + 20·S + 10·C) ÷ 4, de 25 a 100. Cada persona califica una sola vez y deja su sustento.</p>

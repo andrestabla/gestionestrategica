@@ -50,9 +50,11 @@ test("iniciativa con varios resultados clave: mínimo uno, máximo tres, tope de
     assert.ok(upsertInitiative(advisor, ini("in01", "K1", [])).ok);
     assert.equal(catalog().initiatives.find((i) => i.id === "in01")!.krExtra, undefined);
     assert.ok(upsertInitiative(advisor, ini("in01", "K1", ["K2"])).ok);
-    // un KR que una iniciativa mueve como adicional no se puede eliminar; si queda incompleto, la iniciativa no se califica
+    // un KR que una iniciativa mueve como adicional no se puede eliminar; si queda incompleto, la iniciativa se califica igual y lleva el aviso
     const del = removeKpi(advisor, "K2"); assert.ok(!del.ok && /lo mueve/.test(del.error));
     assert.ok(upsertKpi(advisor, { ...kr("K2", "OE-01"), target: 0 }).ok);
-    assert.match(calificabilidad(catalog().initiatives.find((i) => i.id === "in01")!).motivo ?? "", /adicional K2 incompleto/);
+    const cal = calificabilidad(catalog().initiatives.find((i) => i.id === "in01")!);
+    assert.ok(cal.ok, "vinculada: se califica aunque un resultado clave adicional esté incompleto");
+    assert.match(cal.aviso ?? "", /adicional K2 incompleto/);
   });
 });

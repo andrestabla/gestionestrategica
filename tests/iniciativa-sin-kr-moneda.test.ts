@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
-import { createCompany, resetStore, upsertResponsible, setLevers, upsertObjective, upsertKpi, upsertInitiative, calificabilidad, catalog } from "../src/server/store";
+import { createCompany, resetStore, upsertResponsible, setLevers, upsertObjective, upsertKpi, upsertInitiative, calificabilidad, catalog, saveAlineacion, evaluateInitiative } from "../src/server/store";
 import { initiativesOfKr, pasaAPriorizacion } from "../src/lib/convencion";
 import { formatoMiles, leerMonto, fmtMonto } from "../src/lib/dinero";
 import type { SessionUser } from "../src/lib/session";
@@ -78,5 +78,38 @@ test("fuera del acompañamiento el objetivo sigue siendo obligatorio al crear", 
   await runWithTenant("completa-sa", async () => {
     assert.ok(upsertResponsible(advisor, { id: "R01", cargo: "Gerente", dependencia: "Gerencia general", rolPlataforma: "RESPONSABLE" }).ok);
     const r = upsertInitiative(advisor, { ...base, cmi: "", kpi: "" }); assert.ok(!r.ok && /objetivo/.test(r.error));
+  });
+});
+
+test("acompañamiento: toda iniciativa vinculada se califica, aunque esté incompleta, sin validar o parcialmente alineada", async () => {
+  resetStore();
+  assert.ok((await createCompany(admin, { name: "Califica SA", template: "vacia", mode: "acompanamiento", typeRule: "cresio", horizons: [{ id: "H1", label: "H1 · 2027", months: 12 }] })).ok);
+  await runWithTenant("califica-sa", async () => {
+    assert.ok(upsertResponsible(advisor, { id: "R01", cargo: "Gerente", dependencia: "Gerencia general", rolPlataforma: "RESPONSABLE" }).ok);
+    assert.ok(setLevers(advisor, [{ id: "EXC", name: "Innovación comercial", order: 1, ownerId: "R01" }]).ok);
+    assert.ok(upsertObjective(advisor, { id: "OE-01", perspective: "clientes", name: "Aumentar la participación de mercado, medida por el share", kpis: [], lever: "EXC", horizon: "H1" }).ok);
+    assert.ok(upsertKpi(advisor, kr("K1", "OE-01")).ok);
+    const ini = (id: string) => catalog().initiatives.find((x) => x.id === id)!;
+    const valida = (items: { id: string; color: string }[]) => assert.ok(saveAlineacion(advisor, "H1", "h", { horizon: "H1", items, resumen: "" } as unknown as Parameters<typeof saveAlineacion>[3], "prueba", "alineacion-ini").ok);
+
+    // vinculada, sin fechas ni presupuesto y sin validar: se califica y el aviso dice qué falta
+    assert.ok(upsertInitiative(advisor, { id: "in01", name: "Programa de captación de clientes nuevos", cmi: "OE-01", kpi: "K1", ownerId: "R01", capability: "DIR-2" }).ok);
+    let cal = calificabilidad(ini("in01"));
+    assert.ok(cal.ok); assert.match(cal.aviso ?? "", /formulación incompleta/); assert.match(cal.aviso ?? "", /sin validar/);
+    const ev = evaluateInitiative(advisor, "in01", { scores: { D: 3, E: 3, M: 3, L: 3 }, type: {} });
+    assert.ok(ev.ok || !/No se califica todavía/.test(ev.error), "el servidor ya no rechaza la calificación por la condición de entrada");
+
+    // completa y en amarillo: se califica; en rojo también; en verde no lleva aviso
+    assert.ok(upsertInitiative(advisor, { ...base, id: "in02", cmi: "OE-01", kpi: "K1", budgetPlanned: 40_000_000 }).ok);
+    valida([{ id: "in02", color: "amarillo" }]);
+    cal = calificabilidad(ini("in02")); assert.ok(cal.ok); assert.match(cal.aviso ?? "", /parcialmente alineada/);
+    valida([{ id: "in02", color: "rojo" }]);
+    cal = calificabilidad(ini("in02")); assert.ok(cal.ok); assert.match(cal.aviso ?? "", /replantear/);
+    valida([{ id: "in02", color: "verde" }]);
+    cal = calificabilidad(ini("in02")); assert.ok(cal.ok); assert.equal(cal.aviso, undefined);
+
+    // sin resultado clave sigue sin calificarse
+    assert.ok(upsertInitiative(advisor, { ...base, id: "in02", cmi: "OE-01", kpi: "", budgetPlanned: 40_000_000 }).ok);
+    cal = calificabilidad(ini("in02")); assert.ok(!cal.ok); assert.match(cal.motivo ?? "", /sin resultado clave/);
   });
 });

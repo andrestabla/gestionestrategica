@@ -1411,6 +1411,8 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const calOk = (id: string) => (prio ? (calDe(id)?.ok ?? !!cat.initiatives.find((i) => i.id === id)?.kpi) : false);
   const calMotivo = (id: string) => calDe(id)?.motivo ?? "sin resultado clave vinculado";
   const calEtiqueta = (id: string) => { const e = calDe(id)?.etapa; return e === "formulacion" ? "incompleta" : e === "validacion" ? "sin validar" : "sin KR"; };
+  // vinculada y calificable, pero con pendientes de formulación o de validación: se avisa sin bloquear
+  const calAviso = (id: string) => (calDe(id)?.ok ? calDe(id)?.aviso : undefined);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   type Ini = Cat["initiatives"][number];
   const objLever = (i: { cmi: string }) => cat.objectives.find((o) => o.id === i.cmi)?.lever ?? "";
@@ -1463,14 +1465,14 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
           <b className="text-ink">{fuera.length} iniciativa{fuera.length === 1 ? "" : "s"} no {fuera.length === 1 ? "pasa" : "pasan"} a priorización</b> por no estar {fuera.length === 1 ? "vinculada" : "vinculadas"} a un resultado clave: {fuera.slice(0, 4).map((i) => i.name).join(" · ")}{fuera.length > 4 ? ` y ${fuera.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "iniciativas", base)} className="font-bold text-cyan-deep hover:underline">{fuera.length === 1 ? "Vincularla" : "Vincularlas"} en Iniciativas</Link>
         </div>
       )}
-      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><DescargarDecisiones modulo="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}
+      {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><DescargarDecisiones modulo="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: se califica toda iniciativa vinculada a un resultado clave, aunque la validación la deje parcialmente alineada; lo que le falte aparece como «con pendientes». El advisor abre la calificación por prioridad o todas a la vez.</span></div>}
       {canManageSession && <TribeSessionPanel cat={cat} sessions={sessions} me={me} rank={(items) => rank(items).map((x) => x.i)} scoreOf={(id) => { const r = rows.find((x) => x.id === id); return r?.c.n ? r.c.score : null; }} onChanged={() => { onRefresh(); onCatalogRefresh(); }} />}
       {!prio && <SkeletonCards n={4} className="mb-5" />}
       <div className={`mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4 ${prio ? "" : "hidden"}`}>
         <StatCard label="Iniciativas evaluadas" value={cov.evaluated} unit={`de ${cov.total}`} foot={`${cov.pct} % con al menos una calificación`} accent="linear-gradient(90deg, var(--cyan), var(--cyan-deep))" />
         <StatCard label="Con evaluación completa" value={cov.complete} unit={`de ${cov.total}`} foot={`${expected} evaluadores o más`} accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
         <StatCard label="Evaluaciones registradas" value={(prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)).length} foot={`${cov.evaluators.length} evaluadores activos`} />
-        <StatCard label="Habilitadas para calificar" value={list.filter((i) => calOk(i.id)).length} unit={`de ${list.length}`} foot={acomp ? "completas y validadas, con resultado clave completo" : "vinculadas a un resultado clave por el líder de tribu"} accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+        <StatCard label="Habilitadas para calificar" value={list.filter((i) => calOk(i.id)).length} unit={`de ${list.length}`} foot={acomp ? "vinculadas a un resultado clave, aunque tengan pendientes" : "vinculadas a un resultado clave por el líder de tribu"} accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="rise overflow-hidden">
@@ -1488,6 +1490,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                     <span className="num block text-[12px] text-faint">{i.id} · {sub(i)} · {horizonLabel(cat.company, i.horizon)}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">
                       {!calOk(i.id) && <span className="chip chip-warn !py-0 text-[11px]" title={calMotivo(i.id)}>{calEtiqueta(i.id)} · no se califica</span>}
+                      {calAviso(i.id) && <span className="chip chip-gold !py-0 text-[11px]" title={`Se puede calificar. Pendiente: ${calAviso(i.id)}.`}>con pendientes</span>}
                       <span className={`chip !py-0 text-[11px] ${(c?.n ?? 0) >= expected ? "chip-ok" : (c?.n ?? 0) > 0 ? "chip-cyan" : ""}`}>{c?.n ?? 0}/{expected} eval.</span>
                       {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[11px]">D {c.rounded.D}</span>}
                       {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]">L {c.rounded.L}</span>}
@@ -1522,6 +1525,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
                       <td className="num px-2 py-2 text-right text-[14px] font-extrabold" style={{ color: c && c.n ? SCORE_COLOR(c.score) : "var(--faint)" }}>{c && c.n ? c.score : "—"}</td>
                       <td className="px-2 py-2"><span className="flex flex-wrap gap-1">
                         {!calOk(i.id) && <span className="chip chip-warn !py-0 text-[11px]" title={calMotivo(i.id)}>{calEtiqueta(i.id)}</span>}
+                        {calAviso(i.id) && <span className="chip chip-gold !py-0 text-[11px]" title={`Se puede calificar. Pendiente: ${calAviso(i.id)}.`}>con pendientes</span>}
                         {c && c.n > 0 && !c.eligible && <span className="chip chip-warn !py-0 text-[11px]">D {c.rounded.D}</span>}
                         {c && c.n > 0 && c.capacityFirst && <span className="chip chip-warn !py-0 text-[11px]">L {c.rounded.L}</span>}
                         {c && c.lowConsensus && <span className="chip chip-bad !py-0 text-[11px]">consenso</span>}

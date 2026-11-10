@@ -4393,11 +4393,11 @@ export function diagnosticoResumenCap(): string {
 }
 
 /* ═══ Calificabilidad (acompañamiento, F16 · condición de entrada) ═══
-   Solo se califican las iniciativas completas y validadas en la etapa anterior: vinculadas a un resultado clave
-   completo (máximo dos por KR), con la formulación completa (qué logra, responsable, inicio y fin, capacidad que
-   instala y presupuesto) y con la validación de iniciativas en verde. */
+   Se califica toda iniciativa vinculada a un resultado clave cuyo objetivo siga en pie (no descartado y con
+   prioridad). Lo demás ya no bloquea: resultado clave incompleto, formulación incompleta o validación en
+   amarillo, en rojo o sin hacer quedan como `aviso` — pendientes que el comité ve mientras califica. */
 
-export type Calificabilidad = { ok: boolean; motivo?: string; etapa?: "kr" | "formulacion" | "validacion" };
+export type Calificabilidad = { ok: boolean; motivo?: string; etapa?: "kr" | "formulacion" | "validacion"; aviso?: string };
 
 export function calificabilidad(i: InitiativeFull): Calificabilidad {
   const c = cat();
@@ -4407,14 +4407,16 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
   const obj = c.objectives.find((o) => o.id === i.cmi || o.id === k.cmi);
   if (obj?.descartado) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} está descartado` };
   if (obj && !objetivoConPrioridad(c, obj)) return { ok: false, etapa: "kr", motivo: `su objetivo directivo ${obj.id} no está vinculado a una prioridad estratégica` };
-  // los resultados clave adicionales que mueve también deben existir y estar completos
+  // desde aquí nada bloquea: se reúnen los pendientes y se devuelven como aviso
+  const avisos: string[] = [];
+  let etapa: Calificabilidad["etapa"];
+  const faltanKr = krFaltantes(k);
+  if (faltanKr.length) { avisos.push(`resultado clave ${k.code} incompleto (sin ${faltanKr.join(", ")})`); etapa ??= "kr"; }
   for (const code of (i.krExtra ?? [])) {
     const kx = c.kpis.find((x) => x.code === code);
-    if (!kx) return { ok: false, etapa: "kr", motivo: `el resultado clave adicional ${code} ya no existe` };
-    const fx = krFaltantes(kx); if (fx.length) return { ok: false, etapa: "kr", motivo: `resultado clave adicional ${code} incompleto (sin ${fx.join(", ")})` };
+    if (!kx) { avisos.push(`el resultado clave adicional ${code} ya no existe`); etapa ??= "kr"; continue; }
+    const fx = krFaltantes(kx); if (fx.length) { avisos.push(`resultado clave adicional ${code} incompleto (sin ${fx.join(", ")})`); etapa ??= "kr"; }
   }
-  const faltanKr = krFaltantes(k);
-  if (faltanKr.length) return { ok: false, etapa: "kr", motivo: `resultado clave ${k.code} incompleto (sin ${faltanKr.join(", ")})` };
   const Q = /^\d{4}-T[1-4]$/;
   const faltan: string[] = [];
   if ((i.objetivo ?? "").trim().length < 15) faltan.push("qué logra");
@@ -4422,12 +4424,13 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
   if (!(Q.test(i.start ?? "") && Q.test(i.end ?? ""))) faltan.push("inicio y fin");
   if (!i.capability) faltan.push("capacidad que instala");
   if (!((i.budgetPlanned ?? 0) > 0)) faltan.push("presupuesto planeado");
-  if (faltan.length) return { ok: false, etapa: "formulacion", motivo: `formulación incompleta (falta ${faltan.join(", ")})` };
+  if (faltan.length) { avisos.push(`formulación incompleta (falta ${faltan.join(", ")})`); etapa ??= "formulacion"; }
   const val = informes().get(`alineacion-ini|${i.horizon}`);
   const item = val ? ((val.informe as unknown as { items?: { id: string; color: string }[] }).items ?? []).find((x) => x.id === i.id) : undefined;
-  if (!item) return { ok: false, etapa: "validacion", motivo: "sin validar en Iniciativas (pulsa «Validar iniciativas»)" };
-  if (item.color !== "verde") return { ok: false, etapa: "validacion", motivo: item.color === "rojo" ? "la validación la marca por replantear" : "la validación pide mejoras (amarillo): corrígela y revalida" };
-  return { ok: true };
+  if (!item) { avisos.push("sin validar en Iniciativas"); etapa ??= "validacion"; }
+  else if (item.color === "rojo") { avisos.push("la validación la marca por replantear"); etapa ??= "validacion"; }
+  else if (item.color !== "verde") { avisos.push("parcialmente alineada: la validación pide mejoras"); etapa ??= "validacion"; }
+  return avisos.length ? { ok: true, etapa, aviso: avisos.join("; ") } : { ok: true };
 }
 
 export const calificables = (): Record<string, Calificabilidad> => Object.fromEntries(cat().initiatives.map((i) => [i.id, cat().company.mode === "acompanamiento" ? calificabilidad(i) : (i.kpi ? { ok: true } : { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" })]));

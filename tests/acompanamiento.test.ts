@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
 import {
   createCompany, updateCompany, resetStore, upsertResponsible, setLevers, upsertObjective, upsertKpi, upsertInitiative,
-  evaluateInitiative, setPrioSession, catalog, removeKpi, saveAlineacion } from "../src/server/store";
+  evaluateInitiative, setPrioSession, catalog, removeKpi, saveAlineacion, calificabilidad } from "../src/server/store";
 import { isCompanyMode } from "../src/lib/acceso";
 import { isAcompanamiento, isGuiada } from "../src/data/catalogo";
 import { vocabOf, yearOfFirstHorizon, startQuarters } from "../src/lib/vocabulario";
@@ -54,18 +54,19 @@ test("acompañamiento: KR completo para vincular, máximo dos iniciativas por KR
     assert.ok(!catalog().objectives.find((o) => o.id === "OE-01")!.kpis.includes("EXC-02"));
     const conIni = removeKpi(advisor, "EXC-01");
     assert.ok(!conIni.ok && conIni.status === 422 && /iniciativa/.test(conIni.error));
-    // solo se califican iniciativas completas y validadas en verde en la etapa anterior
+    // toda iniciativa vinculada se califica; lo incompleto, lo no validado y lo amarillo quedan como aviso
     const ev = { scores: { D: 3, E: 3, M: 2, L: 3 }, type: {}, notes: {} };
     assert.ok(setPrioSession(advisor, "R01", "abrir").ok);
+    const calDe = () => calificabilidad(catalog().initiatives.find((i) => i.id === "i1")!);
+    assert.ok(calDe().ok && /formulación incompleta/.test(calDe().aviso ?? ""), calDe().aviso);
     const incompleta = evaluateInitiative(advisor, "i1", ev);
-    assert.ok(!incompleta.ok && incompleta.status === 422 && /formulación incompleta/.test(incompleta.error), incompleta.ok ? "" : incompleta.error);
+    assert.ok(incompleta.ok, incompleta.ok ? "" : incompleta.error);
     const i1 = catalog().initiatives.find((i) => i.id === "i1")!;
     assert.ok(upsertInitiative(advisor, { ...i1, objetivo: "Cubrir el 100 % de las cuentas clave con el modelo omnicanal", start: "2026-T1", end: "2026-T4", budgetPlanned: 120 }).ok);
-    const sinValidar = evaluateInitiative(advisor, "i1", ev);
-    assert.ok(!sinValidar.ok && sinValidar.status === 422 && /sin validar/.test(sinValidar.error));
+    assert.ok(calDe().ok && /sin validar/.test(calDe().aviso ?? "") && !/formulación/.test(calDe().aviso ?? ""));
     assert.ok(saveAlineacion(advisor, "H1", "h", { resumen: "ok", items: [{ id: "i1", color: "amarillo", justificacion: "", recomendaciones: [] }] } as never, "test", "alineacion-ini").ok);
-    const amarilla = evaluateInitiative(advisor, "i1", ev);
-    assert.ok(!amarilla.ok && amarilla.status === 422 && /amarillo/.test(amarilla.error));
+    assert.ok(calDe().ok && /parcialmente alineada/.test(calDe().aviso ?? ""));
+    assert.ok(evaluateInitiative(advisor, "i1", ev).ok, "parcialmente alineada: se califica");
     assert.ok(saveAlineacion(advisor, "H1", "h", { resumen: "ok", items: [{ id: "i1", color: "verde", justificacion: "", recomendaciones: [] }] } as never, "test", "alineacion-ini").ok);
     assert.ok(setPrioSession(advisor, "R01", "cerrar").ok);
     // el comité no califica mientras la sesión de la prioridad (su sponsor) no esté abierta
