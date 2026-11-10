@@ -4,11 +4,12 @@ import { runWithTenant } from "../src/server/tenant";
 import { resetStore, catalog, getDecisions, getRevisionesCap, getChecklistsCap, getMetas, getAlineacion, getArticulaciones, listCompanies, calificables } from "../src/server/store";
 import { crearDemoSiegfried } from "../src/server/demo-siegfried";
 import { lecturaCapacidades } from "../src/lib/capacidades";
+import { okrObjectivesOf, objetivosSinPrioridad, pasaAPriorizacion, krFaltantes } from "../src/lib/convencion";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "admin@plataforma.test", name: "Admin", role: "ADMIN" };
 
-test("la instancia DEMO SIEGFRIED se crea con el recorrido ideal completo y sin avisos", async () => {
+test("la instancia DEMO SIEGFRIED se crea con el recorrido ideal completo, un caso de cada regla de paso y sin avisos", async () => {
   resetStore();
   const r = await crearDemoSiegfried(admin);
   assert.ok(r.ok, r.ok ? "" : r.error);
@@ -19,14 +20,26 @@ test("la instancia DEMO SIEGFRIED se crea con el recorrido ideal completo y sin 
     const c = catalog();
     assert.equal(c.company.mode, "acompanamiento");
     assert.equal((c.company.levers ?? []).length, 7);
-    assert.equal(c.objectives.filter((o) => o.horizon === "H1").length, 16);
+    assert.equal(c.objectives.filter((o) => o.horizon === "H1").length, 18);
+    // un caso de cada regla de paso: descartado, sin prioridad, iniciativa sin KR y KR de sostenimiento
+    const oe17 = c.objectives.find((o) => o.id === "OE-17")!, oe18 = c.objectives.find((o) => o.id === "OE-18")!;
+    assert.ok(oe17.descartado && /renuncia/.test(oe17.motivoDescarte ?? ""));
+    assert.ok(!oe18.lever && !oe18.descartado);
+    assert.deepEqual(okrObjectivesOf(c, "H1").length, 16, "a Resultados clave pasan los dieciséis vigentes con prioridad");
+    assert.deepEqual(objetivosSinPrioridad(c, "H1").map((o) => o.id), ["OE-18"]);
+    assert.deepEqual(c.initiatives.filter((i) => !pasaAPriorizacion(c, i)).map((i) => i.id), ["in23"]);
+    const sost = c.kpis.find((k) => k.code === "FIN-27-04")!;
+    assert.equal(sost.goodDirection, "keep"); assert.equal(sost.target, sost.baseline); assert.deepEqual(krFaltantes(sost), []);
     assert.ok(c.objectives.filter((o) => o.horizon === "H1").every((o) => /^(Aumentar|Elevar|Consolidar|Obtener|Garantizar|Reducir|Mantener|Lograr|Acortar|Asegurar|Anticipar)\b/.test(o.name) && !!o.indicator));
     assert.ok((c.company.levers ?? []).every((l) => /Resultado del ciclo/.test(l.desc ?? "") && /Renuncia/.test(l.desc ?? "")));
     assert.ok(c.kpis.length >= 75);
-    assert.equal(c.initiatives.length, 22);
-    assert.ok(c.initiatives.every((i) => i.kpi && i.start && i.end && i.budgetPlanned > 0 && i.objetivo.length > 15));
-    assert.equal(getAlineacion("H1", "alineacion")?.informe.items.length, 16);
-    assert.equal(getAlineacion("H1", "alineacion-ini")?.informe.items.length, 22);
+    assert.equal(c.initiatives.length, 23);
+    assert.ok(c.initiatives.every((i) => (i.kpi || i.id === "in23") && i.start && i.end && i.budgetPlanned > 0 && i.objetivo.length > 15));
+    const ali = getAlineacion("H1", "alineacion")!.informe.items;
+    assert.equal(ali.length, 17, "dieciséis en verde y el que no tiene prioridad en amarillo; el descartado no se valida");
+    assert.equal(ali.filter((x) => x.color === "verde").length, 16); assert.equal(ali.find((x) => x.id === "OE-18")?.color, "amarillo");
+    const aliIni = getAlineacion("H1", "alineacion-ini")!.informe.items;
+    assert.equal(aliIni.length, 23); assert.equal(aliIni.filter((x) => x.color === "verde").length, 22);
     assert.equal(r.resumen.calificaciones, 66);
     const dec = getDecisions();
     assert.equal(Object.values(dec).filter((d) => d.decision === "IMPLEMENTAR").length, 10);
@@ -42,7 +55,8 @@ test("la instancia DEMO SIEGFRIED se crea con el recorrido ideal completo y sin 
     assert.equal(Object.keys(arts).length, 22);
     assert.ok(Object.values(arts).every((a) => a.areas.filter((x) => x.rol === "LIDERA").length === 1 && a.areas.length >= 2));
     assert.equal(r.resumen.articulaciones, 22);
-    assert.ok(Object.values(calificables()).every((x) => x.ok));
+    const cal = calificables();
+    assert.ok(Object.entries(cal).every(([id, x]) => (id === "in23" ? !x.ok : x.ok)), "todas calificables salvo la que no tiene resultado clave");
   });
   const otra = await crearDemoSiegfried(admin);
   assert.ok(!otra.ok && otra.status === 409);

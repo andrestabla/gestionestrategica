@@ -7,7 +7,10 @@
 //   · de 2 a 3 resultados clave por objetivo con línea base 2026 real o plausible, meta 2027, unidad, dueño y fórmula;
 //   · iniciativas con nombre como entrega y los ocho elementos, máximo dos por resultado clave;
 //   · calificaciones de tres evaluadores, decisiones de tiempo con sustento, capacidades revisadas, articulación entre
-//     áreas y metas del primer semestre de 2027.
+//     áreas y metas del primer semestre de 2027;
+//   · un caso de cada regla de paso, para que el advisor muestre cómo se ven: un objetivo descartado con su motivo
+//     (queda en el registro, no avanza), un objetivo aún sin prioridad (no pasa a Resultados clave), una iniciativa
+//     sin resultado clave (no pasa a Priorización) y un resultado clave de sostenimiento («mejor si se mantiene»).
 // Todo es ficticio y plausible: sirve para mostrar al advisor y al comité lo que se espera de cada etapa.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -31,7 +34,7 @@ export const LEVERS = [
 ];
 
 /** Objetivos directivos 2027: verbo de logro + resultado + indicador impulsor (declarado, sin cifra); de 2 a 3 por prioridad. */
-export type ObjDemo = { id: string; perspective: string; lever: string; horizon: "H1"; line: number; name: string; indicator: string; desc: string };
+export type ObjDemo = { id: string; perspective: string; lever: string; horizon: "H1"; line: number; name: string; indicator: string; desc: string; descartado?: boolean; motivoDescarte?: string };
 const obj = (id: string, lever: string, perspective: string, line: number, name: string, indicator: string, desc: string): ObjDemo => ({ id, lever, perspective, horizon: "H1", line, name, indicator, desc });
 export const OBJETIVOS: ObjDemo[] = [
   obj("OE-01", "EXC", "clientes", 3, "Aumentar la participación de mercado en prescripción de las marcas core, medida por la participación Rx en valores, al cierre de 2027.", "Participación Rx en valores por línea (IQVIA)", "Crecer en cardiometabolismo y sistema nervioso central donde ya somos segundo o tercero, con foco en los médicos de mayor prescripción."),
@@ -50,10 +53,17 @@ export const OBJETIVOS: ObjDemo[] = [
   obj("OE-14", "TAL", "aprendizaje", 2, "Elevar la efectividad de los líderes con el modelo de liderazgo Siegfried, medida por el índice de liderazgo y el engagement.", "Índice de liderazgo «Latir Siegfried»", "Comportamientos observables del modelo, formación de líderes y propuesta de valor al colaborador."),
   obj("OE-15", "LEG", "procesos", 1, "Anticipar y tratar los riesgos legales, regulatorios y de integridad críticos, medidos por los riesgos críticos con plan y los hallazgos mayores sin cierre.", "Riesgos críticos con plan de tratamiento", "Matriz de riesgos con dueño, plan y revisión trimestral en comité ejecutivo."),
   obj("OE-16", "LEG", "procesos", 3, "Garantizar la evaluación legal previa de las decisiones y los proyectos estratégicos con controles de integridad en los procesos críticos, medida por los proyectos evaluados antes de su aprobación.", "Proyectos priorizados evaluados antes de su aprobación", "Punto de evaluación legal en el flujo de aprobación del portafolio y controles de integridad diseñados, probados y evaluados."),
+  // regla de paso · descartado: queda en el registro con su motivo y no avanza a resultados clave, iniciativas ni cascada
+  { ...obj("OE-17", "INN", "clientes", 1, "Aumentar la venta con una línea propia de dermocosmética, medida por la participación de la línea en la venta total.", "Participación de la línea de dermocosmética en la venta", "Entrar a dermocosmética con marca propia en el canal retail."),
+    descartado: true, motivoDescarte: "Descartado por el comité el 9 de noviembre de 2026: queda fuera de las diez categorías de mayor crecimiento, que es la renuncia de la prioridad Innovación Diferenciada." },
+  // regla de paso · sin prioridad: propuesto en la sesión, el comité aún no lo ubica; no pasa a Resultados clave hasta vincularse
+  obj("OE-18", "", "procesos", 3, "Reducir la huella de carbono de la operación, medida por las emisiones por unidad producida.", "Emisiones de CO₂ por unidad producida", "Propuesto en la sesión de trabajo; el comité aún no decide de cuál de las siete prioridades cuelga. Mientras no se vincule a una prioridad, no pasa a Resultados clave."),
 ];
+/** Objetivos de la capa demo que ilustran las reglas de paso (no entran a la validación «todo en verde»). */
+export const OBJETIVO_SIN_PRIORIDAD = "OE-18";
 
 /** Resultados clave 2027: de 2 a 3 por objetivo, con línea base 2026 (real donde la plataforma la tiene) y meta distinta. */
-export type KrDemo = { code: string; cmi: string; name: string; baseline: number; target: number; unit: string; goodDirection: "up" | "down"; ownerId: string; due: string; definition: string; formula: string; frequency: string; source: string };
+export type KrDemo = { code: string; cmi: string; name: string; baseline: number; target: number; unit: string; goodDirection: "up" | "down" | "keep"; ownerId: string; due: string; definition: string; formula: string; frequency: string; source: string };
 const kr = (code: string, cmi: string, name: string, baseline: number, target: number, unit: string, ownerId: string, definition: string, formula: string, source = "Reporte interno", due = "2027-T4"): KrDemo =>
   ({ code, cmi, name, baseline, target, unit, goodDirection: target >= baseline ? "up" : "down", ownerId, due, definition, formula, frequency: "Trimestral", source });
 
@@ -77,7 +87,8 @@ export const KRS: KrDemo[] = [
   kr("FIN-27-01", "OE-07", "Caja operativa generada: de 18.000 a 19.500 M USD", 18000, 19500, "M USD", "R06", "Caja generada por la operación antes de inversiones y financiación.", "EBITDA − impuestos − variación del capital de trabajo", "Estados financieros"),
   kr("FIN-27-02", "OE-07", "Gross-to-net: de 3,3 % a 3,0 %", 3.3, 3.0, "%", "R06", "Descuentos, devoluciones y rebates sobre la venta bruta.", "(Venta bruta − venta neta) ÷ venta bruta × 100", "Contabilidad"),
   kr("FIN-27-03", "OE-08", "Costo sobre ventas: de 50 % a 49 %", 50, 49, "%", "R05", "Costo de ventas sobre ventas netas.", "Costo de ventas ÷ ventas netas × 100", "Contabilidad"),
-  kr("FIN-27-04", "OE-08", "Gasto comercial sobre ventas: de 11,9 % a 11,5 %", 11.9, 11.5, "%", "R03", "Gasto comercial total sobre ventas netas.", "Gasto comercial ÷ ventas netas × 100", "Contabilidad"),
+  // resultado clave de sostenimiento: «mejor si se mantiene», la meta es conservar el nivel de la línea base mientras crece la venta
+  { ...kr("FIN-27-04", "OE-08", "Gasto comercial sobre ventas: mantener en 11,9 %", 11.9, 11.9, "%", "R03", "Gasto comercial total sobre ventas netas; el resultado es sostener el nivel de 2026 con una venta mayor.", "Gasto comercial ÷ ventas netas × 100", "Contabilidad"), goodDirection: "keep" as const },
   kr("DIG-27-01", "OE-09", "Directivos que usan el tablero cada semana: de 78 % a 90 %", 78, 90, "%", "R09", "Directivos con al menos una sesión semanal en el tablero directivo.", "Directivos activos semanalmente ÷ directivos × 100", "Plataforma BI"),
   kr("DIG-27-02", "OE-09", "Reportes manuales eliminados por el tablero: de 0 a 15", 0.5, 15, "número", "R09", "Reportes que se armaban a mano y quedaron sustituidos por el tablero.", "Conteo acumulado de reportes sustituidos", "Inventario de reportes"),
   kr("DIG-27-03", "OE-10", "Horas operativas automatizadas al año: de 17.800 a 26.000", 17834, 26000, "horas", "R09", "Horas de tareas repetitivas eliminadas por automatización frente a la línea base 2025.", "Suma de horas automatizadas por proceso", "Inventario de procesos"),
@@ -125,7 +136,11 @@ export const INICIATIVAS: IniDemo[] = [
   ini("in20", "Mapa de decisiones críticas con evaluación legal previa", "OE-16", "LEG-27-03", "R12", "EJE-3", "Dirección", "2027-T2", "2027-T4", 35, "Identificar las decisiones y proyectos que requieren evaluación legal previa e integrarla como requisito en el flujo de aprobación del portafolio.", "90 % de los proyectos priorizados evaluados antes de su aprobación."),
   ini("in21", "Compliance en acción: controles de integridad en los procesos críticos", "OE-16", "LEG-27-04", "R12", "MUL-2", "Dirección", "2027-T1", "2027-T4", 90, "Diseñar, probar y evaluar controles de integridad en los procesos críticos, con formación anual a todos los colaboradores.", "90 % de los procesos críticos con controles evaluados y 95 % de colaboradores formados."),
   ini("in22", "Semillero de talento futuro", "OE-13", "TAL-27-02", "R10", "LID-4", "Talento", "2027-T3", "2027-T4", 120, "Programa de jóvenes profesionales de 18 meses con rotación por planta, calidad y comercial, para alimentar el pipeline de sucesión.", "Primera cohorte de 12 participantes en marcha y 4 asignados a posiciones de relevo."),
+  // regla de paso · sin resultado clave: registrada en la sesión, no pasa a Priorización ni al Portafolio hasta vincularse a un KR
+  ini("in23", "Programa de embajadores médicos en redes profesionales", "OE-02", "", "R02", "MUL-4", "Comercial", "2027-T3", "2027-T4", 45, "Formar a veinte médicos líderes de opinión como embajadores científicos de las marcas core en redes profesionales.", "Veinte embajadores activos con una publicación científica mensual.", "Idea registrada en la sesión sin resultado clave: no pasa a Priorización hasta que se vincule a un KR de su objetivo (por ejemplo, EXC-27-05)."),
 ];
+/** Iniciativa de la capa demo que ilustra la regla de paso «sin resultado clave no hay priorización». */
+export const INICIATIVA_SIN_KR = "in23";
 
 /** Validaciones con IA ya hechas (todas en verde) con su justificación. */
 export const JUSTIFICACION_OBJETIVO = (lever: string) => `Verbo de logro, resultado concreto, indicador impulsor declarado y plazo dado por el horizonte 2027; aporta de forma directa al indicador de la prioridad «${lever}» y no se solapa con otro objetivo del conjunto.`;

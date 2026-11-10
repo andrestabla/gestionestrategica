@@ -787,7 +787,7 @@ function OkrTab({ cat, levers, horizon, canEdit, scope, myTribe, saving, mutate,
     <>
       {sinPrioridad.length > 0 && (
         <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>
-          <b className="text-ink">{sinPrioridad.length} objetivo{sinPrioridad.length === 1 ? "" : "s"} no {sinPrioridad.length === 1 ? "pasa" : "pasan"} a resultados clave</b> por no estar {sinPrioridad.length === 1 ? "vinculado" : "vinculados"} a una {V.leverLow}: {sinPrioridad.slice(0, 4).map((o) => o.id).join(" · ")}{sinPrioridad.length > 4 ? ` y ${sinPrioridad.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "direccion", base)} className="font-bold text-cyan-deep hover:underline">Vincularlos en Objetivos directivos</Link>
+          <b className="text-ink">{sinPrioridad.length} objetivo{sinPrioridad.length === 1 ? "" : "s"} no {sinPrioridad.length === 1 ? "pasa" : "pasan"} a resultados clave</b> por no estar {sinPrioridad.length === 1 ? "vinculado" : "vinculados"} a una {V.leverLow}: {sinPrioridad.slice(0, 4).map((o) => o.id).join(" · ")}{sinPrioridad.length > 4 ? ` y ${sinPrioridad.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "direccion", base)} className="font-bold text-cyan-deep hover:underline">{sinPrioridad.length === 1 ? "Vincularlo" : "Vincularlos"} en Objetivos directivos</Link>
         </div>
       )}
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
@@ -1403,7 +1403,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
       </div>
       {fuera.length > 0 && (
         <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>
-          <b className="text-ink">{fuera.length} iniciativa{fuera.length === 1 ? "" : "s"} no {fuera.length === 1 ? "pasa" : "pasan"} a priorización</b> por no estar {fuera.length === 1 ? "vinculada" : "vinculadas"} a un resultado clave: {fuera.slice(0, 4).map((i) => i.name).join(" · ")}{fuera.length > 4 ? ` y ${fuera.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "iniciativas", base)} className="font-bold text-cyan-deep hover:underline">Vincularlas en Iniciativas</Link>
+          <b className="text-ink">{fuera.length} iniciativa{fuera.length === 1 ? "" : "s"} no {fuera.length === 1 ? "pasa" : "pasan"} a priorización</b> por no estar {fuera.length === 1 ? "vinculada" : "vinculadas"} a un resultado clave: {fuera.slice(0, 4).map((i) => i.name).join(" · ")}{fuera.length > 4 ? ` y ${fuera.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "iniciativas", base)} className="font-bold text-cyan-deep hover:underline">{fuera.length === 1 ? "Vincularla" : "Vincularlas"} en Iniciativas</Link>
         </div>
       )}
       {acomp && <div className="mb-4 flex flex-wrap items-center gap-2"><AyudaMetodologica tema="priorizacion" rule={typeRuleOf(cat.company)} /><DescargarDecisiones modulo="priorizacion" /><span className="text-[12px] text-faint">F16 · Priorización de iniciativas: solo se califican las iniciativas completas y validadas en la etapa anterior; el advisor abre la calificación por prioridad o todas a la vez.</span></div>}

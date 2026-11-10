@@ -5,7 +5,7 @@
 // funciones del store que usa la plataforma, así el resultado es exactamente lo que vería un advisor.
 
 import base from "@/data/demo-siegfried/base.json";
-import { DEMO_SLUG, DEMO_NAME, DEMO_SHORT, LEVERS, OBJETIVOS, KRS, INICIATIVAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
+import { DEMO_SLUG, DEMO_NAME, DEMO_SHORT, LEVERS, OBJETIVOS, KRS, INICIATIVAS, OBJETIVO_SIN_PRIORIDAD, INICIATIVA_SIN_KR, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
 import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 import { huellaAlineacion, huellaIniciativas } from "@/server/huellas";
@@ -63,11 +63,16 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
     // 3. validaciones con IA en verde (objetivos e iniciativas del horizonte 2027)
     const c = catalog();
     const leverName = (id?: string) => leversOf(c.company).find((l) => l.id === id)?.name ?? "";
-    const alineacion: AlineacionIA = { horizon: "H1", resumen: "Los dieciséis objetivos directivos 2027 están alineados con las siete prioridades (de dos a tres por prioridad): cada uno tiene verbo de logro, resultado, indicador impulsor declarado y el plazo del horizonte, sin cifras de meta, sin duplicidades y sin enunciados que sean resultados clave o iniciativas.",
-      items: c.objectives.filter((o) => o.horizon === "H1").map((o) => ({ id: o.id, color: "verde" as const, justificacion: JUSTIFICACION_OBJETIVO(leverName(o.lever)), recomendaciones: [], naturaleza: "objetivo" as const, duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: [] })) };
+    // los descartados no se validan; el objetivo sin prioridad queda en amarillo con la recomendación de ubicarlo
+    const alineacion: AlineacionIA = { horizon: "H1", resumen: "Dieciséis objetivos directivos 2027 están alineados con las siete prioridades (de dos a tres por prioridad): cada uno tiene verbo de logro, resultado, indicador impulsor declarado y el plazo del horizonte, sin cifras de meta, sin duplicidades y sin enunciados que sean resultados clave o iniciativas. Un objetivo (OE-18) está bien formulado pero no cuelga de ninguna prioridad: no pasa a Resultados clave hasta que el comité lo ubique. El objetivo descartado (OE-17) queda en el registro y no se valida.",
+      items: c.objectives.filter((o) => o.horizon === "H1" && !o.descartado).map((o) => o.id === OBJETIVO_SIN_PRIORIDAD
+        ? { id: o.id, color: "amarillo" as const, justificacion: "Tiene verbo de logro, resultado e indicador impulsor, pero no está vinculado a ninguna prioridad estratégica: no se puede juzgar a qué apuesta aporta ni pasa a Resultados clave.", recomendaciones: ["Vincularlo a la prioridad a la que aporta (por ejemplo, Disciplina Operacional) o descartarlo con su motivo."], naturaleza: "objetivo" as const, duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: ["prioridad"] }
+        : { id: o.id, color: "verde" as const, justificacion: JUSTIFICACION_OBJETIVO(leverName(o.lever)), recomendaciones: [], naturaleza: "objetivo" as const, duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: [] }) };
     check("validación de objetivos", saveAlineacion(advisor, "H1", huellaAlineacion("H1"), alineacion, "demo", "alineacion"));
-    const validacionIni: ValidacionIni = { horizon: "H1", resumen: "Las veintidós iniciativas cumplen los ocho elementos: nombre como entrega, qué logran, responsable, inicio y fin, capacidad que instalan, presupuesto, resultado clave que mueven y alcance acotado.",
-      items: c.initiatives.map((i) => ({ id: i.id, color: "verde" as const, justificacion: JUSTIFICACION_INI(i.kpi), recomendaciones: [], naturaleza: "iniciativa" as const, duplicaDe: [], faltan: [], reformulacion: "", logroPropuesto: "" })) };
+    const validacionIni: ValidacionIni = { horizon: "H1", resumen: "Veintidós iniciativas cumplen los ocho elementos: nombre como entrega, qué logran, responsable, inicio y fin, capacidad que instalan, presupuesto, resultado clave que mueven y alcance acotado. Una (in23) no está vinculada a ningún resultado clave: no pasa a Priorización hasta que se vincule.",
+      items: c.initiatives.map((i) => i.id === INICIATIVA_SIN_KR
+        ? { id: i.id, color: "amarillo" as const, justificacion: "Está bien formulada como entrega, con responsable, plazo, capacidad y presupuesto, pero no mueve ningún resultado clave: así no es estratégica ni pasa a Priorización.", recomendaciones: ["Vincularla al resultado clave de su objetivo que realmente mueve (por ejemplo, contactos efectivos por médico) o dejarla fuera del portafolio."], naturaleza: "iniciativa" as const, duplicaDe: [], faltan: ["kr"], reformulacion: "", logroPropuesto: "" }
+        : { id: i.id, color: "verde" as const, justificacion: JUSTIFICACION_INI(i.kpi), recomendaciones: [], naturaleza: "iniciativa" as const, duplicaDe: [], faltan: [], reformulacion: "", logroPropuesto: "" }) };
     check("validación de iniciativas", saveAlineacion(advisor, "H1", huellaIniciativas("H1"), validacionIni as unknown as AlineacionIA, "demo", "alineacion-ini"));
 
     // 4. priorización: el advisor abre la calificación de todas las áreas con iniciativas, tres evaluadores califican, se cierra y se guarda el orden
@@ -82,7 +87,7 @@ export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: b
     }
     for (const s of sponsors) {
       check(`cerrar ${s}`, setPrioSession(advisor, s, "cerrar"));
-      const orden = c.initiatives.filter((i) => i.ownerId === s).map((i) => i.id);
+      const orden = c.initiatives.filter((i) => i.ownerId === s && !!i.kpi).map((i) => i.id);   // solo las que pasan a priorización (vinculadas a un KR)
       check(`guardar ${s}`, setPrioSession(advisor, s, "guardar", orden));
     }
     let decisiones = 0;
