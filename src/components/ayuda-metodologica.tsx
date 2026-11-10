@@ -46,7 +46,7 @@ const PASOS: { de: string; a: string; regla: string; detalle: string; etapas: Et
     detalle: "La meta debe ser distinta de la base, salvo en los de sostenimiento («mejor si se mantiene»). Máximo dos iniciativas por resultado clave; cada iniciativa mueve de 1 a 3." },
   { de: "Iniciativas", a: "Priorización", etapas: ["iniciativas", "priorizacion"],
     regla: "Pasa la iniciativa vinculada al menos a un resultado clave que existe (puede mover hasta tres).",
-    detalle: "Para calificarse debe además estar completa (qué logra, responsable, inicio y fin, capacidad, presupuesto), validada en verde y con la sesión de su prioridad abierta." },
+    detalle: "Una iniciativa puede quedar momentáneamente sin resultado clave: espera en la columna de pendientes y no pasa. Para calificarse debe además estar completa (qué logra, responsable, inicio y fin, capacidad, presupuesto), validada en verde y con la sesión de su prioridad abierta." },
   { de: "Priorización", a: "Portafolio", etapas: ["priorizacion", "portafolio"],
     regla: "Entra al portafolio la iniciativa que pasó por priorización; la decisión de tiempo exige al menos una calificación.",
     detalle: "Implementar exige impacto consolidado de 3 o 4 y capacidad resuelta; renunciar exige motivo; las tácticas se transfieren al área." },
@@ -179,7 +179,7 @@ const INICIATIVAS: Lamina[] = [
   </ul> },
   { k: "Estructura", t: "Qué debe tener", body: <>
     <div className="grid gap-2 sm:grid-cols-2">
-      {[["Nombre", "un sustantivo de entrega, no un verbo: «Call center para droguerías», no «Implementar call center»."], ["Qué logra", "el cambio concreto que deja instalado y cómo mueve el resultado clave."], ["Resultado clave que mueve", "uno principal; si mueve varios, se elige el que más depende de ella."], ["Responsable", "un área y una persona que responde; el sponsor es el de la prioridad."], ["Inicio y fin", "trimestre de inicio y de cierre; una iniciativa sin fin es operación."], ["Capacidad que instala", "la dimensión del mapa 4Shine que fortalece (p. ej. Accountability, Cadencia, Tecnología)."], ["Recursos y presupuesto", "lo que necesita en personas, dinero y tiempo, aunque sea estimado."], ["Alcance", "qué incluye y qué queda fuera; evita la iniciativa paraguas."]].map(([a, b]) => (
+      {[["Nombre", "un sustantivo de entrega, no un verbo: «Call center para droguerías», no «Implementar call center»."], ["Qué logra", "el cambio concreto que deja instalado y cómo mueve el resultado clave."], ["Resultado clave que mueve", "uno principal; si mueve varios, se elige el que más depende de ella. Puede quedar pendiente mientras el comité lo define: la iniciativa vuelve a la columna «Iniciativas sin resultado clave»."], ["Responsable", "un área y una persona que responde; el sponsor es el de la prioridad."], ["Inicio y fin", "trimestre de inicio y de cierre; una iniciativa sin fin es operación."], ["Capacidad que instala", "la dimensión del mapa 4Shine que fortalece (p. ej. Accountability, Cadencia, Tecnología)."], ["Recursos y presupuesto", "lo que necesita en personas, dinero y tiempo, aunque sea estimado. El presupuesto se registra en pesos (COP) o en dólares (USD), con puntos para separar los miles."], ["Alcance", "qué incluye y qué queda fuera; evita la iniciativa paraguas."]].map(([a, b]) => (
         <div key={a} className="rounded-xl bg-surface-2 px-3 py-2.5"><div className="text-[12px] font-bold uppercase tracking-wider text-faint">{a}</div><div className="text-[12.5px] leading-snug text-ink">{b}</div></div>
       ))}
     </div>
@@ -198,7 +198,7 @@ const INICIATIVAS: Lamina[] = [
     <Li><b>Evita duplicados:</b> dos iniciativas con la misma entrega en áreas distintas se fusionan o se diferencian por alcance.</Li>
   </ul> },
   { k: "Errores", t: "Errores frecuentes", body: <ul className="space-y-2">
-    <Li>Iniciativa sin resultado clave: no se puede calificar ni decidir.</Li>
+    <Li>Iniciativa sin resultado clave: puede quedar así un tiempo, pero no se puede calificar ni decidir hasta vincularla.</Li>
     <Li>Nombre con verbo («Implementar…», «Gestionar…»): describe tarea, no entrega.</Li>
     <Li>Iniciativa paraguas que agrupa cinco proyectos: no se puede priorizar ni cerrar.</Li>
     <Li>Más de dos iniciativas por KR: el esfuerzo se dispersa.</Li>

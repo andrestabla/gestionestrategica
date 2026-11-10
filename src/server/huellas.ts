@@ -15,6 +15,6 @@ export const huellaAlineacion = (horizon: string) => {
 
 export const huellaIniciativas = (horizon: string) => {
   const c = catalog();
-  const inis = c.initiatives.filter((i) => i.horizon === horizon).map((i) => [i.id, i.name, i.objetivo ?? "", i.metaResultado ?? "", i.cmi, [i.kpi ?? "", ...(i.krExtra ?? [])].join("+").replace(/\+$/, ""), i.ownerId, i.start ?? "", i.end ?? "", i.capability ?? "", i.budgetPlanned ?? 0, i.observaciones ?? ""]);
+  const inis = c.initiatives.filter((i) => i.horizon === horizon).map((i) => [i.id, i.name, i.objetivo ?? "", i.metaResultado ?? "", i.cmi, [i.kpi ?? "", ...(i.krExtra ?? [])].join("+").replace(/\+$/, ""), i.ownerId, i.start ?? "", i.end ?? "", i.capability ?? "", i.budgetCurrency ? `${i.budgetPlanned ?? 0} ${i.budgetCurrency}` : (i.budgetPlanned ?? 0), i.observaciones ?? ""]);
   return createHash("sha256").update(JSON.stringify({ v: 2, inis })).digest("hex").slice(0, 24);
 };

@@ -16,7 +16,7 @@ export function contextoCapacidades(iniId: string): Parameters<typeof encargoCap
   const dim = DIMS.find((d) => d.code === i.capability);
   return {
     empresa: { name: c.company.name, sector: c.company.sector, size: c.company.size },
-    ini: { id: i.id, name: i.name, objetivo: i.objetivo, start: i.start, end: i.end, budgetPlanned: i.budgetPlanned, capability: i.capability, capabilityName: dim?.name, owner: c.responsibles.find((r) => r.id === i.ownerId)?.dependencia, observaciones: i.observaciones, decision: getDecision(i.id)?.decision ?? null },
+    ini: { id: i.id, name: i.name, objetivo: i.objetivo, start: i.start, end: i.end, budgetPlanned: i.budgetPlanned, budgetCurrency: i.budgetCurrency ?? c.company.currency ?? "COP", capability: i.capability, capabilityName: dim?.name, owner: c.responsibles.find((r) => r.id === i.ownerId)?.dependencia, observaciones: i.observaciones, decision: getDecision(i.id)?.decision ?? null },
     kr: kr ? { code: kr.code, name: kr.name, baseline: kr.baseline != null ? String(kr.baseline) : undefined, target: kr.target != null ? String(kr.target) : undefined, unit: kr.unit, due: kr.due } : undefined,
     objetivo: objetivo ? { id: objetivo.id, name: objetivo.name } : undefined,
     prioridad: lever ? { name: lever.name, sponsor: c.responsibles.find((r) => r.id === lever.ownerId)?.dependencia } : undefined,

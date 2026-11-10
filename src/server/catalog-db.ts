@@ -104,7 +104,7 @@ export async function writeInitiative(db: Db, companyId: string, i: InitiativeFu
     line: i.line, name: i.name, description: i.objetivo, subsistema: i.subsistema, cmiObjective: i.cmi, dimension: i.capability, framework: i.framework,
     metaResultado: i.metaResultado, actions: i.actions as never, log: i.log as never, nextMilestone: i.nextMilestone as never, horizon: i.horizon,
     impact: i.impact, feasibility: i.feasibility, urgency: i.urgency, dependency: i.dependency, status: i.status, ownerRole: i.ownerId,
-    startQuarter: i.start, endQuarter: i.end, budgetPlanned: i.budgetPlanned, budgetCommitted: i.budgetCommitted, budgetExecuted: i.budgetExecuted,
+    startQuarter: i.start, endQuarter: i.end, budgetPlanned: i.budgetPlanned, budgetCommitted: i.budgetCommitted, budgetExecuted: i.budgetExecuted, budgetCurrency: i.budgetCurrency ?? null,
     progress: i.progress, kpiId: kpi?.id ?? null, createdBy: i.createdBy ?? null, observaciones: i.observaciones ?? null, krExtra: (i.krExtra?.length ? i.krExtra : null) as never,
   };
   const existing = mode === "create" ? null : await db.initiative.findUnique({ where: { companyId_code: { companyId, code: i.id } } });
@@ -210,7 +210,7 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
     impact: i.impact as number, feasibility: i.feasibility as number, urgency: i.urgency as number, dependency: i.dependency as number,
     status: i.status as InitiativeFull["status"], start: (i.startQuarter as string) ?? "", end: (i.endQuarter as string) ?? "",
     ownerId: (i.ownerRole as string) ?? "", metaResultado: (i.metaResultado as string) ?? "",
-    budgetPlanned: i.budgetPlanned as number, budgetCommitted: i.budgetCommitted as number, budgetExecuted: i.budgetExecuted as number,
+    budgetPlanned: i.budgetPlanned as number, budgetCommitted: i.budgetCommitted as number, budgetExecuted: i.budgetExecuted as number, ...(i.budgetCurrency === "COP" || i.budgetCurrency === "USD" ? { budgetCurrency: i.budgetCurrency } : {}),
     progress: i.progress as number, capability: (i.dimension as string) ?? "", framework: (i.framework as string) ?? "",
     kpi: i.kpiId ? (kpiCodeById.get(i.kpiId as string) ?? "") : "", ...(i.createdBy ? { createdBy: i.createdBy as string } : {}), ...(i.observaciones ? { observaciones: i.observaciones as string } : {}), ...(Array.isArray(i.krExtra) && i.krExtra.length ? { krExtra: (i.krExtra as unknown[]).map(String) } : {}),
     actions: (i.actions as InitiativeFull["actions"]) ?? [], log: (i.log as InitiativeFull["log"]) ?? [],

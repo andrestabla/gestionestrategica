@@ -537,6 +537,7 @@ model Initiative {
   budgetPlanned   Float           @default(0)
   budgetCommitted Float           @default(0)
   budgetExecuted  Float           @default(0)
+  budgetCurrency  String? // COP | USD: moneda del presupuesto de la iniciativa; si falta, la de la empresa
   progress        Int             @default(0)
   kpiId           String?
   kpi             Kpi?            @relation(fields: [kpiId], references: [id])

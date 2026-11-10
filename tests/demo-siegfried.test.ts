@@ -37,7 +37,7 @@ test("la instancia DEMO SIEGFRIED se crea con el recorrido ideal completo, un ca
     assert.ok((c.company.levers ?? []).every((l) => /Resultado del ciclo/.test(l.desc ?? "") && /Renuncia/.test(l.desc ?? "")));
     assert.ok(c.kpis.length >= 75);
     assert.equal(c.initiatives.length, 23);
-    assert.ok(c.initiatives.every((i) => (i.kpi || i.id === "in23") && i.start && i.end && i.budgetPlanned > 0 && i.objetivo.length > 15));
+    assert.ok(c.initiatives.every((i) => (i.kpi || i.id === "in23") && i.start && i.end && i.budgetPlanned >= 1_000_000 && i.objetivo.length > 15));
     const ali = getAlineacion("H1", "alineacion")!.informe.items;
     assert.equal(ali.length, 17, "dieciséis en verde y el que no tiene prioridad en amarillo; el descartado no se valida");
     assert.equal(ali.filter((x) => x.color === "verde").length, 16); assert.equal(ali.find((x) => x.id === "OE-18")?.color, "amarillo");

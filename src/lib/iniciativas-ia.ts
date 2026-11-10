@@ -23,7 +23,7 @@ export function encargoValidacionIniciativas(args: {
   prioridades: { id: string; name: string; indicator?: string }[];
   objetivos: { id: string; lever?: string; name: string }[];
   krs: { code: string; name: string; objective: string; baseline?: string; target?: string; unit?: string; due?: string }[];
-  iniciativas: { id: string; name: string; objetivo?: string; metaResultado?: string; cmi?: string; kpi?: string; owner?: string; start?: string; end?: string; capability?: string; capabilityName?: string; status?: string; budget?: number; observaciones?: string }[];
+  iniciativas: { id: string; name: string; objetivo?: string; metaResultado?: string; cmi?: string; kpi?: string; owner?: string; start?: string; end?: string; capability?: string; capabilityName?: string; status?: string; budget?: number; moneda?: string; observaciones?: string }[];
   contexto?: string; fecha: string; soloId?: string;
 }): { system: string; user: string } {
   const system = [
@@ -45,7 +45,7 @@ export function encargoValidacionIniciativas(args: {
     `OBJETIVOS DEL HORIZONTE:\n${args.objetivos.map((o) => `- ${o.id} [${o.lever ?? "sin prioridad"}] «${o.name}»`).join("\n")}`,
     `RESULTADOS CLAVE:\n${args.krs.map((k) => `- ${k.code} (objetivo ${k.objective}) «${k.name}»${k.baseline || k.target ? ` · base ${k.baseline ?? "—"} → meta ${k.target ?? "—"} ${k.unit ?? ""}` : ""}${k.due ? ` · plazo ${k.due}` : ""}`).join("\n") || "- ninguno"}`,
     args.soloId ? `EVALÚA SOLO LA INICIATIVA ${args.soloId} (las demás son contexto para duplicidades y reparto por KR): devuelve un único item con su id.` : "",
-    `INICIATIVAS${args.soloId ? " (la marcada «← evaluar» es la que se valida)" : " A VALIDAR"}:\n${args.iniciativas.map((i) => `- ${i.id}${args.soloId === i.id ? " ← evaluar" : ""} «${i.name}»\n  qué logra: ${i.objetivo || "(vacío)"}\n  meta o resultado esperado: ${i.metaResultado || "(vacío)"}\n  objetivo: ${i.cmi ?? "—"} · KR: ${i.kpi || "(sin resultado clave)"} · responsable: ${i.owner ?? "—"} · inicio ${i.start || "(vacío)"} · fin ${i.end || "(vacío)"} · capacidad ${i.capability ? `${i.capability}${i.capabilityName ? ` ${i.capabilityName}` : ""}` : "(vacía)"} · estado ${i.status ?? "—"} · presupuesto planeado ${i.budget ? i.budget : "(vacío)"}${i.observaciones ? `\n  observaciones: ${i.observaciones.slice(0, 300)}` : ""}`).join("\n")}`,
+    `INICIATIVAS${args.soloId ? " (la marcada «← evaluar» es la que se valida)" : " A VALIDAR"}:\n${args.iniciativas.map((i) => `- ${i.id}${args.soloId === i.id ? " ← evaluar" : ""} «${i.name}»\n  qué logra: ${i.objetivo || "(vacío)"}\n  meta o resultado esperado: ${i.metaResultado || "(vacío)"}\n  objetivo: ${i.cmi ?? "—"} · KR: ${i.kpi || "(sin resultado clave)"} · responsable: ${i.owner ?? "—"} · inicio ${i.start || "(vacío)"} · fin ${i.end || "(vacío)"} · capacidad ${i.capability ? `${i.capability}${i.capabilityName ? ` ${i.capabilityName}` : ""}` : "(vacía)"} · estado ${i.status ?? "—"} · presupuesto planeado ${i.budget ? `${i.budget}${i.moneda ? ` ${i.moneda}` : ""}` : "(vacío)"}${i.observaciones ? `\n  observaciones: ${i.observaciones.slice(0, 300)}` : ""}`).join("\n")}`,
   ].filter(Boolean).join("\n\n");
   return { system, user };
 }

@@ -111,7 +111,8 @@ export const KRS: KrDemo[] = [
 /** Iniciativas 2027: nombre como entrega y los ocho elementos; cada una mueve un resultado clave (máximo dos por KR). Presupuesto en millones de COP. */
 export type IniDemo = { id: string; name: string; objetivo: string; metaResultado: string; cmi: string; kpi: string; krExtra?: string[]; ownerId: string; capability: string; subsistema: string; start: string; end: string; budgetPlanned: number; status?: string; observaciones?: string };
 const ini = (id: string, name: string, cmi: string, kpi: string, ownerId: string, capability: string, subsistema: string, start: string, end: string, budgetPlanned: number, objetivo: string, metaResultado: string, observaciones?: string): IniDemo =>
-  ({ id, name, objetivo, metaResultado, cmi, kpi, ownerId, capability, subsistema, start, end, budgetPlanned, observaciones });
+  // la lista de abajo trae el presupuesto en millones de pesos; se guarda la cifra completa (480 → 480.000.000)
+  ({ id, name, objetivo, metaResultado, cmi, kpi, ownerId, capability, subsistema, start, end, budgetPlanned: budgetPlanned * 1_000_000, observaciones });
 
 export const INICIATIVAS: IniDemo[] = [
   // una iniciativa puede mover de 1 a 3 resultados clave: esta mueve la cobertura (principal) y los contactos efectivos por médico

@@ -129,7 +129,7 @@ export type PropuestaCapacidades = { respuestas: Record<string, NivelCap>; falta
 
 export function encargoCapacidades(p: {
   empresa: { name: string; sector?: string; size?: string };
-  ini: { id: string; name: string; objetivo?: string; start?: string; end?: string; budgetPlanned?: number; capability?: string; capabilityName?: string; owner?: string; observaciones?: string; decision?: string | null };
+  ini: { id: string; name: string; objetivo?: string; start?: string; end?: string; budgetPlanned?: number; budgetCurrency?: string; capability?: string; capabilityName?: string; owner?: string; observaciones?: string; decision?: string | null };
   kr?: { code: string; name: string; baseline?: string; target?: string; unit?: string; due?: string };
   objetivo?: { id: string; name: string };
   prioridad?: { name: string; sponsor?: string };
@@ -147,7 +147,7 @@ export function encargoCapacidades(p: {
     p.kr ? `Resultado clave que mueve: ${p.kr.code} ${p.kr.name}${p.kr.baseline != null ? ` · base ${p.kr.baseline}` : ""}${p.kr.target != null ? ` · meta ${p.kr.target}` : ""}${p.kr.unit ? ` ${p.kr.unit}` : ""}${p.kr.due ? ` · plazo ${p.kr.due}` : ""}` : "Sin resultado clave vinculado.",
     p.objetivo ? `Objetivo directivo: ${p.objetivo.id} ${p.objetivo.name}` : "",
     p.prioridad ? `Prioridad estratégica: ${p.prioridad.name}${p.prioridad.sponsor ? ` · sponsor ${p.prioridad.sponsor}` : ""}` : "",
-    `Responsable: ${p.ini.owner ?? "sin responsable"} · inicio ${p.ini.start || "—"} · fin ${p.ini.end || "—"} · presupuesto planeado ${p.ini.budgetPlanned ?? 0}`,
+    `Responsable: ${p.ini.owner ?? "sin responsable"} · inicio ${p.ini.start || "—"} · fin ${p.ini.end || "—"} · presupuesto planeado ${p.ini.budgetPlanned ?? 0}${p.ini.budgetCurrency ? ` ${p.ini.budgetCurrency}` : ""}`,
     p.ini.capabilityName ? `Capacidad que declara instalar: ${p.ini.capability} ${p.ini.capabilityName}` : "",
     p.ini.decision ? `Decisión de tiempo en el portafolio: ${p.ini.decision}` : "",
     p.ini.observaciones ? `Observaciones registradas: ${p.ini.observaciones}` : "",

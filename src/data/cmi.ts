@@ -275,6 +275,7 @@ export type InitiativeFull = {
   ownerId: string;
   metaResultado: string;       // meta de resultado global
   budgetPlanned: number; budgetCommitted: number; budgetExecuted: number;
+  budgetCurrency?: "COP" | "USD"; // moneda del presupuesto de esta iniciativa; si falta, la de la empresa
   progress: number;
   capability: string;          // dimensión que instala (DIR-4…)
   framework: string;           // framework que trabaja la empresa (F04…)

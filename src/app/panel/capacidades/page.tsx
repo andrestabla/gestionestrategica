@@ -19,6 +19,7 @@ import { DescargarDecisiones } from "@/components/descargar-decisiones";
 import { RevisionCapacidadesFocal, SEMAFORO_CLS, type RevisionBorrador } from "@/components/revision-capacidades";
 import { FRENTES, NIVEL_CAP, SEMAFORO, lecturaCapacidades, checklistHash, type ChecklistCap, type RevisionCapacidades, type Semaforo, type PropuestaCapacidades } from "@/lib/capacidades";
 import { decisionLabel, type Decision } from "@/lib/priorizacion";
+import { fmtMonto } from "@/lib/dinero";
 import { DECISION_CLS } from "@/components/priorizacion";
 import { ShieldCheck, Sparkles, Loader2, ClipboardCheck, RefreshCw, Eye } from "lucide-react";
 
@@ -121,7 +122,7 @@ export default function CapacidadesPage() {
       <ul className="space-y-1">
         {kr && <li><b className="text-ink">Resultado clave que mueve:</b> {kr.code} {kr.name}{kr.baseline != null && kr.target != null ? ` · de ${kr.baseline} a ${kr.target}${kr.unit ? ` ${kr.unit}` : ""}` : ""}{kr.due ? ` · ${kr.due}` : ""}</li>}
         {lever && <li><b className="text-ink">{V.lever}:</b> {lever.name}{lever.ownerId ? ` · sponsor ${owner(lever.ownerId)}` : ""}</li>}
-        <li><b className="text-ink">Responsable:</b> {owner(i.ownerId) || "sin responsable"} · {i.start || "—"} a {i.end || "—"} · presupuesto planeado {i.budgetPlanned ? i.budgetPlanned.toLocaleString("es-CO") : "—"}</li>
+        <li><b className="text-ink">Responsable:</b> {owner(i.ownerId) || "sin responsable"} · {i.start || "—"} a {i.end || "—"} · presupuesto planeado {i.budgetPlanned ? fmtMonto(i.budgetPlanned, i.budgetCurrency ?? cat.company.currency) : "—"}</li>
         {dim && <li><b className="text-ink">Capacidad que declara instalar:</b> {dim.code} {dim.name}</li>}
         {i.observaciones && <li><b className="text-ink">Observaciones:</b> {i.observaciones}</li>}
       </ul>

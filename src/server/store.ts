@@ -14,7 +14,7 @@ import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
-  type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, type Horizon, type Lever } from "@/data/catalogo";
+  type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, isAcompanamiento, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL, THRESHOLD } from "@/data/mapa";
 import { lecturaF1 } from "@/lib/f1";
@@ -39,6 +39,7 @@ import { parseModulesOff, parseModulesStored } from "@/lib/modulos";
 import { normalizarMeta, proponerDesdePortafolio, type MetaTrimestral } from "@/lib/cascada";
 import type { AlineacionIA, AlineacionItem } from "@/lib/alineacion";
 import { RESERVED } from "@/lib/tenant-url";
+import { esMoneda } from "@/lib/dinero";
 import type { Response as OdResponse } from "@/lib/od";
 import type { InformeGuardado, InformeIA, InformeKind } from "@/lib/informe-ia";
 import { FRENTES, normalizarRevision, lecturaCapacidades, checklistHash, type ChecklistCap, type RevisionCapacidades, type Frente } from "@/lib/capacidades";
@@ -1183,7 +1184,7 @@ export async function verificarPersistencia(conDetalle = false): Promise<Verific
     db.quarterGoal.findMany(W).catch(() => []), db.f1Response.findMany(W),
   ]);
   const palancasBase = (Array.isArray(fila?.levers) ? fila!.levers : []) as Lever[];
-  const ini = (i: InitiativeFull) => ({ name: i.name, cmi: i.cmi, kpi: i.kpi, krExtra: i.krExtra, ownerId: i.ownerId, start: i.start, end: i.end, budgetPlanned: i.budgetPlanned, capability: i.capability, objetivo: i.objetivo, metaResultado: i.metaResultado, horizon: i.horizon, status: i.status, observaciones: i.observaciones });
+  const ini = (i: InitiativeFull) => ({ name: i.name, cmi: i.cmi, kpi: i.kpi, krExtra: i.krExtra, ownerId: i.ownerId, start: i.start, end: i.end, budgetPlanned: i.budgetPlanned, budgetCurrency: i.budgetCurrency, capability: i.capability, objetivo: i.objetivo, metaResultado: i.metaResultado, horizon: i.horizon, status: i.status, observaciones: i.observaciones });
   const kr = (k: KpiFull) => ({ name: k.name, unit: k.unit, baseline: k.baseline, target: k.target, goodDirection: k.goodDirection, ownerId: k.ownerId, due: k.due, cmi: k.cmi, definition: k.definition, formula: k.formula, frequency: k.frequency, source: k.source, n: (k.series ?? []).length });
   const informesMem = [...informes().values()].map((x) => ({ clave: `${x.kind}|${x.subject}`, hash: x.inputHash, contenido: x.informe as unknown }));
   const informesBase = (informeRows as { kind: string; subject: string; inputHash: string; content: unknown }[]).map((x) => ({ clave: `${x.kind}|${x.subject}`, hash: x.inputHash, contenido: x.content }));
@@ -3047,8 +3048,19 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (name.length < 5) return fail(422, "El nombre de la iniciativa debe tener al menos 5 caracteres.");
   const dim = DIMS.find((d) => d.code === str(input.capability, 10));
   if (!dim) return fail(422, "La dimensión que instala (DIR-1 … MUL-5) es obligatoria.");
-  const cmi = str(input.cmi, 10);
-  if (!c.objectives.some((o) => o.id === cmi)) return fail(422, "El objetivo del cuadro de mando es obligatorio y debe existir.");
+  let cmi = str(input.cmi, 10);
+  const previaIni = c.initiatives.find((i) => i.id === str(input.id, 10));
+  if (!c.objectives.some((o) => o.id === cmi)) {
+    // sin resultado clave la iniciativa puede quedarse momentáneamente sin objetivo: conserva el que tenía o queda sin él
+    // (acompañamiento); con resultado clave, el objetivo es el del KR
+    const kr = c.kpis.find((k) => k.code === str(input.kpi, 20).toUpperCase());
+    const deKr = kr ? c.objectives.find((o) => o.id === kr.cmi || o.kpis.includes(kr.code))?.id : undefined;
+    const anterior = previaIni && c.objectives.some((o) => o.id === previaIni.cmi) ? previaIni.cmi : undefined;
+    if (deKr) cmi = deKr;
+    else if (!str(input.kpi, 20) && anterior) cmi = anterior;
+    else if (!str(input.kpi, 20) && isAcompanamiento(c.company)) cmi = "";
+    else return fail(422, "El objetivo del cuadro de mando es obligatorio y debe existir.");
+  }
   const ownerId = str(input.ownerId, 10);
   if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable no existe en el catálogo.");
   if (tribeScope(user) && ownerId !== tribeScope(user)) return fail(403, "Solo registras iniciativas de tu tribu: elige tu tribu como dueña.");
@@ -3083,12 +3095,14 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   const FS = ["VERDE", "AMBAR", "ROJO"] as const;
   const id = str(input.id, 10) || (() => { let n = 1; while (c.initiatives.some((i) => i.id === `i${n}`)) n++; return `i${n}`; })();
   const prev = c.initiatives.find((i) => i.id === id);
+  // moneda del presupuesto: la que llega; si el formulario no la envía, se conserva la que tenía
+  const moneda = esMoneda(input.budgetCurrency) ? input.budgetCurrency : prev?.budgetCurrency;
   const i: InitiativeFull = {
     id, line: dim.line, subsistema: SUB.find((x) => x === input.subsistema) ?? "Dirección", cmi, name,
     objetivo: str(input.objetivo, 600), horizon: horizonsOf(c.company).some((h) => h.id === input.horizon) ? String(input.horizon) : horizonsOf(c.company)[0].id,
     impact: int(input.impact, 1, 5, 3), feasibility: int(input.feasibility, 1, 5, 3), urgency: int(input.urgency, 1, 5, 3), dependency: int(input.dependency, 1, 5, 3),
     status: STATUS.find((x) => x === input.status) ?? "PLANEADA", start, end, ownerId, metaResultado: str(input.metaResultado, 400),
-    budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted),
+    budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted), ...(moneda ? { budgetCurrency: moneda } : {}),
     progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi, ...(krExtra.length ? { krExtra } : {}), createdBy: prev?.createdBy ?? user.email, observaciones: str(input.observaciones, 1500) || undefined,
     actions: (Array.isArray(input.actions) ? input.actions : []).map((a) => ({ name: str(a?.name, 200), meta: str(a?.meta, 200), status: ACT.find((x) => x === a?.status) ?? "PENDIENTE", quarter: str(a?.quarter, 8) })).filter((a) => a.name),
     log: Array.isArray(input.log) ? input.log.filter((l) => l && typeof l.text === "string") : (prev?.log ?? []),
