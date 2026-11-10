@@ -1098,6 +1098,69 @@ export async function flushOrError(): Promise<string | null> {
   return e.length ? `No se pudo guardar en la base: ${e[0]}. Inténtalo de nuevo.` : null;
 }
 
+/* ═══ Verificación de persistencia ═══
+   Lee la empresa directamente de la base (sin pasar por la memoria de la instancia) y la compara con lo que la
+   plataforma está mostrando. Una diferencia significa que algo se ve en pantalla y no está guardado. */
+
+export type SeccionPersistencia = { nombre: string; memoria: number; base: number; diferencias: string[] };
+export type VerificacionPersistencia = { ok: boolean; at: string; empresa: string; version: { memoria: number; base: number }; secciones: SeccionPersistencia[]; detalle?: Record<string, unknown> };
+
+const canon = (v: unknown): unknown => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== undefined && x !== null && x !== "" && !(Array.isArray(x) && x.length === 0) && x !== false).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, canon(x)]));
+  return v;
+};
+const igual = (a: unknown, b: unknown) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+/** Compara dos colecciones por clave: devuelve las claves que faltan en la base, sobran o difieren. */
+function comparar<T>(nombre: string, mem: T[], base: T[], clave: (x: T) => string, vista: (x: T) => unknown): SeccionPersistencia {
+  const m = new Map(mem.map((x) => [clave(x), x])), d = new Map(base.map((x) => [clave(x), x]));
+  const diferencias: string[] = [];
+  for (const [k, x] of m) { const y = d.get(k); if (!y) diferencias.push(`${k}: está en pantalla y no en la base`); else if (!igual(vista(x), vista(y))) diferencias.push(`${k}: difiere de la base`); }
+  for (const k of d.keys()) if (!m.has(k)) diferencias.push(`${k}: está en la base y no en pantalla`);
+  return { nombre, memoria: mem.length, base: base.length, diferencias };
+}
+
+export async function verificarPersistencia(conDetalle = false): Promise<VerificacionPersistencia | { ok: false; error: string }> {
+  if (!hasDb()) return { ok: false, error: "Esta instalación no usa base de datos." };
+  const st = S(); const c = cat();
+  const companyId = st.dbId ?? g.companies.get(st.slug)?.dbId;
+  if (!companyId) return { ok: false, error: "La empresa no tiene registro en la base." };
+  const db = await prisma();
+  const W = { where: { companyId } };
+  const [fila, fresco, informeRows, decisionRows, evalRows, metaRows, f1Rows] = await Promise.all([
+    db.company.findUnique({ where: { id: companyId }, select: { levers: true, dataVersion: true } }),
+    readCatalog(db, { ...c.company, dbId: companyId }),
+    db.diagnosticReport.findMany(W), db.initiativeDecision.findMany(W), db.initiativeEvaluation.findMany(W),
+    db.quarterGoal.findMany(W).catch(() => []), db.f1Response.findMany(W),
+  ]);
+  const palancasBase = (Array.isArray(fila?.levers) ? fila!.levers : []) as Lever[];
+  const ini = (i: InitiativeFull) => ({ name: i.name, cmi: i.cmi, kpi: i.kpi, krExtra: i.krExtra, ownerId: i.ownerId, start: i.start, end: i.end, budgetPlanned: i.budgetPlanned, capability: i.capability, objetivo: i.objetivo, metaResultado: i.metaResultado, horizon: i.horizon, status: i.status, observaciones: i.observaciones });
+  const kr = (k: KpiFull) => ({ name: k.name, unit: k.unit, baseline: k.baseline, target: k.target, goodDirection: k.goodDirection, ownerId: k.ownerId, due: k.due, cmi: k.cmi, definition: k.definition, formula: k.formula, frequency: k.frequency, source: k.source, n: (k.series ?? []).length });
+  const informesMem = [...informes().values()].map((x) => ({ clave: `${x.kind}|${x.subject}`, hash: x.inputHash, contenido: x.informe as unknown }));
+  const informesBase = (informeRows as { kind: string; subject: string; inputHash: string; content: unknown }[]).map((x) => ({ clave: `${x.kind}|${x.subject}`, hash: x.inputHash, contenido: x.content }));
+  const secciones: SeccionPersistencia[] = [
+    comparar("Prioridades estratégicas", c.company.levers ?? [], palancasBase, (l) => l.id, (l) => l),
+    comparar("Objetivos", c.objectives, fresco.objectives, (o) => o.id, (o) => o),
+    comparar("Resultados clave e indicadores", c.kpis, fresco.kpis, (k) => k.code, kr),
+    comparar("Iniciativas", c.initiatives, fresco.initiatives, (i) => i.id, ini),
+    comparar("Validaciones, capacidades, articulación e historial", informesMem, informesBase, (x) => x.clave, (x) => ({ hash: x.hash, contenido: x.contenido })),
+    comparar("Decisiones de tiempo", [...decisions().values()], (decisionRows as { code: string; data: DecisionRecord }[]).map((r) => r.data), (d) => d.iniId, (d) => ({ decision: d.decision, rationale: d.rationale })),
+    { nombre: "Calificaciones", memoria: getEvaluations().length, base: evalRows.length, diferencias: getEvaluations().length === evalRows.length ? [] : ["el número de calificaciones no coincide"] },
+    { nombre: "Metas trimestrales", memoria: getMetas().length, base: metaRows.length, diferencias: getMetas().length === metaRows.length ? [] : ["el número de metas no coincide"] },
+    { nombre: "Autoevaluaciones directivas", memoria: f1Store().size, base: f1Rows.length, diferencias: f1Store().size === f1Rows.length ? [] : ["el número de autoevaluaciones no coincide"] },
+  ];
+  const out: VerificacionPersistencia = { ok: secciones.every((x) => x.diferencias.length === 0), at: new Date().toISOString(), empresa: st.slug, version: { memoria: st.version, base: fila?.dataVersion ?? 0 }, secciones };
+  // lo que la base tiene, leído sin pasar por la memoria: sirve para comprobar que una edición concreta quedó guardada
+  if (conDetalle) out.detalle = {
+    prioridades: palancasBase.map((l) => `${l.order}. ${l.id} · ${l.name}`),
+    objetivos: fresco.objectives.map((o) => ({ id: o.id, prioridad: o.lever ?? null, descartado: !!o.descartado, nombre: o.name.slice(0, 80) })),
+    resultadosClave: fresco.kpis.map((k) => ({ code: k.code, objetivo: k.cmi, base: k.baseline, meta: k.target, mejorSi: k.goodDirection })),
+    iniciativas: fresco.initiatives.map((i) => ({ id: i.id, kr: [i.kpi, ...(i.krExtra ?? [])].filter(Boolean), nombre: i.name.slice(0, 80) })),
+    informes: informesBase.map((x) => x.clave).sort(),
+  };
+  return out;
+}
+
 /* ═══ Lecturas ═══ */
 
 export const getTasks = (): Task[] => tasks();

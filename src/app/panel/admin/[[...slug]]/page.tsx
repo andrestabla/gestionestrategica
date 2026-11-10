@@ -47,6 +47,14 @@ function ActividadTab() {
   }, []);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { if (!vivo) return; const id = setInterval(() => void load(), 10_000); return () => clearInterval(id); }, [vivo, load]);
+  // verificación de guardado: lee la empresa directo de la base y la compara con lo que se ve en pantalla
+  const [verif, setVerif] = useState<{ cargando: boolean; r?: { ok: boolean; at: string; secciones: { nombre: string; memoria: number; base: number; diferencias: string[] }[] }; error?: string }>({ cargando: false });
+  const verificar = async () => {
+    setVerif({ cargando: true });
+    const res = await fetch("/api/td/persistencia", { cache: "no-store" });
+    const j = await res.json().catch(() => null);
+    setVerif(res.ok ? { cargando: false, r: j } : { cargando: false, error: j?.error ?? `Error ${res.status}` });
+  };
   const q = filtro.trim().toLowerCase();
   const lista = events.filter((e) => (!rol || e.role === rol) && (!q || `${e.actor} ${e.email} ${e.change} ${e.entityId}`.toLowerCase().includes(q)));
   const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -60,6 +68,28 @@ function ActividadTab() {
         <StatCard label="Acciones cargadas" value={events.length} foot="las 300 más recientes" />
         <Card className="rise p-4"><div className="label !text-[11px]">Actualizado</div><div className="num mt-1 text-[20px] font-extrabold text-ink">{at ? hora(at) : "—"}</div><div className="text-[12px] text-faint">{vivo ? "cada 10 segundos" : "en pausa"}</div></Card>
       </div>
+      <Card className="rise p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1 basis-[260px]">
+            <div className="text-[13.5px] font-extrabold text-ink">Guardado en la base de datos</div>
+            <p className="text-[12px] leading-snug text-muted">Lee esta empresa directamente de la base y la compara con lo que la plataforma muestra: prioridades, objetivos, resultados clave, iniciativas, validaciones, decisiones, calificaciones, metas y autoevaluaciones.</p>
+          </div>
+          <button type="button" onClick={() => void verificar()} disabled={verif.cargando} className="btn-primary btn-sm text-[12px]">{verif.cargando ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} Verificar guardado</button>
+        </div>
+        {verif.error && <p className="mt-3 text-[12px] text-bad">{verif.error}</p>}
+        {verif.r && (
+          <div className="mt-3">
+            <p className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold text-ink" style={{ background: `color-mix(in srgb, var(${verif.r.ok ? "--ok" : "--bad"}) 10%, var(--surface))` }}>
+              {verif.r.ok ? "Todo lo que se ve en pantalla está guardado en la base." : "Hay diferencias entre lo que se ve y lo guardado: revisa el detalle y vuelve a guardar esos elementos."} <span className="font-normal text-muted">Verificado a las {hora(verif.r.at)}.</span>
+            </p>
+            <ul className="mt-2 grid gap-x-6 gap-y-1 text-[12px] sm:grid-cols-2">
+              {verif.r.secciones.map((x) => (
+                <li key={x.nombre} className="flex items-start gap-2"><span className={x.diferencias.length ? "text-bad" : "text-ok"}>{x.diferencias.length ? "✖" : "✔"}</span><span className="text-ink">{x.nombre} <span className="num text-faint">· {x.base} en la base</span>{x.diferencias.length > 0 && <span className="block text-bad">{x.diferencias.slice(0, 4).join("; ")}{x.diferencias.length > 4 ? ` y ${x.diferencias.length - 4} más` : ""}</span>}</span></li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Card>
       <Card className="rise overflow-hidden">
         <CardHeader title="Actividad en vivo" sub="entradas por QR, OKR y KR registrados, iniciativas, calificaciones, decisiones y cambios de cuentas"
           right={<span className="flex flex-wrap items-center gap-1.5">
