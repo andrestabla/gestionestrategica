@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
-import { createCompany, updateCompany, resetStore, getMadurez, captureMadurez, setMadSafeguard, publishMadurez } from "../src/server/store";
+import { createCompany, updateCompany, resetStore, getMadurez, captureMadurez, respondMadurez, setMadSafeguard, publishMadurez } from "../src/server/store";
 import { INSTRUMENTS, instrumentOf } from "../src/data/madurez";
 import { instrumentIssues, P, E, S, gapReading, practiceState, sufficientEvidence, cellOf, overallLevel, generalIndex, aiqOf, progressOf, type Captures } from "../src/lib/madurez";
 import { MODULES, moduleOfRoute } from "../src/lib/modulos";
@@ -13,6 +13,7 @@ import type { SessionUser } from "../src/lib/session";
 const admin: SessionUser = { email: "admin@plataforma.example", name: "Admin", role: "ADMIN" };
 const advisor: SessionUser = { email: "a@a.co", name: "Advisor", role: "CONSULTOR" };
 const directivo: SessionUser = { email: "d@empresa.example", name: "Directiva", role: "DIRECTIVO" };
+const lider: SessionUser = { email: "L@empresa.example", name: "Líder", role: "LIDER" };
 const cap = (o: Partial<Captures[string]>) => ({ by: "x", at: "2026-11-10T00:00:00.000Z", ...o });
 
 test("madurez: los dos instrumentos están completos y el de empresa no habla de educación", () => {
@@ -56,7 +57,7 @@ test("madurez: reglas de cálculo sobre una captura", () => {
   assert.ok(tope.capApplied && tope.capped === sg.cap);
 });
 
-test("madurez: nace vacía, la percepción es de todos, la calificación del advisor y el corte exige todas las variables", async () => {
+test("madurez: nace vacía, la percepción la responde cada persona, la calificación es del advisor y el corte exige todas las variables", async () => {
   resetStore();
   assert.ok((await createCompany(admin, { name: "Digital SA", template: "vacia" })).ok);
   await runWithTenant("digital-sa", async () => {
@@ -64,14 +65,28 @@ test("madurez: nace vacía, la percepción es de todos, la calificación del adv
     assert.equal(ini.kind, "empresa");
     assert.deepEqual([Object.keys(ini.vars).length, ini.cuts.length, ini.progress.level, ini.puede.calificar], [0, 0, 0, false]);
     const ins = instrumentOf("empresa"), v0 = ins.variables[0].id;
-    assert.ok(captureMadurez(directivo, v0, { perception: 4 }).ok);
-    const sinPermiso = captureMadurez(directivo, v0, { level: 3 });
-    assert.ok(!sinPermiso.ok && sinPermiso.status === 403);
+    // la percepción es de cada persona: se responde por afirmación y la variable lleva el promedio
+    assert.ok(respondMadurez(directivo, v0, 4).ok);
+    assert.ok(respondMadurez(lider, v0, 5).ok);
+    assert.ok(respondMadurez(lider, ins.variables[1].id, 0).ok);            // «No lo sé» cuenta como respondida, no entra al promedio
+    const noAdvisor = respondMadurez(advisor, v0, 3);
+    assert.ok(!noAdvisor.ok && noAdvisor.status === 403);
+    const invalida = respondMadurez(directivo, v0, 6);
+    assert.ok(!invalida.ok && invalida.status === 422);
+    assert.ok(!respondMadurez(directivo, "NO-EXISTE", 3).ok);
+    const tras = getMadurez(lider);
+    assert.deepEqual([tras.vars[v0].perception, tras.vars[v0].perceptionN, tras.vars[ins.variables[1].id]], [4.5, 2, undefined]);
+    assert.deepEqual([tras.mia.answers, tras.mia.done, tras.participacion.personas, tras.participacion.completas, "lista" in tras.participacion], [{ [v0]: 5, [ins.variables[1].id]: 0 }, null, 2, 0, false]);
+    assert.deepEqual(getMadurez(advisor).participacion.lista?.map((r) => [r.name, r.respondidas]), [["Líder", 2], ["Directiva", 1]]);
+    assert.ok(respondMadurez(directivo, v0, null).ok);                      // borra su respuesta
+    assert.equal(getMadurez(directivo).vars[v0].perception, 5);
+    assert.ok(respondMadurez(directivo, v0, 4).ok);
+    for (const sinPermiso of [captureMadurez(directivo, v0, { level: 3 }), captureMadurez(directivo, v0, { perception: 2 })]) assert.ok(!sinPermiso.ok && sinPermiso.status === 403);
     const fuera = captureMadurez(advisor, v0, { level: 6 });
     assert.ok(!fuera.ok && fuera.status === 422);
     assert.ok(!captureMadurez(advisor, "NO-EXISTE", { level: 3 }).ok);
     const ok = captureMadurez(advisor, v0, { d: 3, i: 2, k: 1, level: 3, target: 4, hallazgo: "  Hay política sin despliegue.  " });
-    assert.ok(ok.ok && ok.capture.perception === 4 && ok.capture.hallazgo === "Hay política sin despliegue.");
+    assert.ok(ok.ok && ok.capture.perception === 4.5 && ok.capture.hallazgo === "Hay política sin despliegue.");
     const borra = captureMadurez(advisor, v0, { hallazgo: "", target: null });
     assert.ok(borra.ok && borra.capture.hallazgo === undefined && borra.capture.target === undefined);
     assert.ok(!setMadSafeguard(directivo, "SG-1", "FALLA", "").ok);
@@ -84,7 +99,12 @@ test("madurez: nace vacía, la percepción es de todos, la calificación del adv
     assert.ok(pub.ok && pub.cut.label === "Línea base" && Object.keys(pub.cut.vars).length === ins.variables.length && pub.cut.safeguards["SG-1"].status === "FALLA");
     // el corte no cambia aunque la captura siga
     assert.ok(captureMadurez(advisor, v0, { level: 5 }).ok);
+    // quien responde todas las afirmaciones queda con el diagnóstico completo
+    for (const v of ins.variables) assert.ok(respondMadurez(directivo, v.id, 3).ok);
+    const completo = getMadurez(directivo);
+    assert.ok(completo.mia.done && completo.participacion.completas === 1);
     const fin = getMadurez(advisor);
+    assert.deepEqual([fin.cuts[0].vars[v0].perception, fin.cuts[0].vars[v0].perceptionN, fin.vars[v0].perception], [4.5, 2, 4]);
     assert.equal(fin.cuts[0].vars[v0].level, 3);
     assert.equal(fin.vars[v0].level, 5);
     assert.ok(fin.puede.calificar);

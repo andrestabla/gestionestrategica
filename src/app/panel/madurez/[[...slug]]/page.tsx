@@ -1,11 +1,13 @@
 "use client";
 
 // Madurez digital · diagnóstico de transformación digital y niveles de madurez.
-// Cinco vistas con ruta propia (/panel/madurez/<vista>): Resumen, Variables,
-// Dominios, Índices y Captura. El instrumento depende del tipo de organización
-// (empresa o institución educativa). La medición es de la empresa: nace vacía,
-// se captura y se publica como corte; las vistas leen el corte elegido o la
-// captura en curso.
+// Vistas con ruta propia (/panel/madurez/<vista>). Quien es de la empresa
+// (directivo, líder, responsable) entra por «Mi diagnóstico»: la invitación a
+// iniciar el diagnóstico de percepción, una afirmación por pantalla. El advisor
+// entra por Resumen y tiene además Captura. El instrumento depende del tipo de
+// organización (empresa o institución educativa). La medición es de la empresa:
+// nace vacía, se captura y se publica como corte; las vistas leen el corte
+// elegido o la captura en curso.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -20,11 +22,14 @@ import {
   practiceCounts, evidenceCoverage, aiqOf, progressOf,
   type OrgKind, type Captures, type MadCapture, type MadCut, type SafeguardState, type SafeguardStatus, type MadInstrument, type MadVariable, type Progress, type CaptureField, type EvidenceComponent,
 } from "@/lib/madurez";
-import { Layers, Search, BookOpenCheck, Sigma, ClipboardList, ChevronDown, Lock, Send } from "lucide-react";
+import { Layers, Search, BookOpenCheck, Sigma, ClipboardList, ChevronDown, Send, UserRoundCheck, Users } from "lucide-react";
+import { PercepcionInicio, Cuestionario, type Mia } from "./percepcion";
 
-type Api = { kind: OrgKind; vars: Captures; safeguards: SafeguardState; cuts: MadCut[]; progress: Progress; puede: { calificar: boolean } };
-type Tab = "resumen" | "variables" | "dominios" | "indices" | "captura";
+type Participacion = { personas: number; completas: number; lista?: { name: string; role: string; respondidas: number; at: string }[] };
+type Api = { kind: OrgKind; vars: Captures; safeguards: SafeguardState; cuts: MadCut[]; progress: Progress; puede: { calificar: boolean }; mia: Mia; participacion: Participacion };
+type Tab = "percepcion" | "resumen" | "variables" | "dominios" | "indices" | "captura";
 const TABS: { id: Tab; label: string; icon: typeof Layers }[] = [
+  { id: "percepcion", label: "Mi diagnóstico", icon: UserRoundCheck },
   { id: "resumen", label: "Resumen", icon: Layers },
   { id: "variables", label: "Variables", icon: Search },
   { id: "dominios", label: "Dominios", icon: BookOpenCheck },
@@ -64,10 +69,10 @@ export default function MadurezPage() {
   const base = useBase();
   const params = useParams<{ slug?: string[] }>();
   const seg = params.slug?.[0]?.toLowerCase();
-  const tab: Tab = isTab(seg) ? seg : "resumen";
   const [data, setData] = useState<Api | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fuente, setFuente] = useState<string | null>(null);   // id del corte o "curso"; nulo = el último corte, o la captura si no hay
+  const [respondiendo, setRespondiendo] = useState(false);     // cuestionario de percepción abierto en modo focal
 
   useEffect(() => {
     let vivo = true;
@@ -83,13 +88,27 @@ export default function MadurezPage() {
     if (!r.ok) { avisar(j?.error ?? `Error ${r.status}`, "bad"); return false; }
     setData(j); return true;
   }, []);
+  // respuesta de percepción: no pisa el estado con cada clic (el cuestionario lleva el suyo); al salir se vuelve a leer
+  const responder = useCallback(async (id: string, value: number | null) => {
+    try { return (await fetch("/api/td/madurez", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "responder", id, value }) })).ok; }
+    catch { return false; }
+  }, []);
+  const cerrarCuestionario = () => {
+    setRespondiendo(false);
+    fetch("/api/td/madurez", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) setData(j); }).catch(() => undefined);
+  };
 
   if (error) return <EmptyNote>{error}</EmptyNote>;
   if (!data) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-64" /></div>;
 
   const ins = instrumentOf(data.kind);
+  // la gente de la empresa entra por su diagnóstico de percepción; el advisor, por el resumen y con Captura
+  const cal = data.puede.calificar;
+  const tabs = TABS.filter((t) => (cal ? t.id !== "percepcion" : t.id !== "captura"));
+  const tab: Tab = isTab(seg) && tabs.some((t) => t.id === seg) ? seg : tabs[0].id;
+  const sinFuente = tab === "captura" || tab === "percepcion";
   const ultimo = data.cuts[data.cuts.length - 1];
-  const sel = tab === "captura" ? "curso" : fuente ?? (ultimo ? ultimo.id : "curso");
+  const sel = sinFuente ? "curso" : fuente ?? (ultimo ? ultimo.id : "curso");
   const corte = data.cuts.find((c) => c.id === sel);
   const caps = corte ? corte.vars : data.vars;
   const sg = corte ? corte.safeguards : data.safeguards;
@@ -99,7 +118,7 @@ export default function MadurezPage() {
     <div>
       <PageHeader kicker="Madurez digital" title="Diagnóstico de transformación digital"
         desc={ins.intro}
-        actions={tab !== "captura" && (
+        actions={!sinFuente && (
           <label className="flex items-center gap-2 text-[12px] text-muted">
             <span className="label !mb-0">Medición</span>
             <select value={sel} onChange={(e) => setFuente(e.target.value)} className="input !w-auto !py-1.5 text-[12.5px]" aria-label="Medición que se muestra">
@@ -110,7 +129,7 @@ export default function MadurezPage() {
         )} />
 
       <div className="rise mb-5 flex flex-wrap gap-1.5" role="tablist" aria-label="Vistas de Madurez digital">
-        {TABS.map((t) => { const on = t.id === tab; return (
+        {tabs.map((t) => { const on = t.id === tab; return (
           <Link key={t.id} href={`${base}/panel/madurez/${t.id}`} role="tab" aria-selected={on}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-colors ${on ? "bg-navy text-white" : "bg-surface text-ink-soft shadow-[var(--e1)] hover:text-navy"}`}>
             <t.icon size={15} /> {t.label}
@@ -118,10 +137,12 @@ export default function MadurezPage() {
         ); })}
       </div>
 
-      {tab !== "captura" && !corte && (
+      {!sinFuente && !corte && (
         <p className="mb-4 rounded-xl bg-gold-wash px-4 py-3 text-[13px] text-ink-soft">
-          {data.progress.level === 0 && data.progress.perception === 0
-            ? <>Aún no hay medición. Empieza por la <Link href={`${base}/panel/madurez/captura`} className="font-semibold text-cyan-deep underline">captura</Link>: percepción, evidencia y nivel de cada variable.</>
+          {!cal
+            ? <>Aún no hay una medición publicada. Tu aporte es el <Link href={`${base}/panel/madurez/percepcion`} className="font-semibold text-cyan-deep underline">diagnóstico de percepción</Link>; los resultados aparecen aquí cuando el advisor publique el corte.</>
+            : data.progress.level === 0 && data.progress.perception === 0
+            ? <>Aún no hay medición. La percepción la responde la gente de la empresa en «Mi diagnóstico»; la evidencia y el nivel de cada variable se registran en la <Link href={`${base}/panel/madurez/captura`} className="font-semibold text-cyan-deep underline">captura</Link>.</>
             : <>Estás viendo la captura en curso ({data.progress.level} de {data.progress.total} variables con nivel). Las cifras son provisionales hasta que se publique el corte.</>}
         </p>
       )}
@@ -130,7 +151,9 @@ export default function MadurezPage() {
       {tab === "variables" && <Variables ins={ins} caps={caps} />}
       {tab === "dominios" && <Dominios ins={ins} caps={caps} />}
       {tab === "indices" && <Indices ins={ins} caps={caps} sg={sg} editable={!corte && data.puede.calificar} enviar={enviar} />}
-      {tab === "captura" && <Captura ins={ins} data={data} enviar={enviar} />}
+      {tab === "percepcion" && <PercepcionInicio ins={ins} mia={data.mia} hayCorte={data.cuts.length > 0} soloVer={false} onStart={() => setRespondiendo(true)} />}
+      {tab === "captura" && <Captura ins={ins} data={data} enviar={enviar} onPreview={() => setRespondiendo(true)} />}
+      {respondiendo && <Cuestionario ins={ins} inicial={cal ? {} : data.mia.answers} soloVer={cal} guardar={responder} onExit={cerrarCuestionario} />}
     </div>
   );
 }
@@ -398,9 +421,9 @@ function Texto({ label, valor, onSave }: { label: string; valor?: string; onSave
       <textarea value={t} onChange={(e) => setT(e.target.value)} onBlur={() => { if (t.trim() !== (valor ?? "")) onSave(t); }} rows={2} maxLength={1200} className="input mt-1.5 text-[13px]" /></label>
   );
 }
-function Captura({ ins, data, enviar }: { ins: MadInstrument; data: Api; enviar: (b: Record<string, unknown>) => Promise<boolean> }) {
+function Captura({ ins, data, enviar, onPreview }: { ins: MadInstrument; data: Api; enviar: (b: Record<string, unknown>) => Promise<boolean>; onPreview: () => void }) {
   const [line, setLine] = useState(ins.lines[0].n), [abierta, setAbierta] = useState<string | null>(null), [label, setLabel] = useState(""), [ocupado, setOcupado] = useState(false);
-  const cal = data.puede.calificar, pr = data.progress;
+  const pr = data.progress, part = data.participacion;
   const set = (id: string, campo: CaptureField, valor: number | string | null) => void enviar({ op: "capturar", id, patch: { [campo]: valor } });
   const publicar = async () => {
     if (!(await confirmar({ title: "Publicar el corte", body: `Se publica la medición con las ${pr.total} variables calificadas. El corte queda como referencia y la captura sigue abierta para el siguiente.`, confirmLabel: "Publicar" }))) return;
@@ -412,22 +435,44 @@ function Captura({ ins, data, enviar }: { ins: MadInstrument; data: Api; enviar:
     <div className="space-y-5">
       <Card className="p-5">
         <div className="grid gap-5 md:grid-cols-3">
-          {([["Percepción", pr.perception, "la registra cualquier persona de la empresa"], ["Evidencia D · I · K", pr.dik, "la califica el advisor"], ["Nivel contra la rúbrica", pr.level, "lo asigna el advisor"]] as const).map(([t, n, d]) => (
+          {([["Percepción", pr.perception, "promedio de lo que responde la gente de la empresa"], ["Evidencia D · I · K", pr.dik, "la califica el advisor"], ["Nivel contra la rúbrica", pr.level, "lo asigna el advisor"]] as const).map(([t, n, d]) => (
             <div key={t}><div className="flex items-baseline justify-between"><span className="text-[13px] font-semibold text-ink">{t}</span><span className="num text-[13px] font-bold text-ink">{n} de {pr.total}</span></div>
               <div className="mt-1.5"><Barra pct={(n / pr.total) * 100} color="var(--cyan-fill)" /></div><p className="mt-1 text-[12px] text-faint">{d}</p></div>
           ))}
         </div>
-        {cal ? (
-          <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-line pt-4">
-            <label className="min-w-[220px] flex-1"><span className="label">Nombre del corte</span><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Corte ${data.cuts.length + 1}`} maxLength={80} className="input mt-1.5 !py-2 text-[13px]" /></label>
-            <button type="button" onClick={publicar} disabled={ocupado || pr.level < pr.total} className="btn-primary disabled:opacity-40"><Send size={15} /> Publicar corte</button>
-            {pr.level < pr.total && <p className="w-full text-[12px] text-muted">Faltan {pr.total - pr.level} variables por calificar con nivel. Una medición parcial no se publica.</p>}
+        <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-line pt-4">
+          <label className="min-w-[220px] flex-1"><span className="label">Nombre del corte</span><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Corte ${data.cuts.length + 1}`} maxLength={80} className="input mt-1.5 !py-2 text-[13px]" /></label>
+          <button type="button" onClick={publicar} disabled={ocupado || pr.level < pr.total} className="btn-primary disabled:opacity-40"><Send size={15} /> Publicar corte</button>
+          {pr.level < pr.total && <p className="w-full text-[12px] text-muted">Faltan {pr.total - pr.level} variables por calificar con nivel. Una medición parcial no se publica.</p>}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="label flex items-center gap-1.5"><Users size={14} /> Percepción de la empresa</div>
+            <p className="mt-1 text-[13px] text-ink-soft">
+              {part.personas === 0
+                ? "Nadie ha respondido todavía. Cada directivo y líder encuentra «Iniciar diagnóstico» al entrar al módulo: una afirmación por pantalla."
+                : <><b className="num text-ink">{part.personas}</b> {part.personas === 1 ? "persona ha respondido" : "personas han respondido"} · <b className="num text-ink">{part.completas}</b> con el diagnóstico completo. La percepción de cada variable es el promedio de sus respuestas.</>}
+            </p>
           </div>
-        ) : <p className="mt-5 flex items-center gap-2 border-t border-line pt-4 text-[12.5px] text-muted"><Lock size={14} /> Tu captura registra la percepción. La evidencia, el nivel y la publicación del corte son del advisor.</p>}
+          <button type="button" onClick={onPreview} className="btn-ghost">Ver el cuestionario</button>
+        </div>
+        {part.lista && part.lista.length > 0 && (
+          <ul className="mt-4 grid gap-x-6 gap-y-2.5 border-t border-line pt-4 sm:grid-cols-2">
+            {part.lista.map((r, k) => (
+              <li key={k} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3 text-[13px]"><span className="truncate font-semibold text-ink">{r.name}</span><span className="num flex-none text-[12px] text-muted">{r.respondidas} de {pr.total}</span></div>
+                <div className="mt-1"><Barra pct={(r.respondidas / pr.total) * 100} color={r.respondidas >= pr.total ? "var(--n5)" : "var(--cyan-fill)"} alto={6} /></div>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Línea">
-        {ins.lines.map((l) => { const vs = ins.variables.filter((v) => v.line === l.n), hechas = vs.filter((v) => typeof data.vars[v.id]?.[cal ? "level" : "perception"] === "number").length; return (
+        {ins.lines.map((l) => { const vs = ins.variables.filter((v) => v.line === l.n), hechas = vs.filter((v) => typeof data.vars[v.id]?.level === "number").length; return (
           <button key={l.n} type="button" role="tab" aria-selected={line === l.n} onClick={() => { setLine(l.n); setAbierta(null); }}
             className={`rounded-xl px-3.5 py-2 text-[13px] font-semibold ${line === l.n ? "bg-navy text-white" : "bg-surface text-ink-soft shadow-[var(--e1)]"}`}>{l.code} · {l.short} <span className="num ml-1 opacity-70">{hechas}/{vs.length}</span></button>
         ); })}
@@ -440,7 +485,7 @@ function Captura({ ins, data, enviar }: { ins: MadInstrument; data: Api; enviar:
               <button type="button" onClick={() => setAbierta(on ? null : v.id)} aria-expanded={on} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-2">
                 <span className="num w-[76px] flex-none text-[12px] text-faint">{v.id}</span>
                 <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold text-ink">{v.name}</span><span className="mt-0.5 block text-[12px] text-muted">{ins.dimensions.find((d) => d.key === v.dimension)?.name} · {v.frame}</span></span>
-                <span className="hidden text-[12px] text-muted sm:block">percepción <b className="num text-ink">{c.perception ?? "—"}</b></span>
+                <span className="hidden text-[12px] text-muted sm:block">percepción <b className="num text-ink">{typeof c.perception === "number" ? f1(c.perception) : "—"}</b></span>
                 <Nivel v={c.level} dec={false} />
                 <ChevronDown size={16} className={`flex-none text-faint transition-transform ${on ? "rotate-180" : ""}`} />
               </button>
@@ -450,18 +495,21 @@ function Captura({ ins, data, enviar }: { ins: MadInstrument; data: Api; enviar:
                     <p className="text-[13px] text-ink-soft">{v.desc}</p>
                     <div><div className="label">Percepción · de 1 (en desacuerdo) a 5 (de acuerdo)</div>
                       <p className="mb-2 mt-1 text-[13px] font-semibold text-ink">{v.items.find((i) => i.type === "likert")?.text}</p>
-                      <Escala etiqueta="Percepción" valor={c.perception} min={1} max={5} onPick={(n) => set(v.id, "perception", n)} /></div>
+                      {c.perceptionN
+                        ? <p className="text-[13px] text-ink-soft"><b className="num text-[15px] text-ink">{f1(c.perception!)}</b> de 5 · promedio de {c.perceptionN} {c.perceptionN === 1 ? "respuesta" : "respuestas"}</p>
+                        : <><Escala etiqueta="Percepción" valor={c.perception} min={1} max={5} onPick={(n) => set(v.id, "perception", n)} />
+                          <p className="mt-1.5 text-[12px] text-faint">Nadie ha respondido esta afirmación. Puedes anotar la percepción acordada en sesión; en cuanto alguien responda, cuenta el promedio.</p></>}</div>
                     {v.items.filter((i) => i.type !== "likert").length > 0 && (
                       <div><div className="label">Preguntas de apoyo</div><ul className="mt-1.5 space-y-1">{v.items.filter((i) => i.type !== "likert").map((i, k) => <li key={k} className="text-[12.5px] text-ink-soft"><span className="chip mr-1.5">{ITEM_TYPE_LABEL[i.type]}</span>{i.text}</li>)}</ul></div>
                     )}
-                    {cal && <><Texto key={`h${c.hallazgo ?? ""}`} label="Hallazgo" valor={c.hallazgo} onSave={(t) => set(v.id, "hallazgo", t)} /><Texto key={`r${c.recomendacion ?? ""}`} label="Recomendación" valor={c.recomendacion} onSave={(t) => set(v.id, "recomendacion", t)} /></>}
+                    {<><Texto key={`h${c.hallazgo ?? ""}`} label="Hallazgo" valor={c.hallazgo} onSave={(t) => set(v.id, "hallazgo", t)} /><Texto key={`r${c.recomendacion ?? ""}`} label="Recomendación" valor={c.recomendacion} onSave={(t) => set(v.id, "recomendacion", t)} /></>}
                   </div>
                   <div className="space-y-4">
                     <div><div className="label">Evidencia · de 0 a 4</div>
                       <div className="mt-2 space-y-3">{(["D", "I", "K"] as EvidenceComponent[]).map((k) => { const req = v.evidence.find((e) => e.component === k), campo = k.toLowerCase() as "d" | "i" | "k", val = c[campo]; return (
                         <div key={k}>
                           <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">{DIK_ANCHORS[k].label} <span className="font-normal text-muted">· {DIK_ANCHORS[k].question}</span></span>
-                            <Escala etiqueta={DIK_ANCHORS[k].label} valor={val} min={0} max={4} disabled={!cal} onPick={(n) => set(v.id, campo, n)} /></div>
+                            <Escala etiqueta={DIK_ANCHORS[k].label} valor={val} min={0} max={4} onPick={(n) => set(v.id, campo, n)} /></div>
                           {req && <p className="mt-1 text-[12px] text-faint">{req.what}. Criterio: {req.criterio}</p>}
                           {typeof val === "number" && <p className="mt-0.5 text-[12px] font-semibold text-ink-soft">{val} · {DIK_ANCHORS[k].levels[val]}</p>}
                         </div>
@@ -469,12 +517,12 @@ function Captura({ ins, data, enviar }: { ins: MadInstrument; data: Api; enviar:
                     </div>
                     <div><div className="label">Nivel contra la rúbrica</div>
                       <ol className="mt-1.5 space-y-1">{v.rubric.map((r, k) => (
-                        <li key={k}><button type="button" disabled={!cal} aria-pressed={c.level === k + 1} onClick={() => set(v.id, "level", c.level === k + 1 ? null : k + 1)}
+                        <li key={k}><button type="button" aria-pressed={c.level === k + 1} onClick={() => set(v.id, "level", c.level === k + 1 ? null : k + 1)}
                           className={`flex w-full gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed ${c.level === k + 1 ? "bg-surface font-semibold text-ink shadow-[var(--e1)]" : "text-ink-soft hover:bg-surface"}`}>
                           <span className="num mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: `var(--n${k + 1})` }}>{k + 1}</span>{r}</button></li>
                       ))}</ol>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">Meta de la variable</span><Escala etiqueta="Meta" valor={c.target} min={1} max={5} disabled={!cal} onPick={(n) => set(v.id, "target", n)} /></div>
+                    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">Meta de la variable</span><Escala etiqueta="Meta" valor={c.target} min={1} max={5} onPick={(n) => set(v.id, "target", n)} /></div>
                     {c.by && <p className="text-[12px] text-faint">Última captura: {c.by} · {fecha(c.at)}</p>}
                   </div>
                 </div>

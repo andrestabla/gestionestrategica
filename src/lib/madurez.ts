@@ -93,7 +93,8 @@ export const DIK_ANCHORS: Record<EvidenceComponent, { label: string; question: s
 /* ═══ Captura y cortes (datos de cada empresa) ═══ */
 
 export type MadCapture = {
-  perception?: number;    // 1–5 · autodiagnóstico
+  perception?: number;    // 1–5 · percepción: promedio de las respuestas de las personas, o el valor acordado en sesión si nadie ha respondido
+  perceptionN?: number;   // cuántas personas respondieron esa variable
   d?: number; i?: number; k?: number;   // 0–4 · evidencia, la califica el advisor
   level?: number;         // 1–5 · nivel contra la rúbrica, lo asigna el advisor
   target?: number;        // 1–5 · meta de la variable
@@ -103,6 +104,17 @@ export type MadCapture = {
   at: string;             // ISO
 };
 export type Captures = Record<string, MadCapture>;
+
+/** Respuesta de percepción de una persona: una afirmación por variable, de 1 a 5; 0 es «No lo sé» y no entra al promedio. */
+export type MadResponse = { email: string; name: string; role: string; answers: Record<string, number>; at: string; done?: string };
+export const PERCEPTION_SCALE = ["Totalmente en desacuerdo", "En desacuerdo", "Ni de acuerdo ni en desacuerdo", "De acuerdo", "Totalmente de acuerdo"] as const;
+export const isPerceptionAnswer = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 5;
+/** Percepción de una variable: promedio de las respuestas válidas (1–5) de las personas, con dos decimales. */
+export function perceptionOf(resps: Iterable<MadResponse>, varId: string): { value: number; n: number } | null {
+  let sum = 0, n = 0;
+  for (const r of resps) { const a = r.answers[varId]; if (typeof a === "number" && a >= 1) { sum += a; n++; } }
+  return n ? { value: Math.round((sum / n) * 100) / 100, n } : null;
+}
 export type SafeguardStatus = "CUMPLE" | "PARCIAL" | "FALLA";
 export type SafeguardState = Record<string, { status: SafeguardStatus; note?: string }>;
 export const SAFEGUARD_LABEL: Record<SafeguardStatus, string> = { CUMPLE: "Cumple", PARCIAL: "Parcial", FALLA: "Falla" };

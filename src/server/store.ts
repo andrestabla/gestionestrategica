@@ -9,7 +9,7 @@
 // Todas las mutaciones validan reglas de negocio y escriben auditoría.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { isOrgKind, captureError, progressOf, CAPTURE_FIELDS, GRADING_FIELDS, type OrgKind, type MadCapture, type MadCut, type SafeguardState, type SafeguardStatus, type CaptureField } from "@/lib/madurez";
+import { isOrgKind, captureError, progressOf, perceptionOf, isPerceptionAnswer, CAPTURE_FIELDS, type OrgKind, type MadCapture, type MadResponse, type Captures, type MadCut, type SafeguardState, type SafeguardStatus, type CaptureField } from "@/lib/madurez";
 import { instrumentOf } from "@/data/madurez";
 import { CONSENT_VERSION } from "@/lib/consentimiento";
 import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
@@ -174,7 +174,7 @@ export type TenantState = {
   informes: Map<string, InformeGuardado>;   // análisis con IA del diagnóstico, clave kind|subject
   f2: F2Response[];
   testNotes: Map<string, TestNotes>;
-  madurez: { vars: Map<string, MadCapture>; safeguards: SafeguardState; cuts: MadCut[] };   // madurez digital: captura vigente, salvaguardas y cortes publicados
+  madurez: { vars: Map<string, MadCapture>; resps: Map<string, MadResponse>; safeguards: SafeguardState; cuts: MadCut[] };   // madurez digital: captura vigente, salvaguardas y cortes publicados
   iniOverrides: Map<string, InitiativeOverride>;
   evals: Map<string, Evaluation>;          // clave iniId|email
   decisions: Map<string, DecisionRecord>;  // clave iniId
@@ -233,7 +233,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     // las reprogramaciones mueven las vigentes y el deslizamiento se mide contra esta.
     baselines: new Map(catalog.tasks.map((t) => [t.id, { start: t.start, due: t.due }])),
     capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f1: new Map(), informes: new Map(), f2: [], testNotes: new Map(),
-    madurez: { vars: new Map(), safeguards: {}, cuts: [] },
+    madurez: { vars: new Map(), resps: new Map(), safeguards: {}, cuts: [] },
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
@@ -522,9 +522,10 @@ async function loadTenant(st: TenantState) {
     for (const e of evalRows) evals().set(e.id, e.data as Evaluation);
     for (const d of decisionRows) decisions().set(d.code, d.data as DecisionRecord);
     st.metas.clear(); for (const m of metaRows as { id: string; data: unknown }[]) st.metas.set(m.id, m.data as MetaTrimestral);
-    st.madurez = { vars: new Map(), safeguards: {}, cuts: [] };
+    st.madurez = { vars: new Map(), resps: new Map(), safeguards: {}, cuts: [] };
     for (const r of (await db.maturityRecord.findMany(W).catch(() => [])) as { id: string; data: unknown }[]) {
       if (r.id.startsWith("var:")) st.madurez.vars.set(r.id.slice(4), r.data as MadCapture);
+      else if (r.id.startsWith("resp:")) st.madurez.resps.set(r.id.slice(5), r.data as MadResponse);
       else if (r.id === "sg") st.madurez.safeguards = r.data as SafeguardState;
       else if (r.id.startsWith("cut:")) st.madurez.cuts.push(r.data as MadCut);
     }
@@ -4467,23 +4468,61 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
 export const calificables = (): Record<string, Calificabilidad> => Object.fromEntries(cat().initiatives.map((i) => [i.id, cat().company.mode === "acompanamiento" ? calificabilidad(i) : (i.kpi ? { ok: true } : { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" })]));
 
 /* ═══ Madurez digital · diagnóstico de transformación digital ═══
-   El instrumento depende del tipo de organización (empresa o institución educativa). Toda persona de
-   la empresa registra la percepción; la evidencia D/I/K, el nivel, la meta, el hallazgo, la
-   recomendación y las salvaguardas las registra el advisor, que también publica el corte. La
-   medición nace vacía: no hay valores de ejemplo. */
+   El instrumento depende del tipo de organización (empresa o institución educativa). Cada persona
+   de la empresa responde su percepción (una afirmación por variable); la percepción de la variable
+   es el promedio de esas respuestas. La evidencia D/I/K, el nivel, la meta, el hallazgo, la
+   recomendación y las salvaguardas las registra el advisor, que también publica el corte y, si
+   nadie ha respondido, puede anotar la percepción acordada en sesión. La medición nace vacía. */
 
 const madState = () => S().madurez;
 export const orgKindOf = (): OrgKind => (cat().company.orgKind === "educativa" ? "educativa" : "empresa");
 const madInstrument = () => instrumentOf(orgKindOf());
 const gradesMadurez = (u: SessionUser) => u.role === "ADMIN" || u.role === "CONSULTOR";
 const madRecord = (id: string, data: unknown) => persist("madurez digital", (db) => db.maturityRecord.upsert({ where: { companyId_id: { companyId: cid(), id } }, update: { data: data as never }, create: { companyId: cid(), id, data: data as never } }));
+const respKey = (u: SessionUser) => u.email.trim().toLowerCase();
 type MadFail = { ok: false; status: number; error: string };
 
-/** Captura vigente, salvaguardas y cortes del instrumento que aplica a la empresa. */
+/** Captura vigente con la percepción ya promediada: lo que leen las vistas y lo que se publica. */
+function madVars(): Captures {
+  const m = madState(), out: Captures = {};
+  for (const v of madInstrument().variables) {
+    const base = m.vars.get(v.id), p = perceptionOf(m.resps.values(), v.id);
+    if (!base && !p) continue;
+    out[v.id] = { ...(base ?? { by: "", at: "" }), ...(p ? { perception: p.value, perceptionN: p.n } : {}) };
+  }
+  return out;
+}
+
+/** Captura vigente, salvaguardas y cortes del instrumento que aplica a la empresa, la respuesta propia
+ *  de percepción y la participación (el advisor ve quién respondió y cuánto, no qué respondió cada quien). */
 export function getMadurez(user: SessionUser) {
   const m = madState(), ins = madInstrument(), ids = new Set(ins.variables.map((v) => v.id));
-  const vars = Object.fromEntries([...m.vars].filter(([id]) => ids.has(id)));
-  return { kind: ins.kind, vars, safeguards: { ...m.safeguards }, cuts: m.cuts.filter((c) => c.kind === ins.kind), progress: progressOf(ins, vars), puede: { calificar: gradesMadurez(user) } };
+  const vars = madVars(), cal = gradesMadurez(user);
+  const contadas = (r: MadResponse) => Object.keys(r.answers).filter((id) => ids.has(id)).length;
+  const todas = [...m.resps.values()].filter((r) => contadas(r) > 0);
+  const mia = m.resps.get(respKey(user));
+  return {
+    kind: ins.kind, vars, safeguards: { ...m.safeguards }, cuts: m.cuts.filter((c) => c.kind === ins.kind), progress: progressOf(ins, vars), puede: { calificar: cal },
+    mia: { answers: Object.fromEntries(Object.entries(mia?.answers ?? {}).filter(([id]) => ids.has(id))), done: mia && contadas(mia) >= ins.variables.length ? mia.done ?? mia.at : null },
+    participacion: { personas: todas.length, completas: todas.filter((r) => contadas(r) >= ins.variables.length).length,
+      ...(cal ? { lista: todas.map((r) => ({ name: r.name, role: r.role, respondidas: contadas(r), at: r.at })).sort((a, b) => b.respondidas - a.respondidas || a.name.localeCompare(b.name)) } : {}) },
+  };
+}
+
+/** Respuesta de percepción de quien tiene la sesión: de 1 a 5, 0 para «No lo sé», nulo para borrarla. */
+export function respondMadurez(user: SessionUser, varId: unknown, value: unknown): { ok: true; response: MadResponse } | MadFail {
+  const ins = madInstrument(), v = ins.variables.find((x) => x.id === varId);
+  if (!v) return { ok: false, status: 404, error: "La afirmación no existe en el instrumento de esta empresa." };
+  if (gradesMadurez(user)) return { ok: false, status: 403, error: "La percepción la responden las personas de la empresa; el advisor califica la evidencia y el nivel." };
+  if (value !== null && !isPerceptionAnswer(value)) return { ok: false, status: 422, error: "La respuesta es un entero de 1 a 5, o 0 para «No lo sé»." };
+  const key = respKey(user), prev = madState().resps.get(key), answers = { ...(prev?.answers ?? {}) };
+  if (value === null) delete answers[v.id]; else answers[v.id] = value;
+  const now = new Date().toISOString(), completa = ins.variables.every((x) => answers[x.id] !== undefined);
+  const next: MadResponse = { email: key, name: user.name, role: user.role, answers, at: now, ...(completa ? { done: prev?.done ?? now } : {}) };
+  madState().resps.set(key, next);
+  if (completa && !prev?.done) audit(user, "task", "madurez:percepcion", "madurez digital: percepción completada");
+  void madRecord(`resp:${key}`, next);
+  return { ok: true, response: next };
 }
 
 export function captureMadurez(user: SessionUser, varId: unknown, patch: unknown): { ok: true; capture: MadCapture } | MadFail {
@@ -4492,8 +4531,8 @@ export function captureMadurez(user: SessionUser, varId: unknown, patch: unknown
   const p = (patch && typeof patch === "object" ? patch : {}) as Partial<Record<CaptureField, unknown>>;
   const keys = CAPTURE_FIELDS.filter((k) => p[k] !== undefined);
   if (!keys.length) return { ok: false, status: 422, error: "No hay cambios que guardar." };
-  if (keys.some((k) => GRADING_FIELDS.includes(k)) && !gradesMadurez(user)) {
-    return { ok: false, status: 403, error: "La evidencia, el nivel, la meta, el hallazgo y la recomendación los registra el advisor; tu captura registra la percepción." };
+  if (!gradesMadurez(user)) {
+    return { ok: false, status: 403, error: "La evidencia, el nivel, la meta, el hallazgo y la recomendación los registra el advisor; tu aporte es el diagnóstico de percepción." };
   }
   const err = captureError(p);
   if (err) return { ok: false, status: 422, error: err };
@@ -4507,7 +4546,7 @@ export function captureMadurez(user: SessionUser, varId: unknown, patch: unknown
   madState().vars.set(v.id, next);
   audit(user, "task", `madurez:${v.id}`, `madurez digital: ${keys.join(", ")}`);
   void madRecord(`var:${v.id}`, next);
-  return { ok: true, capture: next };
+  return { ok: true, capture: madVars()[v.id] ?? next };
 }
 
 export function setMadSafeguard(user: SessionUser, id: unknown, status: unknown, note: unknown): { ok: true; safeguards: SafeguardState } | MadFail {
@@ -4528,7 +4567,7 @@ export function setMadSafeguard(user: SessionUser, id: unknown, status: unknown,
 export function publishMadurez(user: SessionUser, label: unknown): { ok: true; cut: MadCut } | MadFail {
   if (!gradesMadurez(user)) return { ok: false, status: 403, error: "Solo el advisor publica un corte de la medición." };
   const m = madState(), ins = madInstrument();
-  const vars = Object.fromEntries(ins.variables.filter((v) => m.vars.has(v.id)).map((v) => [v.id, { ...m.vars.get(v.id)! }]));
+  const vars = madVars();
   const prog = progressOf(ins, vars);
   if (prog.level < prog.total) return { ok: false, status: 422, error: `Faltan ${prog.total - prog.level} variables por calificar con nivel. Una medición parcial no se publica.` };
   const n = m.cuts.length + 1;
