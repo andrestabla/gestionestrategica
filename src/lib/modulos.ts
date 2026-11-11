@@ -16,8 +16,7 @@ import { estrategiaTabOfSlug, vocabOf } from "@/lib/vocabulario";
 
 export const MODULES = [
   { id: "diagnostico", label: "Diagnóstico", desc: "Capacidad organizacional: autoevaluación, fuentes, brechas e informe.", modes: ["completa", "acompanamiento"] },
-  // Paso 1 de 2: el módulo se registra sin modo (no aparece en ningún menú) para poder dejarlo fuera del alcance de una empresa antes de publicarlo.
-  { id: "madurez", label: "Madurez digital", desc: "Diagnóstico de transformación digital y niveles de madurez.", modes: [] },
+  { id: "madurez", label: "Madurez digital", desc: "Diagnóstico de transformación digital y niveles de madurez.", modes: ["completa", "acompanamiento", "convencion"] },
   { id: "benchmark", label: "Benchmark", desc: "Posición sectorial frente a pares y presencia territorial.", modes: ["completa"] },
   { id: "estrategia", label: "Estrategia", desc: "Cuadro de mando y OKR: objetivos, resultados clave e iniciativas.", modes: ["completa"] },
   { id: "kpi", label: "Indicadores", desc: "Batería de KPI con dueño, fuente y serie.", modes: ["completa"] },
@@ -98,6 +97,7 @@ export function moduleOfRoute(path: string, t: string | null, mode: CompanyMode)
   const p = path.replace(/\/+$/, "") || "/";
   const under = (pre: string) => p === pre || p.startsWith(pre + "/");
   if (under("/panel/diagnostico")) return "diagnostico";
+  if (under("/panel/madurez")) return "madurez";
   if (under("/panel/benchmark")) return "benchmark";
   if (under("/panel/estrategia")) {
     if (mode === "completa") return "estrategia";

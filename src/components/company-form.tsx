@@ -13,7 +13,7 @@ import { SECTOR_OPTIONS } from "@/data/sector";
 import type { CompanyMode } from "@/lib/acceso";
 
 export type HorizonLite = { id: string; label: string; months: number };
-export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion" | "acompanamiento"; instruments?: string[]; modulesOff?: string[]; modulesPending?: string[] };
+export type CompanyLite = { slug: string; name: string; shortName: string; city: string; department: string; sector: string; size: string; sectorKey: string; ciiu: string; active: boolean; template?: string; createdBy?: string; createdAt?: string; country?: "CO" | "EC"; currency?: "COP" | "USD"; orgKind?: "empresa" | "educativa"; horizons?: HorizonLite[]; typeRule?: { id?: string; criteria: { key: string; name: string }[]; min: number } | null; mode?: "completa" | "convencion" | "acompanamiento"; instruments?: string[]; modulesOff?: string[]; modulesPending?: string[] };
 export const DEFAULT_HZ: HorizonLite[] = [{ id: "CORTO", label: "Corto plazo", months: 12 }, { id: "MEDIANO", label: "Mediano plazo", months: 36 }];
 
 /** Horizontes de planeación de la empresa (ordenan el roadmap y la priorización). */
@@ -49,7 +49,7 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
   const [f, setF] = useState({
     name: initial?.name ?? "", shortName: initial?.shortName ?? "", city: initial?.city ?? "", department: initial?.department ?? "",
     sector: initial?.sector ?? "", size: initial?.size ?? "", ciiu: initial?.ciiu ?? "", sectorKey: initial?.sectorKey ?? "suministros-industriales", template: "vacia",
-    country: initial?.country ?? "CO", currency: initial?.currency ?? "COP",
+    country: initial?.country ?? "CO", currency: initial?.currency ?? "COP", orgKind: initial?.orgKind ?? "empresa",
     typeRule: initial?.typeRule?.id ?? (initial?.typeRule?.criteria?.length ? "propia" : "4shine"),
     mode: initial?.mode ?? "completa",
     slug: initial?.slug ?? "",
@@ -107,6 +107,10 @@ export function CompanyForm({ saving, initial, onSubmit, onCancel }: {
             <option value="USD">USD (dólares)</option>
           </select></Field>
         </div>
+        <Field label="Tipo de organización" help="Define el instrumento de Madurez digital: el de empresa o el original para instituciones educativas"><select value={f.orgKind} onChange={set("orgKind")} className="input !py-2 text-[12px]">
+            <option value="empresa">Empresa</option>
+            <option value="educativa">Institución educativa</option>
+          </select></Field>
         <Field label="Sector"><input value={f.sector} onChange={set("sector")} placeholder="p. ej. Distribución de suministros industriales" className="input !py-2 text-[12px]" /></Field>
         <Field label="Sector de referencia (Benchmark e Inteligencia)" help="Con qué industria se compara la empresa: datos reales de Supersociedades o de la SCVS. Si se deja el de suministros y el CIIU o el sector dicen farmacéutico, la plataforma usa el farmacéutico.">
           <select value={f.sectorKey} onChange={set("sectorKey")} className="input !py-2 text-[12px]">

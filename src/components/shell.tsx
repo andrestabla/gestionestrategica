@@ -11,7 +11,7 @@ import {
   Radar, Globe2, Network, Gauge, Map as MapIcon, ListChecks,
   BarChart3, LayoutDashboard, LogOut, Menu, X, Share2, KanbanSquare, BookOpen,
   PanelLeftClose, PanelLeftOpen, Bell, ShieldAlert, AlertTriangle, Info, AtSign, CheckCheck,
-  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock, UserCircle2, CalendarRange, ShieldCheck } from "lucide-react"
+  FileText, Users2, ArrowRightLeft, Presentation, Target, Rocket, Scale, Layers, CalendarDays, Moon, Sun, EyeOff, Lock, UserCircle2, CalendarRange, ShieldCheck, Cpu } from "lucide-react"
 import { AlgoritmoMark } from "@/components/logo";
 import { ACCESS_TABS, type CompanyMode } from "@/lib/acceso";
 import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
@@ -168,6 +168,7 @@ function NotificationsBell() {
 const NAV = [
   { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined, mod: undefined as ModuleId | undefined },
   { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1", mod: "diagnostico" as ModuleId | undefined },
+  { href: "/panel/madurez", label: "Madurez digital", icon: Cpu, code: undefined as string | undefined, mod: "madurez" as ModuleId | undefined },
   { href: "/panel/benchmark", label: "Benchmark", icon: Globe2, code: "M2", mod: "benchmark" as ModuleId | undefined },
   { href: "/panel/estrategia", label: "Estrategia", icon: Network, code: "M3", mod: "estrategia" as ModuleId | undefined },
   { href: "/panel/kpi", label: "Indicadores", icon: Gauge, code: "M4", mod: "kpi" as ModuleId | undefined },
@@ -251,6 +252,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
   const NAV_AC = [
     { href: "/panel", label: "Panel", icon: LayoutDashboard, code: undefined as string | undefined, mod: undefined as ModuleId | undefined },
     { href: "/panel/diagnostico", label: "Diagnóstico", icon: Radar, code: "M1" as string | undefined, mod: "diagnostico" as ModuleId | undefined },
+    { href: "/panel/madurez", label: "Madurez digital", icon: Cpu, code: undefined as string | undefined, mod: "madurez" as ModuleId | undefined },
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.prioridades}`, label: V.tabs.prioridades, icon: Target, code: undefined as string | undefined, mod: "prioridades" as ModuleId | undefined },
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.direccion}`, label: V.tabs.direccion, icon: Network, code: undefined as string | undefined, mod: "direccion" as ModuleId | undefined },
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.okr}`, label: V.tabs.okr, icon: Gauge, code: undefined as string | undefined, mod: "okr" as ModuleId | undefined },
@@ -265,7 +267,9 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
   // los pendientes aparecen atenuados, con candado, para que la empresa sepa qué viene
   const modCfg = { modulesOff, modulesPending };
   const estado = (id: ModuleId | undefined): ModuleState => (id ? moduleState(modCfg, id) : "on");
-  const baseNav = (convencion ? NAV_CV : acomp ? NAV_AC : NAV).filter((n) => estado(n.mod) !== "off");
+  // en la convención, la madurez digital es del equipo de la empresa: quien entra por el QR no la ve
+  const NAV_CVM = user.qr ? NAV_CV : [...NAV_CV, { href: "/panel/madurez", label: "Madurez digital", icon: Cpu, code: undefined as string | undefined, mod: "madurez" as ModuleId | undefined }];
+  const baseNav = (convencion ? NAV_CVM : acomp ? NAV_AC : NAV).filter((n) => estado(n.mod) !== "off");
   const navList = user.role === "ADMIN" || user.role === "CONSULTOR"
     ? [...baseNav, { href: "/panel/admin", label: "Administración", icon: Users2, code: undefined as string | undefined, mod: undefined as ModuleId | undefined }]
     : baseNav;

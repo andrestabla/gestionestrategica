@@ -1,0 +1,3070 @@
+{
+ "variables": [
+  {
+   "id": "AV-ORG-1",
+   "line": 1,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Política institucional de educación digital",
+   "desc": "Existencia y vigencia de una política o lineamiento institucional que defina la educación digital, sus modalidades y su gobierno.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "La institución cuenta con una política de educación digital vigente, conocida y aplicada.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La política fue sancionada por el órgano de gobierno competente y está publicada en la normativa institucional.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Mencione una decisión reciente sobre modalidades o virtualidad y la norma que la amparó.",
+     "type": "abierta",
+     "audiences": [
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Acuerdo o resolución que sanciona la política, con fecha, órgano emisor y publicación",
+     "criterio": "Sancionada por Consejo Superior o Académico, vigente y publicada en la normativa"
+    },
+    {
+     "component": "I",
+     "what": "Decisiones o actos administrativos del último año que citan la política como fundamento",
+     "criterio": "Al menos dos decisiones institucionales la aplican de forma verificable"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de despliegue de la política (unidades que reportan cumplimiento)",
+     "criterio": "Medición periódica con meta, responsable y presentación a órgano de gobierno"
+    }
+   ],
+   "rubric": [
+    "No existe política ni lineamiento; cada decisión sobre lo digital es casuística.",
+    "Borrador o acuerdo en trámite; las decisiones se amparan en resoluciones puntuales.",
+    "Política sancionada y difundida que define modalidades y su gobierno.",
+    "Política aplicada con indicadores de despliegue y revisión periódica.",
+    "Política evaluada y ajustada por ciclos; sirve de referente a otras IES."
+   ]
+  },
+  {
+   "id": "AV-ORG-2",
+   "line": 1,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Gestión de registros calificados para nuevas modalidades",
+   "desc": "Capacidad institucional para tramitar y sostener registros calificados en modalidad virtual e híbrida según las condiciones del Decreto 1330 de 2019.",
+   "frame": "Decreto 1330",
+   "items": [
+    {
+     "text": "La institución sabe tramitar y sostener registros calificados en modalidad virtual o híbrida.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Cuántos registros calificados vigentes incluyen modalidad virtual o híbrida, y cuántos vencen en los próximos 24 meses?",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué ajustes exigiría el procedimiento actual de registro para incorporar las condiciones de calidad de la virtualidad (Decreto 1330)?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Procedimiento documentado de trámite de registros con las condiciones de virtualidad incorporadas",
+     "criterio": "Incluye mediaciones, tutores, soporte y recursos educativos exigidos por el Decreto 1330"
+    },
+    {
+     "component": "I",
+     "what": "Radicados o renovaciones recientes tramitados con componente virtual",
+     "criterio": "Al menos una renovación del último ciclo incorporó modalidad virtual o híbrida"
+    },
+    {
+     "component": "K",
+     "what": "Tablero de vencimientos de registros con semáforo y responsable por programa",
+     "criterio": "Cubre el 100 % del portafolio y alimenta el plan de renovaciones"
+    }
+   ],
+   "rubric": [
+    "Dominio exclusivo del trámite presencial; los vencimientos se atienden de forma reactiva.",
+    "Vencimientos identificados, pero el procedimiento no contempla la virtualidad.",
+    "Procedimiento ajustado al Decreto 1330 para virtualidad y calendario de renovaciones activo.",
+    "Renovaciones planificadas con componente digital y seguimiento por indicadores.",
+    "Gestión anticipada del portafolio de registros; la modalidad se decide con datos de demanda."
+   ]
+  },
+  {
+   "id": "AV-ORG-3",
+   "line": 1,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Estructura organizacional para la virtualidad",
+   "desc": "Existencia de una unidad con mandato, equipo y presupuesto para operar la educación digital (criterio eMM: Organización).",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "Existe una unidad responsable de la educación digital con mandato, equipo y presupuesto suficientes.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La unidad (o su estudio técnico de creación) cuenta con acto administrativo aprobado.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Cuando necesita apoyo para un curso virtual, ¿a quién acude y qué respuesta obtiene?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Acuerdo de creación de la unidad: estructura, funciones, planta y dependencia jerárquica",
+     "criterio": "Aprobado por el órgano competente, con planta viabilizada presupuestalmente"
+    },
+    {
+     "component": "I",
+     "what": "Portafolio de servicios operando (acompañamiento, producción, formación) con registros de atención",
+     "criterio": "La unidad presta servicios regulares a todas las facultades"
+    },
+    {
+     "component": "K",
+     "what": "Informe de gestión de la unidad con indicadores de servicio",
+     "criterio": "Reporte periódico con metas de cobertura y satisfacción"
+    }
+   ],
+   "rubric": [
+    "Funciones dispersas entre dependencias y voluntarios; nadie responde por la virtualidad.",
+    "Estudio técnico o propuesta de unidad en trámite; servicios parciales sin formalizar.",
+    "Unidad creada con mandato, equipo básico y portafolio de servicios definido.",
+    "Unidad consolidada que atiende toda la institución con indicadores de servicio.",
+    "Unidad que innova y transfiere (cursos, metodologías) dentro y fuera de la institución."
+   ]
+  },
+  {
+   "id": "AV-ORG-4",
+   "line": 1,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Gestión del ciclo de vida del portafolio",
+   "desc": "Prácticas de creación, seguimiento y cierre de programas con criterios de demanda, sostenibilidad y pertinencia.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "El portafolio de programas se crea, revisa y cierra con criterios explícitos de demanda, sostenibilidad y pertinencia.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Cuántos programas operan por debajo del punto de equilibrio y cuántos tienen plan de intervención?",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Describa la última decisión de apertura o cierre de programa y los datos que la sustentaron.",
+     "type": "abierta",
+     "audiences": [
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Reglamento o procedimiento del ciclo de vida del portafolio con criterios de decisión",
+     "criterio": "Define umbrales de demanda, equilibrio financiero y pertinencia territorial"
+    },
+    {
+     "component": "I",
+     "what": "Actas de la revisión anual del portafolio con decisiones tomadas por programa",
+     "criterio": "La revisión cubre el 100 % del portafolio y produce decisiones documentadas"
+    },
+    {
+     "component": "K",
+     "what": "Modelo de costos por programa y análisis de demanda territorial",
+     "criterio": "Punto de equilibrio calculado por programa y contrastado con matrícula real"
+    }
+   ],
+   "rubric": [
+    "El portafolio crece por iniciativas aisladas; no se revisa ni se cierra oferta.",
+    "Revisión ocasional sin criterios documentados ni datos de costos.",
+    "Revisión anual institucionalizada con criterios explícitos por programa.",
+    "Decisiones de portafolio sustentadas en costos, demanda y pertinencia medidos.",
+    "Portafolio gestionado como cartera: simulación de escenarios y apertura basada en brechas territoriales."
+   ]
+  },
+  {
+   "id": "AV-MIS-1",
+   "line": 1,
+   "dimension": "misional",
+   "d7": "D2",
+   "ai": true,
+   "name": "Formación y capacitación docente digital",
+   "desc": "Ruta institucional de desarrollo de competencia digital docente por niveles, con certificación y reconocimiento (marco INTEF).",
+   "frame": "INTEF",
+   "items": [
+    {
+     "text": "La ruta de formación en competencia digital docente está disponible, es pertinente y tiene reconocimiento.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "directivos"
+     ]
+    },
+    {
+     "text": "¿Qué porcentaje de la planta docente está certificado en algún nivel de la ruta (INTEF/DigCompEdu)?",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La formación recibida cambió mi práctica de enseñanza con tecnología.",
+     "type": "likert",
+     "audiences": [
+      "docentes"
+     ]
+    },
+    {
+     "text": "El reconocimiento de la certificación en la carrera docente está aprobado en el estatuto o en acuerdo laboral.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Documento de la ruta formativa por niveles con su referente (INTEF) y mecanismo de certificación",
+     "criterio": "Ruta aprobada, con niveles, créditos y certificación verificable"
+    },
+    {
+     "component": "I",
+     "what": "Registros de cohortes: inscritos, asistencia, certificados por nivel y por facultad",
+     "criterio": "Cohortes regulares con participación sostenida (≥ 70 % de asistencia)"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de docentes certificados frente a meta y su correlación con adopción del LMS",
+     "criterio": "Meta anual definida; el dato alimenta decisiones de programación"
+    }
+   ],
+   "rubric": [
+    "Capacitaciones sueltas sin ruta ni certificación; participación voluntaria y ocasional.",
+    "Ruta diseñada o piloteada en algunas facultades; sin reconocimiento formal.",
+    "Ruta institucional por niveles operando con certificación y cohortes regulares.",
+    "Cobertura significativa de la planta (≥ 40 %) con reconocimiento en la carrera docente.",
+    "Competencia digital integrada a la evaluación y el desarrollo docente; la ruta se ajusta con datos de impacto en aula."
+   ]
+  },
+  {
+   "id": "AV-MIS-2",
+   "line": 1,
+   "dimension": "misional",
+   "d7": "D3",
+   "name": "Diseño instruccional estandarizado",
+   "desc": "Estandarización de diseños por tipo de curso y número de créditos, que permita proyectar esfuerzos, costos y tiempos de producción.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "Los cursos se diseñan con estándares institucionales que hacen previsibles esfuerzo, costo y tiempo de producción.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Existe una plantilla o estándar institucional de aula virtual aprobado.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué elementos del diseño de un curso virtual cambian entre facultades y cuáles deberían ser comunes?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Estándar o catálogo de diseños instruccionales por tipología de curso (teórico, teórico-práctico, práctico)",
+     "criterio": "Aprobado y con parámetros de esfuerzo y tiempos por tipología"
+    },
+    {
+     "component": "I",
+     "what": "Cursos producidos bajo el estándar y evaluación de su aplicación (piloto)",
+     "criterio": "El estándar se aplica en la producción regular, no solo en pilotos"
+    },
+    {
+     "component": "K",
+     "what": "Métricas del piloto/producción: satisfacción, tiempos reales vs. estimados",
+     "criterio": "Los datos de producción retroalimentan el estándar"
+    }
+   ],
+   "rubric": [
+    "Cada docente diseña a su manera; el esfuerzo de producción es impredecible.",
+    "Plantilla de aula aprobada o piloteada; sin estándar de diseño instruccional.",
+    "Catálogo de diseños por tipología adoptado en la producción institucional.",
+    "Producción estandarizada con tiempos y costos medidos por tipo de curso.",
+    "Estándares en mejora continua con datos de aprendizaje y costos; producción escalable."
+   ]
+  },
+  {
+   "id": "AV-MIS-3",
+   "line": 1,
+   "dimension": "misional",
+   "d7": "D3",
+   "name": "Lineamientos curriculares para la virtualidad",
+   "desc": "Adaptación de los lineamientos curriculares institucionales a las modalidades virtual e híbrida (unidades, prerrequisitos, interacción).",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "Los lineamientos curriculares vigentes contemplan las modalidades virtual e híbrida.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "directivos"
+     ]
+    },
+    {
+     "text": "El comité curricular aprobó la adaptación de lineamientos para virtualidad.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué reglas curriculares actuales (prerrequisitos, presencialidad, interacción) impiden ofrecer unidades virtuales?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Lineamientos curriculares con capítulo o adaptación para modalidades digitales",
+     "criterio": "Aprobados por el órgano curricular competente"
+    },
+    {
+     "component": "I",
+     "what": "Programas o cursos rediseñados bajo los nuevos lineamientos",
+     "criterio": "Al menos el componente básico aplica los lineamientos adaptados"
+    },
+    {
+     "component": "K",
+     "what": "Seguimiento del rediseño microcurricular (cursos adaptados / total)",
+     "criterio": "Avance medido contra el plan de virtualización"
+    }
+   ],
+   "rubric": [
+    "Lineamientos exclusivamente presenciales; la virtualidad carece de marco curricular.",
+    "Borrador de adaptación en discusión de comités, sin aprobación.",
+    "Lineamientos para virtualidad aprobados y difundidos a los programas.",
+    "Rediseño curricular en ejecución medida sobre los programas priorizados.",
+    "Currículo flexible por diseño: las modalidades se combinan según pertinencia y datos de aprendizaje."
+   ]
+  },
+  {
+   "id": "AV-MIS-4",
+   "line": 1,
+   "dimension": "misional",
+   "d7": "D3",
+   "ai": true,
+   "name": "Evaluación de aprendizajes en entornos digitales",
+   "desc": "Prácticas y herramientas de evaluación formativa y sumativa mediadas por plataforma, con integridad académica.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La evaluación de aprendizajes mediada por plataforma es confiable, variada y cuida la integridad académica.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "estudiantes"
+     ]
+    },
+    {
+     "text": "Las evaluaciones en plataforma reflejan lo que aprendo en el curso.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes"
+     ]
+    },
+    {
+     "text": "Existen rúbricas y bancos de preguntas institucionales para los cursos virtualizados.",
+     "type": "verificacion",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Lineamiento o guía institucional de evaluación en entornos digitales (formativa, sumativa, integridad)",
+     "criterio": "Documentada como estándar, no como práctica del piloto"
+    },
+    {
+     "component": "I",
+     "what": "Cursos que aplican rúbricas y bancos de preguntas en plataforma",
+     "criterio": "Práctica extendida en los cursos virtualizados, con revisión entre pares"
+    },
+    {
+     "component": "K",
+     "what": "Datos de uso y resultados: intentos, distribución de notas, incidentes de integridad",
+     "criterio": "Métricas revisadas por los comités curriculares"
+    }
+   ],
+   "rubric": [
+    "Evaluación digital inexistente o limitada a subir archivos.",
+    "Experiencias aisladas de evaluación en plataforma sin lineamiento común.",
+    "Práctica documentada con rúbricas y bancos de preguntas en los cursos activos.",
+    "Evaluación digital desplegada con métricas de calidad e integridad revisadas.",
+    "Analítica de evaluación usada para mejorar diseño de cursos y detectar riesgo académico."
+   ]
+  },
+  {
+   "id": "AV-TEC-1",
+   "line": 1,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Plataforma LMS institucional",
+   "desc": "Disponibilidad, adopción y gestión del sistema de gestión del aprendizaje como núcleo de los recursos tecnológicos para aprender.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "El LMS institucional es estable, suficiente y está bien administrado.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "estudiantes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Disponibilidad del LMS en los últimos 12 meses y % de cursos con aula activa.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué le impide usar más el aula virtual en sus cursos?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Acuerdos de nivel de servicio, roles de administración y procedimiento de gestión de cambios del LMS",
+     "criterio": "Roles formalizados (≥ 2 administradores) y ambiente de pruebas definido"
+    },
+    {
+     "component": "I",
+     "what": "Operación verificable: monitoreo de disponibilidad, respaldos, gestión de incidentes",
+     "criterio": "Disponibilidad ≥ 99 % sostenida y sin dependencia de una sola persona"
+    },
+    {
+     "component": "K",
+     "what": "Tablero de adopción: aulas activas, usuarios recurrentes, uso por facultad",
+     "criterio": "Publicado periódicamente y usado en decisiones académicas"
+    }
+   ],
+   "rubric": [
+    "Sin LMS institucional o con uso marginal y administración informal.",
+    "LMS operando con administración dependiente de personas y sin ambiente de pruebas.",
+    "LMS estable con roles formalizados, respaldo y monitoreo de disponibilidad.",
+    "Adopción medida y gestionada (aulas activas, uso docente) con metas por facultad.",
+    "LMS como núcleo del ecosistema: integrado, con analítica y evolución planificada."
+   ]
+  },
+  {
+   "id": "AV-TEC-2",
+   "line": 1,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Capacidad de producción de contenidos",
+   "desc": "Equipo, estudio y flujo de producción de recursos educativos digitales (video, interactivos, OVA).",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La institución produce recursos educativos digitales con calidad y ritmo suficientes.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Cursos producidos por año y tamaño/roles del equipo de producción.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Dónde se atasca hoy el flujo de producción de un curso (guion, diseño, montaje, revisión)?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos",
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Modelo de producción documentado: flujo, roles, estándares de calidad y cronograma anual",
+     "criterio": "Define capacidad instalada y modalidad (in-house, contratada, mixta)"
+    },
+    {
+     "component": "I",
+     "what": "Producción real del periodo: cursos terminados, en curso, tiempos por fase",
+     "criterio": "Flujo operando sin cuellos de botella de personal"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de producción: costo por curso, tiempo medio, cumplimiento del plan",
+     "criterio": "Medidos y comparados contra el estándar de diseño"
+    }
+   ],
+   "rubric": [
+    "Sin equipo ni flujo de producción; los cursos dependen del esfuerzo docente individual.",
+    "Equipo incompleto produciendo el primer paquete; flujo definido pero frenado.",
+    "Equipo completo y flujo estable con cronograma anual de producción.",
+    "Producción medida (costos, tiempos) cumpliendo el plan de virtualización.",
+    "Fábrica de contenidos escalable con reuso, actualización programada y estándares propios."
+   ]
+  },
+  {
+   "id": "AV-TEC-3",
+   "line": 1,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Conectividad y equipos en sedes",
+   "desc": "Cobertura de red, aulas con equipos funcionales y soporte en todas las sedes.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La conectividad y los equipos de mi sede permiten estudiar o enseñar con tecnología sin interrupciones.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "estudiantes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Ancho de banda, redundancia y aulas con equipos funcionales por sede.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿En qué horarios y espacios falla la conectividad de su sede?",
+     "type": "abierta",
+     "audiences": [
+      "estudiantes",
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Inventario de conectividad y equipos por sede con plan de capacidad",
+     "criterio": "Cubre todas las sedes con línea base y plan de cierre de brechas"
+    },
+    {
+     "component": "I",
+     "what": "Monitoreo de red por sede (disponibilidad, saturación por franja)",
+     "criterio": "Todas las sedes monitoreadas con alertas"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de servicio por sede frente a umbral definido",
+     "criterio": "El dato de cada sede regional sustenta la decisión de redundancia previa a la oferta virtual"
+    }
+   ],
+   "rubric": [
+    "Conectividad inestable sin diagnóstico; los equipos se reponen por daño.",
+    "Sede principal estable; sedes regionales con intermitencia conocida y sin plan.",
+    "Plan de capacidad por sede en ejecución con monitoreo de red.",
+    "Conectividad redundante en sedes críticas con indicadores de servicio cumplidos.",
+    "Infraestructura dimensionada por demanda proyectada; la red no limita la oferta."
+   ]
+  },
+  {
+   "id": "AV-TEC-4",
+   "line": 1,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "ai": true,
+   "name": "Licencias de software educativo",
+   "desc": "Portafolio de licencias (laboratorios virtuales, simuladores, herramientas de autor) y su gestión de renovación.",
+   "frame": "Decreto 1330",
+   "items": [
+    {
+     "text": "Las licencias de software educativo que necesito están disponibles y vigentes.",
+     "type": "likert",
+     "audiences": [
+      "docentes"
+     ]
+    },
+    {
+     "text": "Existe un portafolio institucional centralizado de licencias educativas con matriz de cobertura por programa.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Licencias educativas activas, su costo anual y cuáles vencen este año.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Portafolio de licencias con matriz de cobertura por programa y calendario de renovación",
+     "criterio": "Centralizado, con responsable y presupuesto de renovación asegurado"
+    },
+    {
+     "component": "I",
+     "what": "Adquisiciones y renovaciones gestionadas por el portafolio (no por facultad)",
+     "criterio": "Sin duplicidades ni vencimientos no planeados en el periodo"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de uso de licencias frente a su costo",
+     "criterio": "El uso real sustenta renovar, sustituir o cancelar"
+    }
+   ],
+   "rubric": [
+    "Compras dispersas por facultad; duplicidades y vencimientos sin control.",
+    "Inventario parcial de licencias en construcción; renovaciones aún reactivas.",
+    "Portafolio centralizado con matriz de cobertura y calendario de renovaciones.",
+    "Gestión por datos de uso: renovaciones y sustituciones decididas con métricas.",
+    "Portafolio optimizado (negociación por volumen, alternativas abiertas) alineado al diseño curricular."
+   ]
+  },
+  {
+   "id": "AV-DAT-1",
+   "line": 1,
+   "dimension": "datos",
+   "d7": "D4",
+   "ai": true,
+   "name": "Analítica de aprendizaje",
+   "desc": "Capacidad de recolectar y usar datos de actividad de plataforma para intervenir el riesgo académico (learning analytics).",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La institución usa los datos de actividad en plataforma para detectar y atender el riesgo académico.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes"
+     ]
+    },
+    {
+     "text": "Existen tableros de actividad de aulas por decanatura o programa.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Si un estudiante deja de conectarse dos semanas, ¿quién se entera y qué pasa?",
+     "type": "abierta",
+     "audiences": [
+      "docentes",
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Diseño del modelo de analítica de aprendizaje: eventos, indicadores, protocolo de intervención",
+     "criterio": "Define alertas, umbrales, responsables y ruta de atención al estudiante"
+    },
+    {
+     "component": "I",
+     "what": "Tableros publicados y casos de intervención temprana documentados",
+     "criterio": "Operando al menos en el componente básico virtualizado"
+    },
+    {
+     "component": "K",
+     "what": "Métricas del ciclo: alertas emitidas, atendidas, resultado académico de los intervenidos",
+     "criterio": "La efectividad de la intervención se mide y ajusta"
+    }
+   ],
+   "rubric": [
+    "Los datos del LMS existen pero nadie los explota; el riesgo se descubre al cierre de notas.",
+    "Reportes manuales ocasionales de actividad; sin alertas ni protocolo.",
+    "Tableros de actividad publicados con protocolo de alerta temprana definido.",
+    "Alertas operando con intervención documentada y cobertura de los cursos virtuales.",
+    "Modelo predictivo de riesgo integrado a permanencia; efectividad medida por cohorte."
+   ]
+  },
+  {
+   "id": "AV-DAT-2",
+   "line": 1,
+   "dimension": "datos",
+   "d7": "D4",
+   "name": "Información del portafolio y la oferta",
+   "desc": "Consistencia y oportunidad de los datos de programas, cupos, matrícula y modalidad que alimentan SNIES y las decisiones de oferta.",
+   "frame": "Decreto 1330",
+   "items": [
+    {
+     "text": "Los datos de programas, cupos, matrícula y modalidad son consistentes y están disponibles a tiempo.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Completitud y oportunidad del último reporte SNIES (% registros completos, días de anticipación).",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué dato de la oferta le ha tocado corregir o reconstruir manualmente este año?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Procedimiento de reporte SNIES con calendario, responsables y validaciones",
+     "criterio": "Documentado y con controles de calidad previos al cargue"
+    },
+    {
+     "component": "I",
+     "what": "Reportes de los últimos periodos entregados en plazo",
+     "criterio": "Sin requerimientos de corrección del Ministerio"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de completitud/consistencia del reporte (meta ≥ 99 %)",
+     "criterio": "Medido por periodo, con plan sobre el residuo incompleto"
+    }
+   ],
+   "rubric": [
+    "Reportes tardíos o con errores recurrentes; los datos de oferta no son confiables.",
+    "Reporte cumplido con esfuerzo manual heroico y validaciones informales.",
+    "Procedimiento con validaciones operando; completitud alta y estable (≥ 97 %).",
+    "Calidad del dato medida con meta y cierre sistemático del residuo.",
+    "Dato de oferta como activo: alimenta simulaciones de demanda y decisiones de portafolio en tiempo real."
+   ]
+  },
+  {
+   "id": "AV-DAT-3",
+   "line": 1,
+   "dimension": "datos",
+   "d7": "D4",
+   "name": "Trazabilidad del estudiante entre sistemas",
+   "desc": "Capacidad de seguir al estudiante de la inscripción al grado sin redigitación entre admisiones, registro y LMS.",
+   "frame": "DAMA-DMBOK",
+   "items": [
+    {
+     "text": "El estudiante fluye de la inscripción al grado sin que su información se redigite entre sistemas.",
+     "type": "likert",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Inconsistencias de matrícula detectadas por periodo entre registro académico y LMS.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Mis datos académicos aparecen correctos y completos en todas las plataformas que uso.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Diseño de la integración admisiones ↔ registro ↔ LMS (contratos de datos, campos, frecuencia)",
+     "criterio": "Especificación aprobada dentro del plan de interoperabilidad"
+    },
+    {
+     "component": "I",
+     "what": "Integración operando en producción (no en pruebas) para matrícula a cursos",
+     "criterio": "La matrícula virtual fluye sin redigitación"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de inconsistencias por periodo con tendencia a cero",
+     "criterio": "Medido y publicado tras cada cierre de matrícula"
+    }
+   ],
+   "rubric": [
+    "Redigitación en cada paso; decenas de inconsistencias por periodo.",
+    "Integración en pruebas; la operación real sigue siendo manual.",
+    "Integración en producción para los flujos de matrícula principales.",
+    "Trazabilidad completa inscripción→grado con inconsistencias medidas cerca de cero.",
+    "Vista única del estudiante en tiempo real usada por bienestar, permanencia y decanaturas."
+   ]
+  },
+  {
+   "id": "IN-ORG-1",
+   "line": 2,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Gobernanza de la investigación digital",
+   "desc": "Políticas y estructuras que orientan la investigación mediada por tecnología y la agenda de CTeI digital.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "La investigación mediada por tecnología tiene lineamientos y estructuras que la orientan.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes"
+     ]
+    },
+    {
+     "text": "El comité de investigaciones aprobó una agenda o lineamiento de CTeI digital.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué necesitaría un grupo para investigar en o a través de entornos digitales con respaldo institucional?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Lineamiento de investigación digital aprobado por el comité de investigaciones",
+     "criterio": "Define alcance, prioridades y mecanismos de fomento"
+    },
+    {
+     "component": "I",
+     "what": "Convocatorias o proyectos que aplican el lineamiento",
+     "criterio": "Al menos una convocatoria interna incorpora la línea digital"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de la agenda CTeI digital (proyectos, recursos, productos)",
+     "criterio": "Seguimiento periódico en el comité"
+    }
+   ],
+   "rubric": [
+    "Sin lineamientos: lo digital en investigación depende de iniciativas personales.",
+    "Agenda CTeI priorizada pero sin lineamiento para entornos digitales.",
+    "Lineamiento aprobado y difundido con mecanismos de fomento definidos.",
+    "Convocatorias y recursos operando bajo el lineamiento, con seguimiento.",
+    "Agenda digital consolidada que atrae financiación externa y coopera en red."
+   ]
+  },
+  {
+   "id": "IN-ORG-2",
+   "line": 2,
+   "dimension": "organizacional",
+   "d7": "D7",
+   "name": "Semilleros y líneas en educación digital",
+   "desc": "Existencia de líneas, semilleros y proyectos asociados a la transformación digital educativa.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "Existen líneas, semilleros y proyectos activos en educación digital o transformación digital.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Líneas y semilleros aprobados en educación digital, y proyectos financiados asociados.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Como estudiante, conozco semilleros donde se investiga sobre tecnología y educación.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Actos de aprobación de líneas y semilleros en educación digital",
+     "criterio": "Formalizados en el sistema de investigación institucional"
+    },
+    {
+     "component": "I",
+     "what": "Semilleros operando: integrantes, plan de trabajo, productos en curso",
+     "criterio": "Actividad regular verificable en al menos 3 semilleros"
+    },
+    {
+     "component": "K",
+     "what": "Proyectos presentados/financiados y productos derivados por línea",
+     "criterio": "Al menos un proyecto financiado (interno o externo)"
+    }
+   ],
+   "rubric": [
+    "Sin líneas ni semilleros relacionados con lo digital.",
+    "Propuestas de líneas/semilleros en trámite o recién aprobadas sin actividad.",
+    "Líneas y semilleros aprobados con actividad regular y plan de trabajo.",
+    "Proyectos financiados en ejecución con productos verificables.",
+    "Ecosistema de investigación digital con relevo estudiantil y cooperación externa sostenida."
+   ]
+  },
+  {
+   "id": "IN-ORG-3",
+   "line": 2,
+   "dimension": "organizacional",
+   "d7": "D2",
+   "name": "Capacidad del talento investigador",
+   "desc": "Suficiencia y estabilidad del talento humano dedicado a investigación (TCE, formación doctoral, permanencia).",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "El talento investigador es suficiente y estable para sostener la producción científica.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes"
+     ]
+    },
+    {
+     "text": "TCE dedicados a investigación, investigadores con doctorado y salidas de investigadores en 24 meses.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué causó las últimas salidas de investigadores y qué se hizo al respecto?",
+     "type": "abierta",
+     "audiences": [
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Plan de desarrollo y retención del talento investigador (relevo generacional, incentivos)",
+     "criterio": "Aprobado, con metas y presupuesto"
+    },
+    {
+     "component": "I",
+     "what": "Acciones ejecutadas: vinculaciones, comisiones doctorales, jóvenes investigadores",
+     "criterio": "El plan opera; los semilleros alimentan el relevo"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de talento: permanencia, TCE de investigación, formación doctoral",
+     "criterio": "Serie histórica con metas y análisis de rotación"
+    }
+   ],
+   "rubric": [
+    "Salidas de investigadores sin plan de retención ni relevo; producción vulnerable.",
+    "Diagnóstico del talento hecho; plan de retención en borrador.",
+    "Plan de talento aprobado con acciones de relevo en ejecución.",
+    "Retención y relevo medidos; la producción no depende de personas únicas.",
+    "Cantera consolidada: jóvenes investigadores y doctores crecen dentro de los grupos."
+   ]
+  },
+  {
+   "id": "IN-MIS-1",
+   "line": 2,
+   "dimension": "misional",
+   "d7": "D4",
+   "name": "Prácticas de ciencia abierta",
+   "desc": "Adopción de acceso abierto, datos abiertos y licenciamiento en la producción académica.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "La producción académica se publica en acceso abierto con licenciamiento claro.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Porcentaje de la producción del último año disponible en acceso abierto.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La política de acceso abierto y autoarchivo está aprobada.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Política de acceso abierto y autoarchivo aprobada (no en borrador)",
+     "criterio": "Sancionada, con obligación de depósito y licencias definidas"
+    },
+    {
+     "component": "I",
+     "what": "Flujo de depósito operando: apoyo a publicación condicionado al autoarchivo",
+     "criterio": "El depósito es sistemático, no voluntario"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de % de producción en abierto con meta",
+     "criterio": "Serie medida y reportada (línea base 44 %)"
+    }
+   ],
+   "rubric": [
+    "Publicación cerrada por defecto; el acceso abierto depende de cada autor.",
+    "Repositorio disponible y política en borrador; depósito voluntario.",
+    "Política aprobada con flujo de depósito obligatorio operando.",
+    "Mayoría de la producción en abierto con seguimiento y metas.",
+    "Ciencia abierta integral: datos, preprints y licencias gestionados como práctica normal."
+   ]
+  },
+  {
+   "id": "IN-MIS-2",
+   "line": 2,
+   "dimension": "misional",
+   "d7": "D3",
+   "name": "Investigación formativa en entornos virtuales",
+   "desc": "Promoción de la investigación formativa a través de entornos virtuales de aprendizaje en pregrado.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La investigación formativa llega a los estudiantes a través de entornos virtuales.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "estudiantes"
+     ]
+    },
+    {
+     "text": "¿En qué cursos o espacios virtuales los estudiantes desarrollan competencias investigativas?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    },
+    {
+     "text": "He participado en actividades de investigación a través de plataformas virtuales.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Estrategia de investigación formativa en entornos virtuales (módulos, metodologías)",
+     "criterio": "Documentada y articulada al componente básico"
+    },
+    {
+     "component": "I",
+     "what": "Cursos o módulos virtuales de investigación formativa operando",
+     "criterio": "Presencia transversal, no solo experiencias de dos facultades"
+    },
+    {
+     "component": "K",
+     "what": "Cobertura de estudiantes alcanzados y productos derivados (semilleros, ponencias)",
+     "criterio": "Medición periódica por programa"
+    }
+   ],
+   "rubric": [
+    "Sin investigación formativa mediada por tecnología.",
+    "Experiencias aisladas en pocas facultades, sin estrategia común.",
+    "Estrategia transversal definida con módulos virtuales en operación.",
+    "Cobertura medida en el componente básico con productos verificables.",
+    "Cantera investigativa digital: trayectos desde pregrado conectados a semilleros y grupos."
+   ]
+  },
+  {
+   "id": "IN-MIS-3",
+   "line": 2,
+   "dimension": "misional",
+   "d7": "D7",
+   "name": "Divulgación científica mediada por TIC",
+   "desc": "Eventos, comunidades y canales digitales de divulgación del conocimiento producido.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "El conocimiento producido se divulga por canales digitales con alcance verificable.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Las revistas institucionales operan con flujo editorial OJS completo y DOI.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Por qué canales se entera la comunidad (y el territorio) de lo que investiga la Universidad?",
+     "type": "abierta",
+     "audiences": [
+      "docentes",
+      "aliados"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Plan de divulgación científica digital: canales, calendario editorial, responsables",
+     "criterio": "Cubre revistas, eventos y redes con metas de alcance"
+    },
+    {
+     "component": "I",
+     "what": "Revistas en OJS con DOI, eventos híbridos realizados, canales activos",
+     "criterio": "Flujo editorial completo y periodicidad cumplida"
+    },
+    {
+     "component": "K",
+     "what": "Métricas de alcance: descargas, visitas, indexación, participación en eventos",
+     "criterio": "Medidas y usadas para ajustar la estrategia"
+    }
+   ],
+   "rubric": [
+    "Divulgación esporádica; revistas sin flujo digital ni indexación.",
+    "Un evento anual y canales informales; OJS parcial sin DOI.",
+    "Revistas en OJS con DOI y calendario editorial cumplido; eventos híbridos regulares.",
+    "Alcance medido con metas; revistas en proceso de indexación.",
+    "Ecosistema de divulgación consolidado: revistas indexadas y comunidades activas con el territorio."
+   ]
+  },
+  {
+   "id": "IN-TEC-1",
+   "line": 2,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Plataforma de gestión de la investigación",
+   "desc": "Sistema para gestionar convocatorias, proyectos, productos y grupos.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La plataforma de gestión de la investigación cubre el ciclo completo: convocatorias, proyectos, productos y grupos.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué partes del ciclo de un proyecto siguen gestionándose por correo o en hojas de cálculo?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Registrar mis productos de investigación es un trámite simple y sin duplicaciones.",
+     "type": "likert",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Documentación funcional de la plataforma y del flujo de gestión de la investigación",
+     "criterio": "Cubre el ciclo completo incluyendo productos"
+    },
+    {
+     "component": "I",
+     "what": "Módulos operando: convocatorias, proyectos y productos gestionados en la plataforma",
+     "criterio": "El registro de productos no es manual ni externo"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de uso: proyectos gestionados, productos registrados, oportunidad",
+     "criterio": "Reportes usados por el comité de investigaciones"
+    }
+   ],
+   "rubric": [
+    "Gestión de la investigación en papel, correo y hojas de cálculo.",
+    "Plataforma parcial: convocatorias o proyectos, con el resto manual.",
+    "Ciclo completo en plataforma, incluido el registro de productos.",
+    "Plataforma integrada con CvLAC y repositorio; datos usados en decisiones.",
+    "Gestión inteligente: analítica de la actividad investigativa orienta recursos y alianzas."
+   ]
+  },
+  {
+   "id": "IN-TEC-2",
+   "line": 2,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Repositorio institucional",
+   "desc": "Repositorio en producción con estándares de metadatos e interoperabilidad (OAI-PMH).",
+   "frame": "DAMA-DMBOK",
+   "items": [
+    {
+     "text": "El repositorio institucional preserva y visibiliza la producción con estándares de calidad.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Objetos depositados, % de metadatos válidos y estado de la cosecha OAI-PMH.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Encuentro fácilmente la producción de la Universidad cuando la busco en línea.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "estudiantes",
+      "aliados"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Políticas del repositorio: colecciones, metadatos, preservación, interoperabilidad",
+     "criterio": "Estándares definidos (Dublin Core, OAI-PMH) y aplicados"
+    },
+    {
+     "component": "I",
+     "what": "Repositorio en producción con migración completa y depósito activo",
+     "criterio": "≥ 90 % de metadatos válidos y crecimiento sostenido"
+    },
+    {
+     "component": "K",
+     "what": "Métricas de uso y visibilidad: descargas, cosecha por agregadores",
+     "criterio": "Cosechado por Google Scholar y La Referencia"
+    }
+   ],
+   "rubric": [
+    "Sin repositorio; la producción se dispersa en discos y correos.",
+    "Repositorio instalado con migración parcial o metadatos deficientes.",
+    "Repositorio en producción con estándares cumplidos y depósito regular.",
+    "Interoperando con agregadores; visibilidad y uso medidos.",
+    "Nodo de ciencia abierta regional: datos de investigación y patrimonio digital incluidos."
+   ]
+  },
+  {
+   "id": "IN-TEC-3",
+   "line": 2,
+   "dimension": "tecnologica",
+   "d7": "D4",
+   "ai": true,
+   "name": "Herramientas de análisis y bibliometría",
+   "desc": "Acceso y uso de herramientas de análisis bibliométrico y vigilancia tecnológica.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los grupos cuentan con herramientas de bibliometría y vigilancia tecnológica para orientar su trabajo.",
+     "type": "likert",
+     "audiences": [
+      "docentes"
+     ]
+    },
+    {
+     "text": "La institución dispone de licencias o servicios de análisis bibliométrico.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Cómo se construyó el último informe bibliométrico institucional y cuánto costó en horas?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Portafolio de herramientas de análisis definido (propias, consorcio, abiertas) con responsables",
+     "criterio": "Incluido en los servicios CRAI con protocolo de uso"
+    },
+    {
+     "component": "I",
+     "what": "Servicios de bibliometría operando para grupos e institución",
+     "criterio": "Informes producidos con herramientas, no a mano"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores derivados: benchmarking de producción, vigilancia de convocatorias",
+     "criterio": "Alimentan decisiones de fomento y alianzas"
+    }
+   ],
+   "rubric": [
+    "Sin herramientas: los informes se arman manualmente cuando se necesitan.",
+    "Acceso básico por consorcio sin servicios de análisis estructurados.",
+    "Servicio de bibliometría definido y operando desde el CRAI.",
+    "Análisis periódicos con herramientas que orientan la estrategia de investigación.",
+    "Inteligencia científica institucional: vigilancia continua conectada a rankings y financiación."
+   ]
+  },
+  {
+   "id": "IN-DAT-1",
+   "line": 2,
+   "dimension": "datos",
+   "d7": "D4",
+   "name": "Actualización de CvLAC / GrupLAC",
+   "desc": "Vigencia de las hojas de vida y grupos en las plataformas de MinCiencias, base de la medición nacional.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "Las hojas de vida (CvLAC) y los grupos (GrupLAC) están actualizados para la medición nacional.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Porcentaje de CvLAC actualizados en el último año y grupos en riesgo de descenso.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué le impide mantener su CvLAC al día?",
+     "type": "abierta",
+     "audiences": [
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Protocolo de actualización CvLAC/GrupLAC con calendario ligado a la medición",
+     "criterio": "Responsables por facultad y soporte definido"
+    },
+    {
+     "component": "I",
+     "what": "Jornadas de actualización asistida ejecutadas con cobertura",
+     "criterio": "≥ 80 % de investigadores activos actualizados"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de vigencia de CvLAC y simulacro de medición de grupos",
+     "criterio": "Riesgo de descenso detectado antes de la convocatoria"
+    }
+   ],
+   "rubric": [
+    "Actualización voluntaria y esporádica; alto riesgo en la medición.",
+    "Campañas ocasionales de actualización sin cobertura suficiente.",
+    "Protocolo con jornadas asistidas y calendario operando.",
+    "Vigencia medida continuamente con simulacros previos a la medición.",
+    "Información de investigadores sincronizada desde los sistemas propios; CvLAC como espejo, no como carga."
+   ]
+  },
+  {
+   "id": "IN-DAT-2",
+   "line": 2,
+   "dimension": "datos",
+   "d7": "D5",
+   "name": "Interoperabilidad producción ↔ repositorio",
+   "desc": "Flujo automático entre el registro de productos, el repositorio y los perfiles de investigador.",
+   "frame": "DAMA-DMBOK",
+   "items": [
+    {
+     "text": "Registrar un producto una sola vez basta: fluye al repositorio y a los perfiles automáticamente.",
+     "type": "likert",
+     "audiences": [
+      "docentes"
+     ]
+    },
+    {
+     "text": "¿En cuántos sistemas debe registrarse hoy un mismo producto de investigación?",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Estime las horas por investigador dedicadas a duplicar registros cada semestre.",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Especificación del flujo investigación → repositorio → perfiles en el plan de interoperabilidad",
+     "criterio": "Contratos de datos definidos e incluidos en el bus"
+    },
+    {
+     "component": "I",
+     "what": "Integración operando al menos entre plataforma de investigación y repositorio",
+     "criterio": "El registro único elimina la digitación múltiple"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de duplicación de esfuerzo (sistemas por producto, tendencia)",
+     "criterio": "Medido antes y después de la integración"
+    }
+   ],
+   "rubric": [
+    "Cada producto se registra hasta en tres sistemas sin sincronización.",
+    "Flujo especificado en el plan de interoperabilidad, sin implementar.",
+    "Primera integración operando: el producto fluye a al menos un sistema destino.",
+    "Registro único con sincronización completa y esfuerzo medido a la baja.",
+    "Metadatos de producción interoperando también con agregadores externos (ORCID, DOI, CvLAC)."
+   ]
+  },
+  {
+   "id": "IN-DAT-3",
+   "line": 2,
+   "dimension": "datos",
+   "d7": "D4",
+   "ai": true,
+   "name": "Métricas de visibilidad científica",
+   "desc": "Medición sistemática de citación, altmetría y posicionamiento de la producción institucional.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "La institución conoce y sigue la visibilidad de su producción (citación, altmetría, posicionamiento).",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes"
+     ]
+    },
+    {
+     "text": "Existe una línea base de citación institucional documentada.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué datos de visibilidad se necesitaron el año pasado para rankings y de dónde salieron?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Diseño del sistema de métricas de visibilidad: fuentes, indicadores, periodicidad",
+     "criterio": "Integrado al observatorio de rankings"
+    },
+    {
+     "component": "I",
+     "what": "Cortes de medición producidos regularmente",
+     "criterio": "Trimestrales o semestrales, sin reconstrucción manual"
+    },
+    {
+     "component": "K",
+     "what": "Serie de citación/altmetría con análisis de tendencia",
+     "criterio": "Usada en decisiones de fomento y en reportes a rankings"
+    }
+   ],
+   "rubric": [
+    "Sin línea base ni seguimiento; los datos se reconstruyen a mano cada año.",
+    "Primeros ejercicios de medición puntuales sin sistema.",
+    "Línea base establecida con cortes regulares en el observatorio.",
+    "Serie con metas y análisis usada en la estrategia de visibilidad.",
+    "Visibilidad gestionada activamente: la evidencia alimenta rankings, alianzas y contratación."
+   ]
+  },
+  {
+   "id": "EX-ORG-1",
+   "line": 3,
+   "dimension": "organizacional",
+   "d7": "D3",
+   "name": "Gestión del portafolio de convenios",
+   "desc": "Ciclo de vida de convenios de extensión: suscripción, ejecución verificable y evaluación de resultados.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los convenios se gestionan por ciclo de vida: suscripción, ejecución verificable y evaluación de resultados.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "administrativos",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Convenios activos, % con ejecución verificable y % evaluados al cierre.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "El convenio con la Universidad produce resultados concretos para nuestra organización.",
+     "type": "likert",
+     "audiences": [
+      "aliados"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Procedimiento del ciclo de vida de convenios con formatos de seguimiento y evaluación",
+     "criterio": "Define hitos, responsables e indicadores por convenio"
+    },
+    {
+     "component": "I",
+     "what": "Convenios activos con seguimiento al día en el sistema",
+     "criterio": "Ejecución verificable en la mayoría del portafolio (línea base: 61 activos)"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de resultado por convenio (beneficiarios, recursos, productos)",
+     "criterio": "Reporte trimestral estructurado en la plataforma"
+    }
+   ],
+   "rubric": [
+    "Convenios firmados sin seguimiento; nadie sabe cuáles están vivos.",
+    "Inventario de convenios al día, con seguimiento informal.",
+    "Ciclo de vida operando con seguimiento estructurado por convenio.",
+    "Resultados medidos por convenio e informados a las partes.",
+    "Cartera de alianzas gestionada estratégicamente por valor territorial y misional."
+   ]
+  },
+  {
+   "id": "EX-ORG-2",
+   "line": 3,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Procesos de autoevaluación institucional",
+   "desc": "Madurez del ciclo de autoevaluación (CNA): periodicidad, participación, planes de mejoramiento con seguimiento.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "El ciclo de autoevaluación funciona con periodicidad, participación y planes de mejoramiento que se cumplen.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Programas con autoevaluación vigente (≤ 3 años) y % de acciones de mejoramiento cerradas.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Los resultados de la autoevaluación producen cambios visibles en mi programa.",
+     "type": "likert",
+     "audiences": [
+      "docentes",
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Modelo de autoevaluación institucional con instrumentos y periodicidad",
+     "criterio": "Aprobado y alineado con CNA/Decreto 1330"
+    },
+    {
+     "component": "I",
+     "what": "Ciclos ejecutados con participación verificable (encuestas, talleres)",
+     "criterio": "Cobertura de estamentos y periodicidad cumplida"
+    },
+    {
+     "component": "K",
+     "what": "Seguimiento sistemático de planes de mejoramiento (acciones, avance, cierre)",
+     "criterio": "Los planes viven en un sistema con seguimiento, no en actas"
+    }
+   ],
+   "rubric": [
+    "Autoevaluación solo cuando la exige un trámite; sin planes de mejoramiento reales.",
+    "Ciclos ejecutados con participación, pero los planes viven en actas sin seguimiento.",
+    "Ciclo institucionalizado con planes de mejoramiento estructurados y responsables.",
+    "Acciones de mejoramiento con seguimiento medido y tasa de cierre creciente.",
+    "Mejora continua basada en evidencia; la autoevaluación anticipa la acreditación en alta calidad."
+   ]
+  },
+  {
+   "id": "EX-ORG-3",
+   "line": 3,
+   "dimension": "organizacional",
+   "d7": "D6",
+   "name": "Relacionamiento con egresados",
+   "desc": "Estrategia y canales de vínculo con egresados: bolsa de empleo, formación continua, participación institucional.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "La institución mantiene vínculo activo y útil con sus egresados.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Cobertura de contacto de la base de egresados y canales activos (bolsa, formación, participación).",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué beneficios recibe hoy un egresado por mantener su información actualizada?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Estrategia de relacionamiento con egresados: canales, beneficios, gobierno del dato",
+     "criterio": "Aprobada, con dueño del proceso y metas de cobertura"
+    },
+    {
+     "component": "I",
+     "what": "Canales operando: bolsa de empleo, formación continua, encuentros, actualización de datos",
+     "criterio": "Actividad regular con participación medida"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores: cobertura de contacto, empleabilidad, participación",
+     "criterio": "Cobertura ≥ 70 % con fuentes propias (no solo OLE)"
+    }
+   ],
+   "rubric": [
+    "Base de egresados desactualizada; contacto solo para ceremonias.",
+    "Cobertura de contacto baja (≈ 40 %); información dependiente del OLE.",
+    "Estrategia operando con campaña de actualización y beneficios activos.",
+    "Cobertura alta y medida; canales con participación regular.",
+    "Comunidad de egresados como activo institucional: mentoría, empleabilidad y donaciones gestionadas por CRM."
+   ]
+  },
+  {
+   "id": "EX-ORG-4",
+   "line": 3,
+   "dimension": "organizacional",
+   "d7": "D7",
+   "name": "Articulación con la educación media y el territorio",
+   "desc": "Programas de articulación con colegios y actores territoriales como canal de cobertura.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "La articulación con la educación media es un canal efectivo de cobertura territorial.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Municipios y colegios con articulación activa, y estudiantes vinculados por cohorte.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La articulación con la Universidad agrega valor a nuestros estudiantes de media.",
+     "type": "likert",
+     "audiences": [
+      "aliados"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Convenios y modelo de articulación con la media documentados",
+     "criterio": "Homologación de cursos definida reglamentariamente"
+    },
+    {
+     "component": "I",
+     "what": "Programas operando en municipios con estudiantes activos",
+     "criterio": "Presencia verificable en ≥ 10 municipios (línea base: 14)"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores: estudiantes articulados, tasa de absorción a pregrado, permanencia",
+     "criterio": "Serie medida por cohorte y municipio"
+    }
+   ],
+   "rubric": [
+    "Sin articulación con la media; el primer contacto es la inscripción.",
+    "Convenios puntuales con pocos colegios, sin homologación.",
+    "Modelo de articulación operando en múltiples municipios con homologación.",
+    "Absorción y permanencia medidas; la articulación alimenta la proyección de demanda.",
+    "Trayectorias media→pregrado fluidas (incluso virtuales); la articulación es la puerta territorial de la Universidad."
+   ]
+  },
+  {
+   "id": "EX-MIS-1",
+   "line": 3,
+   "dimension": "misional",
+   "d7": "D3",
+   "name": "Oferta de educación continua digital",
+   "desc": "Portafolio de cursos, diplomados y certificaciones en modalidad virtual o híbrida.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "La educación continua ofrece un portafolio digital pertinente con matrícula en línea.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Cursos/diplomados virtuales o híbridos activos y % de ingresos de educación continua por canal digital.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué formación corta demandan las organizaciones del territorio que hoy no se ofrece?",
+     "type": "abierta",
+     "audiences": [
+      "aliados"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Portafolio de educación continua digital con modelo de negocio (precios, pasarela, certificados)",
+     "criterio": "Catálogo publicado con matrícula y pago en línea"
+    },
+    {
+     "component": "I",
+     "what": "Oferta operando: cohortes ejecutadas en modalidad virtual o híbrida",
+     "criterio": "≥ 5 productos digitales con cohortes reales"
+    },
+    {
+     "component": "K",
+     "what": "Ingresos y matrícula de la oferta digital frente a meta (KPI SO-01)",
+     "criterio": "Serie medida por producto y canal"
+    }
+   ],
+   "rubric": [
+    "Educación continua exclusivamente presencial, sin catálogo ni pago en línea.",
+    "Primeros productos híbridos diseñados; matrícula aún manual.",
+    "Catálogo digital publicado con pasarela y cohortes operando.",
+    "Portafolio digital con ingresos medidos y crecimiento sostenido.",
+    "Línea de negocio digital consolidada con oferta por demanda territorial y certificación apilable."
+   ]
+  },
+  {
+   "id": "EX-MIS-2",
+   "line": 3,
+   "dimension": "misional",
+   "d7": "D6",
+   "name": "Proyección social mediada por TIC",
+   "desc": "Extensión de los servicios de proyección social (consultorios, unidades de atención) a través de canales digitales.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los servicios de proyección social (consultorios, unidades de atención) atienden también por canales digitales.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Servicios con atención virtual disponible y demanda atendida por subregión.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué servicios de la Universidad necesitaría su comunidad sin viajar a la sede principal?",
+     "type": "abierta",
+     "audiences": [
+      "aliados",
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Modelo de atención virtual de los servicios de proyección social (protocolos, agenda, herramientas)",
+     "criterio": "Documentado con niveles de servicio"
+    },
+    {
+     "component": "I",
+     "what": "Servicios operando virtualmente con casos atendidos",
+     "criterio": "Consultorios jurídico y empresarial con agenda en línea activa"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de atención por canal y territorio",
+     "criterio": "La demanda del sur se atiende y se mide"
+    }
+   ],
+   "rubric": [
+    "Atención exclusivamente presencial; la distancia excluye al territorio.",
+    "Atenciones virtuales ocasionales por iniciativa de cada consultorio.",
+    "Modelo de atención virtual operando con agenda en línea.",
+    "Cobertura territorial medida con niveles de servicio cumplidos.",
+    "Red de servicios híbrida integrada a los convenios territoriales y a la formación práctica de estudiantes."
+   ]
+  },
+  {
+   "id": "EX-MIS-3",
+   "line": 3,
+   "dimension": "misional",
+   "d7": "D7",
+   "name": "Emprendimiento vía canales digitales",
+   "desc": "Programas de emprendimiento e innovación soportados en plataformas y comunidades digitales.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "El emprendimiento y la innovación se apoyan en plataformas y comunidades digitales.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes",
+      "administrativos",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Programas de emprendimiento con componente digital y emprendimientos acompañados por año.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué le faltó al último emprendedor que el centro no pudo resolver presencialmente?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos",
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Programa de emprendimiento digital documentado y articulado a la agenda regional",
+     "criterio": "Con ruta del emprendedor y componente virtual definido"
+    },
+    {
+     "component": "I",
+     "what": "Cohortes operando en formato digital o híbrido, con comunidades activas",
+     "criterio": "Participación verificable más allá de talleres presenciales"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores: emprendimientos acompañados, supervivencia, vínculo con convenios",
+     "criterio": "Serie medida y usada para ajustar el programa"
+    }
+   ],
+   "rubric": [
+    "Talleres presenciales aislados; sin plataforma ni comunidad.",
+    "Primeros contenidos digitales; comunidad incipiente sin programa formal.",
+    "Programa digital operando con ruta del emprendedor y cohortes regulares.",
+    "Resultados medidos (supervivencia, escalamiento) conectados a la agenda regional.",
+    "Ecosistema emprendedor híbrido reconocido en la región, con aliados y financiación externa."
+   ]
+  },
+  {
+   "id": "EX-TEC-1",
+   "line": 3,
+   "dimension": "tecnologica",
+   "d7": "D6",
+   "ai": true,
+   "name": "Canales de atención al interesado y estudiante",
+   "desc": "Sistematización de los momentos de contacto: formularios, chat, línea de WhatsApp, punto de atención virtual.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "Los momentos de contacto con aspirantes y estudiantes están sistematizados con canales digitales y tiempos de respuesta.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "estudiantes"
+     ]
+    },
+    {
+     "text": "Momentos de contacto mapeados, % con canal digital y % con acuerdo de nivel de servicio publicado.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Cuando escribo a la Universidad por un canal digital, recibo respuesta oportuna y útil.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes",
+      "aliados"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Mapa de experiencia con momentos de contacto, canales y ANS por momento",
+     "criterio": "Mapa completo con ANS publicados"
+    },
+    {
+     "component": "I",
+     "what": "Canales digitales operando (formularios, chat, WhatsApp) en los momentos críticos",
+     "criterio": "≥ 80 % de los momentos con canal digital activo"
+    },
+    {
+     "component": "K",
+     "what": "Métricas de servicio: volumen, tiempo de respuesta, satisfacción por canal",
+     "criterio": "Medidas contra ANS con semáforo"
+    }
+   ],
+   "rubric": [
+    "Contacto por ventanilla y correo genérico; sin tiempos comprometidos.",
+    "Momentos de contacto mapeados; pocos canales digitales y sin ANS.",
+    "Canales digitales en los momentos críticos con ANS publicados.",
+    "Servicio medido contra ANS con mejora sostenida.",
+    "Experiencia omnicanal gestionada de la indagación al grado, con datos por interesado (CRM)."
+   ]
+  },
+  {
+   "id": "EX-TEC-2",
+   "line": 3,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Portal institucional y presencia web",
+   "desc": "El sitio web como punto único de acceso a servicios académicos y de extensión.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "El portal institucional es el punto único de acceso a la información y los servicios.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes",
+      "docentes",
+      "aliados"
+     ]
+    },
+    {
+     "text": "Trámites publicados en el portal y cuántos se completan totalmente en línea.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué trámite le tocó hacer presencialmente que esperaba resolver por el portal?",
+     "type": "abierta",
+     "audiences": [
+      "estudiantes",
+      "docentes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Gobierno del portal: responsables, arquitectura de información, política de publicación",
+     "criterio": "Actualización con dueños definidos por sección"
+    },
+    {
+     "component": "I",
+     "what": "Portal estable y actualizado con servicios operativos",
+     "criterio": "Los 10 trámites más demandados accesibles desde el portal"
+    },
+    {
+     "component": "K",
+     "what": "Analítica del portal: visitas, rutas, abandono en trámites",
+     "criterio": "Usada para priorizar la virtualización de trámites"
+    }
+   ],
+   "rubric": [
+    "Portal desactualizado o solo informativo; los trámites viven en PDF.",
+    "Portal estable e informativo; trámites fuera de línea.",
+    "Trámites priorizados operando en línea de extremo a extremo.",
+    "Uso del portal medido; los trámites digitales dominan el volumen.",
+    "Sede electrónica plena: todo trámite estudiantil y docente es digital por defecto."
+   ]
+  },
+  {
+   "id": "EX-TEC-3",
+   "line": 3,
+   "dimension": "tecnologica",
+   "d7": "D6",
+   "name": "Mesa de ayuda y soporte al usuario",
+   "desc": "Mesa de servicio con base de conocimiento para estudiantes y docentes-tutores.",
+   "frame": "eMM",
+   "items": [
+    {
+     "text": "La mesa de ayuda resuelve los problemas técnicos de estudiantes y docentes con oportunidad.",
+     "type": "likert",
+     "audiences": [
+      "estudiantes",
+      "docentes"
+     ]
+    },
+    {
+     "text": "Tickets por periodo, tiempo medio de respuesta y cobertura horaria de la mesa.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué pasó la última vez que tuvo un problema técnico un domingo en la noche?",
+     "type": "abierta",
+     "audiences": [
+      "estudiantes"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Modelo de la mesa de servicio: niveles, base de conocimiento, horarios, ANS",
+     "criterio": "Dimensionada para la población virtual (incluye franja nocturna)"
+    },
+    {
+     "component": "I",
+     "what": "Mesa operando con personal completo y base de conocimiento activa",
+     "criterio": "Las 2 posiciones cubiertas; horario alineado al estudio virtual"
+    },
+    {
+     "component": "K",
+     "what": "Métricas: volumen, tiempo de respuesta (≤ 8 h), resolución en primer contacto",
+     "criterio": "Medidas contra ANS con informe periódico"
+    }
+   ],
+   "rubric": [
+    "Soporte informal por conocidos; sin registro de casos.",
+    "Piloto de mesa con personal incompleto y horario de oficina.",
+    "Mesa formalizada con ANS, base de conocimiento y cobertura completa.",
+    "Servicio medido contra ANS, con franja nocturna para virtuales.",
+    "Soporte proactivo: la mesa detecta problemas antes del reporte y alimenta mejoras de plataforma."
+   ]
+  },
+  {
+   "id": "EX-DAT-1",
+   "line": 3,
+   "dimension": "datos",
+   "d7": "D4",
+   "name": "Base de datos de egresados",
+   "desc": "Calidad, cobertura y actualización de la información de egresados.",
+   "frame": "DAMA-DMBOK",
+   "items": [
+    {
+     "text": "La información de egresados es confiable, completa y tiene un responsable claro.",
+     "type": "likert",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Cobertura de contacto verificado y fecha de la última actualización masiva.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La entidad «egresado» tiene dueño de dato designado en el programa de gobierno de datos.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Definición de la entidad egresado en el catálogo de datos con dueño y reglas de calidad",
+     "criterio": "Dueño designado con funciones y descarga"
+    },
+    {
+     "component": "I",
+     "what": "Procesos de actualización operando (campañas, integración con OLE, formularios)",
+     "criterio": "Actualización continua, no solo campañas"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de cobertura de contacto con meta (70 %)",
+     "criterio": "Serie medida trimestralmente"
+    }
+   ],
+   "rubric": [
+    "Base dispersa y desactualizada; sin dueño del dato.",
+    "Inventario de la base hecho; dueño en designación y cobertura baja.",
+    "Dueño designado con reglas de calidad y actualización operando.",
+    "Cobertura alta y medida contra meta; dato listo para el CRM.",
+    "Dato de egresados vivo e integrado (CRM, bolsa, OLE); segmentación para servicios y filantropía."
+   ]
+  },
+  {
+   "id": "EX-DAT-2",
+   "line": 3,
+   "dimension": "datos",
+   "d7": "D4",
+   "ai": true,
+   "name": "Línea base de indicadores de rankings",
+   "desc": "Datos internos organizados según los indicadores de Sapiens, Scimago, THE Impact y QS.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los datos internos están organizados según los indicadores de los rankings (Sapiens, Scimago, THE, QS).",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Tiempo (semanas-persona) que tomó el último reporte anual a rankings.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "La matriz indicador ↔ fuente de datos está completa y validada.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Matriz indicador↔fuente completa por ranking, con responsable por dato",
+     "criterio": "Cubre los 4 rankings objetivo, validada por Planeación"
+    },
+    {
+     "component": "I",
+     "what": "Cortes de datos producidos con la matriz (no reconstrucción manual)",
+     "criterio": "Corte trimestral automatizado en el observatorio"
+    },
+    {
+     "component": "K",
+     "what": "Línea base por indicador de ranking con brechas frente a pares",
+     "criterio": "Alimenta la estrategia de posicionamiento"
+    }
+   ],
+   "rubric": [
+    "Cada reporte anual se reconstruye a mano durante semanas.",
+    "Matriz indicador↔fuente en borrador; datos aún dispersos.",
+    "Matriz completa con cortes regulares en el observatorio.",
+    "Cortes automatizados con brechas analizadas frente a pares.",
+    "Posicionamiento gestionado: simulación del efecto de decisiones sobre los indicadores de ranking."
+   ]
+  },
+  {
+   "id": "EX-DAT-3",
+   "line": 3,
+   "dimension": "datos",
+   "d7": "D4",
+   "name": "Seguimiento de convenios con datos",
+   "desc": "Registro estructurado de ejecución, beneficiarios y resultados por convenio.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "La ejecución de los convenios se registra de forma estructurada: beneficiarios, recursos y resultados.",
+     "type": "likert",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Convenios con reporte estructurado del último trimestre frente al total activo.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Puede decir cuántos beneficiarios tuvo la extensión en cada sede el año pasado? ¿De dónde saldría el dato?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Formato estructurado de reporte por convenio (beneficiarios, recursos, municipio, resultados)",
+     "criterio": "Adoptado como obligatorio en el procedimiento"
+    },
+    {
+     "component": "I",
+     "what": "Reportes trimestrales cargados en la plataforma para los convenios activos",
+     "criterio": "Cobertura ≥ 90 % de convenios reportando"
+    },
+    {
+     "component": "K",
+     "what": "Agregados por municipio y línea publicados (mapa territorial M2)",
+     "criterio": "El dato agregado sustenta decisiones de presencia territorial"
+    }
+   ],
+   "rubric": [
+    "Informes narrativos sin estructura; imposible agregar por municipio.",
+    "Formato estructurado diseñado; adopción incipiente.",
+    "Reporte estructurado obligatorio con cobertura alta.",
+    "Datos agregados por territorio publicados y usados en decisiones.",
+    "Impacto territorial de la extensión medido por resultados (no solo actividades) y contrastado con brechas del territorio."
+   ]
+  },
+  {
+   "id": "AR-ORG-1",
+   "line": 4,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "ai": true,
+   "name": "Gobierno de TI",
+   "desc": "Comité de TI con mandato sobre portafolio, arquitectura y seguridad; decisiones documentadas.",
+   "frame": "TOGAF 10",
+   "items": [
+    {
+     "text": "El comité de TI gobierna efectivamente el portafolio, la arquitectura y la seguridad.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Sesiones del comité en los últimos 12 meses y decisiones de arquitectura documentadas en actas.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Toda adquisición de TI pasa por revisión de arquitectura previa.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Reglamento del comité: composición, quórum, calendario, atribuciones sobre compras y arquitectura",
+     "criterio": "Aprobado y con la revisión de arquitectura como requisito de adquisición"
+    },
+    {
+     "component": "I",
+     "what": "Actas de sesiones regulares con decisiones de arquitectura y portafolio",
+     "criterio": "Sesiona según calendario con decisiones trazables"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de gobierno: % de compras revisadas, decisiones implementadas",
+     "criterio": "Reporte periódico a la alta dirección"
+    }
+   ],
+   "rubric": [
+    "Sin comité o inactivo; cada dependencia compra TI por su cuenta.",
+    "Comité existente que sesiona irregularmente y sin actas de decisión.",
+    "Comité reglamentado sesionando con calendario y decisiones documentadas.",
+    "Gobierno medido: toda compra pasa por arquitectura y las decisiones se auditan.",
+    "Gobierno de TI integrado a la estrategia institucional; el portafolio se decide por valor."
+   ]
+  },
+  {
+   "id": "AR-ORG-2",
+   "line": 4,
+   "dimension": "organizacional",
+   "d7": "D5",
+   "name": "Arquitectura empresarial documentada",
+   "desc": "Existencia de la arquitectura institucional (negocio, información, aplicaciones, tecnología) bajo un método formal (TOGAF ADM).",
+   "frame": "TOGAF 10",
+   "items": [
+    {
+     "text": "La institución cuenta con una arquitectura empresarial documentada que guía sus decisiones tecnológicas.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Existen las vistas de negocio, información, aplicaciones y tecnología bajo un método formal (TOGAF ADM).",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Ante un sistema nuevo, ¿contra qué mapa se decide dónde encaja y qué reemplaza?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Documentos de arquitectura: visión, arquitectura de negocio, datos, aplicaciones y tecnología",
+     "criterio": "Producidos bajo ADM y aprobados por el comité"
+    },
+    {
+     "component": "I",
+     "what": "Uso de la arquitectura en decisiones reales (adquisiciones, proyectos, integraciones)",
+     "criterio": "La arquitectura objetivo guía el portafolio de proyectos"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de avance del roadmap arquitectural (brechas cerradas)",
+     "criterio": "Seguimiento periódico del plan de transición"
+    }
+   ],
+   "rubric": [
+    "Sin arquitectura documentada; cada sistema se adquirió sin visión de conjunto.",
+    "Fases preliminares del ADM en ejecución (visión, negocio).",
+    "Arquitectura actual y objetivo documentadas en las cuatro capas.",
+    "Roadmap de transición en ejecución medida; las decisiones citan la arquitectura.",
+    "Arquitectura viva: se actualiza por ciclos y simula el impacto de cambios antes de decidir."
+   ]
+  },
+  {
+   "id": "AR-ORG-3",
+   "line": 4,
+   "dimension": "organizacional",
+   "d7": "D1",
+   "name": "Gestión del portafolio de proyectos de TI",
+   "desc": "Priorización, seguimiento y cierre de proyectos tecnológicos con criterios de valor.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los proyectos de TI se priorizan, siguen y cierran con criterios de valor institucional.",
+     "type": "likert",
+     "audiences": [
+      "directivos",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Proyectos de TI del año: presupuesto, % en cronograma y cuántos midieron beneficios post-cierre.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Del último proyecto de TI cerrado, ¿qué beneficio prometido se verificó después?",
+     "type": "abierta",
+     "audiences": [
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Metodología de gestión del portafolio de proyectos de TI (priorización, seguimiento, cierre)",
+     "criterio": "Incluye caso de valor y revisión de beneficios post-cierre"
+    },
+    {
+     "component": "I",
+     "what": "Portafolio anual operando con seguimiento regular",
+     "criterio": "Proyectos priorizados con presupuesto y estado al día"
+    },
+    {
+     "component": "K",
+     "what": "Métricas de portafolio: cumplimiento, desviaciones y beneficios realizados",
+     "criterio": "Revisión de beneficios a los 6 meses del cierre"
+    }
+   ],
+   "rubric": [
+    "Proyectos de TI por demanda espontánea, sin priorización ni seguimiento.",
+    "Lista anual de proyectos con presupuesto, seguimiento informal.",
+    "Portafolio priorizado con seguimiento regular y criterios de valor.",
+    "Desempeño del portafolio medido, incluida la revisión de beneficios post-cierre.",
+    "Portafolio dirigido por la arquitectura y el plan estratégico; el valor realizado retroalimenta la priorización."
+   ]
+  },
+  {
+   "id": "AR-MIS-1",
+   "line": 4,
+   "dimension": "misional",
+   "d7": "D3",
+   "name": "Caracterización de procesos críticos",
+   "desc": "Procesos del mapa institucional con caracterización vigente en el sistema de gestión de calidad.",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "Los procesos críticos de la institución están caracterizados y vigentes en el sistema de calidad.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Porcentaje de procesos críticos con caracterización vigente.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué proceso crítico opera hoy distinto de como está documentado (o sin documentar)?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Mapa de procesos con caracterizaciones vigentes de los procesos críticos",
+     "criterio": "Caracterización ≥ 80 % (KPI AR-01) aprobada en el SGC"
+    },
+    {
+     "component": "I",
+     "what": "Procesos operando conforme a su caracterización (auditorías internas)",
+     "criterio": "Sin brechas mayores entre documento y operación"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de cobertura de caracterización con meta y ritmo",
+     "criterio": "Seguimiento del avance por macroproceso"
+    }
+   ],
+   "rubric": [
+    "Mapa de procesos desactualizado; minoría de procesos críticos documentados.",
+    "Plan de caracterización en marcha con avance parcial (≈ 30 %).",
+    "Mayoría de procesos críticos caracterizados y aprobados en el SGC.",
+    "Cobertura ≥ 80 % con auditorías que verifican la conformidad.",
+    "Procesos gestionados por desempeño: la caracterización incluye indicadores y se optimiza por ciclos."
+   ]
+  },
+  {
+   "id": "AR-MIS-2",
+   "line": 4,
+   "dimension": "misional",
+   "d7": "D3",
+   "name": "Procesos de la virtualidad en el sistema de calidad",
+   "desc": "Evolución del SGC para cubrir la operación de asignaturas y programas virtuales (línea de apoyo + despliegue).",
+   "frame": "CNA",
+   "items": [
+    {
+     "text": "El sistema de gestión de calidad cubre la operación de asignaturas y programas virtuales.",
+     "type": "likert",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Los procesos de la línea de apoyo a virtualidad están aprobados en el SGC.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Si mañana abre la primera cohorte virtual, ¿qué procesos (matrícula, evaluación docente, soporte) la amparan?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Caracterización de los procesos de virtualidad: línea de apoyo (8) y despliegue (16, patrón USCO)",
+     "criterio": "Aprobados en el sistema de calidad, no solo diseñados"
+    },
+    {
+     "component": "I",
+     "what": "Procesos operando en los pilotos de virtualización",
+     "criterio": "La operación piloto sigue los procesos aprobados"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de los procesos de virtualidad (tiempos, satisfacción, conformidad)",
+     "criterio": "Medidos desde la primera cohorte"
+    }
+   ],
+   "rubric": [
+    "El SGC no contempla la virtualidad; una cohorte virtual operaría fuera de proceso.",
+    "Procesos de virtualidad caracterizados, en espera de aprobación.",
+    "Línea de apoyo aprobada en el SGC y aplicada en pilotos.",
+    "Los 24 procesos (apoyo + despliegue) operando con indicadores.",
+    "La virtualidad es parte natural del SGC; los procesos se mejoran con datos de cada cohorte."
+   ]
+  },
+  {
+   "id": "AR-MIS-3",
+   "line": 4,
+   "dimension": "misional",
+   "d7": "D2",
+   "name": "Gestión del cambio organizacional",
+   "desc": "Prácticas de gestión del cambio para la adopción de nuevos procesos y sistemas.",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los cambios de procesos y sistemas se gestionan con método: actores, formación y acompañamiento.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "docentes"
+     ]
+    },
+    {
+     "text": "¿Cómo se enteró y se preparó usted para el último sistema o proceso nuevo que le cambió el trabajo?",
+     "type": "abierta",
+     "audiences": [
+      "docentes",
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Las iniciativas tecnológicas del portafolio incluyen plan de gestión del cambio.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Método institucional de gestión del cambio (mapa de actores, plan de adopción, acompañamiento)",
+     "criterio": "Adoptado como componente obligatorio de las iniciativas"
+    },
+    {
+     "component": "I",
+     "what": "Planes de cambio ejecutados en los despliegues recientes",
+     "criterio": "Más que circulares: formación y acompañamiento verificables"
+    },
+    {
+     "component": "K",
+     "what": "Métricas de adopción post-despliegue (uso, satisfacción, resistencia)",
+     "criterio": "Medidas y usadas para ajustar el acompañamiento"
+    }
+   ],
+   "rubric": [
+    "Los despliegues se comunican por circular; la resistencia se descubre tarde.",
+    "Conciencia del problema; primeros planes de cambio informales.",
+    "Método de gestión del cambio adoptado en las iniciativas del portafolio.",
+    "Adopción medida post-despliegue con acompañamiento ajustado por datos.",
+    "Cultura de cambio instalada: la organización pide y lidera sus propias transformaciones."
+   ]
+  },
+  {
+   "id": "AR-TEC-1",
+   "line": 4,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Inventario y obsolescencia de sistemas",
+   "desc": "Catálogo de sistemas de información con estado, soporte, versiones y riesgo de obsolescencia.",
+   "frame": "TOGAF 10",
+   "items": [
+    {
+     "text": "La institución conoce sus sistemas de información: estado, soporte, versiones y riesgo.",
+     "type": "likert",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Sistemas en el inventario, cuántos sin soporte del fabricante y su plan de reemplazo.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "El inventario de sistemas se actualizó en los últimos 6 meses.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Catálogo de sistemas con atributos de estado, soporte, versión, criticidad y dueño",
+     "criterio": "Completo (14 sistemas) y actualizado semestralmente"
+    },
+    {
+     "component": "I",
+     "what": "Gestión activa de obsolescencia: planes de reemplazo y congelamiento de integraciones en riesgo",
+     "criterio": "Los 3 sistemas en riesgo tienen decisión documentada"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de exposición: % de sistemas críticos con soporte vigente",
+     "criterio": "Reportado al comité de TI con semáforo"
+    }
+   ],
+   "rubric": [
+    "Nadie sabe cuántos sistemas hay ni en qué estado están.",
+    "Inventario parcial o desactualizado; la obsolescencia se descubre al fallar.",
+    "Catálogo completo y actualizado con criticidad y riesgo por sistema.",
+    "Obsolescencia gestionada: planes de reemplazo presupuestados y monitoreados.",
+    "Portafolio de aplicaciones optimizado por valor y costo total; racionalización continua."
+   ]
+  },
+  {
+   "id": "AR-TEC-2",
+   "line": 4,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "name": "Interoperabilidad entre sistemas",
+   "desc": "Intercambio de datos por servicios entre los sistemas críticos, sin archivos planos ni redigitación.",
+   "frame": "TOGAF 10",
+   "items": [
+    {
+     "text": "Los sistemas críticos intercambian datos por servicios, sin archivos planos ni redigitación.",
+     "type": "likert",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Sistemas integrados por servicios frente al total, y flujos que aún son manuales.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué información digitó dos veces su equipo esta semana por falta de integración?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Plan de interoperabilidad: bus de servicios, contratos de datos, prioridades de integración",
+     "criterio": "Aprobado y con financiación resuelta"
+    },
+    {
+     "component": "I",
+     "what": "Integraciones por servicios operando entre sistemas críticos",
+     "criterio": "≥ 60 % de los sistemas críticos integrados"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de integración (KPI AR-02) y reducción de redigitación",
+     "criterio": "Serie medida con meta anual"
+    }
+   ],
+   "rubric": [
+    "Islas de información: intercambio por archivos y redigitación generalizada.",
+    "Plan de interoperabilidad definido; pocas integraciones puntuales (5 de 14).",
+    "Bus o plataforma de integración operando con los flujos prioritarios.",
+    "Mayoría de sistemas críticos integrados; redigitación medida a la baja.",
+    "Interoperabilidad plena con datos maestros únicos; nuevas integraciones en días, no meses."
+   ]
+  },
+  {
+   "id": "AR-TEC-3",
+   "line": 4,
+   "dimension": "tecnologica",
+   "d7": "D5",
+   "ai": true,
+   "name": "Seguridad de la información",
+   "desc": "Controles de seguridad: gestión de accesos, respaldo, continuidad y tratamiento de datos personales.",
+   "frame": "ISO 27001",
+   "items": [
+    {
+     "text": "La información institucional está protegida: accesos, respaldos, continuidad y datos personales.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Existe un SGSI formal con análisis de riesgos vigente y plan de continuidad probado.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Si el LMS falla el día del examen final, ¿cuál es el plan y cuándo se probó por última vez?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "SGSI documentado: política, análisis de riesgos, controles ISO 27001, plan de continuidad",
+     "criterio": "Alcance sobre los sistemas misionales, aprobado"
+    },
+    {
+     "component": "I",
+     "what": "Controles operando: gestión de accesos, respaldos verificados, pruebas de continuidad",
+     "criterio": "Plan de continuidad del LMS probado antes de la matrícula virtual"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de seguridad: incidentes, tiempo de recuperación, cumplimiento de controles",
+     "criterio": "Tablero de riesgos revisado por el comité"
+    }
+   ],
+   "rubric": [
+    "Seguridad reactiva: respaldos informales y accesos sin gestión.",
+    "Controles básicos (respaldo, accesos) sin SGSI ni análisis de riesgos.",
+    "SGSI formulado con análisis de riesgos y controles priorizados en operación.",
+    "Continuidad probada y seguridad medida con indicadores.",
+    "Seguridad como capacidad institucional: mejora continua, cultura extendida y respuesta ensayada."
+   ]
+  },
+  {
+   "id": "AR-DAT-1",
+   "line": 4,
+   "dimension": "datos",
+   "d7": "D4",
+   "ai": true,
+   "name": "Gobierno de datos institucional",
+   "desc": "Comité, catálogo de datos maestros, dueños designados y reglas de calidad (DAMA-DMBOK).",
+   "frame": "DAMA-DMBOK",
+   "items": [
+    {
+     "text": "Los datos institucionales tienen gobierno: comité, catálogo, dueños designados y reglas de calidad.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Entidades en el catálogo de datos maestros y % con dueño designado y activo.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "Como dueño de dato, ¿qué tiempo y herramientas tiene para ejercer el rol?",
+     "type": "abierta",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Programa de gobierno de datos: comité, catálogo de entidades, roles y reglas de calidad (DAMA)",
+     "criterio": "Catálogo de 21 entidades con marco de roles aprobado"
+    },
+    {
+     "component": "I",
+     "what": "Dueños de dato ejerciendo el rol con dedicación asignada",
+     "criterio": "Designación ≥ 80 % y descarga horaria efectiva"
+    },
+    {
+     "component": "K",
+     "what": "Indicadores de gobierno: cobertura de dueños, reglas activas, incidencias resueltas",
+     "criterio": "Reportados al comité de datos"
+    }
+   ],
+   "rubric": [
+    "Sin gobierno de datos: cada sistema define y duplica sus datos.",
+    "Programa iniciado: comité y catálogo creados, dueños parciales sin dedicación.",
+    "Dueños designados con dedicación y reglas de calidad operando.",
+    "Gobierno medido: calidad por entidad con seguimiento y mejora.",
+    "Datos como activo estratégico: ciclo de vida gestionado y decisiones automatizadas confiables."
+   ]
+  },
+  {
+   "id": "AR-DAT-2",
+   "line": 4,
+   "dimension": "datos",
+   "d7": "D4",
+   "name": "Calidad de los datos SNIES",
+   "desc": "Consistencia del reporte oficial: matrícula, programas, docentes y graduados sin inconsistencias.",
+   "frame": "DAMA-DMBOK",
+   "items": [
+    {
+     "text": "El reporte oficial (SNIES) refleja fielmente la realidad institucional, sin inconsistencias.",
+     "type": "likert",
+     "audiences": [
+      "administrativos",
+      "directivos"
+     ]
+    },
+    {
+     "text": "Inconsistencias críticas abiertas del diagnóstico de calidad y su plan de remediación.",
+     "type": "dato",
+     "audiences": [
+      "administrativos"
+     ]
+    },
+    {
+     "text": "¿Qué decisión o ranking se ha visto afectado por un dato oficial errado?",
+     "type": "abierta",
+     "audiences": [
+      "directivos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Diagnóstico de calidad de datos SNIES con inventario de inconsistencias y plan de remediación",
+     "criterio": "12 inconsistencias tipificadas con responsable por entidad"
+    },
+    {
+     "component": "I",
+     "what": "Remediación en ejecución con correcciones aplicadas al reporte",
+     "criterio": "Inconsistencias críticas cerradas antes del siguiente corte"
+    },
+    {
+     "component": "K",
+     "what": "Indicador de calidad del dato oficial (inconsistencias por corte, tendencia)",
+     "criterio": "Medido en cada reporte con meta cero críticas"
+    }
+   ],
+   "rubric": [
+    "Inconsistencias desconocidas o ignoradas; el dato oficial no es confiable.",
+    "Diagnóstico hecho: inconsistencias identificadas, remediación sin arrancar.",
+    "Plan de remediación en ejecución con responsables por entidad.",
+    "Cortes recientes limpios; la calidad se controla antes de cada cargue.",
+    "Validación automática continua contra reglas; el dato oficial es fuente confiable para rankings y decisiones."
+   ]
+  },
+  {
+   "id": "AR-DAT-3",
+   "line": 4,
+   "dimension": "datos",
+   "d7": "D4",
+   "ai": true,
+   "name": "Analítica institucional para decisiones",
+   "desc": "Tableros de decisión para directivos con datos integrados (matrícula, deserción, finanzas, desempeño).",
+   "frame": "CMI",
+   "items": [
+    {
+     "text": "Los directivos deciden con tableros integrados (matrícula, deserción, finanzas, desempeño).",
+     "type": "likert",
+     "audiences": [
+      "directivos"
+     ]
+    },
+    {
+     "text": "Para su última decisión importante, ¿qué datos necesitó y cuánto tardaron en llegarle?",
+     "type": "abierta",
+     "audiences": [
+      "directivos"
+     ]
+    },
+    {
+     "text": "Existe al menos un tablero directivo transversal con datos integrados de más de una fuente.",
+     "type": "verificacion",
+     "audiences": [
+      "administrativos"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "component": "D",
+     "what": "Modelo de analítica institucional: indicadores directivos, fuentes, gobierno de tableros",
+     "criterio": "Definido con la PGTD como tablero transversal"
+    },
+    {
+     "component": "I",
+     "what": "Tableros operando con datos integrados y actualización automática",
+     "criterio": "Consumidos regularmente por el equipo directivo"
+    },
+    {
+     "component": "K",
+     "what": "Uso de la analítica en decisiones documentadas (consejos, comités)",
+     "criterio": "Decisiones citan los tableros como fuente"
+    }
+   ],
+   "rubric": [
+    "Informes directivos armados a mano combinando fuentes; días de espera por un dato.",
+    "Primer tablero transversal operando (PGTD) con fuentes aún estáticas.",
+    "Tableros directivos con fuentes integradas y actualización regular.",
+    "Analítica usada sistemáticamente en los órganos de decisión.",
+    "Cultura de decisión por datos: analítica prescriptiva y simulación de escenarios institucionales."
+   ]
+  }
+ ],
+ "domains": [
+  {
+   "id": "oferta",
+   "name": "Oferta y registros calificados",
+   "desc": "El portafolio académico frente al Decreto 1330: modalidades, vigencia de registros y capacidad de crear oferta virtual.",
+   "variableIds": [
+    "AV-ORG-2",
+    "AV-ORG-4",
+    "AV-DAT-2",
+    "EX-MIS-1"
+   ]
+  },
+  {
+   "id": "docentes",
+   "name": "Formación y capacitación docente",
+   "desc": "La competencia digital docente como condición de la virtualidad: ruta, certificación, adopción y reconocimiento.",
+   "variableIds": [
+    "AV-MIS-1",
+    "AV-MIS-2",
+    "AV-MIS-3"
+   ]
+  },
+  {
+   "id": "recursos",
+   "name": "Recursos tecnológicos para el aprendizaje",
+   "desc": "LMS, producción de contenidos, conectividad, equipos y licencias educativas: la base material del aprendizaje digital.",
+   "variableIds": [
+    "AV-TEC-1",
+    "AV-TEC-2",
+    "AV-TEC-3",
+    "AV-TEC-4",
+    "AV-DAT-1"
+   ]
+  },
+  {
+   "id": "autoevaluacion",
+   "name": "Autoevaluación y aseguramiento de la calidad",
+   "desc": "El ciclo de autoevaluación CNA y el sistema de gestión de calidad frente a las exigencias de las modalidades digitales.",
+   "variableIds": [
+    "EX-ORG-2",
+    "AR-MIS-1",
+    "AR-MIS-2"
+   ]
+  },
+  {
+   "id": "arquitectura",
+   "name": "Arquitectura empresarial y gobierno digital",
+   "desc": "La estructura TOGAF/DAMA que sostiene todo lo demás: gobierno TI, arquitectura documentada, interoperabilidad, seguridad y datos.",
+   "variableIds": [
+    "AR-ORG-1",
+    "AR-ORG-2",
+    "AR-TEC-1",
+    "AR-TEC-2",
+    "AR-TEC-3",
+    "AR-DAT-1",
+    "AR-DAT-2"
+   ]
+  },
+  {
+   "id": "investigacion",
+   "name": "Investigación y visibilidad digital",
+   "desc": "La cadena de valor de la investigación mediada por tecnología: gestión, ciencia abierta, visibilidad y datos de producción.",
+   "variableIds": [
+    "IN-MIS-1",
+    "IN-TEC-2",
+    "IN-DAT-1",
+    "IN-DAT-3"
+   ]
+  }
+ ]
+}

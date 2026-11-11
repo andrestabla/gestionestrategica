@@ -78,6 +78,7 @@ model Company {
   krTemplates Json? // plantillas de resultados clave por objetivo [{oe, code, name, unit, …}]; nulo = sin biblioteca
   prioSessions Json? // sesión de calificación por tribu en la priorización en vivo {tribu: {status, order, …}}
   mode        String  @default("completa") // completa | convencion (menú reducido a las cinco secciones)
+  orgKind     String  @default("empresa") // empresa | educativa: instrumento de madurez digital que aplica
   instruments Json? // instrumentos del diagnóstico habilitados ["test","f1","f2","captura"]; nulo = todos
   modulesOff  Json? // módulos apagados para la empresa ["benchmark","proyectos",…]; nulo = todos encendidos
   access      Json? // acceso por sección de la convención con QR: {seccion: {token, role, at}}
@@ -100,6 +101,7 @@ model Company {
   f1Responses     F1Response[]
   diagnosticReports DiagnosticReport[]
   quarterGoals    QuarterGoal[]
+  maturityRecords MaturityRecord[]
   responsibles    Responsible[]
   objectives      CmiObjective[]
   people          Person[]
@@ -604,6 +606,17 @@ model MailLog {
 }
 
 /// F04 · Cascada y plan trimestral: metas del trimestre por área con criterio de éxito, hitos, interdependencias y cierre.
+// Madurez digital: captura por variable (id «var:<ID>»), salvaguardas («sg») y cortes publicados («cut:<n>»).
+model MaturityRecord {
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String
+  data      Json
+  at        DateTime @updatedAt
+
+  @@id([companyId, id])
+}
+
 model QuarterGoal {
   companyId String
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
