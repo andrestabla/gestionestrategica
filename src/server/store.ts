@@ -3797,6 +3797,7 @@ export type Branding = {
 const BRANDING_ANTERIOR: Partial<Record<keyof Branding, string>> = {
   heroTitle: "Plataforma de gestión estratégica de 4Shine Empresas",
   tagline: "Dirección elige. Liderazgo moviliza. Ejecución cumple. Multiplicación escala.",
+  loginWelcome: "Entra con la cuenta que te asignó el advisor de tu empresa.",
 };
 
 export const DEFAULT_BRANDING: Branding = {
@@ -3810,7 +3811,7 @@ export const DEFAULT_BRANDING: Branding = {
   font: "Inter", radius: "14px", maxWidth: "1220px", buttonStyle: "solid",
   loginLayout: "image-left",
   loginTitle: "Iniciar sesión", showLoginTitle: true,
-  loginWelcome: "Entra con la cuenta que te asignó el advisor de tu empresa.", showLoginWelcome: true,
+  loginWelcome: "Entra con la cuenta que te asignó el asesor estratégico de tu empresa.", showLoginWelcome: true,
   loginSupport: "Soporte: soporte@algoritmot.com", showLoginSupport: false,
   heroTitle: "De la estrategia declarada a la estrategia cumplida.", showHeroTitle: true,
   heroMessages: [], showHeroMessages: true,

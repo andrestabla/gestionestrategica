@@ -175,7 +175,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       )}
       {(b?.showLoginWelcome ?? true) && (
         <p className="mt-1 text-[13px] text-muted">
-          {b?.loginWelcome ?? "Entra con la cuenta que te asignó el advisor de tu empresa."}
+          {b?.loginWelcome ?? "Entra con la cuenta que te asignó el asesor estratégico de tu empresa."}
         </p>
       )}
 
@@ -233,14 +233,14 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
       ) : null}
 
       {!tenant && (
-        <p className="mt-6 text-[12px] leading-snug text-faint">Puedes entrar aquí con cualquier cuenta: al ingresar, la plataforma te lleva al espacio de tu empresa. También puedes usar el enlace propio de tu empresa (/empresa/login) o el QR de su sección.</p>
+        <p className="mt-6 text-[12px] leading-snug text-faint">Puedes entrar aquí con cualquier cuenta registrada en la plataforma. Después de identificarte, el sistema te lleva al espacio de tu empresa. También puedes usar el enlace propio de tu organización (/empresa/login) o el código QR asignado.</p>
       )}
       <div className="mt-4 text-[12px]">
         {!recover ? (
           <button type="button" onClick={() => { setRecover(true); setRecoverMsg(null); }} className="font-semibold text-cyan-deep hover:underline">¿Olvidaste tu contraseña?</button>
         ) : (
           <div className="rounded-xl bg-surface-2 px-3.5 py-3">
-            <p className="text-[12px] text-ink-soft">Escribe arriba tu correo y te enviamos un enlace para crear una contraseña nueva (vale 60 minutos).</p>
+            <p className="text-[12px] text-ink-soft">Escribe tu correo en el campo correspondiente. Te enviaremos un enlace para crear una contraseña nueva, con una vigencia de 60 minutos.</p>
             {recoverMsg ? <p className="mt-2 text-[12px] font-semibold text-ok">{recoverMsg}</p> : (
               <button type="button" onClick={recoverNow} disabled={busy || !email.includes("@")} className="btn-primary mt-2 !py-2 text-[12px] disabled:opacity-40">{busy ? "Enviando…" : "Enviar enlace"}</button>
             )}

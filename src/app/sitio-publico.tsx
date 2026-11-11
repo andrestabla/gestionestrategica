@@ -15,9 +15,9 @@ const CONTACTO = "hola@algoritmot.com";
 const correo = (asunto: string) => `mailto:${CONTACTO}?subject=${encodeURIComponent(asunto)}`;
 const DEMO = correo("Demostración de Gestión estratégica");
 
-// Dos puertas de entrada. El acceso no es abierto: se habilita después de un primer contacto.
+// Dos puertas de entrada. El acceso no es abierto: se habilita después de recibir la solicitud.
 const ENTRADAS = [
-  { t: "Diagnóstico de madurez en transformación digital", d: "Mide el nivel de madurez digital de la organización frente a referentes reconocidos y entrega hallazgos, recomendaciones y la evidencia que los respalda.", a: "Acceso al diagnóstico de madurez en transformación digital" },
+  { t: "Diagnóstico de madurez en transformación digital", d: "Compara el nivel de madurez digital de la organización con un marco de referencia y entrega hallazgos, recomendaciones y la evidencia que los respalda.", a: "Acceso al diagnóstico de madurez en transformación digital" },
   { t: "Test de capacidades", d: "Veinticinco preguntas sobre cómo funciona la empresa. El resultado es un informe de una página con la lectura de sus capacidades y el desafío que domina hoy.", a: "Acceso al test de capacidades" },
 ];
 
@@ -32,7 +32,7 @@ const EJEMPLO: { nombre: string; n: Level[]; decision: string; chip: string }[] 
   { nombre: "Modelo de servicio posventa", n: [4, 4, 3, 2], decision: "Preparar", chip: "sp-chip-oro" },
   { nombre: "Expansión del canal digital", n: [4, 3, 3, 3], decision: "Implementar", chip: "sp-chip-ok" },
   { nombre: "Tablero de indicadores del comité", n: [3, 3, 2, 4], decision: "Implementar", chip: "sp-chip-ok" },
-  { nombre: "Rediseño de la intranet", n: [2, 2, 2, 3], decision: "Backlog", chip: "sp-chip-gris" },
+  { nombre: "Rediseño de la intranet", n: [2, 2, 2, 3], decision: "Aplazar", chip: "sp-chip-gris" },
 ];
 
 const AVANCE = [["Canal digital", 72], ["Tablero del comité", 88], ["Servicio posventa", 45]] as const;
@@ -41,23 +41,23 @@ const AREAS = [
   { t: "Estrategia", d: "Prioridades, objetivos y resultados clave ligados entre sí.", h: "#ruta" },
   { t: "Priorización", d: "El comité califica y decide en sesión, con una misma regla.", h: "#sesion" },
   { t: "Proyectos", d: "Cada iniciativa aprobada, con tareas, fechas y evidencia.", h: "#proyectos" },
-  { t: "Inteligencia", d: "El sector y el mercado en datos con fuente.", h: "#inteligencia" },
+  { t: "Inteligencia", d: "Datos del sector y del mercado con la fuente declarada.", h: "#inteligencia" },
 ];
 
 const PASOS = [
   { t: "Diagnosticar", d: "Un diagnóstico de capacidades con tres fuentes muestra el punto de partida: autoevaluación del equipo directivo, percepción anónima de los equipos y evidencia verificada.", s: "Brechas y punto de partida" },
-  { t: "Elegir", d: "El comité define pocas prioridades estratégicas y los objetivos que responden a cada una. Un objetivo sin prioridad no entra al portafolio.", s: "Prioridades y objetivos" },
+  { t: "Elegir", d: "El comité define pocas prioridades estratégicas y los objetivos que responden a cada una. Solo ingresan al portafolio los objetivos vinculados con una prioridad.", s: "Prioridades y objetivos" },
   { t: "Medir", d: "Cada objetivo se concreta en resultados clave con línea base, meta y fecha. La validación asistida por IA señala lo que le falta a cada formulación.", s: "Resultados clave" },
   { t: "Priorizar", d: "El comité califica las iniciativas con cuatro criterios. El puntaje ordena y el comité decide: implementar, preparar, aplazar o renunciar.", s: "Matriz y portafolio" },
-  { t: "Cumplir", d: "Lo aprobado baja al trimestre y a un plan de trabajo con tareas, responsables y evidencia. El informe ejecutivo muestra el avance en cada corte.", s: "Cascada y proyectos" },
+  { t: "Cumplir", d: "Lo aprobado se traduce en compromisos trimestrales y en un plan de trabajo con tareas, responsables y evidencias. El informe ejecutivo muestra el avance en cada corte.", s: "Cascada y proyectos" },
 ];
 
 // ── gestión de proyectos (vista ilustrativa; «hoy» es el 10 de noviembre) ──
 const RASGOS_GP = [
   ["Tablero por estados.", "Por hacer, en curso, en revisión, bloqueada y hecha."],
   ["Cronograma con línea base.", "Cada reprogramación se mide contra la fecha comprometida."],
-  ["Dependencias.", "Al reprogramar una tarea se pueden correr las que dependen de ella."],
-  ["Cierre con evidencia.", "Una tarea pasa a «Hecha» solo con su soporte adjunto."],
+  ["Dependencias.", "Cuando se reprograma una tarea, el sistema permite ajustar las fechas de las tareas que dependen de ella."],
+  ["Cierre con evidencia.", "Una tarea pasa al estado «Hecha» cuando incluye el soporte correspondiente."],
   ["Carga por persona.", "Tareas abiertas, vencidas y próximas a vencer de cada responsable."],
   ["Alertas e historial.", "Vencimientos, bloqueos y el registro de cada cambio."],
 ];
@@ -82,10 +82,10 @@ const CARGA = [
 
 // ── inteligencia (vista ilustrativa) ──
 const RASGOS_BI = [
-  ["Posición en el sector.", "Ingresos, crecimiento y margen de la empresa frente a las sociedades que reportan."],
+  ["Posición en el sector.", "Ingresos, crecimiento y margen de la empresa frente a las sociedades incluidas en la fuente consultada."],
   ["Competencia.", "Pares, rankings y concentración del sector."],
   ["Territorio.", "Dónde está el sector y dónde hay demanda por cubrir."],
-  ["Señales del entorno.", "Regulación, mercado, macroeconomía y demanda; cada hecho con su fuente."],
+  ["Señales del entorno.", "Regulación, mercado, macroeconomía y demanda, con la fuente y la fecha de cada dato."],
 ];
 // Nube de sociedades del sector: generador fijo para que la figura no cambie entre cargas.
 const NUBE = (() => {
@@ -102,22 +102,22 @@ const SENALES = [
 
 const INCLUYE = [
   ["Diagnóstico de capacidades", "Tres fuentes y una lectura de brechas para saber de dónde se parte."],
-  ["Benchmark sectorial", "La empresa frente a su sector, con datos abiertos de estados financieros."],
+  ["Comparación sectorial", "La empresa frente a su sector, con datos abiertos de estados financieros."],
   ["Prioridades y objetivos", "Pocas prioridades estratégicas y los objetivos directivos que responden a cada una."],
   ["Resultados clave e indicadores", "Línea base, meta, fecha y responsable, con su tablero de seguimiento."],
-  ["Iniciativas", "Formuladas con alcance, fechas, presupuesto y el resultado clave que mueven."],
+  ["Iniciativas", "Formuladas con alcance, fechas, presupuesto y el resultado clave al que contribuyen."],
   ["Matriz de priorización", "Una misma regla para todo el comité: impacto, evidencia, sostenibilidad y capacidad."],
-  ["Portafolio", "Las decisiones de tiempo por horizonte: implementar, preparar, backlog o renunciar."],
+  ["Portafolio", "Las iniciativas organizadas por horizonte: implementar, preparar, aplazar o renunciar."],
   ["Capacidades para ejecutar", "Lo que hay que resolver antes de implementar lo que se aprobó."],
   ["Cascada trimestral", "Del año al trimestre, con compromisos y responsables."],
   ["Gestión de proyectos", "Tablero, cronograma con línea base, dependencias y carga por persona."],
-  ["Inteligencia", "El sector, la competencia y el territorio en datos con fuente."],
+  ["Inteligencia", "Datos del sector, la competencia y el territorio con su fuente y fecha de corte."],
   ["Informe ejecutivo", "El estado de la estrategia en un documento, con descargas en PDF, Word y Excel."],
 ];
 
 const ROLES = [
-  { icon: Target, t: "Comité directivo", d: "Decide con la misma regla y ve el avance de lo que aprobó.", l: ["Define prioridades y objetivos", "Califica iniciativas desde el celular", "Toma las decisiones de tiempo"] },
-  { icon: Presentation, t: "Advisor", d: "Conduce el proceso y deja el registro de cada decisión.", l: ["Facilita las sesiones de trabajo", "Revisa la formulación antes de calificar", "Verifica las evidencias"] },
+  { icon: Target, t: "Comité directivo", d: "Decide con la misma regla y ve el avance de lo que aprobó.", l: ["Define prioridades y objetivos", "Califica iniciativas desde el celular", "Decide qué implementar, preparar, aplazar o descartar"] },
+  { icon: Presentation, t: "Asesor estratégico", d: "Conduce el proceso y deja el registro de cada decisión.", l: ["Facilita las sesiones de trabajo", "Revisa la formulación antes de calificar", "Verifica las evidencias"] },
   { icon: UsersRound, t: "Líderes y responsables", d: "Reciben lo aprobado con fechas y reportan su avance.", l: ["Resultados clave e iniciativas a cargo", "Tareas y proyectos del trimestre", "Evidencia de cada entrega"] },
 ];
 
@@ -168,8 +168,8 @@ export function SitioPublico() {
               <span className="sp-kicker rise" style={{ color: "var(--gold-fill)" }}>Plataforma de gestión estratégica</span>
               <h1 className="sp-h1 rise rise-1"><span>De la estrategia</span> <span><i>declarada</i></span> <span>a la estrategia</span> <span><em>cumplida</em>.</span></h1>
               <p className="sp-hero-p rise rise-2">
-                Gestión estratégica acompaña al comité directivo desde las prioridades hasta el seguimiento de cada proyecto.
-                Objetivos, resultados clave e iniciativas se deciden con una misma regla y quedan a la vista de todos.
+                Gestión estratégica acompaña al comité directivo desde la definición de prioridades hasta el seguimiento de cada proyecto.
+                Los objetivos, los resultados clave y las iniciativas quedan conectados y visibles para quienes participan.
               </p>
               <div className="sp-cta rise rise-3">
                 <a href={DEMO} className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
@@ -178,7 +178,7 @@ export function SitioPublico() {
             </div>
 
             <figure className="sp-vista rise rise-2" role="img"
-              aria-label="Vista ilustrativa de la matriz de priorización: cuatro iniciativas ordenadas por puntaje, con su decisión de implementar, preparar o dejar en backlog.">
+              aria-label="Vista ilustrativa de la matriz de priorización: cuatro iniciativas ordenadas por puntaje, con su decisión de implementar, preparar o aplazar.">
               <div className="sp-flota sp-flota-b" aria-hidden="true">
                 <h4>Avance de proyectos</h4>
                 <div className="sp-caps">
@@ -237,7 +237,7 @@ export function SitioPublico() {
           <div className="sp-wrap">
             <span className="sp-kicker">La ruta</span>
             <h2 className="sp-h2">Cinco pasos, del diagnóstico al trimestre.</h2>
-            <p className="sp-lead">Cada paso deja una decisión registrada y habilita el siguiente. Nada se califica sin estar ligado a un resultado clave.</p>
+            <p className="sp-lead">Cada paso deja una decisión registrada y habilita el siguiente. Toda iniciativa se vincula con un resultado clave antes de ser calificada.</p>
             <ol className="sp-ruta">
               {PASOS.map((p, i) => (
                 <li className="sp-paso" key={p.t} style={v({ "--i": i })}>
@@ -262,9 +262,9 @@ export function SitioPublico() {
                 La conversación se concentra donde hay desacuerdo.
               </p>
               <ul className="sp-puntos-clave">
-                <li><span className="sp-ico"><Smartphone size={20} /></span><div><b>Una calificación por persona</b><span>Cada miembro del comité califica una vez cada iniciativa, con la guía de cada nivel a la vista.</span></div></li>
-                <li><span className="sp-ico"><Radio size={20} /></span><div><b>Consolidado en vivo</b><span>El promedio por criterio y el puntaje se actualizan cada pocos segundos, sin recargar.</span></div></li>
-                <li><span className="sp-ico"><Scale size={20} /></span><div><b>Aviso de bajo consenso</b><span>Si las calificaciones se separan más de 15 puntos, la plataforma lo marca para conversarlo antes de decidir.</span></div></li>
+                <li><span className="sp-ico"><Smartphone size={20} /></span><div><b>Una calificación por persona</b><span>Cada miembro del comité califica una sola vez cada iniciativa, con la guía de cada nivel disponible durante la sesión.</span></div></li>
+                <li><span className="sp-ico"><Radio size={20} /></span><div><b>Consolidado en vivo</b><span>El promedio por criterio y el puntaje se actualizan cada pocos segundos de forma automática.</span></div></li>
+                <li><span className="sp-ico"><Scale size={20} /></span><div><b>Aviso de bajo consenso</b><span>Si la diferencia entre la calificación más alta y la más baja supera 15 puntos, la plataforma lo señala para que el comité lo discuta antes de decidir.</span></div></li>
               </ul>
             </div>
 
@@ -311,7 +311,7 @@ export function SitioPublico() {
               <div>
                 <span className="sp-kicker">Gestión de proyectos</span>
                 <h2 className="sp-h2">Cada iniciativa aprobada tiene su plan de trabajo.</h2>
-                <p className="sp-lead">Lo que el comité decide implementar se convierte en tareas con responsable, fechas y evidencia. El avance se sigue por iniciativa y por persona.</p>
+                <p className="sp-lead">Cada iniciativa que el comité aprueba se convierte en un plan de trabajo con tareas, responsables, fechas y evidencias. El avance se consulta por iniciativa y por persona.</p>
               </div>
               <Rasgos items={RASGOS_GP} />
             </div>
@@ -386,8 +386,8 @@ export function SitioPublico() {
             <div className="sp-doble">
               <div>
                 <span className="sp-kicker">Inteligencia</span>
-                <h2 className="sp-h2">El sector y el mercado, con cifras que declaran su fuente.</h2>
-                <p className="sp-lead">Inteligencia sistematiza datos abiertos de entidades públicas y ubica a la empresa en cada lectura, para decidir con contexto.</p>
+                <h2 className="sp-h2">El sector y el mercado, con la fuente de cada cifra.</h2>
+                <p className="sp-lead">El módulo de Inteligencia sistematiza datos abiertos de entidades públicas y compara a la empresa con su entorno para apoyar decisiones contextualizadas.</p>
               </div>
               <Rasgos items={RASGOS_BI} />
             </div>
@@ -419,9 +419,9 @@ export function SitioPublico() {
                   </div>
                   <div className="sp-bi-lado">
                     <div className="sp-bi-cifras">
-                      <div><b>412</b><span>sociedades que reportan</span></div>
-                      <div><b>6,8 %</b><span>crecimiento mediano</span></div>
-                      <div><b>5,2 %</b><span>margen operacional mediano</span></div>
+                      <div><b>412</b><span>sociedades analizadas</span></div>
+                      <div><b>6,8 %</b><span>mediana de crecimiento</span></div>
+                      <div><b>5,2 %</b><span>mediana del margen operacional</span></div>
                     </div>
                     <div>
                       <h5>Posición por ingresos</h5>
@@ -472,7 +472,7 @@ export function SitioPublico() {
               ))}
             </div>
             <ul className="sp-garantias">
-              <li><Building2 size={20} /><span><b>Un espacio por empresa.</b> Los datos de cada organización están aislados de los demás.</span></li>
+              <li><Building2 size={20} /><span><b>Un espacio por empresa.</b> Los datos de cada organización se mantienen separados de los de las demás.</span></li>
               <li><ShieldCheck size={20} /><span><b>Roles y permisos.</b> Cada persona entra con su cuenta y ve lo que su rol permite.</span></li>
               <li><History size={20} /><span><b>Registro de actividad.</b> Queda constancia de quién decidió qué y cuándo.</span></li>
               <li><FileDown size={20} /><span><b>Decisiones descargables.</b> Cada módulo se exporta a PDF, Word y Excel.</span></li>
@@ -485,11 +485,11 @@ export function SitioPublico() {
           <Anillos cx={720} cy={900} n={9} paso={92} />
           <div className="sp-wrap">
             <h2 className="sp-h2">El primer paso es saber dónde está tu empresa.</h2>
-            <p className="sp-lead">Dos diagnósticos sirven de punto de partida. El acceso a cada uno se habilita después de un primer contacto.</p>
+            <p className="sp-lead">Dos diagnósticos sirven de punto de partida. El acceso se habilita después de recibir la solicitud.</p>
             <div className="sp-entradas">
               {ENTRADAS.map((e, i) => (
                 <article className="sp-entrada" key={e.t}>
-                  <div className="sp-entrada-cab"><code>0{i + 1}</code><span>Acceso previo contacto</span></div>
+                  <div className="sp-entrada-cab"><code>0{i + 1}</code><span>Acceso con solicitud previa</span></div>
                   <h3>{e.t}</h3>
                   <p>{e.d}</p>
                   <a href={correo(e.a)}>Solicitar acceso <ArrowRight size={16} strokeWidth={2.4} /></a>
