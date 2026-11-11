@@ -4,10 +4,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runWithTenant } from "../src/server/tenant";
-import { createCompany, updateCompany, resetStore, getMadurez, captureMadurez, respondMadurez, setMadSafeguard, publishMadurez } from "../src/server/store";
+import { createCompany, updateCompany, resetStore, getMadurez, captureMadurez, respondMadurez, setMadSafeguard, publishMadurez, saveMadInforme, getInforme } from "../src/server/store";
 import { INSTRUMENTS, instrumentOf } from "../src/data/madurez";
 import { instrumentIssues, P, E, S, gapReading, practiceState, sufficientEvidence, cellOf, overallLevel, generalIndex, aiqOf, progressOf, type Captures } from "../src/lib/madurez";
 import { MODULES, moduleOfRoute } from "../src/lib/modulos";
+import { encargoMadInforme, encargoMadLectura, parseMadInforme, parseMadLectura, minimoInforme, minimoLectura, conDato, respuestasValidas } from "../src/lib/madurez-ia";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "admin@plataforma.example", name: "Admin", role: "ADMIN" };
@@ -126,5 +127,48 @@ test("madurez: una institución educativa usa el instrumento original", async ()
   await runWithTenant("instituto-uno", async () => {
     const m = getMadurez(advisor);
     assert.deepEqual([m.kind, m.progress.total, Object.keys(m.vars).length], ["empresa", 48, 0]);
+  });
+});
+
+test("madurez con IA: el encargo lleva las cifras de la medición y la respuesta del modelo se valida", () => {
+  const ins = INSTRUMENTS.empresa, [a, b, c] = ins.variables;
+  const caps: Captures = {
+    [a.id]: cap({ perception: 4.5, perceptionN: 2, d: 1, i: 1, k: 0, level: 2, target: 4, hallazgo: "La estrategia existe solo en una presentación." }),
+    [b.id]: cap({ perception: 2, perceptionN: 1, d: 3, i: 3, k: 3, level: 4 }),
+    [c.id]: cap({ perception: 3, perceptionN: 1 }),
+  };
+  assert.deepEqual([minimoInforme(ins), minimoLectura(ins), conDato(ins, caps)], [12, 24, 3]);
+  const sg = { [ins.safeguards[0].id]: { status: "FALLA" as const } };
+  const e = encargoMadInforme({ empresa: { name: "Digital SA", sector: "Comercio" }, contexto: "CONTEXTO DE PRUEBA", ins, caps, sg, medicion: { etiqueta: "Línea base", fecha: "10 de noviembre de 2026", publicada: false }, participacion: { personas: 2, completas: 1 }, previo: null });
+  for (const trozo of ["Digital SA · Comercio", "CONTEXTO DE PRUEBA", "captura en curso: cifras provisionales", `${a.id} · ${a.name}`, "percepción 4,5 de 5 (2 resp.)", "brecha P−E +", "hallazgo «La estrategia existe solo en una presentación.»", `hoy «${a.rubric[1]}»`, `nivel siguiente «${a.rubric[2]}»`, "MEDICIÓN PARCIAL", "Falla", "No hay corte anterior", '"prioridades"'])
+    assert.ok(e.user.includes(trozo), `falta en el encargo: ${trozo}`);
+  assert.ok(e.system.includes("no inventes cifras") && e.system.includes("empresas medianas"));
+  assert.ok(encargoMadInforme({ empresa: { name: "Instituto" }, ins: INSTRUMENTS.educativa, caps: {}, sg: {}, medicion: { etiqueta: "x", fecha: "x", publicada: true }, participacion: { personas: 0, completas: 0 } }).system.includes("instituciones de educación superior"));
+
+  const answers = Object.fromEntries(ins.variables.map((v, k) => [v.id, k % 6]));   // 0 = «No lo sé»
+  assert.equal(respuestasValidas(ins, answers), 40);
+  const l = encargoMadLectura({ empresa: { name: "Digital SA" }, ins, answers, persona: { nombre: "Laura", rol: "líder" }, fecha: "hoy" });
+  for (const trozo of ["Laura (líder)", "40 valoradas, 8 «No lo sé», 0 sin responder, de 48", "→ No lo sé", "→ 5 (Totalmente de acuerdo)", '"puntos_ciegos"']) assert.ok(l.user.includes(trozo), `falta en el encargo: ${trozo}`);
+  assert.ok(l.system.includes("no es una evaluación de la persona"));
+
+  const informe = parseMadInforme({ titulo: "  Mucha percepción, poca evidencia ", resumen: "Uno.\n\nDos.", lineas: [{ linea: "L1 · Clientes", lectura: "x" }, { lectura: "sin línea" }], prioridades: [{ orden: "2", variable: "B", primer_paso: "b" }, { orden: 1, variable: "A", primer_paso: "a" }], preguntas: ["¿Quién responde?", ""], ruta: [{ horizonte: "0 a 90 días", foco: "f" }] });
+  assert.deepEqual([informe.titulo, informe.resumen, informe.lineas.length, informe.prioridades.map((p) => p.variable), informe.preguntas, informe.fortalezas, informe.hipotesis_central], ["Mucha percepción, poca evidencia", ["Uno.", "Dos."], 1, ["A", "B"], ["¿Quién responde?"], [], undefined]);
+  assert.throws(() => parseMadInforme({ titulo: "x", resumen: [] }), /incompleto/);
+  const lectura = parseMadLectura({ resumen: ["a"], lineas: [{ linea: "L1", lectura: "x" }], alertas: [{ afirmacion: "Datos", lectura: "y" }, { lectura: "z" }], puntos_ciegos: "" });
+  assert.deepEqual([lectura.titulo, lectura.alertas.length, lectura.confianza, lectura.puntos_ciegos], ["Tu lectura", 1, [], undefined]);
+  assert.throws(() => parseMadLectura({}), /incompleta/);
+});
+
+test("madurez con IA: la lectura personal la guarda su dueño y el informe de resultados, el advisor", async () => {
+  resetStore();
+  assert.ok((await createCompany(admin, { name: "Informe SA", template: "vacia" })).ok);
+  await runWithTenant("informe-sa", async () => {
+    const ajeno = saveMadInforme(directivo, "madurez-persona", "l@empresa.example", "h", { titulo: "x" });
+    assert.ok(!ajeno.ok && ajeno.status === 403);
+    assert.ok(saveMadInforme(lider, "madurez-persona", "l@empresa.example", "h1", { titulo: "Mi lectura" }).ok);   // la clave es el correo en minúsculas
+    const sinPermiso = saveMadInforme(directivo, "madurez", "curso", "h", { titulo: "x" });
+    assert.ok(!sinPermiso.ok && sinPermiso.status === 403);
+    assert.ok(saveMadInforme(advisor, "madurez", "curso", "h2", { titulo: "Informe" }).ok);
+    assert.deepEqual([getInforme("madurez-persona", "l@empresa.example")?.inputHash, getInforme("madurez", "curso")?.inputHash, getInforme("madurez", "C1")], ["h1", "h2", null]);
   });
 });

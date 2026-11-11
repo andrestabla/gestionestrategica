@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PageHeader, Card, CardHeader, EmptyNote, Skeleton } from "@/components/ui";
-import { useBase } from "@/components/user-context";
+import { useBase, useUser } from "@/components/user-context";
 import { avisar, confirmar } from "@/components/feedback";
 import { instrumentOf } from "@/data/madurez";
 import {
@@ -22,15 +22,17 @@ import {
   practiceCounts, evidenceCoverage, aiqOf, progressOf,
   type OrgKind, type Captures, type MadCapture, type MadCut, type SafeguardState, type SafeguardStatus, type MadInstrument, type MadVariable, type Progress, type CaptureField, type EvidenceComponent,
 } from "@/lib/madurez";
-import { Layers, Search, BookOpenCheck, Sigma, ClipboardList, ChevronDown, Send, UserRoundCheck, Users } from "lucide-react";
+import { Layers, Search, BookOpenCheck, Sigma, ClipboardList, ChevronDown, Send, UserRoundCheck, Users, FileText } from "lucide-react";
 import { PercepcionInicio, Cuestionario, type Mia } from "./percepcion";
+import { LecturaPersonal, LecturaResumen, InformeResultados } from "./informe";
 
 type Participacion = { personas: number; completas: number; lista?: { name: string; role: string; respondidas: number; at: string }[] };
 type Api = { kind: OrgKind; vars: Captures; safeguards: SafeguardState; cuts: MadCut[]; progress: Progress; puede: { calificar: boolean }; mia: Mia; participacion: Participacion };
-type Tab = "percepcion" | "resumen" | "variables" | "dominios" | "indices" | "captura";
+type Tab = "percepcion" | "resumen" | "informe" | "variables" | "dominios" | "indices" | "captura";
 const TABS: { id: Tab; label: string; icon: typeof Layers }[] = [
   { id: "percepcion", label: "Mi diagnóstico", icon: UserRoundCheck },
   { id: "resumen", label: "Resumen", icon: Layers },
+  { id: "informe", label: "Informe", icon: FileText },
   { id: "variables", label: "Variables", icon: Search },
   { id: "dominios", label: "Dominios", icon: BookOpenCheck },
   { id: "indices", label: "Índices", icon: Sigma },
@@ -66,7 +68,7 @@ function Dato({ label, valor, pie, color }: { label: string; valor: string; pie?
 }
 
 export default function MadurezPage() {
-  const base = useBase();
+  const base = useBase(), user = useUser();
   const params = useParams<{ slug?: string[] }>();
   const seg = params.slug?.[0]?.toLowerCase();
   const [data, setData] = useState<Api | null>(null);
@@ -128,7 +130,7 @@ export default function MadurezPage() {
           </label>
         )} />
 
-      <div className="rise mb-5 flex flex-wrap gap-1.5" role="tablist" aria-label="Vistas de Madurez digital">
+      <div className="rise no-print mb-5 flex flex-wrap gap-1.5" role="tablist" aria-label="Vistas de Madurez digital">
         {tabs.map((t) => { const on = t.id === tab; return (
           <Link key={t.id} href={`${base}/panel/madurez/${t.id}`} role="tab" aria-selected={on}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-colors ${on ? "bg-navy text-white" : "bg-surface text-ink-soft shadow-[var(--e1)] hover:text-navy"}`}>
@@ -138,7 +140,7 @@ export default function MadurezPage() {
       </div>
 
       {!sinFuente && !corte && (
-        <p className="mb-4 rounded-xl bg-gold-wash px-4 py-3 text-[13px] text-ink-soft">
+        <p className="no-print mb-4 rounded-xl bg-gold-wash px-4 py-3 text-[13px] text-ink-soft">
           {!cal
             ? <>Aún no hay una medición publicada. Tu aporte es el <Link href={`${base}/panel/madurez/percepcion`} className="font-semibold text-cyan-deep underline">diagnóstico de percepción</Link>; los resultados aparecen aquí cuando el advisor publique el corte.</>
             : data.progress.level === 0 && data.progress.perception === 0
@@ -147,11 +149,18 @@ export default function MadurezPage() {
         </p>
       )}
 
+      {tab === "resumen" && (cal || corte) && <LecturaResumen key={sel} fuente={sel} href={`${base}/panel/madurez/informe`} cal={cal} />}
+      {tab === "informe" && <InformeResultados key={sel} ins={ins} caps={caps} sg={sg} fuente={sel} etiqueta={corte ? corte.label : "Captura en curso"} empresa={user.company?.name ?? ""} cal={cal} />}
       {tab === "resumen" && <Resumen ins={ins} caps={caps} previo={previo && previo !== corte ? previo.vars : null} />}
       {tab === "variables" && <Variables ins={ins} caps={caps} />}
       {tab === "dominios" && <Dominios ins={ins} caps={caps} />}
       {tab === "indices" && <Indices ins={ins} caps={caps} sg={sg} editable={!corte && data.puede.calificar} enviar={enviar} />}
-      {tab === "percepcion" && <PercepcionInicio ins={ins} mia={data.mia} hayCorte={data.cuts.length > 0} soloVer={false} onStart={() => setRespondiendo(true)} />}
+      {tab === "percepcion" && (
+        <div className="space-y-5">
+          <PercepcionInicio ins={ins} mia={data.mia} hayCorte={data.cuts.length > 0} soloVer={false} onStart={() => setRespondiendo(true)} />
+          {!respondiendo && <LecturaPersonal key={`${Object.keys(data.mia.answers).length}|${data.mia.at ?? ""}`} ins={ins} completo={!!data.mia.done} />}
+        </div>
+      )}
       {tab === "captura" && <Captura ins={ins} data={data} enviar={enviar} onPreview={() => setRespondiendo(true)} />}
       {respondiendo && <Cuestionario ins={ins} inicial={cal ? {} : data.mia.answers} soloVer={cal} guardar={responder} onExit={cerrarCuestionario} />}
     </div>

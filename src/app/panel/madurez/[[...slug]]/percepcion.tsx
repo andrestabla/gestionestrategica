@@ -11,7 +11,7 @@ import { Card } from "@/components/ui";
 import { ModoFocal, pedirPantallaCompleta } from "@/components/modo-focal";
 import { PERCEPTION_SCALE, type MadInstrument, type MadVariable } from "@/lib/madurez";
 
-export type Mia = { answers: Record<string, number>; done: string | null };
+export type Mia = { answers: Record<string, number>; at: string | null; done: string | null };
 type Guardar = (id: string, value: number | null) => Promise<boolean>;
 
 const f1 = (n: number) => n.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -50,7 +50,7 @@ export function PercepcionInicio({ ins, mia, hayCorte, soloVer, onStart }: { ins
     { t: "Resultados", d: "Nivel de madurez, brechas entre lo que se cree y lo que se demuestra, y prioridades." },
   ];
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
       <Card className="rise overflow-hidden">
         <div className="bg-navy px-6 py-7 text-white sm:px-8 sm:py-9">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--gold-fill)]">Paso 1 de 3 · Percepción</div>
@@ -221,7 +221,7 @@ export function Cuestionario({ ins, inicial, soloVer, guardar, onExit }: { ins: 
             {pendientes > 0
               ? "Puedes responderlas ahora o salir y retomar después: lo que ya respondiste quedó guardado."
               : soloVer ? "Así termina para quien responde. En la vista previa no se guardó ninguna respuesta."
-                : "Tu percepción quedó guardada y ya cuenta en la medición de la empresa. El paso siguiente es del advisor: contrastarla con la evidencia."}
+                : "Tu percepción quedó guardada y ya cuenta en la medición de la empresa. Al volver al módulo encuentras tu lectura, generada con IA a partir de tus respuestas. El paso siguiente es del advisor: contrastarla con la evidencia."}
           </p>
           {hechas > 0 && (
             <Card className="mt-6 p-5">

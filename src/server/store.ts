@@ -4503,7 +4503,7 @@ export function getMadurez(user: SessionUser) {
   const mia = m.resps.get(respKey(user));
   return {
     kind: ins.kind, vars, safeguards: { ...m.safeguards }, cuts: m.cuts.filter((c) => c.kind === ins.kind), progress: progressOf(ins, vars), puede: { calificar: cal },
-    mia: { answers: Object.fromEntries(Object.entries(mia?.answers ?? {}).filter(([id]) => ids.has(id))), done: mia && contadas(mia) >= ins.variables.length ? mia.done ?? mia.at : null },
+    mia: { answers: Object.fromEntries(Object.entries(mia?.answers ?? {}).filter(([id]) => ids.has(id))), at: mia?.at ?? null, done: mia && contadas(mia) >= ins.variables.length ? mia.done ?? mia.at : null },
     participacion: { personas: todas.length, completas: todas.filter((r) => contadas(r) >= ins.variables.length).length,
       ...(cal ? { lista: todas.map((r) => ({ name: r.name, role: r.role, respondidas: contadas(r), at: r.at })).sort((a, b) => b.respondidas - a.respondidas || a.name.localeCompare(b.name)) } : {}) },
   };
@@ -4547,6 +4547,22 @@ export function captureMadurez(user: SessionUser, varId: unknown, patch: unknown
   audit(user, "task", `madurez:${v.id}`, `madurez digital: ${keys.join(", ")}`);
   void madRecord(`var:${v.id}`, next);
   return { ok: true, capture: madVars()[v.id] ?? next };
+}
+
+/** Guarda el análisis con IA de Madurez digital: la lectura personal (de quien responde) o el informe
+ *  de resultados de una medición (lo genera el advisor). Va a la misma tabla que los demás informes. */
+export function saveMadInforme(user: SessionUser, kind: "madurez" | "madurez-persona", subject: string, inputHash: string, content: unknown, model = "openai"): { ok: true; saved: InformeGuardado } | MadFail {
+  if (kind === "madurez" && !gradesMadurez(user)) return { ok: false, status: 403, error: "El informe de resultados lo genera el advisor." };
+  if (kind === "madurez-persona" && subject !== respKey(user)) return { ok: false, status: 403, error: "Solo puedes generar la lectura de tu propio diagnóstico." };
+  const saved: InformeGuardado = { kind, subject, inputHash, informe: content as InformeIA, model, by: user.email, at: new Date().toISOString() };
+  informes().set(`${kind}|${subject}`, saved);
+  if (kind === "madurez") audit(user, "task", `madurez:informe:${subject}`, "madurez digital: informe de resultados generado con IA");
+  void persist("informe de madurez digital", async (db) => {
+    const companyId = cid();
+    const data = { inputHash, content: content as object, model, by: user.email, at: new Date(saved.at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind, subject } }, update: data, create: { companyId, kind, subject, ...data } });
+  });
+  return { ok: true, saved };
 }
 
 export function setMadSafeguard(user: SessionUser, id: unknown, status: unknown, note: unknown): { ok: true; safeguards: SafeguardState } | MadFail {
