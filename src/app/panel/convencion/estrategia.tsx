@@ -30,6 +30,7 @@ import { kpisOf } from "@/lib/convencion";
 import { vocabOf, yearOfFirstHorizon, startQuarters, estrategiaHref, ESTRATEGIA_SLUG, type Vocab, type EstrategiaTab } from "@/lib/vocabulario";
 import { isModule, moduleEnabled } from "@/lib/modulos";
 import { PERSPECTIVES, type CmiObjective, type KpiFull, type InitiativeFull } from "@/data/cmi";
+import { INI_CATEGORIAS, categoriaLabel, type IniCategoria } from "@/data/cmi";
 import { mejorSi, krsDeIniciativa, mueveKr, INI_KR_MAX } from "@/data/cmi";
 import { DIMS } from "@/data/mapa";
 import { LINES } from "@/data/demo";
@@ -1119,7 +1120,10 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
   // el líder de tribu (ámbito) edita solo las de su tribu; el directivo por QR, las que creó
   const mine = (i: InitiativeFull) => scope ? i.ownerId === scope : canEdit || (canCreate && (i.createdBy ?? "").toLowerCase() === me.toLowerCase());
   const tribes = cat.responsibles.filter((r) => cat.initiatives.some((i) => i.ownerId === r.id));
-  const unlinked = cat.initiatives.filter((i) => (!i.kpi || !todosKr.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe) && (!fLever || leverDeIni(i) === fLever));
+  const sinKrTodas = cat.initiatives.filter((i) => (!i.kpi || !todosKr.some((x) => x.k.code === i.kpi)) && (!fTribe || i.ownerId === fTribe) && (!fLever || leverDeIni(i) === fLever));
+  // sin resultado clave hay dos casos: las corrientes, que están pendientes de vínculo, y los proyectos especiales e iniciativas disruptivas, que quedan mapeados
+  const unlinked = sinKrTodas.filter((i) => !i.categoria), mapeadas = sinKrTodas.filter((i) => i.categoria);
+  const CatChip = ({ i }: { i: InitiativeFull }) => (i.categoria ? <span className="chip chip-cyan shrink-0 !py-0 text-[11px]" title={INI_CATEGORIAS.find((c) => c.id === i.categoria)?.desc}>{categoriaLabel(i.categoria)}</span> : null);
   const [link, setLink] = useState<string | null>(null);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
   const leverName = (o: CmiObjective) => levers.find((l) => l.id === o.lever)?.name ?? "";
@@ -1150,7 +1154,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
           </div>
         )}
         <StatCard label="KR con iniciativa" value={krs.filter((x) => initiativesOfKr(cat, x.k.code).length > 0).length} unit={`de ${krs.length}`} foot="al menos una iniciativa los mueve" accent="linear-gradient(90deg, var(--ok), #2f8f5b)" />
-        <StatCard label="Iniciativas sin KR" value={unlinked.length} unit={`de ${cat.initiatives.length}`} foot="no mueven un resultado clave del horizonte" accent="linear-gradient(90deg, var(--gold), #a87a14)" />
+        <StatCard label="Iniciativas sin KR" value={unlinked.length} unit={`de ${cat.initiatives.length}`} foot={mapeadas.length ? `más ${mapeadas.length} ${mapeadas.length === 1 ? "mapeada" : "mapeadas"} como proyecto especial o iniciativa disruptiva` : "no mueven un resultado clave del horizonte"} accent="linear-gradient(90deg, var(--gold), #a87a14)" />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         <Card className="rise overflow-hidden">
@@ -1164,7 +1168,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
                 <div key={k.code} className="px-5 py-3">
                   <div className="flex flex-wrap items-baseline gap-2"><span className="num text-[12px] font-extrabold text-cyan-deep">{k.code}</span><span className="text-[12.5px] font-bold text-ink">{k.name}</span><span className={`num text-[12px] font-bold ${initiativesOfKr(cat, k.code).length > KR_INI_MAX ? "text-bad" : "text-faint"}`}>{initiativesOfKr(cat, k.code).length} de {KR_INI_MAX}</span><span className="text-[12px] text-faint sm:ml-auto">{o.id} · {leverName(o)}</span></div>
                   {inis.length === 0 ? <p className="mt-1 text-[12px] italic text-warn">Ninguna iniciativa lo mueve.</p> : (
-                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[12px]"><Rocket size={10} className="shrink-0 text-faint" /><ChipVal i={i} /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[12px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
+                    <ul className="mt-1.5 space-y-1">{inis.map((i) => <li key={i.id} className="flex items-center gap-2 text-[12px]"><Rocket size={10} className="shrink-0 text-faint" /><ChipVal i={i} /><CatChip i={i} /><Link href={`${base}/panel/iniciativas/${i.id}`} className="min-w-0 flex-1 truncate text-ink-soft hover:text-cyan-deep">{i.name}</Link><span className="num hidden shrink-0 text-[12px] text-faint sm:inline">{i.id} · {owner(i.ownerId)}</span>{mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={11} /></button>}</li>)}</ul>
                   )}
                 </div>
               );
@@ -1178,6 +1182,7 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
             )}
           </div>
         </Card>
+        <div className="space-y-5">
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Iniciativas sin resultado clave (${unlinked.length})`} sub="vincúlalas a un KR o déjalas fuera del portafolio" />
           <div className="divide-y divide-line">
@@ -1188,9 +1193,23 @@ function IniciativasTab({ cat, levers, horizon, canEdit, canCreate, scope, myTri
                 {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
               </div>
             ))}
-            {unlinked.length === 0 && <div className="px-5 py-4 text-[12px] text-muted"><CheckCircle2 size={14} className="mr-1 inline text-ok" /> Todas las iniciativas mueven un resultado clave.</div>}
+            {unlinked.length === 0 && <div className="px-5 py-4 text-[12px] text-muted"><CheckCircle2 size={14} className="mr-1 inline text-ok" /> {mapeadas.length ? "Las demás iniciativas mueven un resultado clave." : "Todas las iniciativas mueven un resultado clave."}</div>}
           </div>
         </Card>
+        <Card className="rise rise-2 overflow-hidden">
+          <CardHeader title={`Proyectos especiales e iniciativas disruptivas (${mapeadas.length})`} sub="mapeados para considerar: pasan a Priorización cuando se les asocie un resultado clave" />
+          <div className="divide-y divide-line">
+            {mapeadas.map((i) => (
+              <div key={i.id} className="flex items-center gap-2 px-5 py-2.5 text-[12px]">
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><Link href={`${base}/panel/iniciativas/${i.id}`} className="truncate font-semibold text-ink hover:text-cyan-deep">{i.name}</Link><CatChip i={i} /><ChipVal i={i} /></div><div className="num text-[12px] text-faint">{i.id} · {owner(i.ownerId)} · {horizonLabel(cat.company, i.horizon)}</div></div>
+                {mine(i) && <button onClick={() => setLink(i.id)} className="btn-ghost shrink-0 btn-sm text-[12px]" title="Asociarle un resultado clave: con él pasa a Priorización"><Link2 size={11} /> Asociar KR</button>}
+                {mine(i) && <button onClick={() => setEdit(i)} className="shrink-0 rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-ink" title="Editar o eliminar la iniciativa"><Pencil size={12} /></button>}
+              </div>
+            ))}
+            {mapeadas.length === 0 && <div className="px-5 py-4 text-[12px] leading-relaxed text-muted">Ninguno todavía. Al crear una iniciativa puedes marcarla como proyecto especial o iniciativa disruptiva: queda aquí, sin exigirle objetivo ni resultado clave.</div>}
+          </div>
+        </Card>
+        </div>
       </div>
       {valOpen && <ValidacionIniModal i={valOpen} item={valDe(valOpen.id)} onClose={() => setValOpen(null)} onEdit={mine(valOpen) ? () => { setValOpen(null); setEdit(valOpen); } : undefined}
         onAplicar={mine(valOpen) ? async (patch) => { const ok = await mutate("initiative", "upsert", { ...valOpen, ...patch }); if (ok) { setValOpen(null); void revalidar(valOpen.id); } } : undefined} saving={saving} />}
@@ -1225,7 +1244,7 @@ function OkrPicker({ cat, horizon, value, onChange, scope, iniId, opcional = fal
   const krsDe = (o: CmiObjective) => keyResultsOf(cat, o).filter(krCompleto);
   const conKr = objectives.filter((o) => krsDe(o).length > 0);
   const hayIncompletos = objectives.some((o) => keyResultsOf(cat, o).length > 0);
-  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>{Vb(cat).modo === "acompanamiento" ? `Aún no hay objetivos en ${horizonLabel(cat.company, horizon)}` : scope ? "Tu tribu aún no tiene su OKR registrado" : `Aún no hay OKR de las tribus en ${horizonLabel(cat.company, horizon)}`}: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «{Vb(cat).tabs.okr}».</p>;
+  if (objectives.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>{Vb(cat).modo === "acompanamiento" ? `Aún no hay objetivos en ${horizonLabel(cat.company, horizon)}` : scope ? "Tu tribu aún no tiene su OKR registrado" : `Aún no hay OKR de las tribus en ${horizonLabel(cat.company, horizon)}`}{opcional ? `. Esta iniciativa puede guardarse sin resultado clave; cuando existan en «${Vb(cat).tabs.okr}», se le asocia uno y pasa a Priorización.` : `: las iniciativas se vinculan a un resultado clave, así que primero créalos en la pestaña «${Vb(cat).tabs.okr}».`}</p>;
   if (conKr.length === 0) return <p className="rounded-lg px-3 py-2 text-[12px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>{Vb(cat).modo === "acompanamiento" ? "Los objetivos" : scope ? "El OKR de tu tribu" : "Los OKR de las tribus"} aún no {scope && Vb(cat).modo !== "acompanamiento" ? "tiene" : "tienen"} resultados clave {hayIncompletos ? "completos" : ""}: las iniciativas se vinculan a un resultado clave completo (nombre con cifra, línea base, meta, dueño, plazo y definición con fórmula). {hayIncompletos ? "Complétalos" : "Regístralos"} primero en la pestaña «{Vb(cat).tabs.okr}»{Vb(cat).modo === "acompanamiento" ? "" : " (etapa 3)"} y vuelve a vincular.</p>;
   return (
     <div className="space-y-2">
@@ -1270,16 +1289,18 @@ function okrLinkOk(cat: Cat, horizon: string, v: VinculoKr): boolean {
 function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false, scope = null, saving, onCancel, onSubmit, onDelete }: { cat: Cat; horizon: string; initial?: InitiativeFull | null; defaultOwner?: string; lockOwner?: boolean; scope?: string | null; saving: boolean; onCancel: () => void; onSubmit: (d: Record<string, unknown>) => Promise<boolean>; onDelete?: () => void }) {
   const tribes = isAcompanamiento(cat.company) ? cat.responsibles : cat.responsibles.filter((r) => /tribu/i.test(r.dependencia ?? "") || r.id === defaultOwner || r.id === initial?.ownerId);
   const [f, setF] = useState({ name: initial?.name ?? "", objetivo: initial?.objetivo ?? "", ownerId: initial?.ownerId ?? defaultOwner ?? tribes[0]?.id ?? "",
-    capability: initial?.capability ?? "", status: (initial?.status ?? "PLANEADA") as InitiativeFull["status"], start: initial?.start ?? "", end: initial?.end ?? "", metaResultado: initial?.metaResultado ?? "", budgetPlanned: initial?.budgetPlanned ? formatoMiles(String(initial.budgetPlanned).replace(".", ",")) : "", budgetCurrency: (initial?.budgetCurrency ?? (esMoneda(cat.company.currency) ? cat.company.currency : "COP")) as Moneda, observaciones: initial?.observaciones ?? "" });
+    capability: initial?.capability ?? "", status: (initial?.status ?? "PLANEADA") as InitiativeFull["status"], start: initial?.start ?? "", end: initial?.end ?? "", metaResultado: initial?.metaResultado ?? "", categoria: (initial?.categoria ?? "") as IniCategoria | "", budgetPlanned: initial?.budgetPlanned ? formatoMiles(String(initial.budgetPlanned).replace(".", ",")) : "", budgetCurrency: (initial?.budgetCurrency ?? (esMoneda(cat.company.currency) ? cat.company.currency : "COP")) as Moneda, observaciones: initial?.observaciones ?? "" });
   const [link, setLink] = useState<VinculoKr>({ cmi: initial?.cmi ?? "", kpi: initial?.kpi ?? "", krExtra: initial?.krExtra ?? [] });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const acompIni = isAcompanamiento(cat.company);
+  // proyecto especial o iniciativa disruptiva: se mapea aunque aún no tenga objetivo ni resultado clave, en cualquier modo
+  const mapeable = !!f.categoria, catSel = INI_CATEGORIAS.find((c) => c.id === f.categoria);
   // toda iniciativa nueva nace asociada a un resultado clave; el asistente propone tres a partir de ese KR
   const Q = /^\d{4}-T[1-4]$/;
   const plazoOk = (!f.start || Q.test(f.start.trim().toUpperCase())) && (!f.end || Q.test(f.end.trim().toUpperCase())) && (!f.start || !f.end || f.start.trim().toUpperCase() <= f.end.trim().toUpperCase());
   // en el acompañamiento el comité puede dejar la iniciativa momentáneamente sin resultado clave (queda en la columna de pendientes
   // y no pasa a Priorización); en los demás modos el KR es obligatorio al crear y una existente sin KR se sigue editando
-  const ok = f.name.trim().length >= 5 && !!f.ownerId && (initial || acompIni ? (!link.kpi || okrLinkOk(cat, horizon, link)) : (!!link.kpi && okrLinkOk(cat, horizon, link))) && plazoOk;
+  const ok = f.name.trim().length >= 5 && !!f.ownerId && (initial || acompIni || mapeable ? (!link.kpi || okrLinkOk(cat, horizon, link)) : (!!link.kpi && okrLinkOk(cat, horizon, link))) && plazoOk;
   const [sugIni, setSugIni] = useState<{ capability?: string; start?: string; end?: string }>({});
   const [prop, setProp] = useState<{ loading: boolean; error: string | null; items: PropuestaIniciativa[] }>({ loading: false, error: null, items: [] });
   const proponer = async () => {
@@ -1293,11 +1314,22 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
     <Modal title={initial ? `Iniciativa · ${initial.id}` : "Nueva iniciativa"} sub={isAcompanamiento(cat.company) ? "lo que se hace para mover un resultado clave; con él queda habilitada para calificar" : "lo que se hace para mover un OKR de la tribu; con su resultado clave queda habilitada para calificar"} onClose={onCancel}
       footer={<>{onDelete && <button type="button" onClick={onDelete} className="btn-ghost mr-auto !py-2 text-[12px] text-bad">Eliminar</button>}<button type="button" onClick={onCancel} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
         <button type="button" disabled={saving || !ok} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40"
-          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), ownerId: f.ownerId, kpi: link.kpi, krExtra: link.kpi ? (link.krExtra ?? []) : [], cmi: link.cmi, horizon, capability: f.capability || sugIni.capability || initial?.capability || "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: f.status, start: (f.start || sugIni.start || "").trim().toUpperCase(), end: (f.end || sugIni.end || "").trim().toUpperCase(), metaResultado: f.metaResultado.trim(), budgetPlanned: leerMonto(f.budgetPlanned), budgetCurrency: f.budgetCurrency, observaciones: f.observaciones.trim(), ...(initial ? { impact: initial.impact, feasibility: initial.feasibility, urgency: initial.urgency, dependency: initial.dependency, progress: initial.progress, budgetCommitted: initial.budgetCommitted, budgetExecuted: initial.budgetExecuted, actions: initial.actions, log: initial.log, nextMilestone: initial.nextMilestone, factors: initial.factors } : {}) })}>
+          onClick={() => ok && onSubmit({ ...(initial ? { id: initial.id } : {}), name: f.name.trim(), objetivo: f.objetivo.trim(), categoria: f.categoria || null, ownerId: f.ownerId, kpi: link.kpi, krExtra: link.kpi ? (link.krExtra ?? []) : [], cmi: link.cmi, horizon, capability: f.capability || sugIni.capability || initial?.capability || "EJE-1", subsistema: initial?.subsistema ?? "Operación", status: f.status, start: (f.start || sugIni.start || "").trim().toUpperCase(), end: (f.end || sugIni.end || "").trim().toUpperCase(), metaResultado: f.metaResultado.trim(), budgetPlanned: leerMonto(f.budgetPlanned), budgetCurrency: f.budgetCurrency, observaciones: f.observaciones.trim(), ...(initial ? { impact: initial.impact, feasibility: initial.feasibility, urgency: initial.urgency, dependency: initial.dependency, progress: initial.progress, budgetCommitted: initial.budgetCommitted, budgetExecuted: initial.budgetExecuted, actions: initial.actions, log: initial.log, nextMilestone: initial.nextMilestone, factors: initial.factors } : {}) })}>
           {saving ? <Loader2 size={13} className="animate-spin" /> : initial ? <Save size={13} /> : <Plus size={13} />} {initial ? "Guardar" : "Crear"}
         </button></>}>
       <div className="space-y-2.5">
         <Field label="Iniciativa"><AutoTextarea value={f.name} onChange={set("name")} placeholder="Nombre corto y reconocible" className={INPUT} /></Field>
+        <Field label="Categoría">
+          <div className="grid gap-1.5 sm:grid-cols-3" role="radiogroup" aria-label="Categoría de la iniciativa">
+            {([{ id: "", label: "Iniciativa", corto: "Mueve un resultado clave.", desc: "Iniciativa corriente: existe para mover un resultado clave del plan." }, ...INI_CATEGORIAS.map((c) => ({ ...c, corto: c.id === "especial" ? "Encargo puntual, fuera del plan." : "Apuesta exploratoria." }))] as { id: IniCategoria | ""; label: string; corto: string; desc: string }[]).map((c) => (
+              <button key={c.id || "corriente"} type="button" role="radio" aria-checked={f.categoria === c.id} title={c.desc} onClick={() => setF({ ...f, categoria: c.id })}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${f.categoria === c.id ? "bg-navy text-white" : "bg-surface-2/70 text-ink-soft hover:bg-surface-2"}`}>
+                <span className="block text-[12.5px] font-bold">{c.label}</span>
+                <span className={`block text-[11.5px] leading-snug ${f.categoria === c.id ? "text-white/75" : "text-faint"}`}>{c.corto}</span>
+              </button>
+            ))}
+          </div>
+        </Field>
         <Field label="Qué logra y cómo (opcional)"><textarea value={f.objetivo} onChange={set("objetivo")} rows={3} placeholder="Beneficio verificable, alcance y primera evidencia a 90 días" className={`${INPUT} resize-y`} /></Field>
         <Field label="Meta o resultado esperado"><textarea value={f.metaResultado} onChange={set("metaResultado")} rows={2} placeholder="Qué queda logrado al cierre (p. ej. dos casos piloto documentados y comparados con los resultados experimentales)" className={`${INPUT} resize-y`} /></Field>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -1315,8 +1347,8 @@ function InitiativeForm({ cat, horizon, initial, defaultOwner, lockOwner = false
         </Field>
         <Field label="Observaciones"><textarea value={f.observaciones} onChange={set("observaciones")} rows={3} placeholder="Restricciones, supuestos, dependencias de otras áreas, pendientes de aprobación" className={`${INPUT} resize-y`} /></Field>
         <Field label={isAcompanamiento(cat.company) ? "Sponsor" : "Tribu dueña"}><select value={f.ownerId} onChange={set("ownerId")} disabled={lockOwner} className={INPUT} title={lockOwner ? "Como líder de tribu registras iniciativas de tu tribu" : undefined}><option value="">—</option>{(tribes.length ? tribes : cat.responsibles).map((r) => <option key={r.id} value={r.id}>{r.dependencia || r.cargo}</option>)}</select></Field>
-        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} opcional={acompIni} />
-        <p className="text-[12px] text-faint">{acompIni ? "Toda iniciativa existe para mover al menos un resultado clave y puede mover hasta tres. Puede quedar sin él mientras el comité lo define; para pasar a Priorización necesita al menos uno." : "Queda asociada al resultado clave elegido"} Queda asociada a {horizonLabel(cat.company, horizon)}; así se califica en Priorización como las demás.</p>
+        <OkrPicker cat={cat} horizon={horizon} value={link} onChange={setLink} scope={scope} iniId={initial?.id} opcional={acompIni || mapeable} />
+        <p className="text-[12px] text-faint">{mapeable ? `${catSel!.label}: puede quedar sin objetivo ni resultado clave. Queda mapeada en Iniciativas para tenerla a la vista y no pasa a Priorización mientras no se le asocie al menos un resultado clave.` : acompIni ? "Toda iniciativa existe para mover al menos un resultado clave y puede mover hasta tres. Puede quedar sin él mientras el comité lo define; para pasar a Priorización necesita al menos uno." : "Queda asociada al resultado clave elegido"} Queda asociada a {horizonLabel(cat.company, horizon)}{mapeable ? "." : "; así se califica en Priorización como las demás."}</p>
         {acompIni && !initial && (
           <div className="rounded-xl border border-dashed border-line px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -1415,7 +1447,7 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
   const calDe = (id: string) => prio?.calificables?.[id];
   const calOk = (id: string) => (prio ? (calDe(id)?.ok ?? !!cat.initiatives.find((i) => i.id === id)?.kpi) : false);
   const calMotivo = (id: string) => calDe(id)?.motivo ?? "sin resultado clave vinculado";
-  const calEtiqueta = (id: string) => { const e = calDe(id)?.etapa; return e === "formulacion" ? "incompleta" : e === "validacion" ? "sin validar" : "sin KR"; };
+  const calEtiqueta = (id: string) => { const e = calDe(id)?.etapa; return e === "formulacion" ? "incompleta" : e === "validacion" ? "sin validar" : `${categoriaLabel(cat.initiatives.find((i) => i.id === id)?.categoria)?.toLowerCase() ?? ""} sin KR`.trim(); };
   // vinculada y calificable, pero con pendientes de formulación o de validación: se avisa sin bloquear
   const calAviso = (id: string) => (calDe(id)?.ok ? calDe(id)?.aviso : undefined);
   const owner = (id: string) => cat.responsibles.find((r) => r.id === id)?.dependencia ?? "—";
@@ -1430,7 +1462,9 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
     ? [...leversOrdenadas.map((l) => ({ key: l.id, label: leverLabel(l) })), { key: "", label: `Sin ${V.leverLow}` }]
     : [...krs.map((k) => ({ key: k.code, label: `${k.code} · ${k.name}` })), { key: "", label: "Sin resultado clave" }];
   // acompañamiento: solo pasan a priorización las iniciativas vinculadas a un resultado clave
-  const fuera = cat.initiatives.filter((i) => !pasaAPriorizacion(cat, i));
+  const fueraTodas = cat.initiatives.filter((i) => !pasaAPriorizacion(cat, i));
+  // las corrientes sin KR están pendientes de vínculo; los proyectos especiales e iniciativas disruptivas quedan mapeados a propósito
+  const fuera = fueraTodas.filter((i) => !i.categoria), mapeadasFuera = fueraTodas.filter((i) => i.categoria);
   const list = cat.initiatives.filter((i) => pasaAPriorizacion(cat, i) && (!sel || groupKey(i) === sel));
   const cov = evaluationCoverage(list, (prio?.evaluations ?? []).filter((e) => list.some((i) => i.id === e.iniId)), expected);
   const rank = (items: Ini[]) => items.map((i) => ({ i, r: rows.find((r) => r.id === i.id) })).sort((a, b) => ((b.r?.c.n ? b.r.c.score : -1) - (a.r?.c.n ? a.r.c.score : -1)));
@@ -1465,6 +1499,11 @@ function PriorizacionTab({ cat, levers, prio, base, onRefresh, onCatalogRefresh,
         <button onClick={onRefresh} className="btn-ghost ml-auto btn-sm text-[12px]"><RefreshCw size={12} /> Actualizar</button>
         <span className="text-[12px] text-faint">se refresca cada {PRIO_VIVO_MS / 1000} s</span>
       </div>
+      {mapeadasFuera.length > 0 && (
+        <div className="rise mb-4 rounded-xl bg-surface-2/70 px-4 py-3 text-[12.5px] text-ink-soft">
+          <b className="text-ink">{mapeadasFuera.length} {mapeadasFuera.length === 1 ? "proyecto especial o iniciativa disruptiva queda mapeado" : "proyectos especiales o iniciativas disruptivas quedan mapeados"}</b> y no {mapeadasFuera.length === 1 ? "entra" : "entran"} a Priorización mientras no {mapeadasFuera.length === 1 ? "tenga" : "tengan"} un resultado clave asociado: {mapeadasFuera.slice(0, 4).map((i) => i.name).join(" · ")}{mapeadasFuera.length > 4 ? ` y ${mapeadasFuera.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "iniciativas", base)} className="font-bold text-cyan-deep hover:underline">Ver en Iniciativas</Link>
+        </div>
+      )}
       {fuera.length > 0 && (
         <div className="rise mb-4 rounded-xl px-4 py-3 text-[12.5px] text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 12%, var(--surface))" }}>
           <b className="text-ink">{fuera.length} iniciativa{fuera.length === 1 ? "" : "s"} no {fuera.length === 1 ? "pasa" : "pasan"} a priorización</b> por no estar {fuera.length === 1 ? "vinculada" : "vinculadas"} a un resultado clave: {fuera.slice(0, 4).map((i) => i.name).join(" · ")}{fuera.length > 4 ? ` y ${fuera.length - 4} más` : ""}. <Link href={estrategiaHref(cat.company, "iniciativas", base)} className="font-bold text-cyan-deep hover:underline">{fuera.length === 1 ? "Vincularla" : "Vincularlas"} en Iniciativas</Link>

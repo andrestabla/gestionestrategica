@@ -98,7 +98,9 @@ export const objetivosSinPrioridad = (cat: Catalog, horizon: string): CmiObjecti
   cat.company.mode === "acompanamiento" ? cat.objectives.filter((o) => o.horizon === horizon && !o.okr && !o.descartado && !objetivoConPrioridad(cat, o)) : [];
 /** ¿La iniciativa está vinculada a un resultado clave que existe? */
 export const iniciativaConKr = (cat: Catalog, i: Pick<InitiativeFull, "kpi">): boolean => !!i.kpi && cat.kpis.some((k) => k.code === i.kpi);
-export const pasaAPriorizacion = (cat: Catalog, i: Pick<InitiativeFull, "kpi">): boolean => cat.company.mode !== "acompanamiento" || iniciativaConKr(cat, i);
+/** ¿Pasa a Priorización? En el acompañamiento, solo con resultado clave. Un proyecto especial o una iniciativa disruptiva
+    no pasa en ningún modo mientras no tenga resultado clave asociado: queda mapeado en Iniciativas. */
+export const pasaAPriorizacion = (cat: Catalog, i: Pick<InitiativeFull, "kpi" | "categoria">): boolean => (cat.company.mode !== "acompanamiento" && !i.categoria) || iniciativaConKr(cat, i);
 /** Regla de resultados clave por objetivo: de 2 a 4; 5 se admite como máximo. */
 export const KR_MIN = 2, KR_IDEAL_MAX = 4, KR_MAX = 5;
 

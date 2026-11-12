@@ -257,7 +257,20 @@ export const evidenceOfPractice = (code: string) => EVIDENCE_CATALOG.find((e) =>
 
 export type ActionStatus = "HECHA" | "EN_CURSO" | "PENDIENTE";
 
+/** Categoría de una iniciativa que se mapea para tenerla a la vista aunque todavía no mueva un objetivo ni un resultado
+    clave: proyecto especial o iniciativa disruptiva. Sin categoría es una iniciativa corriente, que existe para mover
+    un resultado clave. Ninguna pasa a Priorización sin resultado clave asociado. */
+export type IniCategoria = "especial" | "disruptiva";
+export const INI_CATEGORIAS: { id: IniCategoria; label: string; plural: string; desc: string }[] = [
+  { id: "especial", label: "Proyecto especial", plural: "Proyectos especiales", desc: "Encargo puntual de la dirección que no nace de un objetivo del plan: se mapea para tenerlo a la vista." },
+  { id: "disruptiva", label: "Iniciativa disruptiva", plural: "Iniciativas disruptivas", desc: "Apuesta exploratoria que puede cambiar el negocio y aún no tiene objetivo ni resultado clave definidos." },
+];
+export const iniCategoria = (x: unknown): IniCategoria | undefined => (x === "especial" || x === "disruptiva" ? x : undefined);
+export const categoriaLabel = (x: unknown): string | undefined => INI_CATEGORIAS.find((c) => c.id === x)?.label;
+
 export type InitiativeFull = {
+  /** Proyecto especial o iniciativa disruptiva; sin valor, iniciativa corriente. */
+  categoria?: IniCategoria;
   /** Otros resultados clave que mueve además del principal (`kpi`): una iniciativa mueve de 1 a 3. */
   krExtra?: string[];
   id: string;

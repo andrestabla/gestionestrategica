@@ -19,6 +19,7 @@ import type { Financials } from "@/data/catalogo";
 import {
   PERSPECTIVES, type Responsible, type CmiObjective, type KpiFull, type InitiativeFull, type ActionStatus,
 } from "@/data/cmi";
+import { INI_CATEGORIAS, categoriaLabel, type IniCategoria } from "@/data/cmi";
 import type { Person } from "@/data/proyectos";
 import { LINES, type Territory } from "@/data/demo";
 import { DIMS, frameworkOfPractice } from "@/data/mapa";
@@ -610,7 +611,7 @@ function IniciativasSection({ v, saving, mutate }: SectionProps) {
             {list.map((i) => (
               <tr key={i.id} className={`border-b border-line last:border-0 ${editing?.id === i.id ? "bg-cyan-wash/40" : ""}`}>
                 <td className="num px-4 py-2.5 text-[12px] text-faint">{i.id}</td>
-                <td className="px-4 py-2.5 font-semibold text-ink">{i.name}<div className="text-[12px] font-normal text-faint">{i.subsistema} · {horizonLabel(v.catalog.company, i.horizon)} · {i.start} → {i.end}</div></td>
+                <td className="px-4 py-2.5 font-semibold text-ink">{i.name}{i.categoria && <span className="chip chip-cyan ml-2 !py-0 text-[11px] font-semibold">{categoriaLabel(i.categoria)}</span>}<div className="text-[12px] font-normal text-faint">{i.subsistema} · {horizonLabel(v.catalog.company, i.horizon)} · {i.start} → {i.end}</div></td>
                 <td className="num px-4 py-2.5 text-[12px] text-muted">{i.cmi}{i.kpi ? ` · ${i.kpi}` : ""}</td>
                 <td className="px-4 py-2.5 text-muted"><span className="num text-[12px] text-faint">{i.capability}</span> {dimName(i.capability)}</td>
                 <td className="px-4 py-2.5 text-muted">{owner(i.ownerId)}</td>
@@ -641,7 +642,7 @@ type IniDraft = {
   status: InitiativeFull["status"]; start: string; end: string; ownerId: string; metaResultado: string;
   budgetPlanned: string; budgetCommitted: string; budgetExecuted: string; progress: string;
   capability: string; kpi: string; actions: ActionDraft[]; factors: FactorDraft[];
-  milestoneDate: string; milestoneText: string;
+  milestoneDate: string; milestoneText: string; categoria: IniCategoria | "";
 };
 type IniPayload = Omit<InitiativeFull, "id"> & { evaluation?: { scores: Record<CriterionKey, Level>; type: TypeMarks } };
 
@@ -657,7 +658,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
     horizon: horizonsOf(v.catalog.company)[0].id, scores: {}, type: {}, status: "PLANEADA",
     start: currentQuarter(), end: currentQuarter(1), ownerId: resps[0]?.id ?? "", metaResultado: "",
     budgetPlanned: "0", budgetCommitted: "0", budgetExecuted: "0", progress: "0",
-    capability: DIMS[0]?.code ?? "", kpi: kpis[0]?.code ?? "", actions: [], factors: [], milestoneDate: "", milestoneText: "",
+    capability: DIMS[0]?.code ?? "", kpi: kpis[0]?.code ?? "", actions: [], factors: [], milestoneDate: "", milestoneText: "", categoria: "",
   });
   const [f, setF] = useState<IniDraft>(initial ? {
     name: initial.name, objetivo: initial.objetivo, line: String(initial.line), subsistema: initial.subsistema, cmi: initial.cmi,
@@ -667,7 +668,7 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
     budgetExecuted: String(initial.budgetExecuted), progress: String(initial.progress), capability: initial.capability, kpi: initial.kpi,
     actions: initial.actions.map((a) => ({ ...a })),
     factors: initial.factors.map((x) => ({ name: x.name, state: x.state, note: x.note ?? "", history: [...x.history] })),
-    milestoneDate: initial.nextMilestone?.date ?? "", milestoneText: initial.nextMilestone?.text ?? "",
+    milestoneDate: initial.nextMilestone?.date ?? "", milestoneText: initial.nextMilestone?.text ?? "", categoria: initial.categoria ?? "",
   } : empty());
   const set = (k: keyof IniDraft) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const pickCapability = (code: string) => {
@@ -683,9 +684,10 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
   const evalComplete = CRITERIA.every((c) => f.scores[c.key]) && typeRule.criteria.every((t) => f.type[t.key]);
   const evalStarted = CRITERIA.some((c) => f.scores[c.key]) || typeRule.criteria.some((t) => f.type[t.key]);
   const preview = evalComplete ? matrixScore(f.scores as Record<CriterionKey, Level>) : null;
-  const canSave = f.name.trim().length > 0 && f.capability.length > 0 && f.cmi.length > 0 && datesOk && (!evalStarted || evalComplete);
+  const canSave = f.name.trim().length > 0 && f.capability.length > 0 && (f.cmi.length > 0 || !!f.categoria) && datesOk && (!evalStarted || evalComplete);
 
   const payload = (): IniPayload => ({
+    categoria: (f.categoria || null) as IniCategoria | undefined,   // nulo borra la categoría: vuelve a ser una iniciativa corriente
     line: num(f.line), subsistema: f.subsistema, cmi: f.cmi, name: f.name.trim(), objetivo: f.objetivo.trim(), horizon: f.horizon,
     // los cuatro campos heredados del prototipo (impacto, factibilidad, urgencia, dependencia) ya no se editan:
     // la calificación es la matriz de priorización (D·E·M·L) y se registra como evaluación del usuario
@@ -710,9 +712,17 @@ function IniciativaForm({ v, saving, initial, mine, canEval, onSubmit, onCancel 
         <div className="space-y-2.5">
           <Field label="Iniciativa"><input value={f.name} onChange={set("name")} placeholder="Plan trimestral con responsables únicos" className={INPUT} /></Field>
           <Field label="Objetivo de la iniciativa"><textarea value={f.objetivo} onChange={set("objetivo")} rows={2} placeholder="Qué cambia cuando esté hecha" className={`${INPUT} resize-y`} /></Field>
+          <Field label="Categoría">
+            <select value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value as IniCategoria | "", ...(e.target.value && !initial ? { cmi: "", kpi: "" } : {}) })} className={INPUT}>
+              <option value="">Iniciativa · mueve un resultado clave</option>
+              {INI_CATEGORIAS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+            {f.categoria && <span className="mt-1 block text-[12px] leading-snug text-faint">Se mapea aunque no tenga objetivo ni KPI. No pasa a Priorización mientras no se le asocie un resultado clave.</span>}
+          </Field>
           <Field label="Objetivo del cuadro de mando">
             <select value={f.cmi} onChange={set("cmi")} className={INPUT}>
-              {objs.length === 0 && <option value="">Sin objetivos aún</option>}
+              {f.categoria && <option value="">— sin objetivo todavía —</option>}
+              {objs.length === 0 && !f.categoria && <option value="">Sin objetivos aún</option>}
               {objs.map((o) => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}
             </select>
           </Field>

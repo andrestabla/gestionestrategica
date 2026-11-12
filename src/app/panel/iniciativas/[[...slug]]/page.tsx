@@ -17,6 +17,7 @@ import { AccessChip, useCan } from "@/components/user-context";
 import { BudgetBar } from "@/components/charts";
 import { fmtCOP, LINES } from "@/data/demo";
 import type { ActionStatus, InitiativeFull } from "@/data/cmi";
+import { INI_CATEGORIAS, categoriaLabel } from "@/data/cmi";
 import { useCatalog } from "@/components/catalog-context";
 import { horizonsOf, horizonTitle } from "@/data/catalogo";
 import { initiativesOf, responsible, type InitiativeView } from "@/lib/vista";
@@ -120,6 +121,7 @@ export default function IniciativasPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className="text-[14.5px] font-extrabold tracking-tight text-ink">{i.name}</span>
+                    {i.categoria && <span className="chip chip-cyan" title={INI_CATEGORIAS.find((c) => c.id === i.categoria)?.desc}>{categoriaLabel(i.categoria)}</span>}
                     <StatusChip status={i.status} />
                     <span className="chip">{i.subsistema}</span>
                     <span className={RISK_CLS[risk.level]} title={risk.drivers.map((d) => d.text).join(" · ")}>
@@ -286,6 +288,7 @@ function IniciativaFicha({ id, onClose, onNav }: {
               {i.name}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
+              {i.categoria && <span className="chip chip-cyan" title={`${INI_CATEGORIAS.find((c) => c.id === i.categoria)?.desc}${i.kpi ? "" : " No pasa a Priorización mientras no se le asocie un resultado clave."}`}>{categoriaLabel(i.categoria)}{i.kpi ? "" : " · mapeada, sin resultado clave"}</span>}
               <StatusChip status={i.status} />
               <span className={RISK_CLS[risk.level]} title={risk.drivers.map((d) => d.text).join(" · ")}>
                 Riesgo {risk.level.toLowerCase()} · {risk.score}/100
@@ -332,8 +335,8 @@ function IniciativaFicha({ id, onClose, onNav }: {
         <div className="flex items-start gap-2.5">
           <Target size={14} className="mt-0.5 shrink-0 text-cyan-deep" />
           <div>
-            <div className="label !text-[11px]">Objetivo CMI · {i.cmi}</div>
-            <div className="text-[12px] font-semibold leading-snug text-ink">{cmiObj?.name}</div>
+            <div className="label !text-[11px]">Objetivo CMI{i.cmi ? ` · ${i.cmi}` : ""}</div>
+            <div className={`text-[12px] leading-snug ${cmiObj ? "font-semibold text-ink" : "text-muted"}`}>{cmiObj?.name ?? (i.categoria ? "Sin objetivo todavía: está mapeada para considerar." : "Sin objetivo asociado.")}</div>
           </div>
         </div>
         <div className="flex items-start gap-2.5">

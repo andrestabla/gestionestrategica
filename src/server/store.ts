@@ -24,7 +24,7 @@ import { avg } from "@/lib/od";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import { krFaltantes, KR_INI_MAX, objetivoConPrioridad, iniciativaConKr } from "@/lib/convencion";
 import { firmaObjetivo } from "@/server/firma";
-import { INI_KR_MAX, mueveKr } from "@/data/cmi";
+import { INI_KR_MAX, mueveKr, iniCategoria, categoriaLabel } from "@/data/cmi";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -3069,6 +3069,8 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   if (!dim) return fail(422, "La dimensión que instala (DIR-1 … MUL-5) es obligatoria.");
   let cmi = str(input.cmi, 10);
   const previaIni = c.initiatives.find((i) => i.id === str(input.id, 10));
+  // categoría: proyecto especial o iniciativa disruptiva. Si la petición no la trae (formularios que no la editan), se conserva
+  const categoria = input.categoria === undefined ? previaIni?.categoria : iniCategoria(input.categoria);
   if (!c.objectives.some((o) => o.id === cmi)) {
     // sin resultado clave la iniciativa puede quedarse momentáneamente sin objetivo: conserva el que tenía o queda sin él
     // (acompañamiento); con resultado clave, el objetivo es el del KR
@@ -3077,8 +3079,8 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
     const anterior = previaIni && c.objectives.some((o) => o.id === previaIni.cmi) ? previaIni.cmi : undefined;
     if (deKr) cmi = deKr;
     else if (!str(input.kpi, 20) && anterior) cmi = anterior;
-    else if (!str(input.kpi, 20) && isAcompanamiento(c.company)) cmi = "";
-    else return fail(422, "El objetivo del cuadro de mando es obligatorio y debe existir.");
+    else if (!str(input.kpi, 20) && (isAcompanamiento(c.company) || categoria)) cmi = "";   // un proyecto especial o una iniciativa disruptiva se mapea aunque aún no tenga objetivo ni resultado clave
+    else return fail(422, "El objetivo del cuadro de mando es obligatorio y debe existir. Si es un proyecto especial o una iniciativa disruptiva, elige esa categoría: se mapea sin objetivo ni resultado clave.");
   }
   const ownerId = str(input.ownerId, 10);
   if (ownerId && !c.responsibles.some((r) => r.id === ownerId)) return fail(422, "El responsable no existe en el catálogo.");
@@ -3122,7 +3124,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
     impact: int(input.impact, 1, 5, 3), feasibility: int(input.feasibility, 1, 5, 3), urgency: int(input.urgency, 1, 5, 3), dependency: int(input.dependency, 1, 5, 3),
     status: STATUS.find((x) => x === input.status) ?? "PLANEADA", start, end, ownerId, metaResultado: str(input.metaResultado, 400),
     budgetPlanned: num(input.budgetPlanned), budgetCommitted: num(input.budgetCommitted), budgetExecuted: num(input.budgetExecuted), ...(moneda ? { budgetCurrency: moneda } : {}),
-    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi, ...(krExtra.length ? { krExtra } : {}), createdBy: prev?.createdBy ?? user.email, observaciones: str(input.observaciones, 1500) || undefined,
+    progress: int(input.progress, 0, 100, 0), capability: dim.code, framework: frameworkOfPractice(dim.prac[0].code)?.id ?? "", kpi, ...(krExtra.length ? { krExtra } : {}), ...(categoria ? { categoria } : {}), createdBy: prev?.createdBy ?? user.email, observaciones: str(input.observaciones, 1500) || undefined,
     actions: (Array.isArray(input.actions) ? input.actions : []).map((a) => ({ name: str(a?.name, 200), meta: str(a?.meta, 200), status: ACT.find((x) => x === a?.status) ?? "PENDIENTE", quarter: str(a?.quarter, 8) })).filter((a) => a.name),
     log: Array.isArray(input.log) ? input.log.filter((l) => l && typeof l.text === "string") : (prev?.log ?? []),
     nextMilestone: { date: str(input.nextMilestone?.date, 12), text: str(input.nextMilestone?.text, 200) },
@@ -3131,7 +3133,7 @@ export function upsertInitiative(user: SessionUser, input: Partial<InitiativeFul
   const idx = c.initiatives.findIndex((x) => x.id === id);
   if (idx >= 0) c.initiatives[idx] = i; else c.initiatives.push(i);
   iniOverrides().delete(id);
-  audit(user, "task", `cat:${id}`, `iniciativa ${idx >= 0 ? "actualizada" : "creada"} (${name})`);
+  audit(user, "task", `cat:${id}`, `iniciativa ${idx >= 0 ? "actualizada" : "creada"} (${name})${categoria ? ` · ${categoriaLabel(categoria)!.toLowerCase()}` : ""}`);
   void persist("catálogo", async (db) => {
     if (idx >= 0 || str(input.id, 10)) await writeInitiative(db, cid(), i);
     else await createRekeying(db, "iniciativa", () => i.id, (fresh) => { i.id = fresh; },
@@ -4431,9 +4433,12 @@ export function diagnosticoResumenCap(): string {
 
 export type Calificabilidad = { ok: boolean; motivo?: string; etapa?: "kr" | "formulacion" | "validacion"; aviso?: string };
 
+/** Por qué no se califica una iniciativa sin resultado clave: las de categoría quedan mapeadas, a la espera de uno. */
+const SIN_KR = (i: InitiativeFull) => (i.categoria ? `${categoriaLabel(i.categoria)!.toLowerCase()} sin resultado clave: queda mapeada y entra a Priorización cuando se le asocie uno` : "sin resultado clave vinculado");
+
 export function calificabilidad(i: InitiativeFull): Calificabilidad {
   const c = cat();
-  if (!i.kpi) return { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" };
+  if (!i.kpi) return { ok: false, etapa: "kr", motivo: SIN_KR(i) };
   const k = c.kpis.find((x) => x.code === i.kpi);
   if (!k) return { ok: false, etapa: "kr", motivo: "el resultado clave vinculado ya no existe" };
   const obj = c.objectives.find((o) => o.id === i.cmi || o.id === k.cmi);
@@ -4465,7 +4470,7 @@ export function calificabilidad(i: InitiativeFull): Calificabilidad {
   return avisos.length ? { ok: true, etapa, aviso: avisos.join("; ") } : { ok: true };
 }
 
-export const calificables = (): Record<string, Calificabilidad> => Object.fromEntries(cat().initiatives.map((i) => [i.id, cat().company.mode === "acompanamiento" ? calificabilidad(i) : (i.kpi ? { ok: true } : { ok: false, etapa: "kr", motivo: "sin resultado clave vinculado" })]));
+export const calificables = (): Record<string, Calificabilidad> => Object.fromEntries(cat().initiatives.map((i) => [i.id, cat().company.mode === "acompanamiento" ? calificabilidad(i) : (i.kpi ? { ok: true } : { ok: false, etapa: "kr", motivo: SIN_KR(i) })]));
 
 /* ═══ Madurez digital · diagnóstico de transformación digital ═══
    El instrumento depende del tipo de organización (empresa o institución educativa). Cada persona
