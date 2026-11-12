@@ -8,7 +8,7 @@
 
 export const DEFAULT_TENANT = "andina";
 
-type Ctx = { slug: string };
+type Ctx = { slug: string; now?: string };
 
 // AsyncLocalStorage solo existe en Node; en el navegador el módulo también se
 // importa (el store entra al bundle del cliente), así que se carga de forma
@@ -39,4 +39,17 @@ export function currentTenant(): string {
 /** ¿Hay un contexto de empresa explícito? (en pruebas y en el navegador, no) */
 export function hasTenantContext(): boolean {
   return Boolean(als?.getStore());
+}
+
+/** Hora de la petición: la real, salvo que una siembra de demostración haya fijado el reloj (así sus registros
+    quedan fechados en el momento que representan y no en el de la siembra). */
+export function ahora(): Date {
+  const n = als?.getStore()?.now;
+  return n ? new Date(n) : new Date();
+}
+
+/** Fija (o suelta, con null) el reloj del contexto actual. Solo lo usa la siembra de la instancia demo. */
+export function fijarReloj(iso: string | null): void {
+  const c = als?.getStore();
+  if (c) c.now = iso ?? undefined;
 }

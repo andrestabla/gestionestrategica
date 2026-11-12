@@ -37,7 +37,15 @@ const f1 = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 }
 const signo = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${f1(Math.abs(n))}`;
 const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const dia = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split("-"); return `${Number(d)} ${MES[Number(m) - 1]} ${y.slice(2)}`; };
-const hace = (iso: string) => { const min = Math.round((Date.now() - Date.parse(iso)) / 60_000); return min < 1 ? "ahora" : min < 60 ? `hace ${min} min` : min < 1440 ? `hace ${Math.round(min / 60)} h` : min < 43_200 ? `hace ${Math.round(min / 1440)} d` : dia(iso); };
+/** Hace cuánto pasó algo. En una empresa detenida en su fecha (demo), se cuenta en días hasta esa fecha y no hasta el reloj real. */
+const hace = (iso: string, hoy?: string) => {
+  if (hoy && hoy !== new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date())) {
+    const d = Math.round((Date.parse(hoy) - Date.parse(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date(iso)))) / 86_400_000);
+    return d <= 0 ? "hoy" : d === 1 ? "ayer" : d < 30 ? `hace ${d} d` : dia(iso);
+  }
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60_000);
+  return min < 1 ? "ahora" : min < 60 ? `hace ${min} min` : min < 1440 ? `hace ${Math.round(min / 60)} h` : min < 43_200 ? `hace ${Math.round(min / 1440)} d` : dia(iso);
+};
 const tinte = (c: string, p = 12) => `color-mix(in srgb, ${c} ${p}%, var(--surface))`;
 
 function ChipNivel({ nivel, valor }: { nivel: Nivel; valor?: number | null }) {
@@ -150,7 +158,7 @@ function TarjetaKr({ k, foco, onOpenIni }: { k: KrImpacto; foco?: string | null;
 }
 
 /* ═══ Movimientos ═══ */
-function ListaMovimientos({ ms, conProyecto, onOpenTask }: { ms: Movimiento[]; conProyecto: boolean; onOpenTask: (id: string) => void }) {
+function ListaMovimientos({ ms, conProyecto, onOpenTask, hoy }: { ms: Movimiento[]; conProyecto: boolean; onOpenTask: (id: string) => void; hoy?: string }) {
   if (!ms.length) return <div className="px-5 py-5"><EmptyNote>Aún no hay movimientos registrados. Cada cierre de tarea, bloqueo, cambio de fecha o riesgo aparece aquí con su efecto.</EmptyNote></div>;
   return (
     <ul className="divide-y divide-line">
@@ -160,7 +168,7 @@ function ListaMovimientos({ ms, conProyecto, onOpenTask }: { ms: Movimiento[]; c
             <div className="text-[13px] font-semibold leading-snug text-ink">{m.texto}</div>
             <div className="mt-0.5 text-[12px] leading-snug text-muted">
               {esTarea ? <button type="button" onClick={() => onOpenTask(m.refId)} className="text-left font-semibold text-ink-soft hover:text-cyan-deep hover:underline">{m.refTitulo}</button> : <span className="font-semibold text-ink-soft">{m.refTitulo}</span>}
-              {conProyecto && <> · {m.iniName}</>} · {m.actor} · {hace(m.at)}
+              {conProyecto && <> · {m.iniName}</>} · {m.actor} · {hace(m.at, hoy)}
             </div>
             {m.puntos !== 0 && m.krs.length > 0 && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">{m.krs.map((k) => <span key={k.code} className="num inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 text-[11.5px] text-ink-soft"><b>{k.code}</b><span style={{ color: k.puntos > 0 ? "var(--ok)" : "var(--bad)" }}>{signo(k.puntos)}</span></span>)}</div>
@@ -223,14 +231,32 @@ function DePortafolio({ data, onOpenIni, onOpenTask, onVer }: { data: ImpactoDat
   const vivos = data.riesgos.filter(riesgoVivo), altos = vivos.filter((r) => severidad(r) >= 15).length;
   const nivelGlobal: Nivel = confianza === null ? "SIN_SENAL" : confianza >= REGLAS.niveles.aFavor ? "A_FAVOR" : confianza >= REGLAS.niveles.enObservacion ? "EN_OBSERVACION" : "EN_CONTRA";
   const proyectos = [...data.proyectos].sort((a, b) => (a.confianza ?? 101) - (b.confianza ?? 101) || a.name.localeCompare(b.name));
+  // sin plan de trabajo ni riesgos todavía: los proyectos existen (son las iniciativas) y se muestran, pero no hay ejecución que leer
   if (!conSenal.length) return (
     <div className="space-y-5">
-      <Card className="p-6 sm:p-8">
-        <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--gold-wash)] text-[var(--gold)]"><Activity size={20} /></span>
-        <h3 className="mt-4 text-[18px] font-extrabold text-ink">Aún no hay ejecución que leer</h3>
-        <p className="mt-2 max-w-[70ch] text-[14px] leading-relaxed text-ink-soft">Este tablero muestra cómo cada movimiento de los proyectos empuja o frena los resultados clave. Para que tenga señal, los proyectos necesitan su plan de trabajo (tareas con inicio, compromiso y responsable) o riesgos registrados. Hay {data.proyectos.length} {data.proyectos.length === 1 ? "proyecto" : "proyectos"} y {data.krs.length} {data.krs.length === 1 ? "resultado clave con proyecto" : "resultados clave con proyecto"}.</p>
-        <div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => onVer("tablero")} className="btn-primary">Ir al tablero de tareas</button><button type="button" onClick={() => onVer("riesgos")} className="btn-ghost"><ShieldAlert size={14} /> Registrar un riesgo</button></div>
+      <Card className="p-6 sm:p-7">
+        <div className="flex flex-wrap items-start gap-4">
+          <span className="grid h-11 w-11 flex-none place-items-center rounded-full bg-[var(--gold-wash)] text-[var(--gold)]"><Activity size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[17px] font-extrabold text-ink">{data.proyectos.length ? `Hay ${data.proyectos.length} ${data.proyectos.length === 1 ? "proyecto" : "proyectos"}, pero ninguno tiene plan de trabajo todavía` : "Aún no hay proyectos"}</h3>
+            <p className="mt-1.5 max-w-[78ch] text-[13.5px] leading-relaxed text-ink-soft">{data.proyectos.length
+              ? <>Cada iniciativa es un proyecto. Este tablero lee su ejecución: tareas con inicio, compromiso y responsable, entregables, riesgos y presupuesto. Mientras no se carguen, no hay avance ni confianza que mostrar para {data.krs.length === 1 ? "el resultado clave que mueve" : `los ${data.krs.length} resultados clave que mueven`}. Abre un proyecto de la lista para empezar su plan.</>
+              : "Los proyectos son las iniciativas de la empresa: créalas primero en Iniciativas."}</p>
+            {data.proyectos.length > 0 && <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => onVer("tablero")} className="btn-primary">Ir al tablero de tareas</button><button type="button" onClick={() => onVer("riesgos")} className="btn-ghost"><ShieldAlert size={14} /> Registrar un riesgo</button></div>}
+            {data.proyectos.length > 0 && data.personas.length === 0 && <p className="mt-3 text-[12.5px] leading-snug text-warn">El directorio de personas está vacío: cada tarea necesita un responsable con nombre propio. Créalas en Administración → Catálogo → Personas.</p>}
+          </div>
+        </div>
       </Card>
+      {data.proyectos.length > 0 && <Card className="overflow-hidden">
+        <CardHeader title={`Proyectos (${data.proyectos.length})`} sub="las iniciativas de la empresa · abre una para cargar su plan de trabajo, sus riesgos y su presupuesto" />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] text-[12.5px]">
+            <thead><tr className="border-b border-line text-left text-[11px] font-bold uppercase tracking-[0.08em] text-faint"><th className="px-5 py-2.5">Proyecto</th><th className="px-3 py-2.5">Resultados clave</th><th className="px-3 py-2.5">Avance</th><th className="px-3 py-2.5">Confianza</th><th className="px-3 py-2.5">Señales</th><th className="px-3 py-2.5">Próximo compromiso</th></tr></thead>
+            <tbody>{proyectos.map((p) => <FilaProyecto key={p.iniId} p={p} responsables={data.responsables} onOpen={() => onOpenIni(p.iniId)} />)}</tbody>
+          </table>
+        </div>
+        {data.sinKr.length > 0 && <p className="border-t border-line px-5 py-3 text-[12px] text-muted">{data.sinKr.length} {data.sinKr.length === 1 ? "proyecto no está asociado" : "proyectos no están asociados"} a ningún resultado clave: su ejecución se sigue aquí, pero no entra a la lectura de los resultados.</p>}
+      </Card>}
       <ComoSeCalcula />
     </div>
   );
@@ -262,7 +288,7 @@ function DePortafolio({ data, onOpenIni, onOpenTask, onVer }: { data: ImpactoDat
 
       <Card className="overflow-hidden">
         <CardHeader title="Movimientos recientes" sub="cada cambio registrado y el efecto que tuvo sobre la confianza del proyecto y de sus resultados clave" />
-        <ListaMovimientos ms={data.movimientos.slice(0, 20)} conProyecto onOpenTask={onOpenTask} />
+        <ListaMovimientos ms={data.movimientos.slice(0, 20)} conProyecto onOpenTask={onOpenTask} hoy={data.hoy} />
       </Card>
       <ComoSeCalcula />
     </div>
@@ -357,7 +383,7 @@ function DeProyecto({ data, p, onOpenIni, onOpenTask, onVer }: { data: ImpactoDa
         </Card>
         <Card className="overflow-hidden">
           <CardHeader title="Movimientos del proyecto" sub="cada cambio y su efecto sobre la confianza" />
-          <ListaMovimientos ms={ms} conProyecto={false} onOpenTask={onOpenTask} />
+          <ListaMovimientos ms={ms} conProyecto={false} onOpenTask={onOpenTask} hoy={data.hoy} />
         </Card>
       </div>
       <ComoSeCalcula />

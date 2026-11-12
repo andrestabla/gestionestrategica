@@ -209,7 +209,7 @@ export const EFECTO = {
 } as const;
 
 type Evento = { id: string | number; at: string; actor: string; entityId: string; change: string };
-const REF = /^(T|RG|GS)-(i\d+)-/;
+const REF = /^(T|RG|GS)-(.+)-\d+$/;   // tarea, riesgo o gasto de un proyecto: «T-i3-02», «RG-in06-01»
 
 /** Clasifica los eventos de la auditoría que son de tareas o de riesgos de un proyecto y les asigna su efecto. */
 export function movimientos(eventos: Evento[], v: TenantView, risks: ProjectRisk[], pesos: Impacto["pesos"]): Movimiento[] {

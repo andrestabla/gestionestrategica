@@ -7,6 +7,8 @@
 // «Hoy» del demo: 2027-03-10 (coherente con DEMO_NOW_INDEX del motor).
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { HOY_DEMO } from "@/data/demo-fechas";
+
 export const DEMO_TODAY = "2027-03-10";
 
 /* ═══ Directorio de personas (ficticias) ═══ */
@@ -114,10 +116,10 @@ export const TASKS: Task[] = [
 
 export const tasksOf = (iniId: string) => TASKS.filter((t) => t.iniId === iniId);
 
-/** «Hoy» de una empresa (AAAA-MM-DD, hora de Bogotá): la fecha real. La empresa de demostración vive en su fecha
-    fija para que sus datos de ejemplo conserven el sentido (vencidas, próximas, avance esperado). */
+/** «Hoy» de una empresa (AAAA-MM-DD, hora de Bogotá): la fecha real. Las empresas de demostración viven en su fecha
+    fija (HOY_DEMO por slug; la plantilla demo, en DEMO_TODAY) para que sus datos de ejemplo conserven el sentido. */
 export const hoyReal = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
-export const hoyDe = (company?: { template?: string } | null): string => (company?.template === "demo" ? DEMO_TODAY : hoyReal());
+export const hoyDe = (company?: { template?: string; slug?: string } | null): string => (company?.slug && HOY_DEMO[company.slug]) || (company?.template === "demo" ? DEMO_TODAY : hoyReal());
 
 /** ¿Vencida a la fecha dada? (abierta y con compromiso anterior a hoy) */
 export const vencida = (t: Task, hoy: string) => t.status !== "HECHA" && t.due < hoy;

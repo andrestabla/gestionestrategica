@@ -21,6 +21,7 @@ import { useMaturity } from "@/lib/use-maturity";
 import { ArrowRight, ShieldAlert, AlertTriangle, Info, CheckCircle2, Circle, Lock } from "lucide-react";
 import { hasInstrument } from "@/lib/instrumentos";
 import { moduleState, moduleEnabled, type ModuleId } from "@/lib/modulos";
+import { EjecucionHome, useEjecucion, diaCorto } from "./ejecucion-home";
 
 /** «3 objetivos», «1 objetivo»: conteo con su sustantivo. */
 const cuenta = (n: number, singular: string, plural = `${singular}s`) => `${n} ${n === 1 ? singular : plural}`;
@@ -77,18 +78,23 @@ function PanelHome() {
 
   // tarjetas de módulos apagados por el administrador: fuera de la portada
   const on = (id: ModuleId) => moduleEnabled(v.catalog.company, id);
+  // acompañamiento con Proyectos habilitado y algún plan de trabajo cargado: la portada lee la ejecución
+  const ejec = useEjecucion(acomp && on("proyectos"));
+  const soloEjecucion = Boolean(ejec) && sinDato;   // sin medición de capacidades publicada, el héroe es la ejecución
   return (
     <>
       <PageHeader
         kicker={v.catalog.company.name}
-        title="Estado de la capacidad organizacional"
-        desc={`Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}).${serie ? ` Serie de la empresa: ${serie}.` : " Aún no hay mediciones publicadas."}`}
+        title={soloEjecucion ? "Ejecución de la estrategia" : "Estado de la capacidad organizacional"}
+        desc={soloEjecucion ? `Lectura al ${diaCorto(ejec!.hoy)}: ${cuenta(ejec!.proyectos.filter((p) => p.avance !== null).length, "proyecto")} con plan de trabajo ${ejec!.krs.length === 1 ? "mueve un resultado clave" : `mueven ${ejec!.krs.length} resultados clave`}. Cada avance, entregable, atraso o riesgo cambia la confianza de entrega.` : `Medición vigente: ${matData?.current.label ?? summary.maturity.assessment.label} (${matData?.current.period ?? summary.maturity.assessment.period}).${serie ? ` Serie de la empresa: ${serie}.` : " Aún no hay mediciones publicadas."}`}
       />
 
       {sinDato && <ArranqueCard />}
 
+      {ejec && <EjecucionHome data={ejec} base={base} enCurso={initiatives.filter((i) => i.status === "EN_CURSO" || i.status === "EN_RIESGO").length} total={initiatives.length} />}
+
       {/* ── héroe: gauge + avance por línea ── */}
-      <div className="rise rise-1 panel relative mb-5 overflow-hidden">
+      {!soloEjecucion && <div className="rise rise-1 panel relative mb-5 overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0"
           style={{ background: "radial-gradient(560px 240px at 12% 0%, rgb(14 147 180 / 0.06), transparent 60%)" }} />
         <div className="relative grid gap-8 px-7 py-6 lg:grid-cols-[240px_1fr_320px] lg:items-center">
@@ -148,10 +154,10 @@ function PanelHome() {
             <MaturityRadar size={320} scores={sinDato ? EMPTY_SCORES : effScores} />
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── métricas ── */}
-      <div className="rise rise-2 mb-5 grid gap-4 sm:grid-cols-3">
+      {!ejec && <div className="rise rise-2 mb-5 grid gap-4 sm:grid-cols-3">
         <StatCard label="Iniciativas en ejecución"
           value={initiatives.filter((i) => i.status === "EN_CURSO").length}
           unit={`de ${initiatives.length}`} foot={`Roadmap ${roadmap}`} />
@@ -163,10 +169,10 @@ function PanelHome() {
           unit={`críticas · ${sinDato ? 0 : summary.alertCounts.warning} advertencias`}
           foot={`${summary.actions.done}/${summary.actions.total} acciones completadas · ${summary.actions.late} vencidas`}
           accent="linear-gradient(90deg, var(--bad), #a13c44)" />
-      </div>
+      </div>}
 
       {/* ── alertas del motor de seguimiento ── */}
-      <Card className="rise rise-3 mb-8">
+      {!soloEjecucion && <Card className="rise rise-3 mb-8">
         <CardHeader title="Alertas del motor de seguimiento"
           sub="Generadas por las reglas del marco conceptual: rachas en rojo, KPI contra meta, rezago de captura, proyección insuficiente, desalineación presupuestal y evidencia faltante" />
         {alerts.length === 0 && <div className="px-5 py-4 text-[12.5px] italic text-faint">{sinDato ? "El motor de seguimiento arranca con la primera medición publicada." : "Sin alertas abiertas."}</div>}
@@ -192,7 +198,7 @@ function PanelHome() {
             {alerts.length - 10} alertas más de menor severidad en los módulos correspondientes.
           </div>
         )}
-      </Card>
+      </Card>}
 
       {/* ── módulos ── */}
       <div className="rise rise-4">
@@ -220,6 +226,18 @@ function PanelHome() {
           {on("portafolio") && <ModuleCard href={estrategiaHref(v.catalog.company, "portafolio", base)} code="PO" title={V.tabs.portafolio}
             desc="Decisión de tiempo por iniciativa y portafolio por prioridad estratégica."
             tags={[roadmap]} />}
+          {on("capacidades") && <ModuleCard href={`${base}/panel/capacidades`} code="CE" title="Capacidades para ejecutar"
+            desc="Qué necesita cada iniciativa decidida para ejecutarse: personas, proceso, datos, tecnología y presupuesto."
+            tags={["Antes de arrancar"]} />}
+          {on("cascada") && <ModuleCard href={`${base}/panel/cascada`} code="F04" title="Cascada trimestral"
+            desc="Las prioridades bajan a metas trimestrales por área, con criterio de éxito, hitos y cierre del trimestre."
+            tags={["Metas por área"]} />}
+          {on("proyectos") && <ModuleCard href={`${base}/panel/proyectos`} code="GP" title="Proyectos"
+            desc="Plan de trabajo, cronograma con ruta crítica, riesgos y presupuesto de cada iniciativa, leídos contra sus resultados clave."
+            tags={ejec ? [cuenta(ejec.proyectos.reduce((a, p) => a + p.tareas.total, 0), "tarea")] : ["Impacto en resultados clave"]} />}
+          {on("madurez") && <ModuleCard href={`${base}/panel/madurez`} code="TD" title="Madurez digital"
+            desc="Diagnóstico de transformación digital: percepción, evidencia y nivel en clientes, operación, innovación y arquitectura."
+            tags={["4 líneas · 48 variables"]} />}
           {on("inteligencia") && <ModuleCard href={`${base}/panel/bi`} code="M7" title="Inteligencia"
             desc="Contexto del sector con datos reales y lectura territorial."
             tags={[v.catalog.company.sector || "Sector"]} />}

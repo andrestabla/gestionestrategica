@@ -20,7 +20,7 @@ import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFul
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
   type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, isAcompanamiento, type Horizon, type Lever } from "@/data/catalogo";
-import { currentTenant, DEFAULT_TENANT, hasTenantContext } from "@/server/tenant";
+import { currentTenant, DEFAULT_TENANT, hasTenantContext, ahora } from "@/server/tenant";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL, THRESHOLD } from "@/data/mapa";
 import { lecturaF1 } from "@/lib/f1";
 import { avg } from "@/lib/od";
@@ -688,7 +688,7 @@ let histSeq = 0;
 /** Guarda la lista vigente como versión del historial antes de cambiarla. */
 function snapshotPalancas(user: SessionUser, motivo: string) {
   const previo = (cat().company.levers ?? []).map((l) => ({ ...l }));
-  const at = new Date().toISOString();
+  const at = ahora().toISOString();
   const id = `${at}-${(++histSeq).toString(36)}`;   // varios cambios en el mismo instante no se pisan
   informes().set(`palancas|${id}`, { kind: "palancas", subject: id, inputHash: motivo.slice(0, 200), informe: { levers: previo } as unknown as InformeIA, model: "manual", by: user.email, at });
   const todas = [...informes().entries()].filter(([k]) => k.startsWith("palancas|")).sort((a, b) => (a[1].at < b[1].at ? 1 : -1));
@@ -822,7 +822,7 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
   const info: CompanyInfo = {
     slug, name, shortName: input.shortName?.trim() || name.split(" ")[0], city: input.city?.trim() ?? "", department: input.department?.trim() ?? "",
     sector: input.sector?.trim() ?? "", size: input.size?.trim() ?? "", sectorKey: input.sectorKey?.trim() || "suministros-industriales",
-    ciiu: input.ciiu?.trim() ?? "", active: true, template, createdBy: actor.name, createdAt: new Date().toISOString(),
+    ciiu: input.ciiu?.trim() ?? "", active: true, template, createdBy: actor.name, createdAt: ahora().toISOString(),
     country: input.country === "EC" ? "EC" : "CO", currency: input.currency === "USD" ? "USD" : "COP",
     orgKind: isOrgKind(input.orgKind) ? input.orgKind : "empresa",
   };
@@ -1059,7 +1059,7 @@ export async function addMembership(actor: SessionUser, email: string, input: { 
   if (f.company.slug === currentTenant()) return { ok: false, status: 422, error: "Esa cuenta ya pertenece a esta empresa." };
   const scope = input.role === "RESPONSABLE" ? resolveScope(input.line, input.responsibleId) : { ok: true as const, line: undefined, responsibleId: undefined };
   if (!scope.ok) return { ok: false, status: 422, error: scope.error };
-  const user: ManagedUser = { email: f.user.email, name: f.user.name, role: input.role, line: scope.line, responsibleId: scope.responsibleId, active: true, seeded: false, membresia: true, principal: f.company.slug, createdBy: actor.name, at: new Date().toISOString() };
+  const user: ManagedUser = { email: f.user.email, name: f.user.name, role: input.role, line: scope.line, responsibleId: scope.responsibleId, active: true, seeded: false, membresia: true, principal: f.company.slug, createdBy: actor.name, at: ahora().toISOString() };
   users().push(user);
   void persist("membresía", async (db) => {
     const companyId = cid();
@@ -1231,7 +1231,7 @@ export async function verificarPersistencia(conDetalle = false): Promise<Verific
     { nombre: "Metas trimestrales", memoria: getMetas().length, base: metaRows.length, diferencias: getMetas().length === metaRows.length ? [] : ["el número de metas no coincide"] },
     { nombre: "Autoevaluaciones directivas", memoria: f1Store().size, base: f1Rows.length, diferencias: f1Store().size === f1Rows.length ? [] : ["el número de autoevaluaciones no coincide"] },
   ];
-  const out: VerificacionPersistencia = { ok: secciones.every((x) => x.diferencias.length === 0), at: new Date().toISOString(), empresa: st.slug, version: { memoria: st.version, base: fila?.dataVersion ?? 0 }, secciones };
+  const out: VerificacionPersistencia = { ok: secciones.every((x) => x.diferencias.length === 0), at: ahora().toISOString(), empresa: st.slug, version: { memoria: st.version, base: fila?.dataVersion ?? 0 }, secciones };
   // lo que la base tiene, leído sin pasar por la memoria: sirve para comprobar que una edición concreta quedó guardada
   if (conDetalle) out.detalle = {
     prioridades: palancasBase.map((l) => `${l.order}. ${l.id} · ${l.name}`),
@@ -1290,7 +1290,7 @@ export type MutationResult =
   | { ok: false; status: number; error: string };
 
 function audit(actor: SessionUser, entity: "task" | "evidence" | "branding", entityId: string, change: string) {
-  const at = new Date().toISOString();
+  const at = ahora().toISOString();
   auditLog().unshift({ id: auditLog().length + 1, at, actor: actor.name, email: actor.email, role: actor.role, entity, entityId, change });
   // también en la base, para la actividad en vivo de Administración (todas las instancias la ven); sin subir la versión de datos
   const st = g.tenants.get(currentTenant());
@@ -1451,7 +1451,7 @@ export async function verifyEvidence(
   if (hasDb()) {
     try {
       const db = await prisma();
-      await db.evidence.upsert({ where: { id: ev.id }, update: { status: "VERIFICADA", verifiedBy: user.name, verifiedAt: new Date() }, create: { id: ev.id, practice: ev.practice, status: "VERIFICADA", verifiedBy: user.name, verifiedAt: new Date() } });
+      await db.evidence.upsert({ where: { id: ev.id }, update: { status: "VERIFICADA", verifiedBy: user.name, verifiedAt: ahora() }, create: { id: ev.id, practice: ev.practice, status: "VERIFICADA", verifiedBy: user.name, verifiedAt: ahora() } });
     } catch { /* memoria como fuente */ }
   }
   return { ok: true, status: "VERIFICADA" };
@@ -1476,7 +1476,7 @@ export function addComment(
     author: user.name,
     role: user.role,
     text: clean,
-    at: new Date().toISOString(),
+    at: ahora().toISOString(),
   };
   comments().push(comment);
   audit(user, "task", taskId, "comentario añadido");
@@ -1508,11 +1508,11 @@ export function attachEvidence(
     kind: meta.kind || "Documento",
     ...file,
     uploadedBy: user.name,
-    date: new Date().toISOString().slice(0, 10),
+    date: ahora().toISOString().slice(0, 10),
     status: "PENDIENTE",   // nace pendiente: la verifica el consultor
   };
   uploads().push(evidence);
-  void persist("archivo", (db) => db.fileAsset.create({ data: { id: evidence.id, companyId: cid(), taskId, title: evidence.title, kind: evidence.kind, fileName: evidence.fileName, filePath: evidence.filePath, size: evidence.size, mime: evidence.mime, uploadedBy: evidence.uploadedBy, status: evidence.status, at: new Date() } }));
+  void persist("archivo", (db) => db.fileAsset.create({ data: { id: evidence.id, companyId: cid(), taskId, title: evidence.title, kind: evidence.kind, fileName: evidence.fileName, filePath: evidence.filePath, size: evidence.size, mime: evidence.mime, uploadedBy: evidence.uploadedBy, status: evidence.status, at: ahora() } }));
   audit(user, "task", taskId, `evidencia adjuntada («${evidence.title}», ${evidence.fileName})`);
   return { ok: true, evidence };
 }
@@ -1807,7 +1807,7 @@ export function captureVariable(
     ...prev,
     ...Object.fromEntries(Object.entries(patch).filter(([, val]) => val !== undefined)),
     by: user.name,
-    at: new Date().toISOString(),
+    at: ahora().toISOString(),
   };
   capture().set(varId, next);
   const what = Object.keys(patch).filter((k2) => patch[k2 as keyof typeof patch] !== undefined).join(", ");
@@ -1860,8 +1860,8 @@ export function publishCapture(
     const company = { id: cid() };
     await db.assessment.upsert({
       where: { companyId_id: { companyId: company.id, id: "A3" } },
-      update: { status: "PUBLICADA", note: assessment.note, publishedAt: new Date(), publishedBy: user.name },
-      create: { id: "A3", companyId: company.id, label: assessment.label, period: assessment.period, status: "PUBLICADA", note: assessment.note, publishedAt: new Date(), publishedBy: user.name },
+      update: { status: "PUBLICADA", note: assessment.note, publishedAt: ahora(), publishedBy: user.name },
+      create: { id: "A3", companyId: company.id, label: assessment.label, period: assessment.period, status: "PUBLICADA", note: assessment.note, publishedAt: ahora(), publishedBy: user.name },
     });
     for (const d of DIMS) {
       const sc = scores[d.line][d.code];
@@ -1911,7 +1911,7 @@ export function saveTestResponse(
   const response: TestResponse = {
     email: user.email, name: user.name, role: user.role,
     cargo: input.cargo?.trim() || undefined, objetivo: input.objetivo?.trim() || undefined,
-    at: new Date().toISOString(), r,
+    at: ahora().toISOString(), r,
   };
   testStore().set(user.email, response);
   audit(user, "task", `test:${user.email}`, `test de capacidad empresarial guardado (${answered} respuestas)`);
@@ -1942,7 +1942,7 @@ export function setTestNotes(
   const notes: TestNotes = {
     ...prev,
     ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, clean(v)]).filter(([, v]) => v !== undefined)),
-    by: user.name, at: new Date().toISOString(),
+    by: user.name, at: ahora().toISOString(),
   };
   testNotes().set(id, notes);
   audit(user, "task", `test:${id}`, "informe del test actualizado");
@@ -2000,7 +2000,7 @@ export function saveF1Response(
   const response: F1Response = {
     email: user.email, name: user.name, role: user.role,
     cargo: input.cargo?.trim() || prev?.cargo || undefined,
-    at: new Date().toISOString(), r: final,
+    at: ahora().toISOString(), r: final,
   };
   f1Store().set(user.email, response);
   audit(user, "task", `f1:${user.email}`, `autoevaluación directiva guardada (${answered} de ${PRACTICES.length} ítems)${merged ? " · fusionada con la copia guardada desde otro dispositivo" : ""}`);
@@ -2028,7 +2028,7 @@ export function saveInforme(user: SessionUser, kind: InformeKind, subject: strin
   if (!hasInstrument(cat().company, "f1")) return { ok: false, status: 403, error: `${instrumentLabel("f1")}: no está habilitada para esta empresa.` };
   if (kind === "consolidado" && !can(user, "view_f1_all")) return { ok: false, status: 403, error: "El consolidado lo generan el administrador y el advisor." };
   if (kind === "f1" && subject !== user.email.toLowerCase() && !F1_CAN_SEE_ALL(user)) return { ok: false, status: 403, error: "Solo puedes generar el análisis de tu propia autoevaluación." };
-  const saved: InformeGuardado = { kind, subject, inputHash, informe, model, by: user.email, at: new Date().toISOString() };
+  const saved: InformeGuardado = { kind, subject, inputHash, informe, model, by: user.email, at: ahora().toISOString() };
   informes().set(`${kind}|${subject}`, saved);
   void persist("informe con IA", async (db) => {
     const companyId = cid();
@@ -2063,7 +2063,7 @@ export function saveF2Response(
   const response: F2Response = {
     // id único también entre instancias (dos respuestas simultáneas en funciones distintas no deben chocar en la base)
     id: `F2-${String(f2Store().length + 1).padStart(4, "0")}-${randomBytes(2).toString("hex")}`,
-    at: new Date().toISOString(),
+    at: ahora().toISOString(),
     area: (input.area ?? "").trim().slice(0, 60) || undefined,
     r, abierta: abierta || undefined,
   };
@@ -2170,7 +2170,7 @@ export function reportKpi(
     };
   }
 
-  const report: KpiReport = { code, period, value, note: note?.trim() || undefined, by: user.name, at: new Date().toISOString() };
+  const report: KpiReport = { code, period, value, note: note?.trim() || undefined, by: user.name, at: ahora().toISOString() };
   const list = kpiReports().get(code) ?? [];
   const existing = list.findIndex((r) => r.period === period);
   if (existing >= 0) list[existing] = report;   // corrección del mismo periodo (auditada)
@@ -2387,7 +2387,7 @@ export function evaluateInitiative(
   const key = `${iniId}|${user.email.toLowerCase()}`;
   const evaluation: Evaluation = {
     iniId, by: user.email.toLowerCase(), name: user.name, role: user.role, scores, type,
-    notes: Object.keys(notes).length ? notes : undefined, at: new Date().toISOString(),
+    notes: Object.keys(notes).length ? notes : undefined, at: ahora().toISOString(),
   };
   evals().set(key, evaluation);
   audit(user, "task", iniId, `priorización: D${scores.D} E${scores.E} M${scores.M} L${scores.L}`);
@@ -2407,7 +2407,7 @@ export function setPrioSession(user: SessionUser, tribeId: unknown, action: Prio
   const prev = sessionOf(c.company.prioSessions, tribe);
   const status = nextStatus(prev.status, action);
   if (!status) return { ok: false, status: 422, error: `No se puede «${action}» desde el estado «${prev.status}».` };
-  const now = new Date().toISOString();
+  const now = ahora().toISOString();
   const next = { ...prev, status };
   if (action === "abrir" || action === "reabrir") { next.openedAt = now; next.openedBy = user.email.toLowerCase(); delete next.savedAt; delete next.savedBy; }
   if (action === "cerrar") next.closedAt = now;
@@ -2492,7 +2492,7 @@ export function decideInitiative(
   const rationale = typeof input.rationale === "string" ? input.rationale.trim() : "";
   const check = decisionCheck(d, consolidatedOf(iniId), rationale);
   if (!check.ok) return { ok: false, status: 422, error: check.reason };
-  const rec: DecisionRecord = { iniId, decision: d, rationale: rationale || undefined, by: user.email.toLowerCase(), name: user.name, at: new Date().toISOString() };
+  const rec: DecisionRecord = { iniId, decision: d, rationale: rationale || undefined, by: user.email.toLowerCase(), name: user.name, at: ahora().toISOString() };
   decisions().set(iniId, rec);
   audit(user, "task", iniId, `decisión de tiempo → ${d}`);
   void persist("decisión", (db) => db.initiativeDecision.upsert({ where: { companyId_code: { companyId: cid(), code: iniId } }, update: { data: rec }, create: { companyId: cid(), code: iniId, data: rec } }));
@@ -2523,7 +2523,7 @@ export function accessLinks(actor: SessionUser): { ok: true; access: AccessInfo[
   const access: AccessConfig = { ...(rec.access ?? {}) };
   let changed = false;
   for (const s of ACCESS_SECTIONS) {
-    if (!access[s.id]) { access[s.id] = { token: newToken(), role: s.role, at: new Date().toISOString() }; changed = true; }
+    if (!access[s.id]) { access[s.id] = { token: newToken(), role: s.role, at: ahora().toISOString() }; changed = true; }
   }
   if (changed) saveAccess(actor, access, "enlaces de acceso por sección creados");
   return { ok: true, access: ACCESS_SECTIONS.map((s) => ({ section: s.id, label: s.label, role: access[s.id]!.role, token: access[s.id]!.token, at: access[s.id]!.at, what: s.what, enabled: access[s.id]!.enabled !== false })) };
@@ -2540,7 +2540,7 @@ export function updateAccess(actor: SessionUser, section: unknown, patch: { rege
   const access: AccessConfig = { ...(rec.access ?? {}) };
   const e = { ...access[section]! };
   if (patch.role !== undefined) { if (!isAccessRole(patch.role)) return { ok: false, status: 422, error: "Rol inválido: DIRECTIVO (consulta y evalúa) o LIDER (edita)." }; e.role = patch.role; }
-  if (patch.regenerate) { e.token = newToken(); e.at = new Date().toISOString(); }
+  if (patch.regenerate) { e.token = newToken(); e.at = ahora().toISOString(); }
   if (typeof patch.enabled === "boolean") { if (patch.enabled) delete e.enabled; else e.enabled = false; }
   access[section] = e;
   saveAccess(actor, access, `acceso ${accessSection(section).label}: ${[patch.regenerate ? "token regenerado" : "", patch.role ? `rol ${e.role}` : "", typeof patch.enabled === "boolean" ? (patch.enabled ? "QR activado" : "QR desactivado") : ""].filter(Boolean).join(", ")}`);
@@ -2576,13 +2576,13 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   // el tratamiento de datos se acepta la primera vez (o si aún no consta la aceptación)
   if (!consent && (!user || !user.consentAt)) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
   if (!user && (!entryRole || (entryRoleNeedsTribe(entryRole) && !tribeId))) return { ok: false, status: 422, error: "Elige tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál." };
-  const consentAt = new Date();
+  const consentAt = ahora();
   if (!user) {
     // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
     const elsewhere = await findUserForLogin(email);
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
     const role: SessionUser["role"] = entryRole === "lider" ? "LIDER" : entryRole === "directivo" ? "DIRECTIVO" : "RESPONSABLE";
-    user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: new Date().toISOString(), consentAt: consentAt.toISOString() };
+    user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: ahora().toISOString(), consentAt: consentAt.toISOString() };
     users().push(user);
     created = true;
     void persist("usuario", async (db) => {
@@ -2690,7 +2690,7 @@ export function addItineraryComment(input: { momentId?: unknown; kind?: unknown;
   const email = pub ? str(input.email, 160).toLowerCase() : by.email;
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, status: 422, error: "El correo no es válido." };
   if (pub && input.consent !== true) return { ok: false, status: 422, error: "Para comentar debes aceptar el tratamiento de tus datos personales." };
-  const c: ItineraryComment = { id: `${momentId}-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`, momentId, kind: input.kind, author, ...(email ? { email } : {}), text, at: new Date().toISOString(), ...(pub ? { consentAt: new Date().toISOString() } : {}), via: pub ? "publico" : "sesion" };
+  const c: ItineraryComment = { id: `${momentId}-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`, momentId, kind: input.kind, author, ...(email ? { email } : {}), text, at: ahora().toISOString(), ...(pub ? { consentAt: ahora().toISOString() } : {}), via: pub ? "publico" : "sesion" };
   S().itinComments.set(c.id, c);
   void persist("comentario del itinerario", (db) => db.itineraryComment.upsert({ where: { id: c.id }, update: { data: c }, create: { id: c.id, companyId: cid(), momentId, data: c } }));
   return { ok: true, comment: c };
@@ -2700,7 +2700,7 @@ export function addItineraryComment(input: { momentId?: unknown; kind?: unknown;
 export function resolveItineraryComment(actor: SessionUser, id: unknown, resolved: boolean): { ok: true; comment: ItineraryComment } | { ok: false; status: number; error: string } {
   if (!can(actor, "manage_catalog")) return { ok: false, status: 403, error: "Los comentarios los atiende el advisor o la gerencia." };
   const c = S().itinComments.get(String(id ?? "")); if (!c) return { ok: false, status: 404, error: "El comentario no existe." };
-  const next: ItineraryComment = { ...c, ...(resolved ? { resolvedAt: new Date().toISOString(), resolvedBy: actor.name } : { resolvedAt: undefined, resolvedBy: undefined }) };
+  const next: ItineraryComment = { ...c, ...(resolved ? { resolvedAt: ahora().toISOString(), resolvedBy: actor.name } : { resolvedAt: undefined, resolvedBy: undefined }) };
   if (!resolved) { delete next.resolvedAt; delete next.resolvedBy; }
   S().itinComments.set(c.id, next);
   void persist("comentario del itinerario", (db) => db.itineraryComment.update({ where: { id: c.id }, data: { data: next } }));
@@ -2760,7 +2760,7 @@ export function addItineraryFile(actor: SessionUser, file: { id: string; name: s
   if (!FILE_ID_RE.test(file.id)) return { ok: false, status: 422, error: "Identificador de archivo inválido." };
   const kind = file.kind ?? "pdf";
   if (kind === "link" && !URL_RE.test(String(file.url ?? ""))) return { ok: false, status: 422, error: "El enlace debe empezar por http:// o https://." };
-  const entry: ItineraryFile = { id: file.id, name: str(file.name, 160), size: kind === "link" ? 0 : file.size, at: new Date().toISOString(), by: actor.name, ...(file.group ? { group: str(file.group, 40) } : {}), ...(kind !== "pdf" ? { kind } : {}), ...(kind === "link" ? { url: str(file.url, 600) } : {}) };
+  const entry: ItineraryFile = { id: file.id, name: str(file.name, 160), size: kind === "link" ? 0 : file.size, at: ahora().toISOString(), by: actor.name, ...(file.group ? { group: str(file.group, 40) } : {}), ...(kind !== "pdf" ? { kind } : {}), ...(kind === "link" ? { url: str(file.url, 600) } : {}) };
   const files = [...(prev.files ?? []).filter((f) => f.id !== file.id), entry].sort((a, b) => a.name.localeCompare(b.name));
   const it: Itinerary = { ...prev, files };
   saveItinerary(actor, it, `material del itinerario: ${entry.name}`);
@@ -3208,7 +3208,7 @@ export function setFinancials(user: SessionUser, input: Partial<Financials> | nu
   if (input === null) { c.financials = null; }
   else {
     const f: Financials = {
-      year: int(input.year, 2000, 2100, new Date().getFullYear()), revenue: num(input.revenue), revenuePrev: num(input.revenuePrev),
+      year: int(input.year, 2000, 2100, ahora().getFullYear()), revenue: num(input.revenue), revenuePrev: num(input.revenuePrev),
       grossProfit: num(input.grossProfit), operatingProfit: num(input.operatingProfit), netProfit: num(input.netProfit),
       assets: num(input.assets), liabilities: num(input.liabilities), equity: num(input.equity),
     };
@@ -3328,7 +3328,7 @@ export function createUser(
     email, name: input.name.trim(), role: input.role,
     line: scope.line, responsibleId: scope.responsibleId,
     active: true, seeded: false,
-    createdBy: actor.name, at: new Date().toISOString(),
+    createdBy: actor.name, at: ahora().toISOString(),
   };
   users().push(user);
   void persist("usuario", async (db) => {
@@ -3489,7 +3489,7 @@ export async function consentPendingDb(user: SessionUser): Promise<boolean> {
 /** Registra la aceptación de la política de tratamiento de datos con fecha y versión. */
 export async function acceptConsent(user: SessionUser): Promise<{ ok: true; at: string } | { ok: false; status: number; error: string }> {
   const u = propio(user);
-  const at = new Date().toISOString();
+  const at = ahora().toISOString();
   if (u) u.consentAt = at;
   if (hasDb()) {
     try {
@@ -3782,7 +3782,7 @@ export function setIntegration(
   }
 
   cfg.updatedBy = user.name;
-  cfg.at = new Date().toISOString();
+  cfg.at = ahora().toISOString();
   integrations().set(key, cfg);
   void persist("integración", (db) => db.integration.upsert({ where: { companyId_key: { companyId: cid(), key } }, update: { enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null }, create: { companyId: cid(), key, enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null } }));
   audit(user, "task", `int-${key}`, `integración ${spec.name} ${patch.enabled !== undefined ? (patch.enabled ? "activada" : "desactivada") : "configurada"}`);
@@ -4061,7 +4061,7 @@ export async function saveMailTemplate(actor: SessionUser, key: unknown, data: {
     return { ok: true, template: null };
   }
   const bad = validarPlantilla(data); if (bad) return { ok: false, status: 422, error: bad };
-  const t: MailTemplateStored = { key, subject: data.subject.trim(), title: data.title.trim(), body: data.body.replace(/\r\n/g, "\n").trim(), updatedBy: actor.email, at: new Date().toISOString() };
+  const t: MailTemplateStored = { key, subject: data.subject.trim(), title: data.title.trim(), body: data.body.replace(/\r\n/g, "\n").trim(), updatedBy: actor.email, at: ahora().toISOString() };
   g.mailTemplates.set(key, t);
   await persistQuiet("plantilla-correo", (db) => db.mailTemplate.upsert({ where: { key }, update: { subject: t.subject, title: t.title, body: t.body, updatedBy: t.updatedBy }, create: { key, subject: t.subject, title: t.title, body: t.body, updatedBy: t.updatedBy } }));
   return { ok: true, template: t };
@@ -4069,7 +4069,7 @@ export async function saveMailTemplate(actor: SessionUser, key: unknown, data: {
 
 /** Registra un envío (o su fallo) en memoria y en la base. */
 export async function logMail(entry: Omit<MailLogEntry, "id" | "at">): Promise<MailLogEntry> {
-  const e: MailLogEntry = { id: `m_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, at: new Date().toISOString(), ...entry };
+  const e: MailLogEntry = { id: `m_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, at: ahora().toISOString(), ...entry };
   g.mailLog.unshift(e); if (g.mailLog.length > 500) g.mailLog.length = 500;
   await persistQuiet("correo", (db) => db.mailLog.create({ data: { id: e.id, by: e.by, companySlug: e.companySlug, kind: e.kind, to: e.to, subject: e.subject, status: e.status, error: e.error ?? null, messageId: e.messageId ?? null } }));
   return e;
@@ -4215,7 +4215,7 @@ export function upsertMeta(user: SessionUser, input: Partial<MetaTrimestral> & R
   const id = typeof input.id === "string" && input.id ? input.id : `mt-${Date.now().toString(36)}${randomBytes(2).toString("hex")}`;
   const prev = metas().get(id);
   const no = puedeMeta(user, n.meta.areaId) ?? (prev ? puedeMeta(user, prev.areaId) : null); if (no) return no;
-  const m: MetaTrimestral = { ...n.meta, cierre: prev?.cierre, id, by: prev?.by ?? user.email, at: new Date().toISOString() };
+  const m: MetaTrimestral = { ...n.meta, cierre: prev?.cierre, id, by: prev?.by ?? user.email, at: ahora().toISOString() };
   metas().set(id, m);
   audit(user, "task", `meta:${id}`, `${prev ? "meta trimestral actualizada" : "meta trimestral creada"} (${m.quarter} · ${m.areaId})`);
   void persist("meta trimestral", (db) => db.quarterGoal.upsert({ where: { companyId_id: { companyId: cid(), id } }, update: { data: m }, create: { companyId: cid(), id, data: m } }));
@@ -4238,9 +4238,9 @@ export function cerrarMeta(user: SessionUser, id: unknown, input: { cumplimiento
   const c = Number(input.cumplimiento);
   if (!Number.isFinite(c) || c < 0 || c > 100) return { ok: false, status: 422, error: "El cumplimiento es un porcentaje de 0 a 100." };
   const aprendizaje = String(input.aprendizaje ?? "").trim().slice(0, 600);
-  m.cierre = { cumplimiento: Math.round(c), aprendizaje, at: new Date().toISOString(), by: user.email };
+  m.cierre = { cumplimiento: Math.round(c), aprendizaje, at: ahora().toISOString(), by: user.email };
   m.estado = c >= 90 ? "CUMPLIDA" : c > 0 ? "PARCIAL" : "NO_CUMPLIDA";
-  m.at = new Date().toISOString();
+  m.at = ahora().toISOString();
   audit(user, "task", `meta:${m.id}`, `cierre del trimestre: ${m.cierre.cumplimiento} %`);
   void persist("meta trimestral", (db) => db.quarterGoal.upsert({ where: { companyId_id: { companyId: cid(), id: m.id } }, update: { data: m }, create: { companyId: cid(), id: m.id, data: m } }));
   return { ok: true, meta: m };
@@ -4328,7 +4328,7 @@ export function aprobarObjetivos(user: SessionUser, horizon: string, ids: string
   const informe: AlineacionIA = previa ? (previa.informe as unknown as AlineacionIA) : { horizon, items: [], resumen: "" };
   const items = [...informe.items];
   const aprobados: string[] = [], omitidos: { id: string; motivo: string }[] = [];
-  const at = new Date().toISOString();
+  const at = ahora().toISOString();
   for (const id of [...new Set(ids.map((x) => String(x).toUpperCase()))]) {
     const o = c.objectives.find((x) => x.id === id && x.horizon === horizon && !x.okr);
     if (!o) { omitidos.push({ id, motivo: "no es un objetivo directivo de este horizonte" }); continue; }
@@ -4360,7 +4360,7 @@ export function aprobarObjetivos(user: SessionUser, horizon: string, ids: string
 export function saveAlineacion(user: SessionUser, horizon: string, inputHash: string, informe: AlineacionIA, model = "openai", kind: InformeKind = "alineacion"): { ok: true; saved: InformeGuardado } | { ok: false; status: number; error: string } {
   if (!can(user, "manage_catalog")) return { ok: false, status: 403, error: "La validación la lanza quien administra la estrategia." };
   const subject = horizon;
-  const saved: InformeGuardado = { kind, subject, inputHash, informe: informe as unknown as InformeIA, model, by: user.email, at: new Date().toISOString() };
+  const saved: InformeGuardado = { kind, subject, inputHash, informe: informe as unknown as InformeIA, model, by: user.email, at: ahora().toISOString() };
   informes().set(`${kind}|${subject}`, saved);
   audit(user, "task", `${kind}:${horizon}`, `${kind === "alineacion" ? "validación de alineación" : "validación de iniciativas"} generada (${informe.items.filter((i) => i.color === "verde").length} verde · ${informe.items.filter((i) => i.color === "amarillo").length} amarillo · ${informe.items.filter((i) => i.color === "rojo").length} rojo)`);
   void persist("validación de alineación", async (db) => {
@@ -4403,7 +4403,7 @@ export function puedeRevisarCap(user: SessionUser, i: InitiativeFull): boolean {
 }
 
 function guardarInformeCap(user: SessionUser, kind: "capacidades" | "capacidades-checklist", iniId: string, content: object, model: string, inputHash: string) {
-  const saved: InformeGuardado = { kind, subject: iniId, inputHash, informe: content as unknown as InformeIA, model, by: user.email, at: new Date().toISOString() };
+  const saved: InformeGuardado = { kind, subject: iniId, inputHash, informe: content as unknown as InformeIA, model, by: user.email, at: ahora().toISOString() };
   informes().set(`${kind}|${iniId}`, saved);
   void persist(kind === "capacidades" ? "revisión de capacidades" : "checklist de capacidades", async (db) => {
     const companyId = cid();
@@ -4417,7 +4417,7 @@ export function saveChecklistCap(user: SessionUser, iniId: string, frentes: Fren
   const i = cat().initiatives.find((x) => x.id === iniId);
   if (!i) return { ok: false, status: 404, error: "La iniciativa no existe." };
   if (!elegiblesCapacidades().some((e) => e.id === iniId)) return { ok: false, status: 422, error: "Solo se revisan las iniciativas con decisión «implementar» o «preparar» en el portafolio." };
-  const checklist: ChecklistCap = { iniId, frentes, resumen, by: user.email, at: new Date().toISOString(), model };
+  const checklist: ChecklistCap = { iniId, frentes, resumen, by: user.email, at: ahora().toISOString(), model };
   guardarInformeCap(user, "capacidades-checklist", iniId, checklist, model, checklistHash(frentes));
   audit(user, "task", `capacidades-checklist:${iniId}`, `checklist de capacidades personalizado para ${iniId}`);
   return { ok: true, checklist };
@@ -4541,8 +4541,27 @@ export function respondMadurez(user: SessionUser, varId: unknown, value: unknown
   if (value !== null && !isPerceptionAnswer(value)) return { ok: false, status: 422, error: "La respuesta es un entero de 1 a 5, o 0 para «No lo sé»." };
   const key = respKey(user), prev = madState().resps.get(key), answers = { ...(prev?.answers ?? {}) };
   if (value === null) delete answers[v.id]; else answers[v.id] = value;
-  const now = new Date().toISOString(), completa = ins.variables.every((x) => answers[x.id] !== undefined);
+  const now = ahora().toISOString(), completa = ins.variables.every((x) => answers[x.id] !== undefined);
   const next: MadResponse = { email: key, name: user.name, role: user.role, answers, at: now, ...(completa ? { done: prev?.done ?? now } : {}) };
+  madState().resps.set(key, next);
+  if (completa && !prev?.done) audit(user, "task", "madurez:percepcion", "madurez digital: percepción completada");
+  void madRecord(`resp:${key}`, next);
+  return { ok: true, response: next };
+}
+
+/** Percepción completa de una persona en una sola escritura (carga en bloque: la usa la siembra de la demo). */
+export function respondMadurezLote(user: SessionUser, respuestas: Record<string, number>): { ok: true; response: MadResponse } | MadFail {
+  const ins = madInstrument();
+  if (gradesMadurez(user)) return { ok: false, status: 403, error: "La percepción la responden las personas de la empresa; el advisor califica la evidencia y el nivel." };
+  const answers: Record<string, number> = {};
+  for (const [id, v] of Object.entries(respuestas ?? {})) {
+    if (!ins.variables.some((x) => x.id === id)) return { ok: false, status: 404, error: `La afirmación ${id} no existe en el instrumento de esta empresa.` };
+    if (!isPerceptionAnswer(v)) return { ok: false, status: 422, error: "La respuesta es un entero de 1 a 5, o 0 para «No lo sé»." };
+    answers[id] = v;
+  }
+  const key = respKey(user), prev = madState().resps.get(key), now = ahora().toISOString(), todas = { ...(prev?.answers ?? {}), ...answers };
+  const completa = ins.variables.every((x) => todas[x.id] !== undefined);
+  const next: MadResponse = { email: key, name: user.name, role: user.role, answers: todas, at: now, ...(completa ? { done: prev?.done ?? now } : {}) };
   madState().resps.set(key, next);
   if (completa && !prev?.done) audit(user, "task", "madurez:percepcion", "madurez digital: percepción completada");
   void madRecord(`resp:${key}`, next);
@@ -4560,7 +4579,7 @@ export function captureMadurez(user: SessionUser, varId: unknown, patch: unknown
   }
   const err = captureError(p);
   if (err) return { ok: false, status: 422, error: err };
-  const next: MadCapture = { ...(madState().vars.get(v.id) ?? {}), by: user.name, at: new Date().toISOString() };
+  const next: MadCapture = { ...(madState().vars.get(v.id) ?? {}), by: user.name, at: ahora().toISOString() };
   const campos = next as unknown as Record<string, unknown>;
   for (const k of keys) {
     const val = p[k];
@@ -4578,7 +4597,7 @@ export function captureMadurez(user: SessionUser, varId: unknown, patch: unknown
 export function saveMadInforme(user: SessionUser, kind: "madurez" | "madurez-persona", subject: string, inputHash: string, content: unknown, model = "openai"): { ok: true; saved: InformeGuardado } | MadFail {
   if (kind === "madurez" && !gradesMadurez(user)) return { ok: false, status: 403, error: "El informe de resultados lo genera el advisor." };
   if (kind === "madurez-persona" && subject !== respKey(user)) return { ok: false, status: 403, error: "Solo puedes generar la lectura de tu propio diagnóstico." };
-  const saved: InformeGuardado = { kind, subject, inputHash, informe: content as InformeIA, model, by: user.email, at: new Date().toISOString() };
+  const saved: InformeGuardado = { kind, subject, inputHash, informe: content as InformeIA, model, by: user.email, at: ahora().toISOString() };
   informes().set(`${kind}|${subject}`, saved);
   if (kind === "madurez") audit(user, "task", `madurez:informe:${subject}`, "madurez digital: informe de resultados generado con IA");
   void persist("informe de madurez digital", async (db) => {
@@ -4611,7 +4630,7 @@ export function publishMadurez(user: SessionUser, label: unknown): { ok: true; c
   const prog = progressOf(ins, vars);
   if (prog.level < prog.total) return { ok: false, status: 422, error: `Faltan ${prog.total - prog.level} variables por calificar con nivel. Una medición parcial no se publica.` };
   const n = m.cuts.length + 1;
-  const cut: MadCut = { id: `C${n}`, label: (typeof label === "string" && label.trim() ? label.trim().slice(0, 80) : `Corte ${m.cuts.filter((c) => c.kind === ins.kind).length + 1}`), at: new Date().toISOString(), by: user.name, kind: ins.kind, vars, safeguards: { ...m.safeguards } };
+  const cut: MadCut = { id: `C${n}`, label: (typeof label === "string" && label.trim() ? label.trim().slice(0, 80) : `Corte ${m.cuts.filter((c) => c.kind === ins.kind).length + 1}`), at: ahora().toISOString(), by: user.name, kind: ins.kind, vars, safeguards: { ...m.safeguards } };
   m.cuts.push(cut);
   audit(user, "task", `madurez:${cut.id}`, `madurez digital: corte publicado «${cut.label}»`);
   void madRecord(`cut:${cut.id}`, cut);
@@ -4640,7 +4659,7 @@ export function upsertRisk(user: SessionUser, input: RiskInput): { ok: true; ris
   if (ownerId && !c.people.some((p) => p.id === ownerId)) return { ok: false, status: 422, error: "El responsable de la respuesta debe ser una persona del directorio." };
   const krsIni = krsDeIniciativa(ini);
   const krs = Array.isArray(datos.krs) ? [...new Set(datos.krs.map((x) => str(x, 20).toUpperCase()))].filter((x) => krsIni.includes(x)) : [];
-  const now = new Date().toISOString();
+  const now = ahora().toISOString();
   const id = prev?.id ?? (() => { let n = 1; while (riesgosState().has(`RG-${ini.id}-${String(n).padStart(2, "0")}`)) n++; return `RG-${ini.id}-${String(n).padStart(2, "0")}`; })();
   const risk: ProjectRisk = {
     id, iniId: ini.id, title: str(datos.title, 200), ...(str(datos.desc, 1200) ? { desc: str(datos.desc, 1200) } : {}), category: datos.category!, probability: datos.probability!, impact: datos.impact!, status: datos.status!,
@@ -4690,7 +4709,7 @@ export function addGasto(user: SessionUser, input: GastoInput): { ok: true; gast
   let n = 1; while (gastosState().has(`GS-${ini.id}-${String(n).padStart(2, "0")}`)) n++;
   const moneda = ini.budgetCurrency ?? (cat().company.currency === "USD" ? "USD" : "COP");
   const gasto: Gasto = { id: `GS-${ini.id}-${String(n).padStart(2, "0")}`, iniId: ini.id, tipo: input.tipo!, concepto: str(input.concepto, 200), monto: Math.round(input.monto! * 100) / 100, fecha: input.fecha!,
-    ...(str(input.soporte, 200) ? { soporte: str(input.soporte, 200) } : {}), by: user.email, at: new Date().toISOString() };
+    ...(str(input.soporte, 200) ? { soporte: str(input.soporte, 200) } : {}), by: user.email, at: ahora().toISOString() };
   gastosState().set(gasto.id, gasto);
   audit(user, "task", gasto.id, `${gasto.tipo === "EJECUCION" ? "ejecución registrada" : "compromiso registrado"} por ${dinero(gasto.monto, moneda)} · «${gasto.concepto}»`);
   void persist("movimiento de presupuesto", (db) => db.projectRecord.upsert({ where: { companyId_id: { companyId: cid(), id: `gasto:${gasto.id}` } }, update: { data: gasto as never }, create: { companyId: cid(), id: `gasto:${gasto.id}`, data: gasto as never } }));

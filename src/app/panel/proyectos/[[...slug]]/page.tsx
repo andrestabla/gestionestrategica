@@ -976,6 +976,11 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
       <CardHeader title="Nueva tarea"
         sub="Nace en «Por hacer», con línea base congelada en sus fechas — cerrar exigirá evidencia"
         right={<button onClick={onClose} className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>} />
+      {people.length === 0 && (
+        <p className="mx-5 mb-3 rounded-xl px-4 py-3 text-[12.5px] leading-relaxed text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, var(--surface))" }}>
+          <b className="text-ink">El directorio de personas está vacío.</b> Cada tarea lleva un responsable con nombre propio, así que antes hay que crear las personas en Administración → Catálogo → Personas. Con ellas, vuelve aquí y crea la tarea.
+        </p>
+      )}
       <div className="grid gap-3 px-5 pb-5 lg:grid-cols-2">
         <div className="space-y-2.5">
           <div>
@@ -1044,7 +1049,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
               iniId, title, desc, assigneeId, start, due,
               dependsOn: dependsOn ? [dependsOn] : undefined, requiresEvidence, milestone,
             })}
-            disabled={saving || title.trim().length < 8 || desc.trim().length < 20 || !start || !due}
+            disabled={saving || people.length === 0 || title.trim().length < 8 || desc.trim().length < 20 || !start || !due}
             className="btn-primary w-full !py-2 text-[12.5px] disabled:opacity-40">
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
             Crear tarea
