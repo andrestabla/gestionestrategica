@@ -6,6 +6,8 @@ import { runWithTenant } from "../src/server/tenant";
 import { createCompany, catalog, resetStore, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, calificables } from "../src/server/store";
 import { INI_CATEGORIAS, categoriaLabel, iniCategoria } from "../src/data/cmi";
 import { pasaAPriorizacion } from "../src/lib/convencion";
+import { documentoDecisiones } from "../src/server/exportar";
+import { documentoXlsx } from "../src/server/exportar-xlsx";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
@@ -56,6 +58,15 @@ test("categoría: se mapea sin objetivo ni KR, no se califica hasta tener KR y s
     assert.equal(de(esp.id!).categoria, undefined);
     assert.ok(upsertInitiative(advisor, { ...de(esp.id!), categoria: "otra" as never }).ok);
     assert.equal(de(esp.id!).categoria, undefined);
+    // la descarga de iniciativas trae la categoría de cada una y avisa de las que quedaron mapeadas
+    const doc = documentoDecisiones("iniciativas", advisor), sec = doc.secciones[0], col = sec.columnas.indexOf("Categoría");
+    assert.equal(col, 2);
+    assert.equal(sec.anchos?.length, sec.columnas.length);
+    assert.ok(sec.filas.every((f) => f.length === sec.columnas.length));
+    assert.deepEqual(sec.filas.map((f) => [f[0], f[col]]), [[esp.id!, "Iniciativa"], [dis.id!, "Iniciativa disruptiva"]]);
+    assert.ok(/1 proyecto especial o iniciativa disruptiva está mapeado/.test(sec.notas?.[0] ?? ""));
+    assert.ok((await documentoXlsx(doc)).length > 2000);
+
     // al quitarle la categoría a una que sigue sin objetivo, vuelve a regir la regla corriente
     const sinCat = upsertInitiative(advisor, { ...de(dis.id!), categoria: null as never });
     assert.ok(!sinCat.ok && sinCat.status === 422);

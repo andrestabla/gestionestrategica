@@ -3,7 +3,7 @@
 // exportar-pdf, exportar-docx y exportar-xlsx a partir de la misma estructura.
 
 import { catalog, getAlineacion, getDecisions, consolidatedOf, getRevisionesCap, getChecklistsCap, getMetas, getArticulaciones, getF1Responses } from "@/server/store";
-import { krsDeIniciativa } from "@/data/cmi";
+import { krsDeIniciativa, categoriaLabel } from "@/data/cmi";
 import { leversOf, horizonsOf, horizonesBase } from "@/data/catalogo";
 import { keyResultsOf, initiativesOfKr, pasaAPriorizacion } from "@/lib/convencion";
 import { rank, decisionLabel, LEVEL_NAMES, type Decision } from "@/lib/priorizacion";
@@ -72,10 +72,12 @@ export function documentoDecisiones(modulo: ModuloExport, user: SessionUser): Do
     const val = getAlineacion(h1?.id ?? "", "alineacion-ini");
     const items = (val?.informe as unknown as ValidacionIni | undefined)?.items ?? [];
     const item = (id: string) => items.find((x) => x.id === id);
-    const filas = c.initiatives.map((i) => { const it = item(i.id); return [i.id, i.name, leverOfIni(i.id), i.cmi, krsDeIniciativa(i).join(" · ") || "—", area(i.ownerId), `${i.start || "—"} a ${i.end || "—"}`, i.capability || "—", i.budgetPlanned ? `${i.budgetCurrency ?? c.company.currency ?? "COP"} ${n(i.budgetPlanned, 0)}` : "—", it ? SEM_ALI[it.color].label : "Sin validar", it ? it.recomendaciones.slice(0, 3).join(" · ") : "—"]; });
+    const filas = c.initiatives.map((i) => { const it = item(i.id); return [i.id, i.name, categoriaLabel(i.categoria) ?? "Iniciativa", leverOfIni(i.id), i.cmi || "—", krsDeIniciativa(i).join(" · ") || "—", area(i.ownerId), `${i.start || "—"} a ${i.end || "—"}`, i.capability || "—", i.budgetPlanned ? `${i.budgetCurrency ?? c.company.currency ?? "COP"} ${n(i.budgetPlanned, 0)}` : "—", it ? SEM_ALI[it.color].label : "Sin validar", it ? it.recomendaciones.slice(0, 3).join(" · ") : "—"]; });
+    const mapeadas = c.initiatives.filter((i) => i.categoria && !i.kpi).length;
     return { ...base, modulo, titulo: V.tabs.iniciativas, subtitulo: "Qué iniciativa mueve cada resultado clave, con su formulación y su validación", secciones: [
       { titulo: `${V.tabs.iniciativas} (${filas.length})`, intro: val ? `Validación de iniciativas del ${val.at.slice(0, 10)}: ${items.filter((x) => x.color === "verde").length} alineadas, ${items.filter((x) => x.color === "amarillo").length} parciales, ${items.filter((x) => x.color === "rojo").length} por replantear.` : "Sin validación registrada.",
-        columnas: ["Id", "Iniciativa", V.lever, "Objetivo", "KR", "Responsable", "Inicio y fin", "Capacidad", "Presupuesto", "Validación", "Qué hacer"], anchos: [5, 20, 11, 6, 7, 10, 9, 6, 7, 8, 11], filas },
+        columnas: ["Id", "Iniciativa", "Categoría", V.lever, "Objetivo", "KR", "Responsable", "Inicio y fin", "Capacidad", "Presupuesto", "Validación", "Qué hacer"], anchos: [4, 16, 8, 9, 7.5, 6, 9, 8, 8, 9.5, 8.5, 10.5], filas,
+        ...(mapeadas ? { notas: [`${mapeadas} ${mapeadas === 1 ? "proyecto especial o iniciativa disruptiva está mapeado" : "proyectos especiales o iniciativas disruptivas están mapeados"} sin resultado clave: no ${mapeadas === 1 ? "pasa" : "pasan"} a Priorización hasta que se ${mapeadas === 1 ? "le" : "les"} asocie uno.`] } : {}) },
     ] };
   }
 
