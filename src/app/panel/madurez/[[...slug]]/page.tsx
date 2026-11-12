@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { PageHeader, Card, CardHeader, EmptyNote, Skeleton } from "@/components/ui";
+import { PageHeader, Card, CardHeader, EmptyNote, Modal, Skeleton } from "@/components/ui";
 import { useBase, useUser } from "@/components/user-context";
 import { avisar, confirmar } from "@/components/feedback";
 import { instrumentOf } from "@/data/madurez";
@@ -22,7 +22,7 @@ import {
   practiceCounts, evidenceCoverage, aiqOf, progressOf,
   type OrgKind, type Captures, type MadCapture, type MadCut, type SafeguardState, type SafeguardStatus, type MadInstrument, type MadVariable, type Progress, type CaptureField, type EvidenceComponent,
 } from "@/lib/madurez";
-import { Layers, Search, BookOpenCheck, Sigma, ClipboardList, ChevronDown, Send, UserRoundCheck, Users, FileText } from "lucide-react";
+import { Layers, Search, BookOpenCheck, Sigma, ClipboardList, ChevronRight, Send, UserRoundCheck, Users, FileText } from "lucide-react";
 import { PercepcionInicio, Cuestionario, type Mia } from "./percepcion";
 import { LecturaPersonal, LecturaResumen, InformeResultados } from "./informe";
 
@@ -232,7 +232,7 @@ function Resumen({ ins, caps, previo }: { ins: MadInstrument; caps: Captures; pr
 function Ficha({ ins, v, c }: { ins: MadInstrument; v: MadVariable; c?: MadCapture }) {
   const st = practiceState(c), gr = gapReading(c), p = P(c), e = E(c), s = S(c);
   return (
-    <div className="grid gap-5 border-t border-line bg-surface-2 px-5 py-4 lg:grid-cols-2">
+    <div className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
       <div className="space-y-4">
         <div><div className="label">Qué mide</div><p className="mt-1 text-[13px] text-ink-soft">{v.desc}</p></div>
         <div><div className="label">Qué se pregunta</div>
@@ -251,7 +251,7 @@ function Ficha({ ins, v, c }: { ins: MadInstrument; v: MadVariable; c?: MadCaptu
       <div className="space-y-4">
         <div><div className="label">Rúbrica</div>
           <ol className="mt-1.5 space-y-1">{v.rubric.map((r, k) => (
-            <li key={k} className={`flex gap-2 rounded-lg px-2.5 py-1.5 text-[13px] ${c?.level === k + 1 ? "bg-surface font-semibold text-ink shadow-[var(--e1)]" : "text-ink-soft"}`}>
+            <li key={k} className={`flex gap-2 rounded-lg px-2.5 py-1.5 text-[13px] ${c?.level === k + 1 ? "bg-surface-2 font-semibold text-ink" : "text-ink-soft"}`}>
               <span className="num mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: `var(--n${k + 1})` }}>{k + 1}</span>{r}</li>
           ))}</ol>
         </div>
@@ -291,21 +291,26 @@ function Variables({ ins, caps }: { ins: MadInstrument; caps: Captures }) {
         <label className="flex items-center gap-1.5 text-[13px] text-ink-soft"><input type="checkbox" checked={brecha} onChange={(e) => setBrecha(e.target.checked)} /> Solo con brecha</label>
       </div>
       <ul className="mt-4 divide-y divide-line border-t border-line">
-        {lista.map((v) => { const c = caps[v.id], on = abierta === v.id; return (
+        {lista.map((v) => { const c = caps[v.id]; return (
           <li key={v.id}>
-            <button type="button" onClick={() => setAbierta(on ? null : v.id)} aria-expanded={on} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-2">
+            <button type="button" onClick={() => setAbierta(v.id)} aria-haspopup="dialog" className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-2">
               <span className="num w-[76px] flex-none text-[12px] text-faint">{v.id}</span>
               <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold text-ink">{v.name}</span>
                 <span className="mt-0.5 block text-[12px] text-muted">{ins.lines.find((l) => l.n === v.line)?.short} · {ins.dimensions.find((d) => d.key === v.dimension)?.name} · <span style={{ color: ins.frames[v.frame]?.color }} className="font-semibold">{v.frame}</span></span></span>
               <span className="hidden text-[12px] text-muted sm:block">{typeof c?.target === "number" ? <>meta <b className="num text-ink">{c.target}</b></> : null}</span>
               <Nivel v={c?.level} dec={false} />
-              <ChevronDown size={16} className={`flex-none text-faint transition-transform ${on ? "rotate-180" : ""}`} />
+              <ChevronRight size={16} className="flex-none text-faint" />
             </button>
-            {on && <Ficha ins={ins} v={v} c={c} />}
           </li>
         ); })}
         {!lista.length && <li className="px-5 py-8 text-center text-[13px] text-muted">Ninguna variable cumple el filtro.</li>}
       </ul>
+      {(() => { const v = abierta ? ins.variables.find((x) => x.id === abierta) : null; return v && (
+        <Modal variante="ventana" title={v.name} onClose={() => setAbierta(null)}
+          sub={<><span className="num font-bold text-cyan-deep">{v.id}</span> · {ins.lines.find((l) => l.n === v.line)?.short} · {ins.dimensions.find((d) => d.key === v.dimension)?.name} · <span style={{ color: ins.frames[v.frame]?.color }} className="font-semibold">{v.frame}</span></>}>
+          <Ficha ins={ins} v={v} c={caps[v.id]} />
+        </Modal>
+      ); })()}
     </Card>
   );
 }
@@ -489,57 +494,67 @@ function Captura({ ins, data, enviar, onPreview }: { ins: MadInstrument; data: A
 
       <Card>
         <ul className="divide-y divide-line">
-          {ins.variables.filter((v) => v.line === line).map((v) => { const c = data.vars[v.id] ?? ({} as MadCapture), on = abierta === v.id; return (
+          {ins.variables.filter((v) => v.line === line).map((v) => { const c = data.vars[v.id] ?? ({} as MadCapture); return (
             <li key={v.id}>
-              <button type="button" onClick={() => setAbierta(on ? null : v.id)} aria-expanded={on} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-2">
+              <button type="button" onClick={() => setAbierta(v.id)} aria-haspopup="dialog" className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-2">
                 <span className="num w-[76px] flex-none text-[12px] text-faint">{v.id}</span>
                 <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold text-ink">{v.name}</span><span className="mt-0.5 block text-[12px] text-muted">{ins.dimensions.find((d) => d.key === v.dimension)?.name} · {v.frame}</span></span>
                 <span className="hidden text-[12px] text-muted sm:block">percepción <b className="num text-ink">{typeof c.perception === "number" ? f1(c.perception) : "—"}</b></span>
                 <Nivel v={c.level} dec={false} />
-                <ChevronDown size={16} className={`flex-none text-faint transition-transform ${on ? "rotate-180" : ""}`} />
+                <ChevronRight size={16} className="flex-none text-faint" />
               </button>
-              {on && (
-                <div className="grid gap-6 border-t border-line bg-surface-2 px-5 py-4 lg:grid-cols-2">
-                  <div className="space-y-4">
-                    <p className="text-[13px] text-ink-soft">{v.desc}</p>
-                    <div><div className="label">Percepción · de 1 (en desacuerdo) a 5 (de acuerdo)</div>
-                      <p className="mb-2 mt-1 text-[13px] font-semibold text-ink">{v.items.find((i) => i.type === "likert")?.text}</p>
-                      {c.perceptionN
-                        ? <p className="text-[13px] text-ink-soft"><b className="num text-[15px] text-ink">{f1(c.perception!)}</b> de 5 · promedio de {c.perceptionN} {c.perceptionN === 1 ? "respuesta" : "respuestas"}</p>
-                        : <><Escala etiqueta="Percepción" valor={c.perception} min={1} max={5} onPick={(n) => set(v.id, "perception", n)} />
-                          <p className="mt-1.5 text-[12px] text-faint">Nadie ha respondido esta afirmación. Puedes anotar la percepción acordada en sesión; en cuanto alguien responda, cuenta el promedio.</p></>}</div>
-                    {v.items.filter((i) => i.type !== "likert").length > 0 && (
-                      <div><div className="label">Preguntas de apoyo</div><ul className="mt-1.5 space-y-1">{v.items.filter((i) => i.type !== "likert").map((i, k) => <li key={k} className="text-[12.5px] text-ink-soft"><span className="chip mr-1.5">{ITEM_TYPE_LABEL[i.type]}</span>{i.text}</li>)}</ul></div>
-                    )}
-                    {<><Texto key={`h${c.hallazgo ?? ""}`} label="Hallazgo" valor={c.hallazgo} onSave={(t) => set(v.id, "hallazgo", t)} /><Texto key={`r${c.recomendacion ?? ""}`} label="Recomendación" valor={c.recomendacion} onSave={(t) => set(v.id, "recomendacion", t)} /></>}
-                  </div>
-                  <div className="space-y-4">
-                    <div><div className="label">Evidencia · de 0 a 4</div>
-                      <div className="mt-2 space-y-3">{(["D", "I", "K"] as EvidenceComponent[]).map((k) => { const req = v.evidence.find((e) => e.component === k), campo = k.toLowerCase() as "d" | "i" | "k", val = c[campo]; return (
-                        <div key={k}>
-                          <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">{DIK_ANCHORS[k].label} <span className="font-normal text-muted">· {DIK_ANCHORS[k].question}</span></span>
-                            <Escala etiqueta={DIK_ANCHORS[k].label} valor={val} min={0} max={4} onPick={(n) => set(v.id, campo, n)} /></div>
-                          {req && <p className="mt-1 text-[12px] text-faint">{req.what}. Criterio: {req.criterio}</p>}
-                          {typeof val === "number" && <p className="mt-0.5 text-[12px] font-semibold text-ink-soft">{val} · {DIK_ANCHORS[k].levels[val]}</p>}
-                        </div>
-                      ); })}</div>
-                    </div>
-                    <div><div className="label">Nivel contra la rúbrica</div>
-                      <ol className="mt-1.5 space-y-1">{v.rubric.map((r, k) => (
-                        <li key={k}><button type="button" aria-pressed={c.level === k + 1} onClick={() => set(v.id, "level", c.level === k + 1 ? null : k + 1)}
-                          className={`flex w-full gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed ${c.level === k + 1 ? "bg-surface font-semibold text-ink shadow-[var(--e1)]" : "text-ink-soft hover:bg-surface"}`}>
-                          <span className="num mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: `var(--n${k + 1})` }}>{k + 1}</span>{r}</button></li>
-                      ))}</ol>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">Meta de la variable</span><Escala etiqueta="Meta" valor={c.target} min={1} max={5} onPick={(n) => set(v.id, "target", n)} /></div>
-                    {c.by && <p className="text-[12px] text-faint">Última captura: {c.by} · {fecha(c.at)}</p>}
-                  </div>
-                </div>
-              )}
             </li>
           ); })}
         </ul>
       </Card>
+      {(() => { const v = abierta ? ins.variables.find((x) => x.id === abierta) : null; if (!v) return null; const c = data.vars[v.id] ?? ({} as MadCapture); const orden = ins.variables.filter((x) => x.line === v.line), pos = orden.findIndex((x) => x.id === v.id); return (
+        <Modal variante="ventana" wide title={v.name} onClose={() => setAbierta(null)}
+          sub={<><span className="num font-bold text-cyan-deep">{v.id}</span> · {ins.dimensions.find((d) => d.key === v.dimension)?.name} · {v.frame} · variable {pos + 1} de {orden.length} de la línea · cada cambio se guarda al momento</>}
+          footer={<>
+            <button type="button" disabled={pos <= 0} onClick={() => setAbierta(orden[pos - 1].id)} className="btn-ghost mr-auto !py-2 text-[12px] disabled:opacity-40">← Anterior</button>
+            <button type="button" disabled={pos >= orden.length - 1} onClick={() => setAbierta(orden[pos + 1].id)} className="btn-ghost !py-2 text-[12px] disabled:opacity-40">Siguiente →</button>
+            <button type="button" onClick={() => setAbierta(null)} className="btn-primary !py-2 text-[12px]">Listo</button>
+          </>}>
+          <div key={v.id} className="grid gap-x-8 gap-y-5 lg:grid-cols-3">
+            <div className="space-y-4">
+              <p className="text-[13px] text-ink-soft">{v.desc}</p>
+              <div><div className="label">Percepción · de 1 (en desacuerdo) a 5 (de acuerdo)</div>
+                <p className="mb-2 mt-1 text-[13px] font-semibold text-ink">{v.items.find((i) => i.type === "likert")?.text}</p>
+                {c.perceptionN
+                  ? <p className="text-[13px] text-ink-soft"><b className="num text-[15px] text-ink">{f1(c.perception!)}</b> de 5 · promedio de {c.perceptionN} {c.perceptionN === 1 ? "respuesta" : "respuestas"}</p>
+                  : <><Escala etiqueta="Percepción" valor={c.perception} min={1} max={5} onPick={(n) => set(v.id, "perception", n)} />
+                    <p className="mt-1.5 text-[12px] text-faint">Nadie ha respondido esta afirmación. Puedes anotar la percepción acordada en sesión; en cuanto alguien responda, cuenta el promedio.</p></>}</div>
+              {v.items.filter((i) => i.type !== "likert").length > 0 && (
+                <div><div className="label">Preguntas de apoyo</div><ul className="mt-1.5 space-y-1">{v.items.filter((i) => i.type !== "likert").map((i, k) => <li key={k} className="text-[12.5px] text-ink-soft"><span className="chip mr-1.5">{ITEM_TYPE_LABEL[i.type]}</span>{i.text}</li>)}</ul></div>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div><div className="label">Evidencia · de 0 a 4</div>
+                <div className="mt-2 space-y-3">{(["D", "I", "K"] as EvidenceComponent[]).map((k) => { const req = v.evidence.find((e) => e.component === k), campo = k.toLowerCase() as "d" | "i" | "k", val = c[campo]; return (
+                  <div key={k}>
+                    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">{DIK_ANCHORS[k].label} <span className="font-normal text-muted">· {DIK_ANCHORS[k].question}</span></span>
+                      <Escala etiqueta={DIK_ANCHORS[k].label} valor={val} min={0} max={4} onPick={(n) => set(v.id, campo, n)} /></div>
+                    {req && <p className="mt-1 text-[12px] text-faint">{req.what}. Criterio: {req.criterio}</p>}
+                    {typeof val === "number" && <p className="mt-0.5 text-[12px] font-semibold text-ink-soft">{val} · {DIK_ANCHORS[k].levels[val]}</p>}
+                  </div>
+                ); })}</div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div><div className="label">Nivel contra la rúbrica</div>
+                <ol className="mt-1.5 space-y-1">{v.rubric.map((r, k) => (
+                  <li key={k}><button type="button" aria-pressed={c.level === k + 1} onClick={() => set(v.id, "level", c.level === k + 1 ? null : k + 1)}
+                    className={`flex w-full gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed ${c.level === k + 1 ? "bg-surface-2 font-semibold text-ink" : "text-ink-soft hover:bg-surface-2"}`}>
+                    <span className="num mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: `var(--n${k + 1})` }}>{k + 1}</span>{r}</button></li>
+                ))}</ol>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">Meta de la variable</span><Escala etiqueta="Meta" valor={c.target} min={1} max={5} onPick={(n) => set(v.id, "target", n)} /></div>
+              {c.by && <p className="text-[12px] text-faint">Última captura: {c.by} · {fecha(c.at)}</p>}
+            </div>
+            <div className="grid gap-x-8 gap-y-4 lg:col-span-3 lg:grid-cols-2"><Texto key={`h${c.hallazgo ?? ""}`} label="Hallazgo" valor={c.hallazgo} onSave={(t) => set(v.id, "hallazgo", t)} /><Texto key={`r${c.recomendacion ?? ""}`} label="Recomendación" valor={c.recomendacion} onSave={(t) => set(v.id, "recomendacion", t)} /></div>
+          </div>
+        </Modal>
+      ); })()}
     </div>
   );
 }

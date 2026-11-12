@@ -12,6 +12,7 @@ import Link from "next/link";
 import { MiniRadar } from "@/components/charts";
 import { MarcaGE } from "@/components/logo";
 import { avisar } from "@/components/feedback";
+import { Modal } from "@/components/ui";
 import { CAPS, LEVELS, THRESHOLD, levelOf, levelName } from "@/data/mapa";
 import type { InformeIA, InformeKind } from "@/lib/informe-ia";
 import type { DimEjec, DatosEjec } from "@/lib/informe-datos";
@@ -236,7 +237,7 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
                   <div className="relative mt-2 h-[8px] overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${((c.m ?? 0) / 5) * 100}%`, background: c.m != null && c.m < THRESHOLD ? "var(--bad)" : c.color }} /><i className="absolute top-0 h-full w-px bg-ink/40" style={{ left: `${(THRESHOLD / 5) * 100}%` }} /></div>
                   <p className="mt-2 text-[12px] italic text-faint">{c.q}</p>
                   <div className="mt-2 text-[13px] leading-relaxed text-ink-soft">{L?.lectura ?? <Esqueleto filas={3} />}</div>
-                  <button type="button" onClick={() => { setTab("dimensiones"); setSel(datos.dims.find((d) => d.capCode === c.code)?.code ?? null); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="mt-3 inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline">Ver sus dimensiones <ArrowRight size={12} /></button>
+                  <button type="button" onClick={() => { setSel(null); setTab("dimensiones"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="mt-3 inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline">Ver sus dimensiones <ArrowRight size={12} /></button>
                 </div>
               </div>
             ); })}
@@ -249,26 +250,19 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
             <div className="panel px-5 py-5 sm:px-7">
               <Kicker icon={<ListChecks size={12} />}>Las diecisiete dimensiones</Kicker>
               <p className="mt-1 text-[12.5px] text-muted">Promedio de las cuatro prácticas de cada dimensión, coloreado por nivel. {kind === "consolidado" ? "La línea oscura muestra la dispersión entre directivos (± una desviación). " : ""}<b className="text-ink"><MousePointerClick size={12} className="mr-0.5 inline" />Toca una barra</b> para ver su definición, su lectura y{kind === "f1" ? " las cuatro prácticas calificadas" : " su dispersión"}.</p>
-              <div className="mt-3 grid gap-5 lg:grid-cols-[1.35fr_1fr]">
-                <BarrasDimensiones dims={datos.dims} sel={sel} onSel={(c) => setSel((s) => (s === c ? null : c))} consolidado={kind === "consolidado"} />
-                <div>
-                  {selDim ? (
-                    <div className="rise rounded-2xl border border-line px-5 py-4">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-faint">{selDim.capName}</div>
-                      <div className="mt-0.5 flex items-baseline justify-between gap-3"><b className="text-[15px] text-ink">{selDim.code} · {selDim.name}</b><span className="num text-[20px] font-extrabold" style={{ color: selDim.m != null ? LEVELS[levelOf(selDim.m) - 1].color : "var(--faint)" }}>{fmtN(selDim.m)}</span></div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2"><Nivel m={selDim.m} />{kind === "consolidado" && selDim.sd != null && <span className="chip">dispersión ± {fmtN(selDim.sd)}</span>}</div>
-                      <p className="mt-2 text-[12px] leading-snug text-muted">{selDim.defn}</p>
-                      <div className="mt-3 text-[13px] leading-relaxed text-ink-soft">{lecturaDim(selDim.code) ?? (informe ? "Sin lectura específica para esta dimensión." : <Esqueleto filas={3} />)}</div>
-                      {selDim.prac && (
-                        <ul className="mt-3 space-y-1.5">{selDim.prac.map((p) => <li key={p.code} className="flex items-start gap-2 text-[12px]"><span className={`num mt-0.5 w-6 shrink-0 rounded-md text-center font-extrabold ${p.v == null ? "bg-surface-2 text-faint" : p.v < THRESHOLD ? "bg-bad/15 text-bad-text" : "bg-ok/15 text-ok-text"}`}>{p.v ?? "—"}</span><span className="text-ink-soft">{p.text}</span></li>)}</ul>
-                      )}
-                      <button type="button" onClick={() => setSel(null)} className="mt-3 text-[12px] font-bold text-cyan-deep hover:underline">Cerrar</button>
-                    </div>
-                  ) : (
-                    <div className="flex h-full min-h-[180px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-line px-5 py-4 text-center text-[12.5px] text-faint"><MousePointerClick size={20} className="text-gold" />Toca una barra de la gráfica para profundizar en esa dimensión.</div>
-                  )}
-                </div>
+              <div className="mt-3">
+                <BarrasDimensiones dims={datos.dims} sel={sel} onSel={(c) => setSel(c)} consolidado={kind === "consolidado"} />
               </div>
+              {selDim && (
+                <Modal variante="dialogo" title={`${selDim.code} · ${selDim.name}`} sub={selDim.capName} onClose={() => setSel(null)}>
+            <div className="flex flex-wrap items-center gap-2"><span className="num text-[22px] font-extrabold leading-none" style={{ color: selDim.m != null ? LEVELS[levelOf(selDim.m) - 1].color : "var(--faint)" }}>{fmtN(selDim.m)}</span><Nivel m={selDim.m} />{kind === "consolidado" && selDim.sd != null && <span className="chip">dispersión ± {fmtN(selDim.sd)}</span>}</div>
+            <p className="mt-2 text-[12px] leading-snug text-muted">{selDim.defn}</p>
+            <div className="mt-3 text-[13px] leading-relaxed text-ink-soft">{lecturaDim(selDim.code) ?? (informe ? "Sin lectura específica para esta dimensión." : <Esqueleto filas={3} />)}</div>
+            {selDim.prac && (
+              <ul className="mt-3 space-y-1.5">{selDim.prac.map((p) => <li key={p.code} className="flex items-start gap-2 text-[12px]"><span className={`num mt-0.5 w-6 shrink-0 rounded-md text-center font-extrabold ${p.v == null ? "bg-surface-2 text-faint" : p.v < THRESHOLD ? "bg-bad/15 text-bad-text" : "bg-ok/15 text-ok-text"}`}>{p.v ?? "—"}</span><span className="text-ink-soft">{p.text}</span></li>)}</ul>
+            )}
+                </Modal>
+              )}
             </div>
             <div className="panel px-5 py-5 sm:px-7">
               <Kicker>Lectura de cada dimensión</Kicker>

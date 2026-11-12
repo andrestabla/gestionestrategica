@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { avanceAMeta, mejora, mueveKr } from "@/data/cmi";
 import { confirmarGuardar } from "@/components/feedback";
 import Link from "next/link";
-import { PageHeader, Card } from "@/components/ui";
+import { PageHeader, Modal } from "@/components/ui";
 import { AccessChip, useCan } from "@/components/user-context";
 import { Sparkline } from "@/components/charts";
 import { LINES, fmtNum } from "@/data/demo";
@@ -16,7 +16,7 @@ import { useCatalog } from "@/components/catalog-context";
 import { kpisOf, responsible, type KpiView } from "@/lib/vista";
 import { kpiHealth } from "@/lib/logic";
 import {
-  X, User, Database, CalendarClock, Target, ListChecks, Sigma,
+  User, Database, CalendarClock, Target, ListChecks, Sigma,
   Loader2, PlusCircle, AlertTriangle, Upload, FileDown, CheckCircle2,
 } from "lucide-react";
 import { periodIndex } from "@/lib/period";
@@ -66,7 +66,7 @@ export default function KpiPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canReportAny && (
-              <button onClick={() => setImporting((v) => !v)} className="btn-ghost btn-sm text-[12px]">
+              <button onClick={() => setImporting(true)} className="btn-ghost btn-sm text-[12px]">
                 <Upload size={13} /> Importar CSV
               </button>
             )}
@@ -91,195 +91,178 @@ export default function KpiPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        {/* tarjetas */}
-        <div className="grid content-start gap-3.5 sm:grid-cols-2">
-          {list.length === 0 && (
-            <p className="rise rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted sm:col-span-2">
-              {kpis.length === 0 ? "Esta empresa aún no tiene indicadores definidos." : "No hay indicadores en esta capacidad."}
-            </p>
-          )}
-          {list.map((k, idx) => {
-            const series = seriesOf(k);
-            const last = series[series.length - 1] ?? { period: "", value: 0 };
-            const prev = series[series.length - 2];
-            const delta = prev ? last.value - prev.value : 0;
-            const improving = mejora(k.goodDirection, last.value, prev?.value, k.target);
-            const ratio = avanceAMeta(k.goodDirection, last.value, k.target);
-            const toTarget = Number.isFinite(ratio) ? ratio : 0;
-            const line = LINES.find((l) => l.n === k.line)!;
-            const active = open === k.code;
-            return (
-              <button key={k.code} onClick={() => setOpen(active ? null : k.code)}
-                className={`panel panel-lift rise rise-${Math.min(idx % 4 + 1, 4)} p-4 text-left ${
-                  active ? "ring-2 ring-cyan" : ""}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-[12.5px] font-bold leading-snug text-ink">{k.name}</div>
-                  <span className="chip shrink-0" style={{ color: line.color }}>{k.code}</span>
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="num text-[22px] font-extrabold text-ink">{fmtNum(last.value, 2)}</span>
-                  <span className="text-[12px] text-faint">{k.unit}</span>
-                  <span className="num ml-auto text-[12px] font-bold"
-                    style={{ color: improving ? "var(--ok)" : "var(--bad)" }}>
-                    {delta >= 0 ? "▲" : "▼"} {fmtNum(Math.abs(delta), 2)}
-                  </span>
-                </div>
-                <div className="mt-1"><Sparkline values={series.map((s) => s.value)} good={improving} /></div>
-                <div className="mt-1.5 flex items-center justify-between">
-                  <span className="label !text-[11px]">meta {fmtNum(k.target, 1)} · {k.frequency.toLowerCase()}</span>
-                  <span className="num text-[11px] font-bold"
-                    style={{ color: toTarget >= 85 ? "var(--ok)" : toTarget >= 55 ? "var(--warn)" : "var(--bad)" }}>
-                    {Math.min(999, Math.round(toTarget))} % de la meta
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ficha */}
-        <div className="lg:sticky lg:top-[70px] lg:self-start">
-          <Card className="rise rise-2">
-            {!kpi ? (
-              <div className="px-5 py-6 text-[12.5px] italic text-faint">
-                Abre un indicador para ver su ficha: definición operativa, fórmula,
-                serie con notas, dueño del dato y objetivo estratégico al que sirve.
+      {/* tarjetas: la ficha de cada indicador abre en una ventana */}
+      <div className="grid content-start gap-3.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {list.length === 0 && (
+          <p className="rise rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted sm:col-span-2 lg:col-span-3 2xl:col-span-4">
+            {kpis.length === 0 ? "Esta empresa aún no tiene indicadores definidos." : "No hay indicadores en esta capacidad."}
+          </p>
+        )}
+        {list.map((k, idx) => {
+          const series = seriesOf(k);
+          const last = series[series.length - 1] ?? { period: "", value: 0 };
+          const prev = series[series.length - 2];
+          const delta = prev ? last.value - prev.value : 0;
+          const improving = mejora(k.goodDirection, last.value, prev?.value, k.target);
+          const ratio = avanceAMeta(k.goodDirection, last.value, k.target);
+          const toTarget = Number.isFinite(ratio) ? ratio : 0;
+          const line = LINES.find((l) => l.n === k.line)!;
+          const active = open === k.code;
+          return (
+            <button key={k.code} onClick={() => setOpen(k.code)}
+              className={`panel panel-lift rise rise-${Math.min(idx % 4 + 1, 4)} p-4 text-left ${
+                active ? "ring-2 ring-cyan" : ""}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-[12.5px] font-bold leading-snug text-ink">{k.name}</div>
+                <span className="chip shrink-0" style={{ color: line.color }}>{k.code}</span>
               </div>
-            ) : (
-              <div className="px-5 py-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="num text-[12px] font-bold text-cyan-deep">{kpi.code}</div>
-                    <h3 className="text-[15px] font-extrabold leading-snug text-ink">{kpi.name}</h3>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="num text-[22px] font-extrabold text-ink">{fmtNum(last.value, 2)}</span>
+                <span className="text-[12px] text-faint">{k.unit}</span>
+                <span className="num ml-auto text-[12px] font-bold"
+                  style={{ color: improving ? "var(--ok)" : "var(--bad)" }}>
+                  {delta >= 0 ? "▲" : "▼"} {fmtNum(Math.abs(delta), 2)}
+                </span>
+              </div>
+              <div className="mt-1"><Sparkline values={series.map((s) => s.value)} good={improving} /></div>
+              <div className="mt-1.5 flex items-center justify-between">
+                <span className="label !text-[11px]">meta {fmtNum(k.target, 1)} · {k.frequency.toLowerCase()}</span>
+                <span className="num text-[11px] font-bold"
+                  style={{ color: toTarget >= 85 ? "var(--ok)" : toTarget >= 55 ? "var(--warn)" : "var(--bad)" }}>
+                  {Math.min(999, Math.round(toTarget))} % de la meta
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {kpi && (
+        <Modal variante="ventana" title={kpi.name} onClose={() => setOpen(null)}
+          sub={<><span className="num font-bold text-cyan-deep">{kpi.code}</span> · {LINES.find((l) => l.n === kpi.line)?.name} · {kpi.frequency.toLowerCase()}</>}>
+          <div className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
+            <div className="min-w-0">
+            <p className="text-[12.5px] leading-relaxed text-ink-soft">{kpi.definition}</p>
+
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5">
+              <Sigma size={13} className="mt-0.5 shrink-0 text-muted" />
+              <code className="num text-[12px] leading-relaxed text-ink-soft">{kpi.formula}</code>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="flex items-start gap-2">
+                <User size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
+                <div>
+                  <div className="label !text-[11px]">Dueño del dato</div>
+                  <div className="text-[12px] font-semibold leading-snug text-ink">
+                    {responsible(v, kpi.ownerId).cargo}
                   </div>
-                  <button onClick={() => setOpen(null)}
-                    className="rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-ink">
-                    <X size={15} />
-                  </button>
+                  <div className="text-[12px] text-faint">{responsible(v, kpi.ownerId).dependencia}</div>
                 </div>
-
-                <p className="mt-2.5 text-[12.5px] leading-relaxed text-ink-soft">{kpi.definition}</p>
-
-                <div className="mt-3 flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5">
-                  <Sigma size={13} className="mt-0.5 shrink-0 text-muted" />
-                  <code className="num text-[12px] leading-relaxed text-ink-soft">{kpi.formula}</code>
+              </div>
+              <div className="flex items-start gap-2">
+                <Database size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
+                <div>
+                  <div className="label !text-[11px]">Fuente</div>
+                  <div className="text-[12px] font-semibold leading-snug text-ink">{kpi.source}</div>
                 </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-                  <div className="flex items-start gap-2">
-                    <User size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
-                    <div>
-                      <div className="label !text-[11px]">Dueño del dato</div>
-                      <div className="text-[12px] font-semibold leading-snug text-ink">
-                        {responsible(v, kpi.ownerId).cargo}
-                      </div>
-                      <div className="text-[12px] text-faint">{responsible(v, kpi.ownerId).dependencia}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Database size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
-                    <div>
-                      <div className="label !text-[11px]">Fuente</div>
-                      <div className="text-[12px] font-semibold leading-snug text-ink">{kpi.source}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CalendarClock size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
-                    <div>
-                      <div className="label !text-[11px]">Periodicidad</div>
-                      <div className="text-[12px] font-semibold text-ink">{kpi.frequency}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Target size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
-                    <div>
-                      <div className="label !text-[11px]">Línea base → meta</div>
-                      <div className="num text-[12px] font-semibold text-ink">
-                        {fmtNum(kpi.baseline, 1)} → {fmtNum(kpi.target, 1)} {kpi.unit}
-                      </div>
-                    </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CalendarClock size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
+                <div>
+                  <div className="label !text-[11px]">Periodicidad</div>
+                  <div className="text-[12px] font-semibold text-ink">{kpi.frequency}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Target size={13} className="mt-0.5 shrink-0 text-cyan-deep" />
+                <div>
+                  <div className="label !text-[11px]">Línea base → meta</div>
+                  <div className="num text-[12px] font-semibold text-ink">
+                    {fmtNum(kpi.baseline, 1)} → {fmtNum(kpi.target, 1)} {kpi.unit}
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {health && (
-                  <div className="mt-4 rounded-lg px-3.5 py-2.5"
-                    style={{
-                      background: health.projection.willReachTarget
-                        ? "color-mix(in srgb, var(--ok) 8%, var(--surface))"
-                        : "color-mix(in srgb, var(--warn) 10%, var(--surface))",
-                    }}>
-                    <div className="label !text-[11px]"
-                      style={{ color: health.projection.willReachTarget ? "var(--ok)" : "var(--warn)" }}>
-                      Proyección a dic-2028 (tendencia lineal de la serie)
-                    </div>
-                    <div className="mt-0.5 text-[12px] font-semibold leading-snug text-ink">
-                      Al ritmo actual llegaría a{" "}
-                      <b className="num">{fmtNum(health.projection.projectedAtTarget, 1)} {kpi.unit}</b>
-                      {" "}frente a la meta de <b className="num">{fmtNum(kpi.target, 1)}</b> —{" "}
-                      {health.projection.willReachTarget ? "la alcanza." : "no la alcanza: la iniciativa asociada debe acelerar."}
-                    </div>
-                    {health.isStale && (
-                      <div className="mt-1 text-[12px] font-semibold" style={{ color: "var(--bad-text)" }}>
-                        Dato rezagado: {health.staleBy} meses sobre la periodicidad declarada.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {kpiObj && (
-                  <Link href="/panel/capacidades"
-                    className="mt-4 block rounded-lg bg-navy px-3.5 py-2.5 transition-transform hover:translate-x-0.5">
-                    <div className="num text-[11px] font-bold text-white/60">{kpiObj.id} · OBJETIVO CMI</div>
-                    <div className="text-[12px] font-semibold leading-snug text-white">{kpiObj.name}</div>
-                  </Link>
-                )}
-
-                <div className="mt-4">
-                  <div className="label mb-2">Serie del indicador</div>
-                  <table className="w-full">
-                    <tbody>
-                      {kpiSeries.map((s) => (
-                        <tr key={s.period} className="border-b border-line last:border-0">
-                          <td className="num py-1.5 pr-2 text-[12px] font-semibold text-muted">
-                            {s.period}
-                            {eff[kpi.code]?.reported.includes(s.period) && (
-                              <span className="chip chip-cyan ml-1.5 !py-0 !text-[11px]">reportado</span>
-                            )}
-                          </td>
-                          <td className="num py-1.5 pr-2 text-right text-[12px] font-bold text-ink">
-                            {fmtNum(s.value, 2)}
-                          </td>
-                          <td className="py-1.5 text-[12px] italic leading-snug text-faint">{s.note ?? ""}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {health && (
+              <div className="mt-4 rounded-lg px-3.5 py-2.5"
+                style={{
+                  background: health.projection.willReachTarget
+                    ? "color-mix(in srgb, var(--ok) 8%, var(--surface))"
+                    : "color-mix(in srgb, var(--warn) 10%, var(--surface))",
+                }}>
+                <div className="label !text-[11px]"
+                  style={{ color: health.projection.willReachTarget ? "var(--ok)" : "var(--warn)" }}>
+                  Proyección a dic-2028 (tendencia lineal de la serie)
                 </div>
-
-                <ReportForm kpi={kpi} onReported={refetch} />
-
-                {kpiInis.length > 0 && (
-                  <div className="mt-4">
-                    <div className="label mb-2 flex items-center gap-1.5">
-                      <ListChecks size={11} /> Iniciativas que lo mueven
-                    </div>
-                    {kpiInis.map((i) => (
-                      <Link key={i.id} href={`/panel/iniciativas/${i.id}`}
-                        className="block rounded-lg bg-gold-wash px-3 py-2 transition-transform hover:translate-x-0.5">
-                        <div className="text-[12px] font-semibold text-ink">{i.name}</div>
-                        <div className="num mt-0.5 text-[12px]" style={{ color: "var(--gold-text)" }}>
-                          avance {i.progress} % · {i.start} → {i.end}
-                        </div>
-                      </Link>
-                    ))}
+                <div className="mt-0.5 text-[12px] font-semibold leading-snug text-ink">
+                  Al ritmo actual llegaría a{" "}
+                  <b className="num">{fmtNum(health.projection.projectedAtTarget, 1)} {kpi.unit}</b>
+                  {" "}frente a la meta de <b className="num">{fmtNum(kpi.target, 1)}</b> —{" "}
+                  {health.projection.willReachTarget ? "la alcanza." : "no la alcanza: la iniciativa asociada debe acelerar."}
+                </div>
+                {health.isStale && (
+                  <div className="mt-1 text-[12px] font-semibold" style={{ color: "var(--bad-text)" }}>
+                    Dato rezagado: {health.staleBy} meses sobre la periodicidad declarada.
                   </div>
                 )}
               </div>
             )}
-          </Card>
-        </div>
-      </div>
+
+            {kpiObj && (
+              <Link href="/panel/capacidades"
+                className="mt-4 block rounded-lg bg-navy px-3.5 py-2.5 transition-transform hover:translate-x-0.5">
+                <div className="num text-[11px] font-bold text-white/60">{kpiObj.id} · OBJETIVO CMI</div>
+                <div className="text-[12px] font-semibold leading-snug text-white">{kpiObj.name}</div>
+              </Link>
+            )}
+
+            {kpiInis.length > 0 && (
+              <div className="mt-4">
+                <div className="label mb-2 flex items-center gap-1.5">
+                  <ListChecks size={11} /> Iniciativas que lo mueven
+                </div>
+                {kpiInis.map((i) => (
+                  <Link key={i.id} href={`/panel/iniciativas/${i.id}`}
+                    className="block rounded-lg bg-gold-wash px-3 py-2 transition-transform hover:translate-x-0.5">
+                    <div className="text-[12px] font-semibold text-ink">{i.name}</div>
+                    <div className="num mt-0.5 text-[12px]" style={{ color: "var(--gold-text)" }}>
+                      avance {i.progress} % · {i.start} → {i.end}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            </div>
+            <div className="min-w-0">
+            <div>
+              <div className="label mb-2">Serie del indicador</div>
+              <table className="w-full">
+                <tbody>
+                  {kpiSeries.map((s) => (
+                    <tr key={s.period} className="border-b border-line last:border-0">
+                      <td className="num py-1.5 pr-2 text-[12px] font-semibold text-muted">
+                        {s.period}
+                        {eff[kpi.code]?.reported.includes(s.period) && (
+                          <span className="chip chip-cyan ml-1.5 !py-0 !text-[11px]">reportado</span>
+                        )}
+                      </td>
+                      <td className="num py-1.5 pr-2 text-right text-[12px] font-bold text-ink">
+                        {fmtNum(s.value, 2)}
+                      </td>
+                      <td className="py-1.5 text-[12px] italic leading-snug text-faint">{s.note ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <ReportForm kpi={kpi} onReported={refetch} />
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
@@ -352,22 +335,21 @@ function KpiImport({ onDone, onClose }: {
   };
 
   return (
-    <Card className="rise mb-5 ring-1 ring-cyan/40">
-      <div className="flex flex-wrap items-center gap-2.5 px-5 pb-2 pt-4">
-        <span className="p-title">Importar valores de KPI desde CSV</span>
-        <span className="p-sub">columnas: código · periodo · valor · nota (separador ; o ,)</span>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => downloadCsv("plantilla-kpi",
-              ["codigo", "periodo", "valor", "nota"],
-              [["AV-01", "2027-T2", 52, "corte del LMS"], ["IN-01", "2027-S1", 48, ""]])}
-            className="chip cursor-pointer"><FileDown size={10} /> Plantilla</button>
-          <button onClick={onClose} className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink">
-            <X size={15} />
-          </button>
-        </div>
-      </div>
-      <div className="space-y-3 px-5 pb-5">
+    <Modal title="Importar valores de KPI desde CSV" sub="columnas: código · periodo · valor · nota (separador ; o ,)" onClose={onClose} wide
+      footer={<>
+        <button type="button"
+          onClick={() => downloadCsv("plantilla-kpi",
+            ["codigo", "periodo", "valor", "nota"],
+            [["AV-01", "2027-T2", 52, "corte del LMS"], ["IN-01", "2027-S1", 48, ""]])}
+          className="btn-ghost mr-auto !py-2 text-[12px]"><FileDown size={13} /> Plantilla</button>
+        <button type="button" onClick={onClose} className="btn-ghost !py-2 text-[12px]">{done ? "Cerrar" : "Cancelar"}</button>
+        <button type="button" onClick={runImport} disabled={busy || !rows || valid.length === 0 || done}
+          className="btn-primary !py-2 text-[12px] disabled:opacity-40">
+          {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+          Importar {valid.length} válida{valid.length !== 1 ? "s" : ""}
+        </button>
+      </>}>
+      <div className="space-y-3">
         <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-surface-2 px-3 py-2.5 transition-colors hover:bg-cyan-wash">
           <Upload size={13} className="shrink-0 text-cyan-deep" />
           <span className={`min-w-0 flex-1 truncate text-[12px] ${fileName ? "font-semibold text-ink" : "text-muted"}`}>
@@ -382,7 +364,7 @@ function KpiImport({ onDone, onClose }: {
 
         {rows && (
           <>
-            <div className="max-h-56 overflow-y-auto rounded-lg bg-surface-2/60">
+            <div className="rounded-lg bg-surface-2/60">
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-line-strong">
@@ -417,21 +399,14 @@ function KpiImport({ onDone, onClose }: {
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={runImport} disabled={busy || valid.length === 0 || done}
-                className="btn-primary !py-2 text-[12px] disabled:opacity-40">
-                {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                Importar {valid.length} válida{valid.length !== 1 ? "s" : ""}
-              </button>
-              <span className="text-[12px] text-faint">
-                {rows.length - valid.length > 0 && `${rows.length - valid.length} con problemas (no se importan) · `}
-                el servidor revalida permisos y reglas fila a fila
-              </span>
-            </div>
+            <p className="text-[12px] text-faint">
+              {rows.length - valid.length > 0 && `${rows.length - valid.length} con problemas (no se importan) · `}
+              el servidor revalida permisos y reglas fila a fila
+            </p>
           </>
         )}
       </div>
-    </Card>
+    </Modal>
   );
 }
 
@@ -483,9 +458,9 @@ function ReportForm({ kpi, onReported }: {
       <div className="flex gap-2">
         <input type="text" value={period} onChange={(e) => setPeriod(e.target.value)}
           placeholder={PERIOD_HINT[kpi.frequency]}
-          className="input w-24 !py-1.5 text-[12px]" />
+          aria-label="Periodo" className="input !w-28 flex-none !py-1.5 text-[12px]" />
         <input type="number" value={value} onChange={(e) => setValue(e.target.value)}
-          placeholder={`valor (${kpi.unit})`}
+          placeholder={`valor (${kpi.unit})`} aria-label="Valor"
           className="input min-w-0 flex-1 !py-1.5 text-[12px]" />
       </div>
       <input type="text" value={note} onChange={(e) => setNote(e.target.value)}

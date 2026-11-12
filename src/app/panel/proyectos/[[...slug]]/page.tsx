@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader, Card, CardHeader, StatCard } from "@/components/ui";
+import { PageHeader, Card, CardHeader, StatCard, Modal } from "@/components/ui";
 import { AccessChip, useUser, useCan } from "@/components/user-context";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { evidencesOf, person } from "@/lib/vista";
@@ -316,7 +316,8 @@ export default function ProyectosPage() {
         ))}
       </div>
 
-      <div className={`grid gap-5 ${task ? "lg:grid-cols-[1fr_350px]" : ""}`}>
+      {/* la ficha de la tarea se abre en una ventana sobre la vista: el tablero conserva su ancho */}
+      <div className="grid gap-5">
         <div className="min-w-0">
           {view === "impacto" && <ImpactoView iniId={iniFilter} rev={rev} onOpenIni={setIniFilter} onOpenTask={setOpenTask} onVer={(x) => setView(x)} />}
           {view === "riesgos" && <RiesgosView iniId={iniFilter} rev={rev} onChanged={() => setRev((n) => n + 1)} />}
@@ -558,18 +559,17 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
   const coAssignees = (task.coAssigneeIds ?? []).map((cid) => personOf(cid)).filter(Boolean) as Person[];
 
   return (
-    <div className="order-first min-w-0 lg:order-none lg:sticky lg:top-[70px] lg:self-start">
-      <Card className="ring-1 ring-cyan/40">
-        <CardHeader title={task.id}
-          sub={editable ? "Ficha editable — tu rol puede modificarla" : `Solo lectura para tu rol (${userRole})`}
-          right={
-            <button onClick={onClose}
-              className="rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-ink">
-              <X size={15} />
-            </button>
-          } />
-        <div className="space-y-4 px-5 pb-5">
-          <h3 className="text-[14px] font-extrabold leading-snug text-ink">{task.title}</h3>
+    <Modal variante="ventana" title={`${task.id} · ${task.title}`} onClose={onClose}
+      sub={editable ? "Ficha editable — tu rol puede modificarla" : `Solo lectura para tu rol (${userRole})`}
+      footer={editable && dirty ? (
+        <button onClick={() => onPatch(task.id, draft)} disabled={saving} className="btn-primary !py-2 text-[12.5px]">
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          Guardar cambios
+        </button>
+      ) : undefined}>
+      <div className="grid gap-x-8 gap-y-5 lg:grid-cols-2">
+        {/* columna 1: qué es, quién, cuándo, estado y planificación */}
+        <div className="min-w-0 space-y-4">
 
           {/* descripción: qué se hace y qué produce */}
           <p className="rounded-lg bg-surface-2/60 px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
@@ -726,14 +726,6 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             )}
           </div>
 
-          {editable && dirty && (
-            <button onClick={() => onPatch(task.id, draft)} disabled={saving}
-              className="btn-primary w-full !py-2 text-[12.5px]">
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              Guardar cambios
-            </button>
-          )}
-
           {task.note && (
             <p className="rounded-lg bg-gold-wash px-3 py-2.5 text-[12px] leading-relaxed" style={{ color: "var(--gold-text)" }}>
               {task.note}
@@ -779,6 +771,10 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             })()}
           </div>
 
+        </div>
+
+        {/* columna 2: evidencia, comentarios e historial */}
+        <div className="min-w-0 space-y-4">
           {/* evidencia + verificación */}
           <div>
             <div className="label mb-1.5 flex items-center gap-1 !text-[11px]"><FileText size={10} /> Evidencia del entregable</div>
@@ -942,8 +938,8 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             </button>
           )}
         </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -972,16 +968,14 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
   const iniTasks = allTasks.filter((t) => t.iniId === iniId);
 
   return (
-    <Card className="rise mb-5 ring-1 ring-cyan/40">
-      <CardHeader title="Nueva tarea"
-        sub="Nace en «Por hacer», con línea base congelada en sus fechas — cerrar exigirá evidencia"
-        right={<button onClick={onClose} className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-ink"><X size={15} /></button>} />
+    <Modal variante="ventana" title="Nueva tarea" onClose={onClose}
+      sub="Nace en «Por hacer», con línea base congelada en sus fechas — cerrar exigirá evidencia">
       {people.length === 0 && (
-        <p className="mx-5 mb-3 rounded-xl px-4 py-3 text-[12.5px] leading-relaxed text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, var(--surface))" }}>
+        <p className="mb-4 rounded-xl px-4 py-3 text-[12.5px] leading-relaxed text-ink-soft" style={{ background: "color-mix(in srgb, var(--warn) 10%, var(--surface))" }}>
           <b className="text-ink">El directorio de personas está vacío.</b> Cada tarea lleva un responsable con nombre propio, así que antes hay que crear las personas en Administración → Catálogo → Personas. Con ellas, vuelve aquí y crea la tarea.
         </p>
       )}
-      <div className="grid gap-3 px-5 pb-5 lg:grid-cols-2">
+      <div className="grid gap-x-6 gap-y-3 lg:grid-cols-2">
         <div className="space-y-2.5">
           <div>
             <div className="label mb-1 !text-[11px]">Iniciativa</div>
@@ -1056,7 +1050,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
           </button>
         </div>
       </div>
-    </Card>
+    </Modal>
   );
 }
 

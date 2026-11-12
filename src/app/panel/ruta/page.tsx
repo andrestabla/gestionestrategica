@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, CardHeader, StatusChip } from "@/components/ui";
+import { PageHeader, Card, CardHeader, Modal, StatusChip } from "@/components/ui";
 import { AccessChip } from "@/components/user-context";
 import { GanttChart, PriorityMatrix } from "@/components/charts";
 import { LINES, fmtCOP } from "@/data/demo";
@@ -122,17 +122,15 @@ export default function RutaPage() {
         </div>
       </Card>
 
-      {/* detalle de iniciativa */}
+      {/* ficha de la iniciativa: abre en una ventana sobre el mapa de ruta */}
       {ini && (
-        <Card className="rise mb-5 border-cyan/40">
-          <CardHeader title={ini.name} sub="Ficha de la iniciativa"
-            right={
-              <span className="flex items-center gap-2">
-                <Link href={`/panel/proyectos/${ini.id}`} className="chip chip-cyan">Plan de trabajo →</Link>
-                <StatusChip status={ini.status} />
-              </span>
-            } />
-          <div className="grid gap-x-8 gap-y-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4">
+        <Modal variante="ventana" title={ini.name} onClose={() => setSel(null)}
+          sub={<span className="flex flex-wrap items-center gap-2">Ficha de la iniciativa <StatusChip status={ini.status} /></span>}
+          footer={<>
+            <Link href={`/panel/iniciativas/${ini.id}`} className="btn-ghost !py-2 text-[12px]">Ficha completa y evaluación</Link>
+            <Link href={`/panel/proyectos/${ini.id}`} className="btn-primary !py-2 text-[12px]">Plan de trabajo →</Link>
+          </>}>
+          <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="label mb-1">Capacidad</div>
               <div className="text-[13px] font-semibold text-ink">
@@ -176,7 +174,7 @@ export default function RutaPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </Modal>
       )}
 
       {/* listas por horizonte */}
