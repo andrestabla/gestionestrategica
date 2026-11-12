@@ -516,7 +516,7 @@ function Captura({ ins, data, enviar, onPreview }: { ins: MadInstrument; data: A
             <button type="button" onClick={() => setAbierta(null)} className="btn-primary !py-2 text-[12px]">Listo</button>
           </>}>
           <div key={v.id} className="grid gap-x-8 gap-y-5 lg:grid-cols-3">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <p className="text-[13px] text-ink-soft">{v.desc}</p>
               <div><div className="label">Percepción · de 1 (en desacuerdo) a 5 (de acuerdo)</div>
                 <p className="mb-2 mt-1 text-[13px] font-semibold text-ink">{v.items.find((i) => i.type === "likert")?.text}</p>
@@ -527,6 +527,7 @@ function Captura({ ins, data, enviar, onPreview }: { ins: MadInstrument; data: A
               {v.items.filter((i) => i.type !== "likert").length > 0 && (
                 <div><div className="label">Preguntas de apoyo</div><ul className="mt-1.5 space-y-1">{v.items.filter((i) => i.type !== "likert").map((i, k) => <li key={k} className="text-[12.5px] text-ink-soft"><span className="chip mr-1.5">{ITEM_TYPE_LABEL[i.type]}</span>{i.text}</li>)}</ul></div>
               )}
+              <Texto key={`h${c.hallazgo ?? ""}`} label="Hallazgo" valor={c.hallazgo} onSave={(t) => set(v.id, "hallazgo", t)} />
             </div>
             <div className="space-y-4">
               <div><div className="label">Evidencia · de 0 a 4</div>
@@ -549,9 +550,9 @@ function Captura({ ins, data, enviar, onPreview }: { ins: MadInstrument; data: A
                 ))}</ol>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold text-ink">Meta de la variable</span><Escala etiqueta="Meta" valor={c.target} min={1} max={5} onPick={(n) => set(v.id, "target", n)} /></div>
+              <Texto key={`r${c.recomendacion ?? ""}`} label="Recomendación" valor={c.recomendacion} onSave={(t) => set(v.id, "recomendacion", t)} />
               {c.by && <p className="text-[12px] text-faint">Última captura: {c.by} · {fecha(c.at)}</p>}
             </div>
-            <div className="grid gap-x-8 gap-y-4 lg:col-span-3 lg:grid-cols-2"><Texto key={`h${c.hallazgo ?? ""}`} label="Hallazgo" valor={c.hallazgo} onSave={(t) => set(v.id, "hallazgo", t)} /><Texto key={`r${c.recomendacion ?? ""}`} label="Recomendación" valor={c.recomendacion} onSave={(t) => set(v.id, "recomendacion", t)} /></div>
           </div>
         </Modal>
       ); })()}
