@@ -10,7 +10,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Card, CardHeader, EmptyNote, Skeleton } from "@/components/ui";
 import { NIVEL, REGLAS, EFECTO, type Impacto, type KrImpacto, type PulsoProyecto, type Movimiento, type Factor, type Nivel } from "@/lib/impacto-kr";
 import { NIVEL_RIESGO, nivelRiesgo, severidad, riskStatusLabel, riesgoVivo, type ProjectRisk } from "@/lib/riesgos";
-import { ArrowDownRight, ArrowUpRight, Minus, Target, ChevronRight, CalendarClock, ShieldAlert, Activity, Info, TrendingUp, TrendingDown } from "lucide-react";
+import { Flag, ArrowDownRight, ArrowUpRight, Minus, Target, ChevronRight, CalendarClock, ShieldAlert, Activity, Info, TrendingUp, TrendingDown } from "lucide-react";
 
 export type ImpactoData = Impacto & {
   movimientos: Movimiento[]; riesgos: ProjectRisk[]; editable: Record<string, boolean>;
@@ -191,9 +191,10 @@ function ComoSeCalcula() {
             <li>· Ritmo: −{f1(R.ritmo.porPuntoAtraso)} por punto de atraso frente al plan (hasta −{R.ritmo.topeAtraso}); +{f1(R.ritmo.porPuntoAdelanto)} por punto de adelanto (hasta +{R.ritmo.topeAdelanto}).</li>
             <li>· Tareas vencidas: −{R.vencidas.porTarea} por tarea y −{f1(R.vencidas.porDia)} por día de atraso (hasta −{R.vencidas.tope}).</li>
             <li>· Tareas bloqueadas: −{R.bloqueadas.porTarea} por tarea (hasta −{R.bloqueadas.tope}).</li>
-            <li>· Entregables atrasados: −{R.entregablesAtrasados.porEntregable} adicionales por entregable (hasta −{R.entregablesAtrasados.tope}).</li>
-            <li>· Entregables cumplidos: +{f1(R.entregablesCumplidos.porEntregable)} por entregable (hasta +{R.entregablesCumplidos.tope}).</li>
+            <li>· Entregables e hitos atrasados: −{R.entregablesAtrasados.porEntregable} adicionales por cada uno (hasta −{R.entregablesAtrasados.tope}).</li>
+            <li>· Entregables e hitos cumplidos: +{f1(R.entregablesCumplidos.porEntregable)} por cada uno (hasta +{R.entregablesCumplidos.tope}).</li>
             <li>· Riesgos: severidad ÷ 25 × {R.riesgos.ABIERTO} si está abierto, × {R.riesgos.EN_MITIGACION} en mitigación, × {R.riesgos.MATERIALIZADO} materializado (hasta −{R.riesgos.tope}).</li>
+            <li>· Fin previsto: −1 por cada {R.finPrevisto.diasPorPunto} días que el fin del proyecto se corre según la ruta crítica (hasta −{R.finPrevisto.tope}).</li>
             <li>· Cronograma corrido: −1 por cada {R.cronograma.diasPorPunto} días frente a la línea base (hasta −{R.cronograma.tope}).</li>
           </ul>
           <p className="mt-2"><b className="text-ink">Movimientos.</b> Cada cambio registrado lleva el efecto que tuvo al hacerse: entregable cumplido +{EFECTO.entregableCumplido}, tarea cerrada +{EFECTO.tareaCerrada}, bloqueo {EFECTO.bloqueo}, desbloqueo +{EFECTO.desbloqueo}, fecha corrida −1 por cada {EFECTO.fechaCorrida.diasPorPunto} días, y los riesgos según su severidad.</p>
@@ -280,7 +281,7 @@ function FilaProyecto({ p, responsables, onOpen }: { p: PulsoProyecto; responsab
         {p.entregables.total > 0 && <span className="chip !py-0">{p.entregables.cumplidos}/{p.entregables.total} entregables</span>}
         {!p.tareas.vencidas && !p.tareas.bloqueadas && !p.riesgos.vivos && !p.entregables.total && <span className="text-faint">—</span>}
       </div></td>
-      <td className="px-3 py-3">{p.proximo ? <div className="max-w-[220px]"><div className="truncate text-ink-soft">{p.proximo.title}</div><div className="num text-[12px] text-faint">{dia(p.proximo.due)}{p.proximo.entregable ? " · entregable" : ""}</div></div> : <span className="text-faint">—</span>}</td>
+      <td className="px-3 py-3">{p.proximo ? <div className="max-w-[220px]"><div className="truncate text-ink-soft">{p.proximo.title}</div><div className="num text-[12px] text-faint">{dia(p.proximo.due)}{p.proximo.hito ? " · hito" : p.proximo.entregable ? " · entregable" : ""}{p.fin && p.fin.desvio > 0 ? <span style={{ color: "var(--bad)" }}> · fin +{p.fin.desvio} d</span> : null}</div></div> : <span className="text-faint">—</span>}</td>
     </tr>
   );
 }
@@ -311,7 +312,15 @@ function DeProyecto({ data, p, onOpenIni, onOpenTask, onVer }: { data: ImpactoDa
                   <span><b className="num" style={{ color: p.tareas.bloqueadas ? "var(--warn)" : undefined }}>{p.tareas.bloqueadas}</b> bloqueadas</span>
                   <span><b className="num text-ink">{p.entregables.cumplidos}</b> de {p.entregables.total} entregables</span>
                 </div>
-                {p.proximo && <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-muted"><CalendarClock size={13} /> Próximo: <button type="button" onClick={() => onOpenTask(p.proximo!.id)} className="truncate font-semibold text-ink-soft hover:text-cyan-deep hover:underline">{p.proximo.title}</button> · {dia(p.proximo.due)}</p>}
+                {p.fin && (
+                  <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
+                    <Flag size={13} /> Fin planeado <b className="num text-ink-soft">{dia(p.fin.planeado)}</b>
+                    {p.fin.desvio > 0 ? <span className="chip chip-bad !py-0 text-[11px]" title="Con el estado de las tareas a la fecha y lo pendiente tardando lo planeado">previsto {dia(p.fin.previsto)} · +{p.fin.desvio} {p.fin.desvio === 1 ? "día" : "días"}</span> : <span className="chip chip-ok !py-0 text-[11px]">en fecha</span>}
+                    <span>· {p.fin.criticasPendientes} {p.fin.criticasPendientes === 1 ? "tarea pendiente" : "tareas pendientes"} en la ruta crítica</span>
+                    {p.fin.hitos > 0 && <span>· {p.fin.hitosCumplidos} de {p.fin.hitos} hitos</span>}
+                  </p>
+                )}
+                {p.proximo && <p className="mt-2 flex items-center gap-1.5 text-[12.5px] text-muted"><CalendarClock size={13} /> Próximo{p.proximo.hito ? " hito" : ""}: <button type="button" onClick={() => onOpenTask(p.proximo!.id)} className="truncate font-semibold text-ink-soft hover:text-cyan-deep hover:underline">{p.proximo.title}</button> · {dia(p.proximo.due)}</p>}
               </>
             )}
           </div>

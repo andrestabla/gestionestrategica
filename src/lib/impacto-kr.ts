@@ -17,6 +17,7 @@ import type { InitiativeFull, KpiFull } from "@/data/cmi";
 import { krsDeIniciativa } from "@/data/cmi";
 import { diasEntre, vencida, type Task, type TaskStatus } from "@/data/proyectos";
 import { severidad, riesgoVivo, type ProjectRisk, type RiskStatus } from "@/lib/riesgos";
+import { rutaCritica } from "@/lib/ruta-critica";
 
 /* ═══ Reglas (pesos a la vista) ═══ */
 
@@ -32,6 +33,7 @@ export const REGLAS = {
   entregablesCumplidos: { porEntregable: 1.5, tope: 6 },
   riesgos: { ABIERTO: 8, EN_MITIGACION: 4, MATERIALIZADO: 14, CERRADO: 0, tope: 30 } as Record<RiskStatus, number> & { tope: number },
   cronograma: { minimoDias: 3, diasPorPunto: 6, tope: 10 },
+  finPrevisto: { minimoDias: 5, diasPorPunto: 5, tope: 12 },
   niveles: { aFavor: 80, enObservacion: 60 },
 } as const;
 
@@ -50,7 +52,7 @@ const pl = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : v
 
 /* ═══ Pulso de un proyecto ═══ */
 
-export type FactorClave = "RITMO" | "VENCIDAS" | "BLOQUEADAS" | "ENTREGABLES_ATRASADOS" | "ENTREGABLES_CUMPLIDOS" | "RIESGOS" | "CRONOGRAMA";
+export type FactorClave = "RITMO" | "VENCIDAS" | "BLOQUEADAS" | "ENTREGABLES_ATRASADOS" | "ENTREGABLES_CUMPLIDOS" | "RIESGOS" | "CRONOGRAMA" | "FIN_PREVISTO";
 export type Factor = { clave: FactorClave; puntos: number; titulo: string; detalle: string };
 
 export type PulsoProyecto = {
@@ -63,7 +65,8 @@ export type PulsoProyecto = {
   esperado: number | null;    // 0–100 · trabajo que debería ir a la fecha
   ritmo: number | null;       // puntos porcentuales: avance − esperado
   diasCorridos: number;       // días que el cronograma se corrió frente a su línea base
-  proximo: { id: string; title: string; due: string; entregable: boolean } | null;
+  fin: { planeado: string; previsto: string; desvio: number; criticas: number; criticasPendientes: number; hitos: number; hitosCumplidos: number } | null;   // ruta crítica: fin del plan, fin previsto a la fecha y días de diferencia
+  proximo: { id: string; title: string; due: string; entregable: boolean; hito: boolean } | null;
   confianza: number | null;   // 0–100
   nivel: Nivel;
   factores: Factor[];         // ordenados por peso (de mayor a menor efecto)
@@ -80,7 +83,8 @@ const esperadoTarea = (t: Task, hoy: string) => {
 export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: ProjectRisk[], hoy: string, desvios: Record<string, number> = {}): PulsoProyecto {
   const mias = tasks.filter((t) => t.iniId === ini.id), vivos = risks.filter((r) => r.iniId === ini.id && riesgoVivo(r));
   const venc = mias.filter((t) => vencida(t, hoy)), bloq = mias.filter((t) => t.status === "BLOQUEADA");
-  const entregables = mias.filter((t) => t.requiresEvidence);
+  const entregables = mias.filter((t) => t.requiresEvidence || t.milestone);   // compromisos formales: entregables e hitos
+  const ruta = rutaCritica(mias, hoy);
   const diasAtraso = venc.reduce((a, t) => a + diasEntre(t.due, hoy), 0);
   const entAtrasados = entregables.filter((t) => vencida(t, hoy)).length, entCumplidos = entregables.filter((t) => t.status === "HECHA").length;
   const avance = mias.length ? (mias.reduce((a, t) => a + REGLAS.credito[t.status], 0) / mias.length) * 100 : null;
@@ -95,10 +99,11 @@ export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: Project
   if (ritmo !== null && ritmo >= R.ritmo.tolerancia) factores.push({ clave: "RITMO", puntos: Math.min(R.ritmo.topeAdelanto, ritmo * R.ritmo.porPuntoAdelanto), titulo: "Ritmo por encima del plan", detalle: `Va en ${Math.round(avance!)} % frente a ${Math.round(esperado!)} % esperado a la fecha.` });
   if (venc.length) factores.push({ clave: "VENCIDAS", puntos: -Math.min(R.vencidas.tope, R.vencidas.porTarea * venc.length + R.vencidas.porDia * diasAtraso), titulo: pl(venc.length, "tarea vencida", "tareas vencidas"), detalle: `Suman ${pl(diasAtraso, "día", "días")} de atraso.` });
   if (bloq.length) factores.push({ clave: "BLOQUEADAS", puntos: -Math.min(R.bloqueadas.tope, R.bloqueadas.porTarea * bloq.length), titulo: pl(bloq.length, "tarea bloqueada", "tareas bloqueadas"), detalle: bloq.slice(0, 2).map((t) => t.title).join(" · ") });
-  if (entAtrasados) factores.push({ clave: "ENTREGABLES_ATRASADOS", puntos: -Math.min(R.entregablesAtrasados.tope, R.entregablesAtrasados.porEntregable * entAtrasados), titulo: pl(entAtrasados, "entregable atrasado", "entregables atrasados"), detalle: "Compromisos formales que ya debían estar entregados." });
-  if (entCumplidos) factores.push({ clave: "ENTREGABLES_CUMPLIDOS", puntos: Math.min(R.entregablesCumplidos.tope, R.entregablesCumplidos.porEntregable * entCumplidos), titulo: pl(entCumplidos, "entregable cumplido", "entregables cumplidos"), detalle: `De ${entregables.length} comprometidos, con su evidencia.` });
+  if (entAtrasados) factores.push({ clave: "ENTREGABLES_ATRASADOS", puntos: -Math.min(R.entregablesAtrasados.tope, R.entregablesAtrasados.porEntregable * entAtrasados), titulo: pl(entAtrasados, "entregable o hito atrasado", "entregables o hitos atrasados"), detalle: "Compromisos formales que ya debían estar cumplidos." });
+  if (entCumplidos) factores.push({ clave: "ENTREGABLES_CUMPLIDOS", puntos: Math.min(R.entregablesCumplidos.tope, R.entregablesCumplidos.porEntregable * entCumplidos), titulo: pl(entCumplidos, "entregable o hito cumplido", "entregables o hitos cumplidos"), detalle: `De ${entregables.length} comprometidos, con su evidencia.` });
   if (exposicion > 0) { const altos = vivos.filter((r) => severidad(r) >= 15).length, mat = vivos.filter((r) => r.status === "MATERIALIZADO").length;
     factores.push({ clave: "RIESGOS", puntos: -Math.min(R.riesgos.tope, exposicion), titulo: pl(vivos.length, "riesgo abierto", "riesgos abiertos"), detalle: [altos ? pl(altos, "de nivel alto", "de nivel alto") : "", mat ? pl(mat, "materializado", "materializados") : ""].filter(Boolean).join(" · ") || "Ninguno de nivel alto." }); }
+  if (ruta.desvio >= R.finPrevisto.minimoDias) factores.push({ clave: "FIN_PREVISTO", puntos: -Math.min(R.finPrevisto.tope, ruta.desvio / R.finPrevisto.diasPorPunto), titulo: "El fin del proyecto se corre", detalle: `Con lo pendiente como va, terminaría ${pl(ruta.desvio, "día", "días")} después de lo planeado.` });
   if (diasCorridos >= R.cronograma.minimoDias) factores.push({ clave: "CRONOGRAMA", puntos: -Math.min(R.cronograma.tope, diasCorridos / R.cronograma.diasPorPunto), titulo: "Cronograma corrido", detalle: `Las fechas compromiso se han corrido ${pl(diasCorridos, "día", "días")} frente a la línea base.` });
   for (const f of factores) f.puntos = r1(f.puntos);
   factores.sort((a, b) => Math.abs(b.puntos) - Math.abs(a.puntos));
@@ -112,7 +117,10 @@ export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: Project
     entregables: { total: entregables.length, cumplidos: entCumplidos, atrasados: entAtrasados },
     riesgos: { vivos: vivos.length, altos: vivos.filter((r) => severidad(r) >= 15).length, materializados: vivos.filter((r) => r.status === "MATERIALIZADO").length, exposicion: r1(exposicion) },
     avance: avance === null ? null : r1(avance), esperado: esperado === null ? null : r1(esperado), ritmo: ritmo === null ? null : r1(ritmo),
-    diasCorridos, proximo: prox ? { id: prox.id, title: prox.title, due: prox.due, entregable: !!prox.requiresEvidence } : null,
+    diasCorridos,
+    fin: ruta.fin && ruta.finPrevisto ? { planeado: ruta.fin, previsto: ruta.finPrevisto, desvio: ruta.desvio, criticas: ruta.criticas.length, criticasPendientes: ruta.criticas.filter((id) => mias.find((t) => t.id === id)?.status !== "HECHA").length,
+      hitos: mias.filter((t) => t.milestone).length, hitosCumplidos: mias.filter((t) => t.milestone && t.status === "HECHA").length } : null,
+    proximo: prox ? { id: prox.id, title: prox.title, due: prox.due, entregable: !!prox.requiresEvidence, hito: !!prox.milestone } : null,
     confianza, nivel: nivelDe(confianza), factores,
   };
 }

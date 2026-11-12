@@ -52,6 +52,7 @@ export type Task = {
   due: string;              // YYYY-MM-DD
   status: TaskStatus;
   requiresEvidence?: boolean;   // entregable formal
+  milestone?: boolean;          // hito: punto de control del proyecto (se dibuja como rombo en el cronograma)
   evidenceIds?: string[];       // EV-xx del catálogo
   dependsOn?: string[];         // ids de tareas prerrequisito
   note?: string;

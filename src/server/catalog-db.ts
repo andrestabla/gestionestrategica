@@ -131,7 +131,7 @@ export const deletePerson = (db: Db, companyId: string, id: string) => db.person
 export async function writeTask(db: Db, companyId: string, t: Task) {
   const data = {
     iniCode: t.iniId, title: t.title, desc: t.desc, assigneeId: t.assigneeId, coAssigneeIds: (t.coAssigneeIds ?? []) as never,
-    start: new Date(t.start), due: new Date(t.due), status: t.status, requiresEvidence: t.requiresEvidence ?? false,
+    start: new Date(t.start), due: new Date(t.due), status: t.status, requiresEvidence: t.requiresEvidence ?? false, milestone: t.milestone ?? false,
     evidenceIds: (t.evidenceIds ?? []) as never, dependsOn: (t.dependsOn ?? []) as never, note: t.note ?? null,
   };
   await db.projectTask.upsert({ where: { companyId_id: { companyId, id: t.id } }, update: data, create: { companyId, id: t.id, baseStart: new Date(t.start), baseDue: new Date(t.due), ...data } });
@@ -226,7 +226,7 @@ export async function readCatalog(db: Db, company: CompanyInfo & { dbId: string 
       id: t.id as string, iniId: t.iniCode as string, title: t.title as string, desc: (t.desc as string) ?? "", assigneeId: t.assigneeId as string,
       coAssigneeIds: ((t.coAssigneeIds as string[]) ?? []).length ? (t.coAssigneeIds as string[]) : undefined,
       start: day(t.baseStart as Date ?? t.start as Date), due: day(t.baseDue as Date ?? t.due as Date), status: t.status as Task["status"],
-      requiresEvidence: Boolean(t.requiresEvidence), evidenceIds: ((t.evidenceIds as string[]) ?? []).length ? (t.evidenceIds as string[]) : undefined,
+      requiresEvidence: Boolean(t.requiresEvidence), ...(t.milestone ? { milestone: true } : {}), evidenceIds: ((t.evidenceIds as string[]) ?? []).length ? (t.evidenceIds as string[]) : undefined,
       dependsOn: ((t.dependsOn as string[]) ?? []).length ? (t.dependsOn as string[]) : undefined, note: (t.note as string) ?? undefined,
     }));
   const assessments: AssessmentRecord[] = aRows.map((a: Record<string, unknown> & { scores: { line: number; dimension: string; value: number; target: number | null }[] }) => {

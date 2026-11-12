@@ -333,6 +333,7 @@ model ProjectTask {
   due              DateTime
   status           String // POR_HACER | EN_CURSO | EN_REVISION | HECHA | BLOQUEADA
   requiresEvidence Boolean   @default(false)
+  milestone        Boolean   @default(false) // hito del proyecto
   evidenceIds      Json?
   dependsOn        Json?
   note             String?

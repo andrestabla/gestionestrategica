@@ -12,6 +12,7 @@
 import { isOrgKind, captureError, progressOf, perceptionOf, isPerceptionAnswer, CAPTURE_FIELDS, type OrgKind, type MadCapture, type MadResponse, type Captures, type MadCut, type SafeguardState, type SafeguardStatus, type CaptureField } from "@/lib/madurez";
 import { instrumentOf } from "@/data/madurez";
 import { riskError, severidad, type ProjectRisk, type RiskInput } from "@/lib/riesgos";
+import { formaCiclo } from "@/lib/ruta-critica";
 import { CONSENT_VERSION } from "@/lib/consentimiento";
 import { type Task, type TaskStatus, DEMO_TODAY, hoyDe } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
@@ -480,7 +481,7 @@ async function loadTenant(st: TenantState) {
       db.userMembership.findMany({ where: { companyId, active: true }, include: { user: { include: { company: { select: { slug: true } } } } } }).catch(() => []),
     ]);
     const rows = rowsRaw as (DbTaskRow & {
-      iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; dependsOn: unknown;
+      iniCode: string; title: string; desc: string | null; requiresEvidence: boolean; milestone?: boolean; dependsOn: unknown;
       baseStart: Date | null; baseDue: Date | null; archived: boolean;
     })[];
     if (rows.length) {
@@ -503,6 +504,7 @@ async function loadTenant(st: TenantState) {
         t.evidenceIds = (r.evidenceIds as string[] | null) ?? t.evidenceIds;
         t.dependsOn = (r.dependsOn as string[] | null)?.length ? (r.dependsOn as string[]) : t.dependsOn;
         t.requiresEvidence = r.requiresEvidence;
+        if (r.milestone !== undefined) t.milestone = r.milestone || undefined;
         if (r.baseStart && r.baseDue) baselines().set(t.id, { start: day(r.baseStart), due: day(r.baseDue) });
         if (r.archived && tasks().includes(t)) { tasks().splice(tasks().indexOf(t), 1); if (!archived().includes(t)) archived().push(t); }
       }
@@ -1311,7 +1313,7 @@ export async function activityFeed(opts: { since?: string; until?: string; limit
 export async function updateTask(
   user: SessionUser,
   id: string,
-  patch: Partial<Pick<Task, "status" | "assigneeId" | "coAssigneeIds" | "start" | "due" | "note">> & { blockNote?: string },
+  patch: Partial<Pick<Task, "status" | "assigneeId" | "coAssigneeIds" | "start" | "due" | "note" | "milestone" | "dependsOn">> & { blockNote?: string },
 ): Promise<MutationResult> {
   const t = getTask(id);
   if (!t) return { ok: false, status: 404, error: "La tarea no existe." };
@@ -1385,32 +1387,37 @@ export async function updateTask(
     changes.push("nota actualizada");
     t.note = patch.note;
   }
+  if (patch.milestone !== undefined && Boolean(patch.milestone) !== Boolean(t.milestone)) {
+    changes.push(patch.milestone ? "hito marcado" : "hito retirado");
+    t.milestone = patch.milestone ? true : undefined;
+  }
+  if (patch.dependsOn !== undefined) {
+    // dependencias: tareas que existen, sin repetir, sin ella misma y sin formar un ciclo (A espera a B y B espera a A)
+    if (!Array.isArray(patch.dependsOn) || patch.dependsOn.some((d) => typeof d !== "string" || !tasks().some((x) => x.id === d))) {
+      return { ok: false, status: 422, error: "Dependencias inválidas: deben ser tareas vigentes del plan." };
+    }
+    const deps = [...new Set(patch.dependsOn)];
+    if (deps.includes(t.id)) return { ok: false, status: 422, error: "Una tarea no puede depender de sí misma." };
+    if (formaCiclo(tasks(), t.id, deps)) return { ok: false, status: 422, error: "Esa dependencia forma un ciclo: alguna de esas tareas ya depende de esta." };
+    const antes = (t.dependsOn ?? []).join(",");
+    if (deps.join(",") !== antes) {
+      changes.push(`dependencias [${antes || "—"}] → [${deps.join(",") || "—"}]`);
+      t.dependsOn = deps.length ? deps : undefined;
+    }
+  }
 
   if (changes.length === 0) return { ok: true, task: t };
 
   audit(user, "task", id, changes.join(" · "));
 
-  // write-through a Postgres si está configurada
-  if (hasDb()) {
-    try {
-      const db = await prisma();
-      await db.projectTask.update({
-        where: { id },
-        data: {
-          status: t.status,
-          assigneeId: t.assigneeId,
-          coAssigneeIds: t.coAssigneeIds ?? [],
-          start: new Date(t.start),
-          due: new Date(t.due),
-          note: t.note,
-        },
-      });
-    } catch (e) {
-      // la memoria queda como fuente; la reconciliación ocurre al reconectar
-      console.error("[pgtd] write-through falló:", (e as Error).message,
-        "· cwd:", process.cwd(), "· url:", process.env.DATABASE_URL);
-    }
-  }
+  // a la base, por la clave compuesta de la empresa. Si la tarea venía de los datos de ejemplo y aún no tenía
+  // fila, se crea con su línea base. El error, si lo hay, llega a la respuesta (flushOrError), no solo a la consola.
+  const base = baselines().get(t.id) ?? { start: t.start, due: t.due };
+  const datos = {
+    iniCode: t.iniId, title: t.title, desc: t.desc, assigneeId: t.assigneeId, coAssigneeIds: (t.coAssigneeIds ?? []) as never, start: new Date(t.start), due: new Date(t.due), status: t.status,
+    requiresEvidence: t.requiresEvidence ?? false, milestone: t.milestone ?? false, evidenceIds: (t.evidenceIds ?? []) as never, dependsOn: (t.dependsOn ?? []) as never, note: t.note ?? null,
+  };
+  void persist("tarea", (db) => db.projectTask.upsert({ where: { companyId_id: { companyId: cid(), id: t.id } }, update: datos, create: { companyId: cid(), id: t.id, baseStart: new Date(base.start), baseDue: new Date(base.due), ...datos } }));
 
   return { ok: true, task: t };
 }
@@ -1540,7 +1547,7 @@ export function createTask(
   input: {
     iniId: string; title: string; desc: string; assigneeId: string;
     coAssigneeIds?: string[]; start: string; due: string;
-    dependsOn?: string[]; requiresEvidence?: boolean; note?: string;
+    dependsOn?: string[]; requiresEvidence?: boolean; milestone?: boolean; note?: string;
   },
 ): MutationResult {
   const ini = cat().initiatives.find((i) => i.id === input.iniId);
@@ -1589,6 +1596,7 @@ export function createTask(
     start: input.start, due: input.due,
     status: "POR_HACER",
     requiresEvidence: Boolean(input.requiresEvidence),
+    ...(input.milestone ? { milestone: true } : {}),
     dependsOn: input.dependsOn?.length ? input.dependsOn : undefined,
     note: input.note?.trim() || undefined,
   };
@@ -1597,7 +1605,7 @@ export function createTask(
   void persist("tarea nueva", (db) => db.projectTask.create({ data: {
     id, companyId: cid(), iniCode: task.iniId, title: task.title, desc: task.desc, assigneeId: task.assigneeId, coAssigneeIds: task.coAssigneeIds ?? [],
     start: new Date(task.start), due: new Date(task.due), baseStart: new Date(task.start), baseDue: new Date(task.due),
-    status: task.status, requiresEvidence: task.requiresEvidence ?? false, evidenceIds: [], dependsOn: task.dependsOn ?? [], note: task.note ?? null,
+    status: task.status, requiresEvidence: task.requiresEvidence ?? false, milestone: task.milestone ?? false, evidenceIds: [], dependsOn: task.dependsOn ?? [], note: task.note ?? null,
   } }));
   audit(user, "task", id, `tarea creada («${title}») en ${ini.name}`);
   return { ok: true, task };

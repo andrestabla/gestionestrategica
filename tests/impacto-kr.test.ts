@@ -124,3 +124,32 @@ test("riesgos: reglas, permisos, auditoría legible por el tablero y efecto en l
     void createTask;
   });
 });
+
+test("ruta crítica: holgura por dependencias, tareas críticas, conflicto, ciclo y fin previsto con el estado a la fecha", async () => {
+  const { rutaCritica, formaCiclo, sumarDias } = await import("../src/lib/ruta-critica");
+  assert.equal(sumarDias("2027-01-31", 1), "2027-02-01");
+  // A (ene) → B (feb) → D (mar, hito); C (feb, corta) también alimenta D y tiene holgura
+  const A = T("A", { start: "2027-01-01", due: "2027-01-31", status: "HECHA" });
+  const B = T("B", { start: "2027-02-01", due: "2027-02-28", dependsOn: ["A"], status: "EN_CURSO" });
+  const C = T("C", { start: "2027-02-01", due: "2027-02-10", dependsOn: ["A"] });
+  const D = T("D", { start: "2027-03-01", due: "2027-03-15", dependsOn: ["B", "C"], milestone: true });
+  const r = rutaCritica([A, B, C, D], "2027-02-05");
+  assert.deepEqual([r.fin, r.finPrevisto, r.desvio, r.ciclo], ["2027-03-15", "2027-03-15", 0, false]);
+  assert.deepEqual(r.criticas, ["A", "B", "D"]);
+  assert.deepEqual(["A", "B", "C", "D"].map((id) => r.nodos[id].holgura), [0, 0, 18, 0]);   // C puede correrse 18 días sin mover el fin
+  assert.ok(!r.nodos.C.critica && !r.nodos.C.conflicto);
+  // el mismo plan visto el 10 de marzo: B sigue en curso y vencida → empuja a D y el fin se corre
+  const tarde = rutaCritica([A, B, C, D], "2027-03-10");
+  assert.equal(tarde.nodos.B.finPrevisto, sumarDias("2027-03-10", Math.round(27 * 0.6)));   // le falta el 60 % de sus 27 días
+  assert.equal(tarde.nodos.D.finPrevisto, sumarDias(tarde.nodos.B.finPrevisto, 14));
+  assert.ok(tarde.desvio > 0 && tarde.finPrevisto === tarde.nodos.D.finPrevisto && tarde.nodos.D.atraso === tarde.desvio);
+  // conflicto: una tarea que empieza antes de que termine su dependencia
+  assert.ok(rutaCritica([A, T("E", { start: "2027-01-15", due: "2027-02-01", dependsOn: ["A"] })], "2027-01-01").nodos.E.conflicto);
+  // ciclo
+  assert.ok(formaCiclo([A, B, C, D], "A", ["D"]) && !formaCiclo([A, B, C, D], "C", ["B"]));
+  assert.ok(rutaCritica([{ ...A, dependsOn: ["D"] }, B, C, D], "2027-02-05").ciclo);
+  // el motor de impacto recoge el fin previsto y cuenta el hito como compromiso formal
+  const p = pulsoProyecto(ini, [A, B, C, D].map((t) => ({ ...t, iniId: "i1" })), [], "2027-03-10");
+  assert.deepEqual([p.fin?.planeado, p.fin?.criticas, p.fin?.hitos, p.fin?.hitosCumplidos, p.entregables.total], ["2027-03-15", 3, 1, 0, 1]);
+  assert.ok((p.fin?.desvio ?? 0) >= 5 && p.factores.some((f) => f.clave === "FIN_PREVISTO" && f.puntos < 0));
+});

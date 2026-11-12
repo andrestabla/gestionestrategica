@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { ImpactoView } from "./impacto";
 import { RiesgosView } from "./riesgos";
+import { Cronograma } from "./cronograma";
 
 type View = "impacto" | "tablero" | "cronograma" | "personas" | "riesgos";
 const COLUMNS: TaskStatus[] = ["POR_HACER", "EN_CURSO", "EN_REVISION", "BLOQUEADA", "HECHA"];
@@ -60,20 +61,6 @@ const fmtDate = (iso: string) => {
   const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   return `${Number(d)} ${MES[Number(m) - 1]} ${y.slice(2)}`;
 };
-
-/** Escala de meses del cronograma: del primer inicio al último compromiso de las tareas visibles, con el mes de hoy
-    dentro y entre 6 y 24 meses de ancho. */
-function escalaMeses(tasks: Task[], hoy: string) {
-  const idx = (iso: string) => { const [y, m] = iso.split("-").map(Number); return y * 12 + (m - 1); };
-  const fechas = [...tasks.flatMap((t) => [t.start, t.due]), hoy].map(idx);
-  const desde = Math.min(...fechas), hasta = Math.max(Math.max(...fechas), desde + 5);
-  const n = Math.min(24, hasta - desde + 1);
-  const meses = Array.from({ length: n }, (_, i) => {
-    const y = Math.floor((desde + i) / 12), m = ((desde + i) % 12) + 1;
-    return { y, m, label: ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][m - 1] + (m === 1 || i === 0 ? `'${String(y).slice(2)}` : "") };
-  });
-  return { meses, indice: (iso: string) => idx(iso) - desde };
-}
 
 export default function ProyectosPage() {
   const user = useUser();
@@ -198,7 +185,6 @@ export default function ProyectosPage() {
   }
 
   const currentIni = iniFilter ? inis.find((i) => i.id === iniFilter) : null;
-  const { meses: MONTHS, indice: monthIndex } = escalaMeses(filtered, data.today);
   const planView = view === "tablero" || view === "cronograma" || view === "personas";
 
   return (
@@ -366,69 +352,8 @@ export default function ProyectosPage() {
 
           {/* ═══ CRONOGRAMA ═══ */}
           {view === "cronograma" && (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto px-5 py-4">
-                <div className="min-w-[840px]">
-                  <div className="mb-2 grid" style={{ gridTemplateColumns: `240px repeat(${MONTHS.length}, 1fr)` }}>
-                    <div />
-                    {MONTHS.map((m, i) => (
-                      <div key={i} className="num border-l border-line text-center text-[11px] font-bold text-faint">
-                        {m.label}
-                      </div>
-                    ))}
-                  </div>
-                  {inis.filter((i) => filtered.some((t) => t.iniId === i.id)).map((ini) => {
-                    const mine = filtered.filter((t) => t.iniId === ini.id)
-                      .sort((a, b) => a.start.localeCompare(b.start));
-                    return (
-                      <div key={ini.id} className="border-t border-line py-1.5">
-                        <div className="mb-1 text-[12px] font-bold text-ink">{ini.name}</div>
-                        {mine.map((t) => {
-                          const s = Math.max(0, monthIndex(t.start));
-                          const e = Math.min(MONTHS.length - 1, Math.max(s, monthIndex(t.due)));
-                          const meta = TASK_STATUS_META[t.status];
-                          const late = vencida(t, data.today);
-                          return (
-                            <div key={t.id} className="grid items-center"
-                              style={{ gridTemplateColumns: `240px repeat(${MONTHS.length}, 1fr)` }}>
-                              <button onClick={() => setOpenTask(t.id)}
-                                className="truncate pr-3 text-left text-[12px] text-muted transition-colors hover:text-ink">
-                                {t.title}
-                              </button>
-                              {MONTHS.map((_, mi) => (
-                                <div key={mi} className="relative h-[18px] border-l border-line/60">
-                                  {mi === s && (
-                                    <button onClick={() => setOpenTask(t.id)}
-                                      className="absolute inset-y-[3px] left-[2px] rounded-full transition-transform hover:scale-y-125"
-                                      style={{
-                                        width: `calc(${(e - s + 1) * 100}% - 4px)`,
-                                        background: late ? "var(--bad)" : meta.color,
-                                        opacity: t.status === "HECHA" ? 0.45 : 0.9,
-                                      }}
-                                      title={`${t.title} · ${fmtDate(t.start)} → ${fmtDate(t.due)}`} />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-2.5 text-[12px] text-muted">
-                {COLUMNS.map((c) => (
-                  <span key={c} className="flex items-center gap-1.5">
-                    <i className="h-2 w-4 rounded-full" style={{ background: TASK_STATUS_META[c].color }} />
-                    {TASK_STATUS_META[c].label}
-                  </span>
-                ))}
-                <span className="flex items-center gap-1.5">
-                  <i className="h-2 w-4 rounded-full" style={{ background: "var(--bad)" }} /> vencida
-                </span>
-              </div>
-            </Card>
+            <Cronograma proyectos={inis.filter((i) => filtered.some((t) => t.iniId === i.id)).map((i) => ({ id: i.id, name: i.name }))}
+              tasks={filtered} todas={tasks} hoy={data.today} baselines={data.baselines} onOpenTask={setOpenTask} />
           )}
 
           {/* ═══ PERSONAS ═══ */}
@@ -545,7 +470,7 @@ function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; on
   const soon = vencePronto(t, hoy);
   return (
     <button onClick={onOpen} className="panel panel-lift block w-full p-3 text-left">
-      <div className="text-[12px] font-bold leading-snug text-ink">{t.title}</div>
+      <div className="text-[12px] font-bold leading-snug text-ink">{t.milestone && <span className="mr-1.5 inline-block h-[8px] w-[8px] rotate-45 rounded-[1.5px] bg-navy align-middle" title="Hito del proyecto" />}{t.title}</div>
       <div className="mt-1.5 truncate text-[11px] text-faint">{ini?.name ?? t.iniId.toUpperCase()}</div>
       <div className="mt-2 flex items-center justify-between">
         <span className="flex items-center -space-x-1.5">
@@ -813,23 +738,44 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
             </p>
           )}
 
-          {/* dependencias */}
-          {task.dependsOn && task.dependsOn.length > 0 && (
-            <div>
-              <div className="label mb-1.5 flex items-center gap-1 !text-[11px]"><Link2 size={10} /> Depende de</div>
-              {task.dependsOn.map((d) => {
-                const dep = allTasks.find((x) => x.id === d)!;
-                return (
-                  <button key={d} onClick={() => onOpenTask(d)}
-                    className="mb-1 flex w-full items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3">
+          {/* planificación: hito y dependencias (alimentan la ruta crítica del cronograma) */}
+          <div>
+            <div className="label mb-1.5 flex items-center gap-1 !text-[11px]"><Link2 size={10} /> Planificación</div>
+            {editable ? (
+              <label className="mb-2 flex cursor-pointer items-center gap-2 text-[12px] text-ink-soft">
+                <input type="checkbox" checked={!!task.milestone} disabled={saving} onChange={(e) => onPatch(task.id, { milestone: e.target.checked })} />
+                Hito del proyecto
+              </label>
+            ) : task.milestone ? <p className="mb-2 text-[12px] font-semibold text-ink">Hito del proyecto</p> : null}
+            <div className="mb-1 text-[11.5px] text-muted">Depende de</div>
+            {(task.dependsOn ?? []).map((d) => {
+              const dep = allTasks.find((x) => x.id === d);
+              if (!dep) return null;
+              return (
+                <div key={d} className="mb-1 flex items-center gap-1">
+                  <button onClick={() => onOpenTask(d)}
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3">
                     <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: TASK_STATUS_META[dep.status].color }} />
                     <span className="flex-1 truncate text-[12px] font-medium text-ink">{dep.title}</span>
                     <span className="num text-[11px] text-faint">{fmtDate(dep.due)}</span>
                   </button>
-                );
-              })}
-            </div>
-          )}
+                  {editable && <button type="button" disabled={saving} onClick={() => onPatch(task.id, { dependsOn: (task.dependsOn ?? []).filter((x) => x !== d) })}
+                    className="rounded-md p-1.5 text-faint hover:bg-surface-2 hover:text-bad" title="Quitar la dependencia" aria-label={`Quitar la dependencia de ${dep.title}`}><X size={12} /></button>}
+                </div>
+              );
+            })}
+            {!(task.dependsOn ?? []).length && <p className="text-[12px] text-faint">Sin prerrequisitos.</p>}
+            {editable && (() => {
+              const candidatas = allTasks.filter((x) => x.iniId === task.iniId && x.id !== task.id && !(task.dependsOn ?? []).includes(x.id));
+              return candidatas.length ? (
+                <select value="" disabled={saving} onChange={(e) => { if (e.target.value) onPatch(task.id, { dependsOn: [...(task.dependsOn ?? []), e.target.value] }); }}
+                  className="input mt-1.5 !py-1.5 text-[12px]" aria-label="Añadir una dependencia">
+                  <option value="">+ Añadir una tarea de la que depende…</option>
+                  {candidatas.map((x) => <option key={x.id} value={x.id}>{x.id} · {x.title.slice(0, 48)}</option>)}
+                </select>
+              ) : null;
+            })()}
+          </div>
 
           {/* evidencia + verificación */}
           <div>
@@ -1019,6 +965,7 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
   const [due, setDue] = useState(hoy);
   const [dependsOn, setDependsOn] = useState("");
   const [requiresEvidence, setRequiresEvidence] = useState(false);
+  const [milestone, setMilestone] = useState(false);
 
   const iniTasks = allTasks.filter((t) => t.iniId === iniId);
 
@@ -1086,10 +1033,14 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
               onChange={(e) => setRequiresEvidence(e.target.checked)} />
             Entregable formal (marca de evidencia en el tablero)
           </label>
+          <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink-soft">
+            <input type="checkbox" checked={milestone} onChange={(e) => setMilestone(e.target.checked)} />
+            Hito del proyecto (punto de control: se dibuja como rombo en el cronograma)
+          </label>
           <button
             onClick={() => onCreate({
               iniId, title, desc, assigneeId, start, due,
-              dependsOn: dependsOn ? [dependsOn] : undefined, requiresEvidence,
+              dependsOn: dependsOn ? [dependsOn] : undefined, requiresEvidence, milestone,
             })}
             disabled={saving || title.trim().length < 8 || desc.trim().length < 20 || !start || !due}
             className="btn-primary w-full !py-2 text-[12.5px] disabled:opacity-40">
