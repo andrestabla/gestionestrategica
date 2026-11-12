@@ -717,7 +717,7 @@ function PermisosTab() {
 type IntegrationUi = {
   key: string; name: string; purpose: string;
   enabled: boolean; configured: boolean; source?: "entorno" | "plataforma" | null; updatedBy?: string; at?: string;
-  fields: { key: string; label: string; secret: boolean; placeholder: string; value: string }[];
+  fields: { key: string; label: string; secret: boolean; placeholder: string; value: string; options?: { value: string; label: string; nota?: string; retiro?: string }[] }[];
 };
 
 function IntegracionesTab() {
@@ -797,18 +797,28 @@ function IntegrationCard({ it, rise, onSaved, onError }: {
         </span>
       </div>
       <div className="space-y-2 px-5 py-3">
-        {it.fields.map((f) => (
+        {it.fields.map((f) => { const v = draft[f.key] ?? f.value, op = f.options?.find((o) => o.value === v); return (
           <label key={f.key} className="block">
             <span className="label !text-[11px]">{f.label}</span>
-            <input
-              type={f.secret ? "password" : "text"}
-              value={draft[f.key] ?? f.value}
-              onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
-              placeholder={f.placeholder}
-              autoComplete="off"
-              className="input mt-1 !py-1.5 font-mono !text-[12px]" />
+            {f.options ? (<>
+              <select value={v} onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))} className="input mt-1 !py-1.5 !text-[12.5px]">
+                {!v && <option value="">Elige un modelo…</option>}
+                {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {v && !op && <option value={v}>{v} · configurado a mano</option>}
+              </select>
+              {op?.nota && <span className="mt-1 block text-[12px] leading-snug text-muted">{op.nota}</span>}
+              {op?.retiro && <span className="mt-1 block text-[12px] font-semibold leading-snug" style={{ color: "var(--warn-text)" }}>{op.retiro}</span>}
+            </>) : (
+              <input
+                type={f.secret ? "password" : "text"}
+                value={v}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                placeholder={f.placeholder}
+                autoComplete="off"
+                className="input mt-1 !py-1.5 font-mono !text-[12px]" />
+            )}
           </label>
-        ))}
+        ); })}
         <div className="flex gap-2 pt-1">
           <button onClick={() => post({ fields: draft })} disabled={saving || !dirty}
             className="btn-primary flex-1 btn-sm text-[12px] disabled:opacity-40">

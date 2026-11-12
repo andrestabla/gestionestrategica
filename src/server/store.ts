@@ -3713,10 +3713,11 @@ export type IntegrationConfig = {
   at?: string;
 };
 
+import { OPENAI_MODELOS } from "@/lib/modelos-ia";
 type IntegrationSpec = {
   name: string;
   purpose: string;
-  fields: { key: string; label: string; secret?: boolean; placeholder: string; validate: (v: string) => string | null }[];
+  fields: { key: string; label: string; secret?: boolean; placeholder: string; validate: (v: string) => string | null; options?: { value: string; label: string; nota?: string; retiro?: string }[] }[];
 };
 
 const req = (label: string) => (v: string) => (v.trim() ? null : `${label} es obligatorio`);
@@ -3733,6 +3734,7 @@ export const INTEGRATION_SPECS: Record<IntegrationKey, IntegrationSpec> = {
       {
         key: "model", label: "Modelo", placeholder: "gpt-4o-mini",
         validate: req("El modelo"),
+        options: OPENAI_MODELOS,
       },
     ],
   },
@@ -3810,7 +3812,14 @@ export function effectiveIntegration(key: IntegrationKey): IntegrationConfig | n
       if (cfg?.enabled && INTEGRATION_SPECS[key].fields.every((f) => cfg.fields[f.key]?.trim())) return cfg;
     }
   } catch { /* sin empresa activa */ }
-  return envIntegration(key);
+  const env = envIntegration(key);
+  // OpenAI: la clave puede venir del entorno y el modelo elegirse en Integraciones (sin volver a escribir la clave)
+  if (env && key === "openai") { const m = modeloElegido(); if (m) return { ...env, fields: { ...env.fields, model: m } }; }
+  return env;
+}
+/** Modelo de OpenAI elegido en Integraciones para la empresa activa, aunque la clave siga viniendo del entorno. */
+function modeloElegido(): string | null {
+  try { return hasTenantContext() ? integrations().get("openai")?.fields.model?.trim() || null : null; } catch { return null; }
 }
 export const effectiveSes = () => effectiveIntegration("ses");
 export const effectiveR2 = () => effectiveIntegration("r2");
@@ -3820,7 +3829,9 @@ export function getIntegrationsMasked() {
     const spec = INTEGRATION_SPECS[key];
     const stored = integrations().get(key);
     // SES y R2: si no hay configuración propia activa, rige la del entorno y se muestra activa
-    const env = !(stored?.enabled) ? envIntegration(key) : null;
+    const envBase = !(stored?.enabled) ? envIntegration(key) : null;
+    // OpenAI con la clave del entorno: el modelo que se muestra es el elegido aquí, si lo hay
+    const env = envBase && key === "openai" && stored?.fields.model?.trim() ? { ...envBase, fields: { ...envBase.fields, model: stored.fields.model.trim() } } : envBase;
     const cfg = stored?.enabled ? stored : (env ?? stored);
     return {
       key,
@@ -3832,7 +3843,7 @@ export function getIntegrationsMasked() {
       updatedBy: cfg?.updatedBy,
       at: cfg?.at,
       fields: spec.fields.map((f) => ({
-        key: f.key, label: f.label, secret: Boolean(f.secret), placeholder: f.placeholder,
+        key: f.key, label: f.label, secret: Boolean(f.secret), placeholder: f.placeholder, ...(f.options ? { options: f.options } : {}),
         value: cfg?.fields[f.key] ? (f.secret ? maskSecret(cfg.fields[f.key]) : cfg.fields[f.key]) : "",
       })),
     };
@@ -4712,6 +4723,12 @@ export function saveBaseInteligencia(by: string, content: unknown, model: string
     await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind: "inteligencia", subject: "base" } }, update: data, create: { companyId, kind: "inteligencia", subject: "base", ...data } });
   });
   return { base: content, at, model, by };
+}
+/** Quita la base investigada de la empresa (queda la curada del sector). */
+export function clearBaseInteligencia(by: string): void {
+  if (!informes().delete("inteligencia|base")) return;
+  audit({ email: by, name: by, role: "CONSULTOR" }, "task", "inteligencia:base", "base de inteligencia: investigación de la industria retirada");
+  void persist("base de inteligencia", async (db) => { await db.diagnosticReport.deleteMany({ where: { companyId: cid(), kind: "inteligencia", subject: "base" } }); });
 }
 /** Líneas del instrumento de madurez digital de la empresa: con ellas se clasifican los hechos digitales de la industria. */
 export const lineasMadurez = () => madInstrument().lines.map((l) => ({ n: l.n, name: l.name, short: l.short, color: l.color }));

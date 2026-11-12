@@ -11,7 +11,7 @@ test("la investigación solo guarda los hechos cuya fuente está entre las pági
     data: { hechos: [
       hecho("https://www.dane.gov.co/encuesta/edit?utm_source=x", { dato: { linea: 2, indicador: "Empresas con procesos automatizados", valor: 41.26, unidad: "%", alcance: "Manufactura, Colombia", anio: "2025" } }),
       hecho("https://inventada.example.com/informe"),                                   // no se consultó: se descarta
-      hecho("https://empresa.com/nota/", { par: { empresa: "Laboratorio X", anio: "2025", linea: 1 } }),
+      { ...hecho("https://empresa.com/nota/", { par: { empresa: "Laboratorio X", anio: "2025", linea: 1 } }), hecho: "Laboratorio X implantó en 2025 una plataforma de gestión de clientes para 300 visitadores." },
       hecho("no es una dirección"),
       hecho("https://empresa.com/otra", { dato: { linea: 9, indicador: "x", valor: 300, unidad: "%" } }),   // dato inválido: el hecho queda, sin dato
     ] },
@@ -38,6 +38,14 @@ test("se descartan las páginas de inicio, lo que no trae cifra, el texto comerc
   ] }, urls }], { industria: "X", model: "m", at: "2026-01-01T00:00:00.000Z" }, LINEAS, ["https://www.oficial.gov.co/boletin/"]);
   assert.deepEqual(base.hechos.map((h) => h.par?.empresa), ["Laboratorio X"]);
   assert.equal(base.descartados, 3);
+  // un «par» que solo trae cifras financieras, o que habla de la propia empresa, no es una iniciativa digital de un competidor
+  const pares = parseInvestigacion([{ data: { hechos: [
+    { ...hecho("https://prensa.com/nota-3", { par: { empresa: "Laboratorio Y", anio: "2022", linea: 2 } }), hecho: "En 2022, Laboratorio Y reportó ingresos de $604.148 millones con margen de 19,8 %." },
+    { ...hecho("https://prensa.com/nota-4", { par: { empresa: "Laboratorios Siegfried", anio: "2022", linea: 1 } }), hecho: "En 2022, Laboratorios Siegfried lanzó una plataforma digital para 5.000 médicos." },
+    { ...hecho("https://prensa.com/nota-5", { par: { empresa: "Laboratorio Z", anio: "2024", linea: 2 } }), hecho: "Laboratorio Z automatizó en 2024 dos líneas de empaque." },
+  ] }, urls: ["https://prensa.com/nota-3", "https://prensa.com/nota-4", "https://prensa.com/nota-5"] }], { industria: "X", model: "m", at: "2026-01-01T00:00:00.000Z" }, LINEAS, [], "Laboratorios Siegfried");
+  assert.deepEqual(pares.hechos.map((h) => h.par?.empresa), ["Laboratorio Z"]);
+  assert.equal(pares.descartados, 2);
 });
 
 test("sin páginas consultadas no se guarda ningún hecho", () => {

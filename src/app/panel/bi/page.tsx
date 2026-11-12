@@ -25,7 +25,7 @@ import { baseDe, type Tema, type BaseConocimiento } from "@/data/conocimiento-se
 import { useEffect, useState } from "react";
 import { esInvestigado } from "@/lib/inteligencia-base";
 import { AdopcionIndustria, ParesIndustria, type LineaRef } from "@/app/panel/madurez/[[...slug]]/informe-graficas";
-import { avisar } from "@/components/feedback";
+import { avisar, confirmar } from "@/components/feedback";
 import { Database, Users, ShieldCheck, FlaskConical, Landmark, ExternalLink, Scale, Award, BookOpen, Loader2, RefreshCw, Sparkles, Cpu } from "lucide-react";
 import { MapaSector, Dispersion, RankingActividad, comparables, CanalesBarra, RadarAtc, Productos } from "@/components/inteligencia-graficos";
 
@@ -123,6 +123,13 @@ export default function BiPage() {
     if (investigando) return;
     setInvestigando(true); setIbError(null);
     try { const r = await fetch("/api/td/inteligencia/base", { method: "POST" }); const j = await r.json().catch(() => ({})); if (r.ok) { setIb(j); avisar("Base de Inteligencia actualizada."); } else setIbError(j.error ?? `Error ${r.status}`); }
+    catch { setIbError("No se pudo conectar con el servidor."); }
+    setInvestigando(false);
+  };
+  const quitar = async () => {
+    if (investigando || !(await confirmar({ title: "¿Quitar la investigación de la industria?", body: `Se retiran de la base de ${company.name} los hechos investigados con IA; quedan los hechos curados del sector. Se puede volver a investigar después.`, confirmLabel: "Quitar", danger: true }))) return;
+    setInvestigando(true); setIbError(null);
+    try { const r = await fetch("/api/td/inteligencia/base", { method: "DELETE" }); const j = await r.json().catch(() => ({})); if (r.ok) { setIb(j); avisar("Investigación retirada de la base."); } else setIbError(j.error ?? `Error ${r.status}`); }
     catch { setIbError("No se pudo conectar con el servidor."); }
     setInvestigando(false);
   };
@@ -474,8 +481,8 @@ export default function BiPage() {
       {/* ── la base de Inteligencia de la empresa: de dónde sale y cuándo se actualizó ── */}
       {ib && (
         <Card className="rise rise-2 mb-5">
-          <CardHeader title="Base de Inteligencia de la empresa" sub={ib.industria ? `se arma según su industria · ${ib.industria}` : "se arma según la industria de la empresa"}
-            right={ib.puedeActualizar && ib.disponible && !ib.falta ? <button type="button" onClick={() => void investigar()} disabled={investigando} className="btn-primary btn-sm text-[12px] disabled:opacity-50">{investigando ? <Loader2 size={13} className="animate-spin" /> : ib.investigada ? <RefreshCw size={13} /> : <Sparkles size={13} />} {investigando ? "Investigando…" : ib.investigada ? "Actualizar investigación" : "Investigar la industria"}</button> : undefined} />
+          <CardHeader title={`Base de Inteligencia de ${company.name}`} sub={ib.industria ? `se arma según su industria · ${ib.industria}` : "se arma según la industria de la empresa"}
+            right={ib.puedeActualizar && ib.disponible && !ib.falta ? <span className="flex flex-wrap items-center gap-2">{ib.investigada && <button type="button" onClick={() => void quitar()} disabled={investigando} className="btn-ghost btn-sm text-[12px] disabled:opacity-50">Quitar investigación</button>}<button type="button" onClick={() => void investigar()} disabled={investigando} className="btn-primary btn-sm text-[12px] disabled:opacity-50">{investigando ? <Loader2 size={13} className="animate-spin" /> : ib.investigada ? <RefreshCw size={13} /> : <Sparkles size={13} />} {investigando ? "Investigando…" : ib.investigada ? "Actualizar investigación" : "Investigar la industria"}</button></span> : undefined} />
           <div className="grid gap-4 px-5 pb-5 md:grid-cols-2">
             <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Hechos curados del sector</div>
               <p className="mt-1 text-[13px] leading-snug text-ink-soft">{ib.curada ? <><b className="num text-ink">{ib.curada.hechos}</b> hechos revisados a mano · {ib.curada.nombre}.</> : "Este sector todavía no tiene hechos revisados a mano: la base sale de la investigación de la industria."}</p></div>

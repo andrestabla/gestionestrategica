@@ -2,7 +2,7 @@
 // la investiga con el modelo y búsqueda en la web y la guarda. La usan el módulo de Inteligencia, el
 // asistente de OKR y el informe de madurez digital.
 
-import { catalog, getBaseInteligencia, saveBaseInteligencia, lineasMadurez, effectiveIntegration, flushOrError } from "@/server/store";
+import { catalog, getBaseInteligencia, saveBaseInteligencia, clearBaseInteligencia, lineasMadurez, effectiveIntegration, flushOrError } from "@/server/store";
 import { buscarJson, iaDisponible } from "@/server/ia";
 import { baseDe, type BaseConocimiento } from "@/data/conocimiento-sector";
 import { sectorOf, sectorKeyDe, shortName, DEFAULT_SECTOR_KEY } from "@/data/sector";
@@ -40,9 +40,17 @@ export async function investigarIndustria(by: string): Promise<{ ok: true; base:
   try { respuestas = await Promise.all(bloques.map((b) => buscarJson(system, b.user, { country: c.country === "EC" ? "EC" : "CO" }))); }
   catch (e) { return { ok: false, status: 502, error: (e as Error).message }; }
   const model = effectiveIntegration("openai")?.fields.model?.trim() || "gpt-4o-mini";
-  const base = parseInvestigacion(respuestas, { industria, model, at: new Date().toISOString() }, lineas, (curada?.fuentes ?? []).map((f) => f.url));
+  const base = parseInvestigacion(respuestas, { industria, model, at: new Date().toISOString() }, lineas, (curada?.fuentes ?? []).map((f) => f.url), c.name);
   if (!base.hechos.length) return { ok: false, status: 502, error: base.descartados ? `La investigación devolvió ${base.descartados} hechos, pero ninguno pasó los filtros (fuente entre las páginas consultadas, con cifra y sin texto comercial), así que no se guardó nada. Inténtalo de nuevo.` : "La investigación no devolvió hechos nuevos; inténtalo de nuevo." };
   saveBaseInteligencia(by, base, model, industria);
   const bad = await flushOrError(); if (bad) return { ok: false, status: 500, error: bad };
   return { ok: true, base };
+}
+
+/** Quita la base investigada de la empresa: vuelve a quedar solo la curada del sector. */
+export async function quitarInvestigacion(by: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (!baseInvestigada()) return { ok: true };
+  clearBaseInteligencia(by);
+  const bad = await flushOrError(); if (bad) return { ok: false, status: 500, error: bad };
+  return { ok: true };
 }

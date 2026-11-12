@@ -84,11 +84,11 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
       // cortas, menos elementos), se vuelve a pedir una vez diciéndole al modelo qué le faltó; se guarda la más completa
       const { system, partes, hechos, ctx } = e.encargo();
       const respuestas = await Promise.all(partes.map(async (p) => {
-        const primera = await chatJson(system, p.user, { maxTokens: 4500, timeoutMs: 120_000 });
+        const primera = await chatJson(system, p.user, { maxTokens: 4500, timeoutMs: 135_000, effort: "medium" });
         const f1 = faltantesParte(p.id, primera, ctx);
         if (!f1.length) return primera;
         try {
-          const segunda = await chatJson(system, `${p.user}\n\nTu respuesta anterior se rechazó por incompleta: ${f1.join("; ")}. Escríbela de nuevo, completa, cumpliendo cada mínimo de palabras y de elementos.`, { maxTokens: 4500, timeoutMs: 120_000 });
+          const segunda = await chatJson(system, `${p.user}\n\nTu respuesta anterior se rechazó por incompleta: ${f1.join("; ")}. Escríbela de nuevo, completa, cumpliendo cada mínimo de palabras y de elementos.`, { maxTokens: 4500, timeoutMs: 135_000, effort: "medium" });
           return faltantesParte(p.id, segunda, ctx).length < f1.length ? segunda : primera;
         } catch { return primera; }
       }));

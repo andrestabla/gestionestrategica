@@ -88,12 +88,17 @@ export function urlClave(u: string): string | null {
   try { const x = new URL(u.trim()); if (!/^https?:$/.test(x.protocol)) return null; return `${x.hostname.toLowerCase().replace(/^www\./, "")}${x.pathname.replace(/\/+$/, "")}`; } catch { return null; }
 }
 
+/** Una iniciativa digital nombra algo digital: los datos financieros o de exportación de una empresa no lo son. */
+const DIGITAL = /digital|plataforma|software|sistema|automatiz|inteligencia artificial|\bIA\b|anal[ií]tica|\bdatos\b|nube|\bERP\b|\bCRM\b|\bSAP\b|comercio electr[oó]nico|e-commerce|\bapp\b|aplicaci[oó]n|robot|telemedicina|omnicanal|tecnolog|en l[ií]nea|virtual|trazabilidad|serializaci[oó]n|industria 4\.0/i;
 /** Texto de vendedor: describe lo que alguien ofrece, no un hecho de la industria. */
 const COMERCIAL = /\b(ofrece|ofrecen|ofrecemos|brinda|brindan|soluciones (?:tecnol[oó]gicas |digitales |integrales )?para|con m[aá]s de \d+ a[nñ]os de experiencia|l[ií]der en soluciones)\b/i;
 
 /** Arma la base investigada con las respuestas de los bloques. `yaCuradas`: direcciones de las fuentes que la base curada
     ya tiene (no se repiten). */
-export function parseInvestigacion(respuestas: { data: unknown; urls: string[] }[], meta: { industria: string; model: string; at: string }, lineas: LineaDigital[], yaCuradas: string[] = []): BaseInvestigada {
+export function parseInvestigacion(respuestas: { data: unknown; urls: string[] }[], meta: { industria: string; model: string; at: string }, lineas: LineaDigital[], yaCuradas: string[] = [], empresa?: string): BaseInvestigada {
+  // palabra distintiva del nombre de la empresa: los hechos de «par» que hablan de ella misma no son de un competidor
+  const clavePropia = (empresa ?? "").split(/\s+/).filter((w) => w.length > 4 && !/^(laboratorios?|industrias?|grupo|compa[nñ][ií]a|empresa|demo|test)$/i.test(w))[0];
+  const propia = clavePropia ? new RegExp(clavePropia.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
   const curadas = new Set(yaCuradas.map(urlClave).filter((x): x is string => !!x));
   const consultadas = new Set(respuestas.flatMap((r) => r.urls).map(urlClave).filter((x): x is string => !!x));
   const nLineas = new Set(lineas.map((l) => l.n));
@@ -110,6 +115,7 @@ export function parseInvestigacion(respuestas: { data: unknown; urls: string[] }
       if (curadas.has(clave)) continue;                              // ya está en la base curada del sector
       if (!clave.includes("/")) { descartados++; continue; }         // la fuente es la página de inicio de un sitio, no la página del dato
       const esPar = !!(o.par && typeof o.par === "object");
+      if (esPar && (!DIGITAL.test(hecho) || (propia && propia.test(s((o.par as Record<string, unknown>).empresa, 80))))) { descartados++; continue; }   // no es una iniciativa digital, o habla de la propia empresa
       if (!/\d/.test(hecho) || (COMERCIAL.test(hecho) && !esPar)) { descartados++; continue; }   // sin cifra ni fecha, o texto comercial de un proveedor
       const firma = hecho.toLowerCase().replace(/\W+/g, " ").slice(0, 90); if (vistos.has(firma)) continue; vistos.add(firma);
       const temas = (Array.isArray(o.temas) ? o.temas : []).map((t) => s(t, 20).toLowerCase()).filter((t): t is Tema => (TEMAS_BASE as string[]).includes(t)).slice(0, 3);
