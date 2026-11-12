@@ -26,13 +26,14 @@ import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/compon
 import {
   KanbanSquare, CalendarRange, Users, X, Link2, FileText, ShieldCheck,
   AlertTriangle, Lock, ChevronRight, Loader2, Save, History, Paperclip,
-  Plus, Archive, Activity, ShieldAlert,
+  Plus, Archive, Activity, ShieldAlert, Wallet,
 } from "lucide-react";
+import { PresupuestoView } from "./presupuesto";
 import { ImpactoView } from "./impacto";
 import { RiesgosView } from "./riesgos";
 import { Cronograma } from "./cronograma";
 
-type View = "impacto" | "tablero" | "cronograma" | "personas" | "riesgos";
+type View = "impacto" | "tablero" | "cronograma" | "personas" | "riesgos" | "presupuesto";
 const COLUMNS: TaskStatus[] = ["POR_HACER", "EN_CURSO", "EN_REVISION", "BLOQUEADA", "HECHA"];
 
 type ApiData = {
@@ -209,7 +210,7 @@ export default function ProyectosPage() {
             )}
             <AccessChip module="proyectos" />
             <div className="flex flex-wrap gap-1 rounded-xl bg-surface-2 p-1">
-              {([["impacto", Activity, "Impacto en KR"], ["tablero", KanbanSquare, "Tablero"], ["cronograma", CalendarRange, "Cronograma"], ["personas", Users, "Personas"], ["riesgos", ShieldAlert, "Riesgos"]] as const).map(([v, Icon, label]) => (
+              {([["impacto", Activity, "Impacto en KR"], ["tablero", KanbanSquare, "Tablero"], ["cronograma", CalendarRange, "Cronograma"], ["personas", Users, "Personas"], ["riesgos", ShieldAlert, "Riesgos"], ["presupuesto", Wallet, "Presupuesto"]] as const).map(([v, Icon, label]) => (
                 <button key={v} onClick={() => setView(v)}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold transition-all ${
                     view === v ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
@@ -319,6 +320,7 @@ export default function ProyectosPage() {
         <div className="min-w-0">
           {view === "impacto" && <ImpactoView iniId={iniFilter} rev={rev} onOpenIni={setIniFilter} onOpenTask={setOpenTask} onVer={(x) => setView(x)} />}
           {view === "riesgos" && <RiesgosView iniId={iniFilter} rev={rev} onChanged={() => setRev((n) => n + 1)} />}
+          {view === "presupuesto" && <PresupuestoView iniId={iniFilter} rev={rev} onChanged={() => setRev((n) => n + 1)} onOpenIni={setIniFilter} />}
           {/* ═══ TABLERO ═══ */}
           {view === "tablero" && (
             <div className="grid gap-3 lg:grid-cols-5">

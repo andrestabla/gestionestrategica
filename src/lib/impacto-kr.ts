@@ -18,6 +18,7 @@ import { krsDeIniciativa } from "@/data/cmi";
 import { diasEntre, vencida, type Task, type TaskStatus } from "@/data/proyectos";
 import { severidad, riesgoVivo, type ProjectRisk, type RiskStatus } from "@/lib/riesgos";
 import { rutaCritica } from "@/lib/ruta-critica";
+import { presupuestoDe, dinero, type Gasto, type PresupuestoProyecto, type Moneda } from "@/lib/presupuesto";
 
 /* ═══ Reglas (pesos a la vista) ═══ */
 
@@ -34,6 +35,7 @@ export const REGLAS = {
   riesgos: { ABIERTO: 8, EN_MITIGACION: 4, MATERIALIZADO: 14, CERRADO: 0, tope: 30 } as Record<RiskStatus, number> & { tope: number },
   cronograma: { minimoDias: 3, diasPorPunto: 6, tope: 10 },
   finPrevisto: { minimoDias: 5, diasPorPunto: 5, tope: 12 },
+  presupuesto: { porPuntoBrecha: 0.3, topeBrecha: 12, porPuntoSobrecompromiso: 0.4, topeSobrecompromiso: 8 },   // la brecha cuenta desde REGLAS_PRESUPUESTO.brechaMinima
   niveles: { aFavor: 80, enObservacion: 60 },
 } as const;
 
@@ -47,12 +49,13 @@ export const NIVEL: Record<Nivel, { label: string; color: string; chip: string; 
 export const nivelDe = (confianza: number | null): Nivel => (confianza === null ? "SIN_SENAL" : confianza >= REGLAS.niveles.aFavor ? "A_FAVOR" : confianza >= REGLAS.niveles.enObservacion ? "EN_OBSERVACION" : "EN_CONTRA");
 
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
+const BRECHA_MINIMA = 10;   // la misma de REGLAS_PRESUPUESTO.brechaMinima: puntos entre % ejecutado y % de avance
 const r1 = (x: number) => Math.round(x * 10) / 10;
 const pl = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
 /* ═══ Pulso de un proyecto ═══ */
 
-export type FactorClave = "RITMO" | "VENCIDAS" | "BLOQUEADAS" | "ENTREGABLES_ATRASADOS" | "ENTREGABLES_CUMPLIDOS" | "RIESGOS" | "CRONOGRAMA" | "FIN_PREVISTO";
+export type FactorClave = "RITMO" | "VENCIDAS" | "BLOQUEADAS" | "ENTREGABLES_ATRASADOS" | "ENTREGABLES_CUMPLIDOS" | "RIESGOS" | "CRONOGRAMA" | "FIN_PREVISTO" | "PRESUPUESTO" | "SOBRECOMPROMISO";
 export type Factor = { clave: FactorClave; puntos: number; titulo: string; detalle: string };
 
 export type PulsoProyecto = {
@@ -66,6 +69,7 @@ export type PulsoProyecto = {
   ritmo: number | null;       // puntos porcentuales: avance − esperado
   diasCorridos: number;       // días que el cronograma se corrió frente a su línea base
   fin: { planeado: string; previsto: string; desvio: number; criticas: number; criticasPendientes: number; hitos: number; hitosCumplidos: number } | null;   // ruta crítica: fin del plan, fin previsto a la fecha y días de diferencia
+  presupuesto: PresupuestoProyecto;   // ejecutado contra avance: valor ganado, índice de costo y proyección al cierre
   proximo: { id: string; title: string; due: string; entregable: boolean; hito: boolean } | null;
   confianza: number | null;   // 0–100
   nivel: Nivel;
@@ -80,7 +84,7 @@ const esperadoTarea = (t: Task, hoy: string) => {
 };
 
 /** Lectura de la ejecución de un proyecto a la fecha `hoy`. `desvios`: días que cada tarea se corrió frente a su línea base. */
-export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: ProjectRisk[], hoy: string, desvios: Record<string, number> = {}): PulsoProyecto {
+export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: ProjectRisk[], hoy: string, desvios: Record<string, number> = {}, gastos: Gasto[] = [], monedaEmpresa: Moneda = "COP"): PulsoProyecto {
   const mias = tasks.filter((t) => t.iniId === ini.id), vivos = risks.filter((r) => r.iniId === ini.id && riesgoVivo(r));
   const venc = mias.filter((t) => vencida(t, hoy)), bloq = mias.filter((t) => t.status === "BLOQUEADA");
   const entregables = mias.filter((t) => t.requiresEvidence || t.milestone);   // compromisos formales: entregables e hitos
@@ -104,11 +108,15 @@ export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: Project
   if (exposicion > 0) { const altos = vivos.filter((r) => severidad(r) >= 15).length, mat = vivos.filter((r) => r.status === "MATERIALIZADO").length;
     factores.push({ clave: "RIESGOS", puntos: -Math.min(R.riesgos.tope, exposicion), titulo: pl(vivos.length, "riesgo abierto", "riesgos abiertos"), detalle: [altos ? pl(altos, "de nivel alto", "de nivel alto") : "", mat ? pl(mat, "materializado", "materializados") : ""].filter(Boolean).join(" · ") || "Ninguno de nivel alto." }); }
   if (ruta.desvio >= R.finPrevisto.minimoDias) factores.push({ clave: "FIN_PREVISTO", puntos: -Math.min(R.finPrevisto.tope, ruta.desvio / R.finPrevisto.diasPorPunto), titulo: "El fin del proyecto se corre", detalle: `Con lo pendiente como va, terminaría ${pl(ruta.desvio, "día", "días")} después de lo planeado.` });
+  const pres = presupuestoDe(ini, gastos, avance, monedaEmpresa);
+  if (pres.brecha !== null && pres.brecha >= BRECHA_MINIMA) factores.push({ clave: "PRESUPUESTO", puntos: -Math.min(R.presupuesto.topeBrecha, pres.brecha * R.presupuesto.porPuntoBrecha), titulo: "Gasta más rápido de lo que avanza", detalle: `Ha ejecutado el ${Math.round(pres.pctEjecutado!)} % del presupuesto con ${Math.round(avance!)} % de avance.` });
+  if (pres.planeado > 0 && pres.comprometido > pres.planeado) { const exceso = ((pres.comprometido - pres.planeado) / pres.planeado) * 100;
+    factores.push({ clave: "SOBRECOMPROMISO", puntos: -Math.min(R.presupuesto.topeSobrecompromiso, exceso * R.presupuesto.porPuntoSobrecompromiso), titulo: "Lo comprometido supera lo planeado", detalle: `Hay ${dinero(pres.comprometido, pres.moneda)} comprometidos sobre ${dinero(pres.planeado, pres.moneda)} planeados.` }); }
   if (diasCorridos >= R.cronograma.minimoDias) factores.push({ clave: "CRONOGRAMA", puntos: -Math.min(R.cronograma.tope, diasCorridos / R.cronograma.diasPorPunto), titulo: "Cronograma corrido", detalle: `Las fechas compromiso se han corrido ${pl(diasCorridos, "día", "días")} frente a la línea base.` });
   for (const f of factores) f.puntos = r1(f.puntos);
   factores.sort((a, b) => Math.abs(b.puntos) - Math.abs(a.puntos));
 
-  const conSenal = mias.length > 0 || vivos.length > 0;
+  const conSenal = mias.length > 0 || vivos.length > 0 || factores.length > 0;
   const confianza = conSenal ? Math.round(clamp(100 + factores.reduce((a, f) => a + f.puntos, 0), 0, 100)) : null;
   const prox = mias.filter((t) => t.status !== "HECHA" && !vencida(t, hoy)).sort((a, b) => a.due.localeCompare(b.due))[0];
   return {
@@ -120,6 +128,7 @@ export function pulsoProyecto(ini: InitiativeFull, tasks: Task[], risks: Project
     diasCorridos,
     fin: ruta.fin && ruta.finPrevisto ? { planeado: ruta.fin, previsto: ruta.finPrevisto, desvio: ruta.desvio, criticas: ruta.criticas.length, criticasPendientes: ruta.criticas.filter((id) => mias.find((t) => t.id === id)?.status !== "HECHA").length,
       hitos: mias.filter((t) => t.milestone).length, hitosCumplidos: mias.filter((t) => t.milestone && t.status === "HECHA").length } : null,
+    presupuesto: pres,
     proximo: prox ? { id: prox.id, title: prox.title, due: prox.due, entregable: !!prox.requiresEvidence, hito: !!prox.milestone } : null,
     confianza, nivel: nivelDe(confianza), factores,
   };
@@ -156,8 +165,9 @@ export function krMedido(k: KpiFull): KrMedido {
 export type Impacto = { hoy: string; proyectos: PulsoProyecto[]; krs: KrImpacto[]; sinKr: string[]; pesos: Record<string, { code: string; peso: number }[]> };
 
 /** Lectura completa: pulso de cada proyecto y efecto de la ejecución sobre cada resultado clave que alguno mueve. */
-export function impactoKr(v: TenantView, risks: ProjectRisk[], hoy: string, desvios: Record<string, number> = {}): Impacto {
-  const proyectos = v.initiatives.map((i) => pulsoProyecto(i, v.tasks, risks, hoy, desvios));
+export function impactoKr(v: TenantView, risks: ProjectRisk[], hoy: string, desvios: Record<string, number> = {}, gastos: Gasto[] = []): Impacto {
+  const monedaEmpresa: Moneda = v.catalog?.company?.currency === "USD" ? "USD" : "COP";
+  const proyectos = v.initiatives.map((i) => pulsoProyecto(i, v.tasks, risks, hoy, desvios, gastos, monedaEmpresa));
   const porId = new Map(proyectos.map((p) => [p.iniId, p]));
   const pesos: Impacto["pesos"] = {};
   const krs: KrImpacto[] = [];
@@ -186,7 +196,7 @@ export function impactoKr(v: TenantView, risks: ProjectRisk[], hoy: string, desv
 
 /* ═══ Movimientos: cada cambio registrado y su efecto ═══ */
 
-export type TipoMovimiento = "TAREA_CERRADA" | "ENTREGABLE_CUMPLIDO" | "TAREA_REABIERTA" | "TAREA_BLOQUEADA" | "TAREA_DESBLOQUEADA" | "TAREA_AVANZA" | "FECHA_CORRIDA" | "FECHA_ADELANTADA"
+export type TipoMovimiento = "GASTO" | "TAREA_CERRADA" | "ENTREGABLE_CUMPLIDO" | "TAREA_REABIERTA" | "TAREA_BLOQUEADA" | "TAREA_DESBLOQUEADA" | "TAREA_AVANZA" | "FECHA_CORRIDA" | "FECHA_ADELANTADA"
   | "EVIDENCIA" | "TAREA_NUEVA" | "TAREA_ARCHIVADA" | "RIESGO_NUEVO" | "RIESGO_CERRADO" | "RIESGO_MATERIALIZADO" | "RIESGO_EN_MITIGACION" | "RIESGO_REABIERTO" | "RIESGO_CAMBIA" | "OTRO";
 export type Movimiento = {
   id: string; at: string; actor: string; iniId: string; iniName: string; refId: string; refTitulo: string;
@@ -199,7 +209,7 @@ export const EFECTO = {
 } as const;
 
 type Evento = { id: string | number; at: string; actor: string; entityId: string; change: string };
-const REF = /^(T|RG)-(i\d+)-/;
+const REF = /^(T|RG|GS)-(i\d+)-/;
 
 /** Clasifica los eventos de la auditoría que son de tareas o de riesgos de un proyecto y les asigna su efecto. */
 export function movimientos(eventos: Evento[], v: TenantView, risks: ProjectRisk[], pesos: Impacto["pesos"]): Movimiento[] {
@@ -239,6 +249,8 @@ export function movimientos(eventos: Evento[], v: TenantView, risks: ProjectRisk
       } else if (/^evidencia adjuntada/.test(seg)) partes.push({ tipo: "EVIDENCIA", texto: "Evidencia adjuntada", puntos: EFECTO.evidencia });
       else if (/^tarea creada/.test(seg)) partes.push({ tipo: "TAREA_NUEVA", texto: "Tarea nueva en el plan", puntos: 0 });
       else if (/^tarea archivada/.test(seg)) partes.push({ tipo: "TAREA_ARCHIVADA", texto: "Tarea archivada", puntos: 0 });
+      else if ((x = /^(ejecución|compromiso) registrad[ao] por (.+)$/.exec(seg))) partes.push({ tipo: "GASTO", texto: `${x[1] === "ejecución" ? "Ejecución" : "Compromiso"} de presupuesto: ${x[2]}`, puntos: 0 });
+      else if (/^movimiento de presupuesto eliminado/.test(seg)) partes.push({ tipo: "GASTO", texto: "Movimiento de presupuesto eliminado", puntos: 0 });
       else if (/^riesgo registrado/.test(seg)) partes.push({ tipo: "RIESGO_NUEVO", texto: "Riesgo nuevo", puntos: -porSev(REGLAS.riesgos.ABIERTO) });
       else if ((x = /^nivel (\d+) → (\d+)$/.exec(seg))) { const d = Number(x[1]) - Number(x[2]); if (d) partes.push({ tipo: "RIESGO_CAMBIA", texto: d > 0 ? `El riesgo baja de ${x[1]} a ${x[2]}` : `El riesgo sube de ${x[1]} a ${x[2]}`, puntos: r1((d / 25) * REGLAS.riesgos.ABIERTO) }); }
     }

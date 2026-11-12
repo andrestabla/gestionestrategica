@@ -10,10 +10,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Card, CardHeader, EmptyNote, Skeleton } from "@/components/ui";
 import { NIVEL, REGLAS, EFECTO, type Impacto, type KrImpacto, type PulsoProyecto, type Movimiento, type Factor, type Nivel } from "@/lib/impacto-kr";
 import { NIVEL_RIESGO, nivelRiesgo, severidad, riskStatusLabel, riesgoVivo, type ProjectRisk } from "@/lib/riesgos";
-import { Flag, ArrowDownRight, ArrowUpRight, Minus, Target, ChevronRight, CalendarClock, ShieldAlert, Activity, Info, TrendingUp, TrendingDown } from "lucide-react";
+import { ESTADO_PRESUPUESTO, REGLAS_PRESUPUESTO, dinero, type Gasto } from "@/lib/presupuesto";
+import { Wallet, Flag, ArrowDownRight, ArrowUpRight, Minus, Target, ChevronRight, CalendarClock, ShieldAlert, Activity, Info, TrendingUp, TrendingDown } from "lucide-react";
 
 export type ImpactoData = Impacto & {
-  movimientos: Movimiento[]; riesgos: ProjectRisk[]; editable: Record<string, boolean>;
+  movimientos: Movimiento[]; riesgos: ProjectRisk[]; gastos: Gasto[]; editable: Record<string, boolean>;
   personas: { id: string; name: string; cargo: string }[]; responsables: Record<string, string>;
 };
 
@@ -195,6 +196,7 @@ function ComoSeCalcula() {
             <li>· Entregables e hitos cumplidos: +{f1(R.entregablesCumplidos.porEntregable)} por cada uno (hasta +{R.entregablesCumplidos.tope}).</li>
             <li>· Riesgos: severidad ÷ 25 × {R.riesgos.ABIERTO} si está abierto, × {R.riesgos.EN_MITIGACION} en mitigación, × {R.riesgos.MATERIALIZADO} materializado (hasta −{R.riesgos.tope}).</li>
             <li>· Fin previsto: −1 por cada {R.finPrevisto.diasPorPunto} días que el fin del proyecto se corre según la ruta crítica (hasta −{R.finPrevisto.tope}).</li>
+            <li>· Presupuesto: −{f1(R.presupuesto.porPuntoBrecha)} por cada punto que lo ejecutado va por encima del avance, desde {REGLAS_PRESUPUESTO.brechaMinima} puntos (hasta −{R.presupuesto.topeBrecha}); −{f1(R.presupuesto.porPuntoSobrecompromiso)} por cada punto que lo comprometido supera lo planeado (hasta −{R.presupuesto.topeSobrecompromiso}).</li>
             <li>· Cronograma corrido: −1 por cada {R.cronograma.diasPorPunto} días frente a la línea base (hasta −{R.cronograma.tope}).</li>
           </ul>
           <p className="mt-2"><b className="text-ink">Movimientos.</b> Cada cambio registrado lleva el efecto que tuvo al hacerse: entregable cumplido +{EFECTO.entregableCumplido}, tarea cerrada +{EFECTO.tareaCerrada}, bloqueo {EFECTO.bloqueo}, desbloqueo +{EFECTO.desbloqueo}, fecha corrida −1 por cada {EFECTO.fechaCorrida.diasPorPunto} días, y los riesgos según su severidad.</p>
@@ -205,7 +207,7 @@ function ComoSeCalcula() {
 }
 
 /* ═══ Vista ═══ */
-export function ImpactoView({ iniId, rev, onOpenIni, onOpenTask, onVer }: { iniId: string | null; rev: number; onOpenIni: (id: string | null) => void; onOpenTask: (id: string) => void; onVer: (v: "tablero" | "riesgos") => void }) {
+export function ImpactoView({ iniId, rev, onOpenIni, onOpenTask, onVer }: { iniId: string | null; rev: number; onOpenIni: (id: string | null) => void; onOpenTask: (id: string) => void; onVer: (v: "tablero" | "riesgos" | "presupuesto") => void }) {
   const { data, error } = useImpacto(rev);
   if (error) return <EmptyNote>{error}</EmptyNote>;
   if (!data) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-72" /></div>;
@@ -213,7 +215,7 @@ export function ImpactoView({ iniId, rev, onOpenIni, onOpenTask, onVer }: { iniI
   return p ? <DeProyecto data={data} p={p} onOpenIni={onOpenIni} onOpenTask={onOpenTask} onVer={onVer} /> : <DePortafolio data={data} onOpenIni={onOpenIni} onOpenTask={onOpenTask} onVer={onVer} />;
 }
 
-function DePortafolio({ data, onOpenIni, onOpenTask, onVer }: { data: ImpactoData; onOpenIni: (id: string | null) => void; onOpenTask: (id: string) => void; onVer: (v: "tablero" | "riesgos") => void }) {
+function DePortafolio({ data, onOpenIni, onOpenTask, onVer }: { data: ImpactoData; onOpenIni: (id: string | null) => void; onOpenTask: (id: string) => void; onVer: (v: "tablero" | "riesgos" | "presupuesto") => void }) {
   const conSenal = data.proyectos.filter((p) => p.confianza !== null), conPlan = data.proyectos.filter((p) => p.avance !== null);
   const media = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
   const confianza = media(conSenal.map((p) => p.confianza!)), avance = media(conPlan.map((p) => p.avance!)), esperado = media(conPlan.map((p) => p.esperado!));
@@ -279,6 +281,7 @@ function FilaProyecto({ p, responsables, onOpen }: { p: PulsoProyecto; responsab
         {p.tareas.bloqueadas > 0 && <span className="chip chip-warn !py-0">{p.tareas.bloqueadas} bloqueadas</span>}
         {p.riesgos.vivos > 0 && <span className={`chip !py-0 ${p.riesgos.altos ? "chip-bad" : "chip-warn"}`}>{p.riesgos.vivos} {p.riesgos.vivos === 1 ? "riesgo" : "riesgos"}</span>}
         {p.entregables.total > 0 && <span className="chip !py-0">{p.entregables.cumplidos}/{p.entregables.total} entregables</span>}
+        {(p.presupuesto.estado === "ALERTA" || p.presupuesto.estado === "SOBRECOSTO") && <span className={`chip !py-0 ${ESTADO_PRESUPUESTO[p.presupuesto.estado].chip}`} title={ESTADO_PRESUPUESTO[p.presupuesto.estado].desc}>Presupuesto: {ESTADO_PRESUPUESTO[p.presupuesto.estado].label.toLowerCase()}</span>}
         {!p.tareas.vencidas && !p.tareas.bloqueadas && !p.riesgos.vivos && !p.entregables.total && <span className="text-faint">—</span>}
       </div></td>
       <td className="px-3 py-3">{p.proximo ? <div className="max-w-[220px]"><div className="truncate text-ink-soft">{p.proximo.title}</div><div className="num text-[12px] text-faint">{dia(p.proximo.due)}{p.proximo.hito ? " · hito" : p.proximo.entregable ? " · entregable" : ""}{p.fin && p.fin.desvio > 0 ? <span style={{ color: "var(--bad)" }}> · fin +{p.fin.desvio} d</span> : null}</div></div> : <span className="text-faint">—</span>}</td>
@@ -286,7 +289,7 @@ function FilaProyecto({ p, responsables, onOpen }: { p: PulsoProyecto; responsab
   );
 }
 
-function DeProyecto({ data, p, onOpenIni, onOpenTask, onVer }: { data: ImpactoData; p: PulsoProyecto; onOpenIni: (id: string | null) => void; onOpenTask: (id: string) => void; onVer: (v: "tablero" | "riesgos") => void }) {
+function DeProyecto({ data, p, onOpenIni, onOpenTask, onVer }: { data: ImpactoData; p: PulsoProyecto; onOpenIni: (id: string | null) => void; onOpenTask: (id: string) => void; onVer: (v: "tablero" | "riesgos" | "presupuesto") => void }) {
   const n = NIVEL[p.nivel];
   const krs = data.krs.filter((k) => k.proyectos.some((x) => x.iniId === p.iniId));
   const riesgos = data.riesgos.filter((r) => r.iniId === p.iniId && riesgoVivo(r));
@@ -318,6 +321,13 @@ function DeProyecto({ data, p, onOpenIni, onOpenTask, onVer }: { data: ImpactoDa
                     {p.fin.desvio > 0 ? <span className="chip chip-bad !py-0 text-[11px]" title="Con el estado de las tareas a la fecha y lo pendiente tardando lo planeado">previsto {dia(p.fin.previsto)} · +{p.fin.desvio} {p.fin.desvio === 1 ? "día" : "días"}</span> : <span className="chip chip-ok !py-0 text-[11px]">en fecha</span>}
                     <span>· {p.fin.criticasPendientes} {p.fin.criticasPendientes === 1 ? "tarea pendiente" : "tareas pendientes"} en la ruta crítica</span>
                     {p.fin.hitos > 0 && <span>· {p.fin.hitosCumplidos} de {p.fin.hitos} hitos</span>}
+                  </p>
+                )}
+                {p.presupuesto.planeado > 0 && (
+                  <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
+                    <Wallet size={13} /> Presupuesto <b className="num text-ink-soft">{dinero(p.presupuesto.planeado, p.presupuesto.moneda)}</b> · ejecutado {f0(p.presupuesto.pctEjecutado ?? 0)} %
+                    <span className={`chip !py-0 text-[11px] ${ESTADO_PRESUPUESTO[p.presupuesto.estado].chip}`} title={ESTADO_PRESUPUESTO[p.presupuesto.estado].desc}>{ESTADO_PRESUPUESTO[p.presupuesto.estado].label}</span>
+                    <button type="button" onClick={() => onVer("presupuesto")} className="font-semibold text-cyan-deep hover:underline">Ver presupuesto</button>
                   </p>
                 )}
                 {p.proximo && <p className="mt-2 flex items-center gap-1.5 text-[12.5px] text-muted"><CalendarClock size={13} /> Próximo{p.proximo.hito ? " hito" : ""}: <button type="button" onClick={() => onOpenTask(p.proximo!.id)} className="truncate font-semibold text-ink-soft hover:text-cyan-deep hover:underline">{p.proximo.title}</button> · {dia(p.proximo.due)}</p>}

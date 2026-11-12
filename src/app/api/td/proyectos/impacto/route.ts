@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../../_helpers";
-import { tenantView, catalog, getRisks, getTasks, deviationDays, activityFeed } from "@/server/store";
+import { tenantView, catalog, getRisks, getGastos, getTasks, deviationDays, activityFeed } from "@/server/store";
 import { impactoKr, movimientos } from "@/lib/impacto-kr";
 import { hoyDe } from "@/data/proyectos";
 import { can } from "@/lib/permissions";
@@ -12,9 +12,10 @@ import { can } from "@/lib/permissions";
 export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
   const v = tenantView(), c = catalog(), hoy = hoyDe(c.company), risks = getRisks();
   const desvios = Object.fromEntries(getTasks().map((t) => [t.id, deviationDays(t)]));
-  const impacto = impactoKr(v, risks, hoy, desvios);
+  const gastos = getGastos();
+  const impacto = impactoKr(v, risks, hoy, desvios, gastos);
   const { events } = await activityFeed({ limit: 400 });
   const editable = Object.fromEntries(c.initiatives.map((i) => [i.id, can(user, "edit_tasks", i)]));
-  return NextResponse.json({ ...impacto, movimientos: movimientos(events, v, risks, impacto.pesos).slice(0, 80), riesgos: risks, editable,
+  return NextResponse.json({ ...impacto, movimientos: movimientos(events, v, risks, impacto.pesos).slice(0, 80), riesgos: risks, gastos, editable,
     personas: c.people.map((p) => ({ id: p.id, name: p.name, cargo: p.cargo })), responsables: Object.fromEntries(c.responsibles.map((r) => [r.id, r.dependencia || r.cargo])) });
 });

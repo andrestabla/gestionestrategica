@@ -13,6 +13,7 @@ import { isOrgKind, captureError, progressOf, perceptionOf, isPerceptionAnswer, 
 import { instrumentOf } from "@/data/madurez";
 import { riskError, severidad, type ProjectRisk, type RiskInput } from "@/lib/riesgos";
 import { formaCiclo } from "@/lib/ruta-critica";
+import { gastoError, dinero, type Gasto, type GastoInput } from "@/lib/presupuesto";
 import { CONSENT_VERSION } from "@/lib/consentimiento";
 import { type Task, type TaskStatus, DEMO_TODAY, hoyDe } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
@@ -177,7 +178,8 @@ export type TenantState = {
   f2: F2Response[];
   testNotes: Map<string, TestNotes>;
   madurez: { vars: Map<string, MadCapture>; resps: Map<string, MadResponse>; safeguards: SafeguardState; cuts: MadCut[] };
-  riesgos: Map<string, ProjectRisk>;   // gestión de proyectos: riesgos y problemas de cada proyecto, clave RG-<ini>-NN   // madurez digital: captura vigente, salvaguardas y cortes publicados
+  riesgos: Map<string, ProjectRisk>;   // gestión de proyectos: riesgos y problemas de cada proyecto, clave RG-<ini>-NN
+  gastos: Map<string, Gasto>;          // gestión de proyectos: compromisos y ejecuciones de presupuesto, clave GS-<ini>-NN   // madurez digital: captura vigente, salvaguardas y cortes publicados
   iniOverrides: Map<string, InitiativeOverride>;
   evals: Map<string, Evaluation>;          // clave iniId|email
   decisions: Map<string, DecisionRecord>;  // clave iniId
@@ -238,6 +240,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f1: new Map(), informes: new Map(), f2: [], testNotes: new Map(),
     madurez: { vars: new Map(), resps: new Map(), safeguards: {}, cuts: [] },
     riesgos: new Map(),
+    gastos: new Map(),
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
@@ -535,8 +538,11 @@ async function loadTenant(st: TenantState) {
       else if (r.id.startsWith("cut:")) st.madurez.cuts.push(r.data as MadCut);
     }
     st.madurez.cuts.sort((a, b) => a.at.localeCompare(b.at));
-    st.riesgos = new Map();
-    for (const r of (await db.projectRecord.findMany(W).catch(() => [])) as { id: string; data: unknown }[]) if (r.id.startsWith("risk:")) st.riesgos.set(r.id.slice(5), r.data as ProjectRisk);
+    st.riesgos = new Map(); st.gastos = new Map();
+    for (const r of (await db.projectRecord.findMany(W).catch(() => [])) as { id: string; data: unknown }[]) {
+      if (r.id.startsWith("risk:")) st.riesgos.set(r.id.slice(5), r.data as ProjectRisk);
+      else if (r.id.startsWith("gasto:")) st.gastos.set(r.id.slice(6), r.data as Gasto);
+    }
     for (const c of itinCommentRows) S().itinComments.set(c.id, c.data as ItineraryComment);
     // usuarios de la empresa, integraciones, branding y notificaciones leídas
     if (dbUsers.length) {
@@ -4664,5 +4670,40 @@ export function removeRisk(user: SessionUser, id: unknown): { ok: true } | RiskF
   riesgosState().delete(prev.id);
   audit(user, "task", prev.id, `riesgo eliminado · «${prev.title}»`);
   void persist("riesgo del proyecto", (db) => db.projectRecord.deleteMany({ where: { companyId: cid(), id: `risk:${prev.id}` } }));
+  return { ok: true };
+}
+
+/* ═══ Gestión de proyectos · presupuesto: compromisos y ejecuciones ═══
+   Cada movimiento es un registro propio (no se edita: si hubo un error, se elimina y se registra de nuevo). Lo
+   registra quien puede editar las tareas del proyecto. La auditoría lleva el monto y el concepto, y el tablero
+   de impacto lo muestra como movimiento. */
+
+const gastosState = () => S().gastos;
+export const getGastos = (iniId?: string): Gasto[] => [...gastosState().values()].filter((g) => !iniId || g.iniId === iniId).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.at.localeCompare(a.at));
+
+export function addGasto(user: SessionUser, input: GastoInput): { ok: true; gasto: Gasto } | RiskFail {
+  const ini = cat().initiatives.find((i) => i.id === input.iniId);
+  if (!ini) return { ok: false, status: 422, error: "Elige el proyecto al que pertenece el movimiento." };
+  if (!can(user, "edit_tasks", ini)) return { ok: false, status: 403, error: user.role === "DIRECTIVO" ? "Tu rol es de consulta: no registra movimientos de presupuesto." : `No puedes registrar presupuesto de ${resName(user, ini)}: tu ámbito es ${scopeName(user)}.` };
+  const err = gastoError(input); if (err) return { ok: false, status: 422, error: err };
+  if (!(ini.budgetPlanned > 0)) return { ok: false, status: 422, error: "Este proyecto no tiene presupuesto planeado: defínelo en la ficha de la iniciativa antes de registrar movimientos." };
+  let n = 1; while (gastosState().has(`GS-${ini.id}-${String(n).padStart(2, "0")}`)) n++;
+  const moneda = ini.budgetCurrency ?? (cat().company.currency === "USD" ? "USD" : "COP");
+  const gasto: Gasto = { id: `GS-${ini.id}-${String(n).padStart(2, "0")}`, iniId: ini.id, tipo: input.tipo!, concepto: str(input.concepto, 200), monto: Math.round(input.monto! * 100) / 100, fecha: input.fecha!,
+    ...(str(input.soporte, 200) ? { soporte: str(input.soporte, 200) } : {}), by: user.email, at: new Date().toISOString() };
+  gastosState().set(gasto.id, gasto);
+  audit(user, "task", gasto.id, `${gasto.tipo === "EJECUCION" ? "ejecución registrada" : "compromiso registrado"} por ${dinero(gasto.monto, moneda)} · «${gasto.concepto}»`);
+  void persist("movimiento de presupuesto", (db) => db.projectRecord.upsert({ where: { companyId_id: { companyId: cid(), id: `gasto:${gasto.id}` } }, update: { data: gasto as never }, create: { companyId: cid(), id: `gasto:${gasto.id}`, data: gasto as never } }));
+  return { ok: true, gasto };
+}
+
+export function removeGasto(user: SessionUser, id: unknown): { ok: true } | RiskFail {
+  const prev = gastosState().get(String(id));
+  if (!prev) return { ok: false, status: 404, error: "El movimiento no existe." };
+  const ini = cat().initiatives.find((i) => i.id === prev.iniId);
+  if (!can(user, "edit_tasks", ini)) return { ok: false, status: 403, error: "No puedes eliminar movimientos de presupuesto de este proyecto." };
+  gastosState().delete(prev.id);
+  audit(user, "task", prev.id, `movimiento de presupuesto eliminado · «${prev.concepto}»`);
+  void persist("movimiento de presupuesto", (db) => db.projectRecord.deleteMany({ where: { companyId: cid(), id: `gasto:${prev.id}` } }));
   return { ok: true };
 }

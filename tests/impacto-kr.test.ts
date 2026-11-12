@@ -153,3 +153,58 @@ test("ruta crítica: holgura por dependencias, tareas críticas, conflicto, cicl
   assert.deepEqual([p.fin?.planeado, p.fin?.criticas, p.fin?.hitos, p.fin?.hitosCumplidos, p.entregables.total], ["2027-03-15", 3, 1, 0, 1]);
   assert.ok((p.fin?.desvio ?? 0) >= 5 && p.factores.some((f) => f.clave === "FIN_PREVISTO" && f.puntos < 0));
 });
+
+test("presupuesto: ejecutado contra avance, valor ganado, índice de costo, proyección al cierre y su efecto en la confianza", async () => {
+  const { presupuestoDe, totalesPorMoneda, gastoError, dinero, dineroCorto } = await import("../src/lib/presupuesto");
+  const base = { id: "i1", budgetPlanned: 100_000_000, budgetCommitted: 0, budgetExecuted: 0 };
+  const g = (tipo: "EJECUCION" | "COMPROMISO", monto: number, iniId = "i1") => ({ id: `GS-${iniId}-${monto}`, iniId, tipo, concepto: "Consultoría", monto, fecha: "2027-02-01", by: "x", at: "" });
+  // sin presupuesto, sin ejecución y en línea
+  assert.equal(presupuestoDe({ ...base, budgetPlanned: 0 }, [], 50).estado, "SIN_PRESUPUESTO");
+  assert.equal(presupuestoDe(base, [], 50).estado, "SIN_EJECUCION");
+  const enLinea = presupuestoDe(base, [g("EJECUCION", 40_000_000), g("COMPROMISO", 60_000_000), g("EJECUCION", 9, "i2")], 50);
+  assert.deepEqual([enLinea.ejecutado, enLinea.comprometido, enLinea.pctEjecutado, enLinea.valorGanado, enLinea.indiceCosto, enLinea.brecha, enLinea.proyeccion, enLinea.sobrecosto, enLinea.disponible, enLinea.estado],
+    [40_000_000, 60_000_000, 40, 50_000_000, 1.25, -10, 80_000_000, -20_000_000, 40_000_000, "EN_LINEA"]);
+  // gasta más rápido de lo que avanza: 60 % ejecutado con 30 % de avance → proyecta el doble
+  const alerta = presupuestoDe(base, [g("EJECUCION", 60_000_000)], 30);
+  assert.deepEqual([alerta.brecha, alerta.indiceCosto, alerta.proyeccion, alerta.sobrecosto, alerta.estado], [30, 0.5, 200_000_000, 100_000_000, "ALERTA"]);
+  // el saldo de apertura de la ficha cuenta; ejecutado por encima de lo planeado es sobrecosto
+  const sobre = presupuestoDe({ ...base, budgetExecuted: 90_000_000, budgetCurrency: "USD" as const }, [g("EJECUCION", 20_000_000)], 80);
+  assert.deepEqual([sobre.ejecutado, sobre.apertura.ejecutado, sobre.estado, sobre.moneda, sobre.disponible], [110_000_000, 90_000_000, "SOBRECOSTO", "USD", -10_000_000]);
+  // sin plan de trabajo no hay valor ganado ni proyección; con poco avance tampoco se proyecta
+  assert.deepEqual([presupuestoDe(base, [g("EJECUCION", 10_000_000)], null).brecha, presupuestoDe(base, [g("EJECUCION", 10_000_000)], 5).proyeccion], [null, null]);
+  assert.deepEqual(totalesPorMoneda([enLinea, alerta, sobre]).map((t) => [t.moneda, t.proyectos, t.planeado, t.ejecutado, t.pctEjecutado, t.pctAvance]), [["COP", 2, 200_000_000, 100_000_000, 50, 40], ["USD", 1, 100_000_000, 110_000_000, 110, 80]]);
+  assert.equal(gastoError({ tipo: "EJECUCION", concepto: "Consultoría", monto: 0, fecha: "2027-02-01" }), "El monto es un número mayor que cero.");
+  assert.equal(gastoError({ tipo: "EJECUCION", concepto: "Consultoría", monto: 10, fecha: "2027-02-01" }), null);
+  assert.deepEqual([dinero(12_500_000, "COP"), dineroCorto(12_500_000, "COP"), dineroCorto(130_000, "USD"), dineroCorto(2_400_000_000, "COP")], ["COP 12.500.000", "COP 12,5 M", "USD 130 mil", "COP 2,4 mil M"]);
+  // en el motor: la brecha de 30 puntos resta 30 × 0,3 = 9; comprometer 25 % más de lo planeado resta 25 × 0,4 → tope 8
+  const conPres = { ...ini, budgetPlanned: 100_000_000, budgetCommitted: 0, budgetExecuted: 0 } as InitiativeFull;
+  const tareas = [T("a", { status: "HECHA" }), T("b", { status: "EN_CURSO", due: "2027-06-30" }), T("c", { start: "2027-04-01", due: "2027-06-30" }), T("d", { start: "2027-04-01", due: "2027-06-30" })];   // avance 35 %
+  const p = pulsoProyecto(conPres, tareas, [], "2027-02-10", {}, [g("EJECUCION", 65_000_000), g("COMPROMISO", 125_000_000)]);
+  assert.deepEqual([p.avance, p.presupuesto.brecha, p.presupuesto.estado], [35, 30, "ALERTA"]);
+  assert.deepEqual(Object.fromEntries(p.factores.filter((f) => f.clave === "PRESUPUESTO" || f.clave === "SOBRECOMPROMISO").map((f) => [f.clave, f.puntos])), { PRESUPUESTO: -9, SOBRECOMPROMISO: -8 });
+  // en el store: permisos, proyecto con presupuesto y traza legible por el tablero
+  const { addGasto, removeGasto, getGastos } = await import("../src/server/store");
+  resetStore();
+  assert.ok((await createCompany(admin, { name: "Presupuesto SA", template: "vacia" })).ok);
+  await runWithTenant("presupuesto-sa", async () => {
+    assert.ok(upsertResponsible(advisor, { cargo: "Gerente general", dependencia: "Gerencia", rolPlataforma: "LIDER" }).ok);
+    assert.ok(upsertObjective(advisor, { perspective: "financiera", name: "Crecer 20 % con margen", kpis: [], line: 1 }).ok);
+    assert.ok(upsertKpi(advisor, { code: "DIR-01", line: 1, cmi: "OE-01", name: "Crecimiento de ventas", unit: "%", frequency: "Trimestral", ownerId: "R01", baseline: 5, target: 20, goodDirection: "up" }).ok);
+    const sin = upsertInitiative(advisor, { name: "Proyecto sin presupuesto", cmi: "OE-01", capability: "EJE-2", ownerId: "R01", kpi: "DIR-01" });
+    const con = upsertInitiative(advisor, { name: "Proyecto con presupuesto", cmi: "OE-01", capability: "EJE-2", ownerId: "R01", budgetPlanned: 50_000_000 });
+    const mov = { tipo: "EJECUCION" as const, concepto: "Anticipo del proveedor", monto: 12_000_000, fecha: "2027-02-01" };
+    const sinPermiso = addGasto(directivo, { ...mov, iniId: con.id });
+    assert.ok(!sinPermiso.ok && sinPermiso.status === 403);
+    const sinPlan = addGasto(advisor, { ...mov, iniId: sin.id });
+    assert.ok(!sinPlan.ok && /no tiene presupuesto planeado/.test(sinPlan.error));
+    assert.ok(!addGasto(advisor, { ...mov, iniId: con.id, monto: -5 }).ok);
+    const ok = addGasto(advisor, { ...mov, iniId: con.id });
+    assert.ok(ok.ok && ok.gasto.id === `GS-${con.id}-01` && getGastos(con.id).length === 1);
+    assert.equal(getAudit(ok.gasto.id)[0].change, "ejecución registrada por COP 12.000.000 · «Anticipo del proveedor»");
+    const imp = impactoKr(tenantView(), [], "2027-02-10", {}, getGastos());
+    assert.deepEqual([imp.proyectos.find((x) => x.iniId === con.id)!.presupuesto.ejecutado, imp.proyectos.find((x) => x.iniId === con.id)!.presupuesto.estado], [12_000_000, "EN_LINEA"]);
+    const ms = movimientos(getAudit().map((a) => ({ ...a })), tenantView(), [], imp.pesos);
+    assert.deepEqual([ms[0].tipo, ms[0].puntos, ms[0].texto], ["GASTO", 0, "Ejecución de presupuesto: COP 12.000.000"]);
+    assert.ok(!removeGasto(directivo, ok.gasto.id).ok && removeGasto(advisor, ok.gasto.id).ok && getGastos().length === 0);
+  });
+});
