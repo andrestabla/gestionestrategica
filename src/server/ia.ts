@@ -40,7 +40,7 @@ export async function buscarJson(system: string, user: string, opts: { timeoutMs
   });
   try {
     const ubicacion = opts.country ? { user_location: { type: "approximate", country: opts.country } } : {};
-    let res = await pedir({ type: "web_search", ...ubicacion }, { include: ["web_search_call.action.sources"] });
+    let res = await pedir({ type: "web_search", search_context_size: "high", ...ubicacion }, { include: ["web_search_call.action.sources"] });
     // modelos anteriores solo conocen la herramienta de búsqueda en su versión previa
     if (res.status === 400) res = await pedir({ type: "web_search_preview", ...ubicacion }, {});
     if (!res.ok) { const e = await res.text().catch(() => ""); throw new Error(`OpenAI respondió ${res.status}${e ? ": " + e.slice(0, 200) : ""}`); }

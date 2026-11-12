@@ -19,7 +19,7 @@ export type BaseInvestigada = {
   at: string; model: string;
   fuentes: Fuente[]; hechos: Hecho[];
   consultadas: number;        // páginas que el modelo consultó
-  descartados: number;        // hechos que no se guardaron porque su fuente no estaba entre las consultadas
+  descartados: number;        // hechos que no se guardaron: fuente fuera de las páginas consultadas, página de inicio, sin cifra o texto comercial
 };
 
 type Empresa = Pick<CompanyInfo, "name" | "sector" | "sectorKey" | "country"> & { ciiu?: string; size?: string };
@@ -40,7 +40,7 @@ export const esInvestigado = (h: Pick<Hecho, "id">) => h.id.startsWith("ia-");
 
 /* ═══ Encargo de la investigación ═══ */
 
-const SISTEMA = "Eres analista de inteligencia sectorial de la plataforma Gestión estratégica. Investigas en la web y entregas hechos verificables para comités directivos de empresas medianas de Colombia y Ecuador. Reglas: cada hecho lleva una cifra o un dato concreto, el año al que corresponde, su alcance (país, región o mundo; universo o muestra) y la dirección exacta de la página donde lo leíste. Solo incluyes lo que encontraste en una página que abriste en esta búsqueda; nunca completas de memoria ni estimas. Prefieres fuentes oficiales, gremios, consultoras con informe público, notas de prensa de las propias empresas y prensa económica seria, de los últimos tres años. Si no encuentras un dato, lo omites. Escribes en español neutro de Colombia. Respondes solo con un objeto JSON válido, sin texto antes ni después y sin bloques de código.";
+const SISTEMA = "Eres analista de inteligencia sectorial de la plataforma Gestión estratégica. Investigas en la web y entregas hechos verificables para comités directivos de empresas medianas de Colombia y Ecuador. Reglas: cada hecho lleva una cifra o un dato concreto, el año al que corresponde, su alcance (país, región o mundo; universo o muestra) y la dirección exacta de la página donde lo leíste. Solo incluyes lo que encontraste en una página que abriste en esta búsqueda; nunca completas de memoria ni estimas. Prefieres fuentes oficiales, gremios, consultoras con informe público, notas de prensa de las propias empresas y prensa económica seria, de los últimos tres años. No incluyes proveedores de tecnología, consultoras, agencias ni páginas comerciales que ofrecen sus servicios: solo datos de la industria y hechos de las empresas que la componen. La fuente es la página concreta del dato (un informe, una nota, un boletín), nunca la página de inicio de un sitio. Si no encuentras un dato, lo omites. Escribes en español neutro de Colombia. Respondes solo con un objeto JSON válido, sin texto antes ni después y sin bloques de código.";
 
 const FORMATO = (lineas: LineaDigital[]) => `Devuelve un objeto JSON con exactamente esta forma:
 {"hechos": [{
@@ -53,23 +53,31 @@ const FORMATO = (lineas: LineaDigital[]) => `Devuelve un objeto JSON con exactam
 }]}
 Líneas de la transformación digital para clasificar «linea»: ${lineas.map((l) => `${l.n} = ${l.name}`).join("; ")}.`;
 
-/** Bloques de investigación: siempre el estado digital de la industria; el panorama del sector solo si no hay base curada. */
-export function encargoInvestigacion(c: Empresa, lineas: LineaDigital[], conCurada: boolean): { system: string; bloques: { id: "digital" | "sector"; user: string }[] } {
+export type BloqueInvestigacion = "adopcion" | "pares" | "exigencias" | "sector";
+/** Bloques de investigación, cada uno una búsqueda dirigida: cifras de adopción digital de la industria, iniciativas de
+    sus empresas (con los nombres de las que compiten con la empresa, si se conocen) y exigencias que obligan a
+    digitalizar; el panorama del sector solo si no hay base curada. */
+export function encargoInvestigacion(c: Empresa, lineas: LineaDigital[], conCurada: boolean, competidores: string[] = []): { system: string; bloques: { id: BloqueInvestigacion; user: string }[] } {
   const ind = industriaDe(c), p = pais(c);
   const quien = `EMPRESA: ${c.name}. INDUSTRIA: ${ind}.${c.size ? ` TAMAÑO: ${c.size}.` : ""}`;
-  const digital = `${quien}
+  const comun = `Busca primero en ${p}; si no hay datos, en América Latina y luego en el mundo, diciéndolo en el alcance. Haz varias búsquedas distintas y abre las páginas antes de escribir.`;
+  const adopcion = `${quien}
 
-Investiga cómo están las empresas de esta misma industria en transformación digital. Busca primero en ${p}; si no hay datos, en América Latina y luego en el mundo, diciéndolo en el alcance. Entrega entre 12 y 18 hechos repartidos así:
-1. Cifras de adopción digital de la industria (entre 6 y 10): porcentaje de empresas del sector que usan o tienen una práctica digital (gestión de clientes y canales digitales, comercio electrónico, automatización y digitalización de procesos, trazabilidad, analítica e inteligencia artificial, nube, ciberseguridad, gobierno de datos), inversión en tecnología, niveles de madurez digital publicados. Cada una con «dato».
-2. Iniciativas digitales concretas y fechadas de empresas nombradas de la misma industria que compiten en ${p} (entre 5 y 8, de al menos cuatro empresas distintas): sistemas implantados, plantas o procesos automatizados, canales digitales, analítica o inteligencia artificial, reconocimientos. Cada una con «par».
-3. Exigencias regulatorias o de los clientes que obligan a digitalizar en esta industria en ${p} (entre 1 y 3).
-Todos los hechos de este bloque llevan «digital» como primer tema.
+Investiga qué tan digitalizadas están las empresas de esta industria, con cifras. ${comun} Entrega entre 8 y 12 hechos, cada uno un porcentaje publicado por una encuesta, un gremio, una entidad oficial o una consultora: empresas del sector que usan gestión de clientes y canales digitales, comercio electrónico, automatización o digitalización de procesos, trazabilidad, analítica, inteligencia artificial, nube, ciberseguridad o gobierno de datos; etapa de madurez digital; inversión en tecnología. Todos llevan «digital» como primer tema y «dato» con el porcentaje; «par» va en null.
+${FORMATO(lineas)}`;
+  const pares = `${quien}
+
+Investiga qué han hecho en transformación digital las empresas de esta misma industria que compiten en ${p}.${competidores.length ? ` Busca una por una, entre otras: ${competidores.join(", ")}.` : ""} Entrega entre 8 y 12 hechos, de al menos cinco empresas distintas: cada uno una iniciativa concreta y fechada (de 2022 en adelante) de una empresa nombrada: sistemas implantados, plantas o procesos automatizados, canales digitales para clientes, analítica o inteligencia artificial, alianzas tecnológicas o reconocimientos, con su cifra si la hay. La fuente es una nota de prensa, un informe de la propia empresa o prensa económica. Todos llevan «digital» como primer tema y «par» con la empresa; «dato» va en null.
+${FORMATO(lineas)}`;
+  const exigencias = `${quien}
+
+Investiga qué normas, entidades de control o clientes obligan o empujan a digitalizar en esta industria en ${p}: requisitos de trazabilidad, de datos, de facturación o trámites electrónicos, de seguridad de la información y de protección de datos, con su fecha de entrada en vigor o su plazo. Entrega entre 4 y 6 hechos de fuentes oficiales o de prensa jurídica o económica. Todos llevan «digital» y «regulacion» como temas; «dato» y «par» van en null.
 ${FORMATO(lineas)}`;
   const sector = `${quien}
 
 Investiga el panorama de esta industria en ${p} para alimentar la planeación estratégica de la empresa. Entrega entre 12 y 16 hechos con cifra, repartidos entre: tamaño y crecimiento del mercado y principales competidores (mercado); márgenes y costos (margen); clientes, canales y demanda (cliente, demanda); regulación y precios (regulacion); talento y empleo (talento); variables macroeconómicas y de comercio exterior que la afectan (macro); expansión geográfica (expansion). En este bloque «dato» y «par» van en null.
 ${FORMATO(lineas)}`;
-  return { system: SISTEMA, bloques: [{ id: "digital", user: digital }, ...(conCurada ? [] : [{ id: "sector" as const, user: sector }])] };
+  return { system: SISTEMA, bloques: [{ id: "adopcion", user: adopcion }, { id: "pares", user: pares }, { id: "exigencias", user: exigencias }, ...(conCurada ? [] : [{ id: "sector" as const, user: sector }])] };
 }
 
 /* ═══ Validación de lo que responde el modelo ═══ */
@@ -80,8 +88,13 @@ export function urlClave(u: string): string | null {
   try { const x = new URL(u.trim()); if (!/^https?:$/.test(x.protocol)) return null; return `${x.hostname.toLowerCase().replace(/^www\./, "")}${x.pathname.replace(/\/+$/, "")}`; } catch { return null; }
 }
 
-/** Arma la base investigada con las respuestas de los bloques. Descarta los hechos cuya fuente no está entre las páginas consultadas. */
-export function parseInvestigacion(respuestas: { data: unknown; urls: string[] }[], meta: { industria: string; model: string; at: string }, lineas: LineaDigital[]): BaseInvestigada {
+/** Texto de vendedor: describe lo que alguien ofrece, no un hecho de la industria. */
+const COMERCIAL = /\b(ofrece|ofrecen|ofrecemos|brinda|brindan|soluciones (?:tecnol[oó]gicas |digitales |integrales )?para|con m[aá]s de \d+ a[nñ]os de experiencia|l[ií]der en soluciones)\b/i;
+
+/** Arma la base investigada con las respuestas de los bloques. `yaCuradas`: direcciones de las fuentes que la base curada
+    ya tiene (no se repiten). */
+export function parseInvestigacion(respuestas: { data: unknown; urls: string[] }[], meta: { industria: string; model: string; at: string }, lineas: LineaDigital[], yaCuradas: string[] = []): BaseInvestigada {
+  const curadas = new Set(yaCuradas.map(urlClave).filter((x): x is string => !!x));
   const consultadas = new Set(respuestas.flatMap((r) => r.urls).map(urlClave).filter((x): x is string => !!x));
   const nLineas = new Set(lineas.map((l) => l.n));
   const fuentes: Fuente[] = [], hechos: Hecho[] = [], vistos = new Set<string>();
@@ -94,6 +107,10 @@ export function parseInvestigacion(respuestas: { data: unknown; urls: string[] }
       const hecho = s(o.hecho, 700), url = s(f.url, 600), clave = urlClave(url);
       if (!hecho || !clave) { descartados++; continue; }
       if (!consultadas.has(clave)) { descartados++; continue; }   // la fuente no está entre las páginas que el modelo abrió
+      if (curadas.has(clave)) continue;                              // ya está en la base curada del sector
+      if (!clave.includes("/")) { descartados++; continue; }         // la fuente es la página de inicio de un sitio, no la página del dato
+      const esPar = !!(o.par && typeof o.par === "object");
+      if (!/\d/.test(hecho) || (COMERCIAL.test(hecho) && !esPar)) { descartados++; continue; }   // sin cifra ni fecha, o texto comercial de un proveedor
       const firma = hecho.toLowerCase().replace(/\W+/g, " ").slice(0, 90); if (vistos.has(firma)) continue; vistos.add(firma);
       const temas = (Array.isArray(o.temas) ? o.temas : []).map((t) => s(t, 20).toLowerCase()).filter((t): t is Tema => (TEMAS_BASE as string[]).includes(t)).slice(0, 3);
       let fuente = fuentes.find((x) => urlClave(x.url) === clave);

@@ -114,46 +114,69 @@ export type EntradaInforme = {
   prioridades?: { nombre: string; desc?: string }[];
 };
 
-const SISTEMA_INFORME = (ins: MadInstrument) => `Eres el advisor senior de transformación digital de la plataforma Gestión estratégica. Escribes informes de resultados del diagnóstico de madurez digital para ${ins.kind === "educativa" ? "los órganos de dirección de instituciones de educación superior" : "comités directivos de empresas medianas"} en Colombia y Ecuador: profundos, concretos, en español neutro de Colombia, con tono profesional y directo, sin halagos vacíos ni jerga de moda. Analizas a la organización, nunca a las personas que respondieron. Cada afirmación se apoya en las cifras y los hallazgos recibidos: no inventes cifras, sistemas, proveedores, nombres ni hechos que no estén en la entrada. Distingue siempre la percepción (lo que la gente cree) de la evidencia (lo que se demuestra con documentos, uso real e indicadores). Donde falte evidencia o nivel, dilo y enuncia la lectura como hipótesis a verificar («la lectura sugiere», «habría que verificar»). Un promedio aceptable no borra una variable débil. No repitas la entrada: interprétala, explica por qué ocurre y qué consecuencia tiene para el negocio. Nombra las variables por su identificador y su nombre, y usa las cifras exactas recibidas (nivel, índice, percepción, evidencia). Cuando te apoyes en un hecho del sector, cítalo con su número entre corchetes, por ejemplo [4]; solo existen los números que recibes. Para comparar a la organización con las empresas de su misma industria usa únicamente las cifras de adopción digital y las iniciativas de otras empresas que aparecen en los hechos; no existe un promedio de madurez digital del sector, así que no lo afirmes: compara práctica por práctica, y si para una línea no hay hechos de la industria, dilo en vez de suponer. Respondes solo con un objeto JSON válido, sin texto adicional.`;
+const SISTEMA_INFORME = (ins: MadInstrument) => `Eres el advisor senior de transformación digital de la plataforma Gestión estratégica. Escribes informes de resultados del diagnóstico de madurez digital para ${ins.kind === "educativa" ? "los órganos de dirección de instituciones de educación superior" : "comités directivos de empresas medianas"} en Colombia y Ecuador: profundos, concretos, en español neutro de Colombia, con tono profesional y directo, sin halagos vacíos ni jerga de moda. Analizas a la organización, nunca a las personas que respondieron. Cada afirmación se apoya en las cifras y los hallazgos recibidos: no inventes cifras, sistemas, proveedores, nombres ni hechos que no estén en la entrada. Distingue siempre la percepción (lo que la gente cree) de la evidencia (lo que se demuestra con documentos, uso real e indicadores). Donde falte evidencia o nivel, dilo y enuncia la lectura como hipótesis a verificar («la lectura sugiere», «habría que verificar»). Un promedio aceptable no borra una variable débil. No repitas la entrada: interprétala, explica por qué ocurre y qué consecuencia tiene para el negocio. Nombra las variables por su identificador y su nombre, y usa las cifras exactas recibidas (nivel, índice, percepción, evidencia). Cuando te apoyes en un hecho del sector, cítalo con su número entre corchetes, por ejemplo [4]; solo existen los números que recibes. Para comparar a la organización con las empresas de su misma industria usa únicamente las cifras de adopción digital y las iniciativas de otras empresas que aparecen en los hechos; no existe un promedio de madurez digital del sector, así que no lo afirmes: compara práctica por práctica, y si para una línea no hay hechos de la industria, dilo en vez de suponer. Desarrollas cada lectura: prefieres un párrafo con tres cifras y su explicación a una frase general, y cumples los mínimos de palabras y de elementos que pide el formato. Respondes solo con un objeto JSON válido, sin texto adicional.`;
 
-const FORMATO_DIAGNOSTICO = `Devuelve un objeto JSON con exactamente estas claves:
+// El informe se pide en cuatro partes, cada una con su formato: así el modelo desarrolla cada sección en vez de
+// repartir pocas palabras entre todas. Los mínimos se comprueban al recibir la respuesta (ver `faltantesParte`).
+export type ParteInforme = "panorama" | "lineas" | "industria" | "plan";
+
+const FORMATOS: Record<ParteInforme, { encargo: string; formato: string }> = {
+  panorama: {
+    encargo: "Escribe la primera parte del informe: el panorama general. Otras partes desarrollan cada línea, el cruce con la industria y el plan; aquí explica dónde está la organización, por qué y qué está en juego.",
+    formato: `Devuelve un objeto JSON con exactamente estas claves:
 {
- "titulo": string (máximo 12 palabras; la idea principal del informe, sin el nombre de la organización),
- "hipotesis_central": string (una frase de 30-45 palabras: la lectura que ordena todo lo demás, con la cifra que más la sostiene),
- "resumen": string[] (cuatro párrafos de 80-130 palabras: 1. dónde está hoy la organización, con sus cifras; 2. qué lo explica, la causa común detrás de las variables débiles; 3. cómo se relaciona con lo que el sector y la estrategia le exigen; 4. qué está en juego si no se actúa y qué cambia si se actúa),
- "contexto_empresa": string (80-130 palabras: cómo dialoga esta medición con las prioridades, objetivos, iniciativas y cifras recibidas; si el contexto es escaso, dilo y señala qué dato cambiaría la lectura),
- "patrones": [{"titulo": string (máximo 8 palabras), "lectura": string (60-100 palabras: un patrón que atraviesa varias líneas, por ejemplo prácticas documentadas que no se miden, o tecnología disponible sin adopción; qué lo causa y qué efecto tiene), "variables": string[] (de tres a seis identificadores de variable que lo evidencian)}] (tres o cuatro patrones),
- "lineas": [{"linea": "código · nombre", "lectura": string (90-140 palabras: qué muestran su nivel, su índice, su percepción y su evidencia; cuáles variables la sostienen y cuáles la frenan, con sus cifras), "causa": string (30-50 palabras: la causa más probable de su nivel actual), "riesgo": string (25-45 palabras: qué pasa en el negocio si esta línea no avanza), "variables_clave": string[] (de dos a cuatro identificadores: las que más mueven la línea)}] (todas las líneas, en el orden recibido),
- "dimensiones": [{"dimension": "nombre", "lectura": string (40-70 palabras)}] (todas las dimensiones),
- "fortalezas": [{"variable": "ID · nombre", "por_que": string (40-70 palabras: qué la sostiene según la evidencia y cómo aprovecharla)}] (tres a cinco; lista vacía si ninguna variable tiene evidencia que la respalde),
- "brechas": [{"variable": "ID · nombre", "que_revela": string (50-90 palabras), "causa_raiz": string (25-45 palabras), "efecto_en": string[] (identificadores de otras variables que dependen de esta; de una a cuatro), "evidencia_a_verificar": string (qué documento, uso o indicador comprobaría la práctica), "referente": string (el referente contra el que se evalúa la variable)}] (cinco a siete, de mayor a menor efecto sobre las demás),
- "percepcion_evidencia": string (120-180 palabras: qué dice la distancia entre lo que la gente percibe y lo que se demuestra; nombra las variables con sobreestimación o con práctica invisible y qué conversación abre cada grupo; si no hay evidencia calificada, dilo y explica qué no se puede concluir todavía),
- "preparacion_ia": string (100-160 palabras: lectura del índice de preparación para inteligencia artificial, sus componentes y sus salvaguardas; qué casos de uso son razonables hoy y cuáles no; si no hay datos suficientes, dilo),
- "ia_condiciones": string[] (tres o cuatro condiciones concretas que deben cumplirse antes de escalar inteligencia artificial, cada una en 15-30 palabras),
+ "titulo": string (máximo 12 palabras; la idea principal del informe, sin el nombre de la organización ni la palabra «diagnóstico»),
+ "hipotesis_central": string (una frase de 30-45 palabras: la causa que explica el resultado, con la cifra que más la sostiene; no repitas solo el nivel general),
+ "resumen": string[] (exactamente cuatro párrafos, cada uno de 90 a 130 palabras: 1. dónde está hoy la organización, con el nivel y el índice de cada línea y el estado de las prácticas; 2. qué lo explica: la causa común detrás de las variables débiles, nombrando al menos cuatro variables con su identificador y su cifra; 3. cómo se relaciona con lo que su industria y su estrategia le exigen, citando hechos entre corchetes; 4. qué está en juego si no se actúa y qué cambia si se actúa),
+ "contexto_empresa": string (90-130 palabras: cómo dialoga esta medición con las prioridades estratégicas, los objetivos y las cifras recibidas; nombra al menos tres prioridades y la variable de la que depende cada una),
+ "patrones": [{"titulo": string (máximo 8 palabras), "lectura": string (70-100 palabras: un patrón que atraviesa varias líneas, por ejemplo prácticas documentadas que no se miden, o tecnología disponible sin adopción; qué lo causa y qué efecto tiene en el negocio), "variables": string[] (de tres a seis identificadores de variable que lo evidencian)}] (exactamente cuatro patrones distintos),
+ "percepcion_evidencia": string (130-180 palabras: qué dice la distancia entre lo que la gente percibe y lo que se demuestra; nombra al menos cinco variables con su diferencia en puntos, dónde se concentra la sobreestimación y qué conversación abre; si no hay evidencia calificada, dilo y explica qué no se puede concluir todavía),
+ "preparacion_ia": string (110-160 palabras: lectura del índice de preparación para inteligencia artificial, de cada componente con su cifra y de cada salvaguarda con su estado; qué casos de uso son razonables hoy y cuáles no),
+ "ia_condiciones": string[] (exactamente cuatro condiciones concretas que deben cumplirse antes de escalar inteligencia artificial, cada una en 15-30 palabras),
  "nota_metodologica": string (50-90 palabras: cobertura de la medición, qué falta por capturar y cómo cambiaría la lectura al completarla)
-}`;
-
-const FORMATO_CRUCE = `Devuelve un objeto JSON con exactamente estas claves:
+}`,
+  },
+  lineas: {
+    encargo: "Escribe la segunda parte del informe: la lectura de cada línea y de cada dimensión, las fortalezas y las brechas. Desarrolla cada lectura con las cifras de sus variables: no la resumas.",
+    formato: `Devuelve un objeto JSON con exactamente estas claves:
+{
+ "lineas": [{"linea": "código · nombre", "lectura": string (100 a 140 palabras: qué muestran su nivel, su índice, su percepción y su evidencia; las dos o tres variables que la sostienen y las tres que más la frenan, cada una con su identificador, su nivel y su evidencia; y qué dice el hallazgo del advisor sobre ellas), "causa": string (30-50 palabras: la causa más probable de su nivel actual, concreta para esta organización), "riesgo": string (30-45 palabras: qué pasa en el negocio si esta línea no avanza, ligado a una prioridad estratégica o a un hecho de la industria), "variables_clave": string[] (de tres a cuatro identificadores: las que más mueven la línea)}] (todas las líneas, en el orden recibido),
+ "dimensiones": [{"dimension": "nombre", "lectura": string (45-70 palabras: su nivel, su percepción y su evidencia, y qué la distingue de las otras dimensiones)}] (todas las dimensiones),
+ "fortalezas": [{"variable": "ID · nombre", "por_que": string (45-70 palabras: qué la sostiene según la evidencia, con sus cifras, y cómo aprovecharla para subir otras variables)}] (cuatro, las de mayor evidencia; lista vacía solo si ninguna variable tiene evidencia que la respalde),
+ "brechas": [{"variable": "ID · nombre", "que_revela": string (55-90 palabras: qué muestra su nivel y su evidencia, qué describe hoy su rúbrica y por qué pesa sobre el resto), "causa_raiz": string (25-45 palabras), "efecto_en": string[] (identificadores de otras variables que dependen de esta; de dos a cuatro), "evidencia_a_verificar": string (qué documento, uso o indicador comprobaría la práctica), "referente": string (el referente contra el que se evalúa la variable)}] (exactamente seis, de mayor a menor efecto sobre las demás)
+}`,
+  },
+  industria: {
+    encargo: "Escribe la tercera parte del informe: cómo está la organización frente a las empresas de su misma industria y frente a lo que el sector le exige. Es la parte que más le importa a la dirección: usa todos los hechos pertinentes y cítalos.",
+    formato: `Devuelve un objeto JSON con exactamente esta clave:
 {
  "sector": {
-   "lectura": string (150-220 palabras: qué le exige hoy el sector a una organización como esta en lo digital, según los hechos numerados y la inteligencia del sector, y cómo queda la medición frente a esa exigencia; cita los hechos entre corchetes),
-   "industria": string (160-240 palabras: cómo están las empresas de la misma industria en transformación digital, según las cifras de adopción y las iniciativas de otras empresas recibidas en los hechos: qué prácticas ya son comunes, cuáles apenas empiezan, qué han hecho los competidores nombrados y qué tan lejos o cerca queda la organización; cita los hechos entre corchetes; si los hechos no traen cifras de adopción ni iniciativas de otras empresas, dilo y explica qué dato haría falta),
-   "comparacion": [{"practica": string (la práctica digital de la industria, en máximo 12 palabras), "industria": string (20-40 palabras: qué muestran los hechos sobre esa práctica en la industria, con su cifra y su cita entre corchetes), "organizacion": string (20-40 palabras: qué muestra la medición sobre la misma práctica: variable, nivel y evidencia), "posicion": "rezago" | "en_linea" | "ventaja", "variables": string[] (uno a tres identificadores de las variables comparadas)}] (cinco a ocho comparaciones, solo sobre prácticas con un hecho citado; lista vacía si no hay hechos de la industria),
-   "lineas": [{"linea": "código · nombre", "exigencia": "alta" | "media" | "baja" (qué tanto presiona el sector sobre esta línea, según los hechos), "posicion": "rezago" | "en_linea" | "ventaja" (el nivel de la línea frente a esa exigencia), "que_exige": string (40-70 palabras: la exigencia concreta del sector sobre esta línea, con los hechos citados entre corchetes), "lectura": string (40-70 palabras: qué significa el nivel medido frente a esa exigencia y qué variable es el cuello de botella)}] (todas las líneas, en el orden recibido; lista vacía si no recibes hechos ni inteligencia del sector),
-   "oportunidades": [{"titulo": string (máximo 9 palabras), "lectura": string (45-75 palabras: la oportunidad de mercado o de eficiencia que señalan los hechos y qué capacidad digital la habilita; cita los hechos), "variables": string[] (de dos a cuatro identificadores de las variables que habría que subir para capturarla)}] (tres o cuatro),
-   "riesgos": [{"titulo": string (máximo 9 palabras), "lectura": string (45-75 palabras: el riesgo competitivo, regulatorio u operativo que señalan los hechos y por qué el nivel actual expone a la organización; cita los hechos), "variables": string[] (de dos a cuatro identificadores)}] (tres o cuatro),
-   "regulatorio": string (80-120 palabras: qué exigen la regulación y los referentes del sector en datos, trazabilidad, calidad y seguridad de la información, y qué variables de la medición lo sostienen o lo ponen en riesgo; cadena vacía si no recibes información regulatoria)
- },
- "estrategia": [{"prioridad": string (el nombre exacto de la prioridad estratégica recibida), "dependencia": "alta" | "media" | "baja" (qué tanto depende esa prioridad de capacidades digitales), "variables": string[] (de tres a seis identificadores de las variables de las que depende), "lectura": string (40-70 palabras: si el nivel de esas variables sostiene el resultado que la prioridad promete o lo pone en riesgo, y por qué)}] (una por cada prioridad estratégica recibida; lista vacía si no recibes prioridades),
- "prioridades": [{"orden": 1, "variable": "ID · nombre", "por_que_ahora": string (30-50 palabras: por qué esta va antes que las demás; cita el hecho del sector o la prioridad estratégica que la vuelve urgente), "primer_paso": string (una actividad concreta para los próximos 90 días que lleve la variable al nivel siguiente de su rúbrica; solo la actividad, sin nombres de personas), "resultado_esperado": string (qué evidencia verificable quedaría al terminar), "plazo": "0 a 90 días" | "3 a 6 meses" | "6 a 12 meses", "esfuerzo": "bajo" | "medio" | "alto", "impacto": "bajo" | "medio" | "alto"}] (seis a ocho, ordenadas por impacto sobre esfuerzo),
- "ruta": [{"horizonte": "0 a 90 días" | "3 a 6 meses" | "6 a 12 meses", "foco": string (40-70 palabras: qué se instala en ese tramo y por qué en ese orden), "hitos": string[] (tres o cuatro hitos verificables, cada uno en 8-18 palabras)}] (los tres horizontes),
- "escenarios": {"si_no_se_actua": string (60-90 palabras: qué pasa en doce meses con el nivel actual, frente a lo que exigen el sector y la estrategia), "si_se_ejecuta": string (60-90 palabras: qué cambia si se ejecutan las prioridades, en términos de nivel de madurez y de resultado de negocio, sin prometer cifras que no estén en la entrada)},
- "indicadores": [{"indicador": string, "linea_base": string (la cifra de hoy tomada de la medición; si no existe, «sin medir»), "meta": string (la cifra o el estado a doce meses), "fuente": string (de dónde saldría el dato)}] (cinco o seis indicadores para seguir el avance),
- "preguntas": string[] (seis a ocho preguntas incómodas y útiles para la sesión de devolución con la dirección; al menos dos sobre el sector)
-}`;
+   "industria": string (180 a 240 palabras: cómo están las empresas de la misma industria en transformación digital, según las cifras de adopción y las iniciativas de otras empresas recibidas en los hechos: qué prácticas ya son comunes, cuáles apenas empiezan, qué ha hecho cada competidor nombrado en los hechos y qué tan lejos o cerca queda la organización de cada cosa, con el nivel de la variable correspondiente; cita los hechos entre corchetes; si los hechos no traen cifras de adopción ni iniciativas de otras empresas, dilo y explica qué dato haría falta),
+   "comparacion": [{"practica": string (la práctica digital de la industria, en máximo 12 palabras), "industria": string (20-40 palabras: qué muestran los hechos sobre esa práctica en la industria, con su cifra y su cita entre corchetes), "organizacion": string (20-40 palabras: qué muestra la medición sobre la misma práctica: la variable con su identificador, su nivel y su evidencia), "posicion": "rezago" | "en_linea" | "ventaja" (rezago si la organización está por debajo de lo que la mayoría ya hace; en_linea si está donde está la mayoría; ventaja si tiene instalado lo que la mayoría no), "variables": string[] (uno a tres identificadores de las variables comparadas)}] (entre siete y nueve comparaciones, una por cada práctica con un hecho citado, repartidas entre las líneas; lista vacía si no hay hechos de la industria),
+   "lectura": string (160-220 palabras: qué le exige hoy el sector a una organización como esta —mercado, clientes, regulación, competencia— según los hechos numerados y la inteligencia del sector, y cómo queda la medición frente a esa exigencia; cita los hechos entre corchetes),
+   "lineas": [{"linea": "código · nombre", "exigencia": "alta" | "media" | "baja" (qué tanto presiona el sector sobre esta línea, según los hechos), "posicion": "rezago" | "en_linea" | "ventaja" (el nivel de la línea frente a esa exigencia), "que_exige": string (45-70 palabras: la exigencia concreta del sector sobre esta línea, con los hechos citados entre corchetes), "lectura": string (45-70 palabras: qué significa el nivel medido frente a esa exigencia y qué variable es el cuello de botella)}] (todas las líneas, en el orden recibido; lista vacía si no recibes hechos ni inteligencia del sector),
+   "oportunidades": [{"titulo": string (máximo 9 palabras), "lectura": string (50-75 palabras: la oportunidad de mercado o de eficiencia que señalan los hechos y qué capacidad digital la habilita; cita los hechos), "variables": string[] (de dos a cuatro identificadores de las variables que habría que subir para capturarla)}] (exactamente cuatro),
+   "riesgos": [{"titulo": string (máximo 9 palabras), "lectura": string (50-75 palabras: el riesgo competitivo, regulatorio u operativo que señalan los hechos y por qué el nivel actual expone a la organización; cita los hechos), "variables": string[] (de dos a cuatro identificadores)}] (exactamente cuatro),
+   "regulatorio": string (90-120 palabras: qué exigen la regulación y los referentes del sector en datos, trazabilidad, calidad y seguridad de la información, citando los hechos, y qué variables de la medición lo sostienen o lo ponen en riesgo; cadena vacía si no recibes información regulatoria)
+ }
+}`,
+  },
+  plan: {
+    encargo: "Escribe la cuarta parte del informe: el cruce con la estrategia de la organización y el plan que se deriva. Las prioridades salen de las variables en foco y de los hallazgos registrados; el primer paso lleva la variable al nivel siguiente de su rúbrica.",
+    formato: `Devuelve un objeto JSON con exactamente estas claves:
+{
+ "estrategia": [{"prioridad": string (el nombre exacto de la prioridad estratégica recibida), "dependencia": "alta" | "media" | "baja" (qué tanto depende esa prioridad de capacidades digitales), "variables": string[] (de cuatro a seis identificadores de las variables de las que depende), "lectura": string (45-70 palabras: si el nivel de esas variables sostiene el resultado que la prioridad promete o lo pone en riesgo, y por qué, con sus cifras)}] (una por cada prioridad estratégica recibida, sin omitir ninguna; lista vacía si no recibes prioridades),
+ "prioridades": [{"orden": 1, "variable": "ID · nombre", "por_que_ahora": string (30-50 palabras: por qué esta va antes que las demás; cita el hecho del sector o nombra la prioridad estratégica que la vuelve urgente), "primer_paso": string (25-45 palabras: una actividad concreta para los próximos 90 días que lleve la variable al nivel siguiente de su rúbrica; di qué se hace y con qué alcance, sin nombres de personas), "resultado_esperado": string (qué evidencia verificable quedaría al terminar), "plazo": "0 a 90 días" | "3 a 6 meses" | "6 a 12 meses", "esfuerzo": "bajo" | "medio" | "alto", "impacto": "bajo" | "medio" | "alto"}] (exactamente ocho, ordenadas por impacto sobre esfuerzo; variables distintas, de al menos tres líneas),
+ "ruta": [{"horizonte": "0 a 90 días" | "3 a 6 meses" | "6 a 12 meses", "foco": string (45-70 palabras: qué se instala en ese tramo y por qué en ese orden), "hitos": string[] (cuatro hitos verificables, cada uno en 8-18 palabras)}] (los tres horizontes),
+ "escenarios": {"si_no_se_actua": string (70-90 palabras: qué pasa en doce meses con el nivel actual, frente a lo que exigen la industria y la estrategia; cita los hechos), "si_se_ejecuta": string (70-90 palabras: qué cambia si se ejecutan las prioridades, en términos de nivel de madurez y de resultado de negocio, sin prometer cifras que no estén en la entrada)},
+ "indicadores": [{"indicador": string, "linea_base": string (la cifra de hoy tomada de la medición; si no existe, «sin medir»), "meta": string (la cifra o el estado a doce meses), "fuente": string (de dónde saldría el dato)}] (exactamente seis indicadores para seguir el avance),
+ "preguntas": string[] (exactamente ocho preguntas incómodas y útiles para la sesión de devolución con la dirección; al menos tres sobre la industria o los competidores)
+}`,
+  },
+};
 
 /** Encargo del informe de resultados de la medición. */
-export function encargoMadInforme(a: EntradaInforme): { system: string; diagnostico: string; cruce: string } {
+export function encargoMadInforme(a: EntradaInforme): { system: string; partes: { id: ParteInforme; user: string }[] } {
   const { ins, caps, sg, medicion, participacion, previo } = a;
   const pr = progressOf(ins, caps), general = overallLevel(ins, caps), idx = generalIndex(ins, caps), pc = practiceCounts(ins, caps), aiq = aiqOf(ins, caps, sg);
   const mediaDe = (pick: (v: MadVariable) => boolean, fn: typeof P) => media(ins.variables.filter(pick).map((v) => fn(caps[v.id])).filter((x): x is number => x !== null));
@@ -198,12 +221,8 @@ export function encargoMadInforme(a: EntradaInforme): { system: string; diagnost
     a.prioridades?.length ? "\nPRIORIDADES ESTRATÉGICAS DE LA ORGANIZACIÓN (usa estos nombres exactos):" : "",
     ...(a.prioridades ?? []).map((p, i) => `${i + 1}. ${p.nombre}${p.desc ? ` — ${p.desc}` : ""}`),
   ].filter((x) => x !== "").join("\n");
-  const cierre = `Las prioridades salen de las variables en foco y de los hallazgos registrados; el primer paso lleva la variable al nivel siguiente de su rúbrica.`;
-  return {
-    system: SISTEMA_INFORME(ins),
-    diagnostico: `${datos}\n\nEscribe la primera parte del informe de resultados del diagnóstico de transformación digital de ${sujeto(ins)}: el diagnóstico interno. Otra parte del informe cruza la medición con el sector y la estrategia y propone el plan; aquí concéntrate en explicar dónde está la organización y por qué.\n${FORMATO_DIAGNOSTICO}`,
-    cruce: `${datos}\n\nEscribe la segunda parte del informe de resultados del diagnóstico de transformación digital de ${sujeto(ins)}: el cruce de la medición con el sector y con la estrategia de la organización, y el plan que se deriva. ${cierre}\n${FORMATO_CRUCE}`,
-  };
+  const partes = (Object.keys(FORMATOS) as ParteInforme[]).map((id) => ({ id, user: `${datos}\n\nEl informe de resultados del diagnóstico de transformación digital de ${sujeto(ins)} se escribe en cuatro partes. ${FORMATOS[id].encargo} Respeta los mínimos de palabras y el número de elementos de cada clave: una respuesta más corta se rechaza y se vuelve a pedir.\n${FORMATOS[id].formato}` }));
+  return { system: SISTEMA_INFORME(ins), partes };
 }
 
 const SISTEMA_LECTURA = (ins: MadInstrument) => `Eres el advisor senior de transformación digital de la plataforma Gestión estratégica. Le devuelves a una persona de ${sujeto(ins)} la lectura de su diagnóstico de percepción: cómo ve ella hoy las prácticas digitales de la organización. Escribes en español neutro de Colombia, en segunda persona (tú), con tono cercano, profesional y directo, sin halagos vacíos. Es su mirada sobre la organización: no es una evaluación de la persona ni el nivel de madurez de ${sujeto(ins)}, que solo se conoce cuando el advisor contraste la percepción con la evidencia. Todo se enuncia como percepción o hipótesis («ves», «tu lectura sugiere», «valdría la pena contrastar»). No inventes hechos, sistemas ni cifras que no estén en la entrada. Respondes solo con un objeto JSON válido, sin texto adicional.`;
@@ -269,7 +288,40 @@ export function citasDe(informe: unknown): number[] {
   return [...out].sort((a, b) => a - b);
 }
 
-/** Valida y normaliza el informe. Recibe la respuesta del modelo: las dos partes (diagnóstico y cruce) ya unidas en un objeto. */
+const palabras = (v: unknown) => (typeof v === "string" ? v.trim().split(/\s+/).filter(Boolean).length : 0);
+const lista = (v: unknown) => (Array.isArray(v) ? (v as Record<string, unknown>[]) : []);
+
+/** Lo que le falta a la respuesta de una parte frente a lo pedido (vacío = cumple). Los umbrales son algo menores que los
+    mínimos del encargo: se rechaza lo claramente corto, no un párrafo al que le faltan diez palabras. */
+export function faltantesParte(id: ParteInforme, raw: unknown, ctx: { lineas: number; dimensiones: number; prioridades: number; hechos: number }): string[] {
+  const o = (raw ?? {}) as Record<string, unknown>, out: string[] = [];
+  const min = (nombre: string, v: unknown, n: number) => { if (palabras(v) < n) out.push(`«${nombre}» tiene ${palabras(v)} palabras y debe tener al menos ${n}`); };
+  const cuenta = (nombre: string, v: unknown, n: number) => { if (lista(v).length < n) out.push(`«${nombre}» trae ${lista(v).length} elementos y debe traer ${n}`); };
+  const cada = (nombre: string, v: unknown, campo: string, n: number) => { const cortos = lista(v).filter((x) => palabras(x?.[campo]) < n).length; if (cortos) out.push(`en «${nombre}», ${cortos} ${cortos === 1 ? "elemento tiene" : "elementos tienen"} «${campo}» con menos de ${n} palabras`); };
+  if (id === "panorama") {
+    const r = Array.isArray(o.resumen) ? o.resumen : [];
+    if (r.length < 4) out.push(`«resumen» trae ${r.length} párrafos y debe traer cuatro`);
+    const cortos = r.filter((p) => palabras(p) < 70).length; if (cortos) out.push(`${cortos} ${cortos === 1 ? "párrafo" : "párrafos"} de «resumen» ${cortos === 1 ? "tiene" : "tienen"} menos de 70 palabras`);
+    min("contexto_empresa", o.contexto_empresa, 70); cuenta("patrones", o.patrones, 4); cada("patrones", o.patrones, "lectura", 50);
+    min("percepcion_evidencia", o.percepcion_evidencia, 105); min("preparacion_ia", o.preparacion_ia, 90);
+  } else if (id === "lineas") {
+    cuenta("lineas", o.lineas, ctx.lineas); cada("lineas", o.lineas, "lectura", 80); cada("lineas", o.lineas, "causa", 18); cada("lineas", o.lineas, "riesgo", 18);
+    cuenta("dimensiones", o.dimensiones, ctx.dimensiones); cada("dimensiones", o.dimensiones, "lectura", 32);
+    cuenta("brechas", o.brechas, 6); cada("brechas", o.brechas, "que_revela", 42);
+  } else if (id === "industria") {
+    const sec = (o.sector ?? {}) as Record<string, unknown>;
+    min("sector.lectura", sec.lectura, 125);
+    if (ctx.hechos > 0) { min("sector.industria", sec.industria, 140); cuenta("sector.comparacion", sec.comparacion, 7); cuenta("sector.lineas", sec.lineas, ctx.lineas); cada("sector.lineas", sec.lineas, "que_exige", 32); cuenta("sector.oportunidades", sec.oportunidades, 4); cuenta("sector.riesgos", sec.riesgos, 4); cada("sector.oportunidades", sec.oportunidades, "lectura", 38); cada("sector.riesgos", sec.riesgos, "lectura", 38); }
+  } else {
+    if (ctx.prioridades > 0) cuenta("estrategia", o.estrategia, ctx.prioridades);
+    cuenta("prioridades", o.prioridades, 7); cada("prioridades", o.prioridades, "primer_paso", 18); cada("prioridades", o.prioridades, "por_que_ahora", 20);
+    cuenta("ruta", o.ruta, 3); cuenta("indicadores", o.indicadores, 5); if ((Array.isArray(o.preguntas) ? o.preguntas.length : 0) < 6) out.push("«preguntas» debe traer ocho preguntas");
+    const esc = (o.escenarios ?? {}) as Record<string, unknown>; min("escenarios.si_no_se_actua", esc.si_no_se_actua, 50); min("escenarios.si_se_ejecuta", esc.si_se_ejecuta, 50);
+  }
+  return out;
+}
+
+/** Valida y normaliza el informe. Recibe la respuesta del modelo: las cuatro partes ya unidas en un objeto. */
 export function parseMadInforme(raw: unknown): MadInformeIA {
   const o = (raw ?? {}) as Record<string, unknown>;
   const sec = (o.sector ?? null) as Record<string, unknown> | null;

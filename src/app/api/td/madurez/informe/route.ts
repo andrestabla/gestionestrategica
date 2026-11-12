@@ -4,7 +4,7 @@ import { withTenant } from "../../_helpers";
 import { catalog, getMadurez, getInforme, saveMadInforme, effectiveIntegration, flushOrError } from "@/server/store";
 import { chatJson, iaDisponible } from "@/server/ia";
 import { instrumentOf } from "@/data/madurez";
-import { encargoMadInforme, encargoMadLectura, parseMadInforme, parseMadLectura, citasDe, minimoInforme, minimoLectura, conDato, respuestasValidas, type MadInformeIA } from "@/lib/madurez-ia";
+import { encargoMadInforme, encargoMadLectura, parseMadInforme, parseMadLectura, citasDe, faltantesParte, minimoInforme, minimoLectura, conDato, respuestasValidas, type MadInformeIA } from "@/lib/madurez-ia";
 import { hechosSector, prioridadesEstrategicas, sectorCruce } from "@/server/madurez-sector";
 import { contextoEmpresa } from "@/server/contexto-empresa";
 import { sectorKeyDe, sectorOf } from "@/data/sector";
@@ -23,7 +23,7 @@ import type { SessionUser } from "@/lib/session";
 //      del sector para las gráficas.
 export const maxDuration = 300;
 
-const VERSION = 2;   // al cambiar el encargo, los análisis guardados se marcan desactualizados
+const VERSION = 3;   // al cambiar el encargo, los análisis guardados se marcan desactualizados
 const hash = (x: unknown) => createHash("sha256").update(JSON.stringify(x)).digest("hex").slice(0, 32);
 const dia = (iso?: string | null) => (iso ? new Date(iso) : new Date()).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
 const ROL: Record<string, string> = { DIRECTIVO: "directivo", LIDER: "líder", RESPONSABLE: "responsable de área", ADMIN: "administrador", CONSULTOR: "advisor" };
@@ -54,8 +54,8 @@ function entrada(user: SessionUser, url: URL) {
     kind: "madurez" as const, subject: fuente, puedeGenerar: m.puede.calificar && n >= min,
     falta: !m.puede.calificar ? "El informe lo genera el advisor." : n < min ? `El informe se genera cuando al menos ${min} variables tengan percepción o nivel; hay ${n}.` : null,
     inputHash: hash({ caps, sg, k: m.kind, p: previo?.id ?? null, v: VERSION }),
-    encargo: () => { const hechos = hechosSector(); return { hechos, ...encargoMadInforme({ empresa, contexto: contextoEmpresa(), ins, caps, sg, participacion: m.participacion, previo: previo ? { etiqueta: previo.label, caps: previo.vars } : null,
-      hechos: hechos.map((h) => ({ n: h.n, hecho: h.hecho, editor: h.editor, fecha: h.fecha, nota: h.nota })), prioridades: prioridadesEstrategicas(),
+    encargo: () => { const hechos = hechosSector(), prioridades = prioridadesEstrategicas(); return { hechos, ctx: { lineas: ins.lines.length, dimensiones: ins.dimensions.length, prioridades: prioridades.length, hechos: hechos.length }, ...encargoMadInforme({ empresa, contexto: contextoEmpresa(), ins, caps, sg, participacion: m.participacion, previo: previo ? { etiqueta: previo.label, caps: previo.vars } : null,
+      hechos: hechos.map((h) => ({ n: h.n, hecho: h.hecho, editor: h.editor, fecha: h.fecha, nota: h.nota })), prioridades,
       medicion: { etiqueta: corte ? corte.label : "Captura en curso", fecha: dia(corte?.at), publicada: !!corte } }) }; },
   };
 }
@@ -80,13 +80,19 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   let contenido;
   try {
     if (e.kind === "madurez") {
-      // dos partes en paralelo sobre los mismos datos; se guardan juntas, con los hechos del sector que citan
-      const { system, diagnostico, cruce, hechos } = e.encargo();
-      const [a, b] = await Promise.all([
-        chatJson(system, diagnostico, { maxTokens: 7000, timeoutMs: 170_000 }),
-        chatJson(system, cruce, { maxTokens: 7000, timeoutMs: 170_000 }),
-      ]);
-      const informe: MadInformeIA = parseMadInforme({ ...(a as object), ...(b as object) });
+      // cuatro partes en paralelo sobre los mismos datos. Si una llega claramente por debajo de lo pedido (lecturas
+      // cortas, menos elementos), se vuelve a pedir una vez diciéndole al modelo qué le faltó; se guarda la más completa
+      const { system, partes, hechos, ctx } = e.encargo();
+      const respuestas = await Promise.all(partes.map(async (p) => {
+        const primera = await chatJson(system, p.user, { maxTokens: 4500, timeoutMs: 120_000 });
+        const f1 = faltantesParte(p.id, primera, ctx);
+        if (!f1.length) return primera;
+        try {
+          const segunda = await chatJson(system, `${p.user}\n\nTu respuesta anterior se rechazó por incompleta: ${f1.join("; ")}. Escríbela de nuevo, completa, cumpliendo cada mínimo de palabras y de elementos.`, { maxTokens: 4500, timeoutMs: 120_000 });
+          return faltantesParte(p.id, segunda, ctx).length < f1.length ? segunda : primera;
+        } catch { return primera; }
+      }));
+      const informe: MadInformeIA = parseMadInforme(Object.assign({}, ...respuestas.map((r) => (r ?? {}) as object)));
       const citados = new Set(citasDe(informe));
       informe.fuentes = hechos.filter((h) => citados.has(h.n));
       contenido = informe;

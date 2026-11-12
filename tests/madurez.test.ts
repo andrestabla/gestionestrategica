@@ -8,7 +8,7 @@ import { createCompany, updateCompany, resetStore, getMadurez, captureMadurez, r
 import { INSTRUMENTS, instrumentOf } from "../src/data/madurez";
 import { instrumentIssues, P, E, S, gapReading, practiceState, sufficientEvidence, cellOf, overallLevel, generalIndex, aiqOf, progressOf, type Captures } from "../src/lib/madurez";
 import { MODULES, moduleOfRoute } from "../src/lib/modulos";
-import { encargoMadInforme, encargoMadLectura, parseMadInforme, parseMadLectura, minimoInforme, minimoLectura, conDato, respuestasValidas } from "../src/lib/madurez-ia";
+import { faltantesParte, encargoMadInforme, encargoMadLectura, parseMadInforme, parseMadLectura, minimoInforme, minimoLectura, conDato, respuestasValidas } from "../src/lib/madurez-ia";
 import type { SessionUser } from "../src/lib/session";
 
 const admin: SessionUser = { email: "admin@plataforma.example", name: "Admin", role: "ADMIN" };
@@ -141,13 +141,23 @@ test("madurez con IA: el encargo lleva las cifras de la medición y la respuesta
   const sg = { [ins.safeguards[0].id]: { status: "FALLA" as const } };
   const e = encargoMadInforme({ empresa: { name: "Digital SA", sector: "Comercio" }, contexto: "CONTEXTO DE PRUEBA", ins, caps, sg, medicion: { etiqueta: "Línea base", fecha: "10 de noviembre de 2026", publicada: false }, participacion: { personas: 2, completas: 1 }, previo: null });
   for (const trozo of ["Digital SA · Comercio", "CONTEXTO DE PRUEBA", "captura en curso: cifras provisionales", `${a.id} · ${a.name}`, "percepción 4,5 de 5 (2 resp.)", "brecha P−E +", "hallazgo «La estrategia existe solo en una presentación.»", `hoy «${a.rubric[1]}»`, `nivel siguiente «${a.rubric[2]}»`, "MEDICIÓN PARCIAL", "Falla", "No hay corte anterior", '"prioridades"'])
-    assert.ok((e.diagnostico + e.cruce).includes(trozo), `falta en el encargo: ${trozo}`);
-  assert.ok(e.diagnostico.includes("Digital SA · Comercio") && e.cruce.includes("Digital SA · Comercio"), "las dos partes llevan los datos de la medición");
-  // el informe se pide en dos partes sobre los mismos datos: el diagnóstico interno y el cruce con la industria, la estrategia y el plan
-  assert.ok(e.diagnostico.includes('"patrones"') && !e.diagnostico.includes('"comparacion"') && e.cruce.includes('"comparacion"') && e.cruce.includes('"escenarios"'));
-  assert.ok(e.cruce.includes("no hay una base de hechos cargada"));
+    assert.ok(e.partes.map((p) => p.user).join("\n").includes(trozo), `falta en el encargo: ${trozo}`);
+  // el informe se pide en cuatro partes sobre los mismos datos: panorama, líneas, industria y plan
+  assert.deepEqual(e.partes.map((p) => p.id), ["panorama", "lineas", "industria", "plan"]);
+  assert.ok(e.partes.every((p) => p.user.includes("Digital SA · Comercio")), "todas las partes llevan los datos de la medición");
+  const parte = (id: string) => e.partes.find((p) => p.id === id)!.user;
+  assert.ok(parte("panorama").includes('"patrones"') && !parte("panorama").includes('"comparacion"') && parte("industria").includes('"comparacion"') && parte("plan").includes('"escenarios"'));
+  assert.ok(parte("industria").includes("no hay una base de hechos cargada"));
   const conHechos = encargoMadInforme({ empresa: { name: "Digital SA" }, ins, caps, sg, medicion: { etiqueta: "x", fecha: "x", publicada: true }, participacion: { personas: 1, completas: 1 }, hechos: [{ n: 1, hecho: "El 40 % de las empresas usa analítica.", editor: "Gremio", fecha: "2026" }], prioridades: [{ nombre: "Excelencia comercial", desc: "crecer" }] });
-  assert.ok(conHechos.cruce.includes("[1] El 40 % de las empresas usa analítica. (Gremio, 2026)") && conHechos.cruce.includes("1. Excelencia comercial — crecer"));
+  const plan = conHechos.partes.find((p) => p.id === "plan")!.user;
+  assert.ok(plan.includes("[1] El 40 % de las empresas usa analítica. (Gremio, 2026)") && plan.includes("1. Excelencia comercial — crecer"));
+  // una parte corta se detecta para volver a pedirla; una completa pasa
+  const ctx = { lineas: 4, dimensiones: 4, prioridades: 7, hechos: 10 };
+  const largo = (n: number) => Array.from({ length: n }, () => "palabra").join(" ");
+  const corta = faltantesParte("plan", { estrategia: [{}, {}], prioridades: [{ primer_paso: "x", por_que_ahora: "y" }], ruta: [{}, {}, {}], indicadores: [], preguntas: [], escenarios: {} }, ctx);
+  assert.ok(corta.some((x) => x.includes("«estrategia» trae 2 elementos y debe traer 7")) && corta.some((x) => x.includes("«prioridades» trae 1")));
+  assert.deepEqual(faltantesParte("plan", { estrategia: Array(7).fill({}), prioridades: Array(8).fill({ primer_paso: largo(25), por_que_ahora: largo(30) }), ruta: [{}, {}, {}], indicadores: Array(6).fill({}), preguntas: Array(8).fill("¿?"), escenarios: { si_no_se_actua: largo(70), si_se_ejecuta: largo(70) } }, ctx), []);
+  assert.ok(faltantesParte("panorama", { resumen: ["corto"] }, ctx).length >= 4);
   assert.ok(e.system.includes("no inventes cifras") && e.system.includes("empresas medianas"));
   assert.ok(encargoMadInforme({ empresa: { name: "Instituto" }, ins: INSTRUMENTS.educativa, caps: {}, sg: {}, medicion: { etiqueta: "x", fecha: "x", publicada: true }, participacion: { personas: 0, completas: 0 } }).system.includes("instituciones de educación superior"));
 

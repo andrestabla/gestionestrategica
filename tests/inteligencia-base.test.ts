@@ -4,7 +4,7 @@ import { parseInvestigacion, encargoInvestigacion, industriaDe, baseCombinada, u
 import { parseMadInforme, citasDe } from "../src/lib/madurez-ia";
 
 const LINEAS = [{ n: 1, name: "Clientes" }, { n: 2, name: "Operación" }, { n: 3, name: "Innovación" }, { n: 4, name: "Arquitectura" }];
-const hecho = (url: string, extra: Record<string, unknown> = {}) => ({ hecho: `Dato de prueba con cifra para ${url}`, temas: ["digital", "cliente"], fuente: { titulo: "Estudio", editor: "Gremio", fecha: "2026", url, tipo: "oficial" }, nota: "", dato: null, par: null, ...extra });
+const hecho = (url: string, extra: Record<string, unknown> = {}) => ({ hecho: `Dato de prueba: 12 % de las empresas en 2025, según ${url}`, temas: ["digital", "cliente"], fuente: { titulo: "Estudio", editor: "Gremio", fecha: "2026", url, tipo: "oficial" }, nota: "", dato: null, par: null, ...extra });
 
 test("la investigación solo guarda los hechos cuya fuente está entre las páginas consultadas", () => {
   const base = parseInvestigacion([{
@@ -27,6 +27,19 @@ test("la investigación solo guarda los hechos cuya fuente está entre las pági
   assert.equal(urlClave("HTTPS://WWW.Sitio.com/a/b/?x=1#y"), "sitio.com/a/b");
 });
 
+test("se descartan las páginas de inicio, lo que no trae cifra, el texto comercial de proveedores y lo que ya está curado", () => {
+  const urls = ["https://proveedor.com/", "https://proveedor.com/industrias/farma", "https://prensa.com/nota-1", "https://prensa.com/nota-2", "https://oficial.gov.co/boletin"];
+  const base = parseInvestigacion([{ data: { hechos: [
+    { ...hecho("https://proveedor.com/"), hecho: "Proveedor creció 20 % en 2025 en el sector." },                                  // página de inicio
+    { ...hecho("https://proveedor.com/industrias/farma"), hecho: "Proveedor ofrece soluciones tecnológicas para la industria desde 2010." },   // comercial
+    { ...hecho("https://prensa.com/nota-1"), hecho: "La industria avanza en su transformación digital." },                         // sin cifra
+    { ...hecho("https://oficial.gov.co/boletin"), hecho: "El 41 % de las empresas del sector usa analítica (2025)." },             // ya está curado
+    { ...hecho("https://prensa.com/nota-2", { par: { empresa: "Laboratorio X", anio: "2026", linea: 1 } }), hecho: "Laboratorio X ofrece desde 2026 visitas médicas digitales a 24.000 profesionales." },   // iniciativa de un par: vale
+  ] }, urls }], { industria: "X", model: "m", at: "2026-01-01T00:00:00.000Z" }, LINEAS, ["https://www.oficial.gov.co/boletin/"]);
+  assert.deepEqual(base.hechos.map((h) => h.par?.empresa), ["Laboratorio X"]);
+  assert.equal(base.descartados, 3);
+});
+
 test("sin páginas consultadas no se guarda ningún hecho", () => {
   const base = parseInvestigacion([{ data: { hechos: [hecho("https://sitio.com/a")] }, urls: [] }], { industria: "X", model: "m", at: "2026-01-01T00:00:00.000Z" }, LINEAS);
   assert.equal(base.hechos.length, 0);
@@ -38,8 +51,9 @@ test("la industria sale de la ficha y decide qué se investiga", () => {
   assert.equal(industriaDe(c), "Industria farmacéutica (CIIU C2100) · Colombia");
   assert.equal(industriaDe({ name: "Sin ficha" }), "");
   // con base curada solo se investiga lo digital; sin ella, también el panorama del sector
-  assert.deepEqual(encargoInvestigacion(c, LINEAS, true).bloques.map((b) => b.id), ["digital"]);
-  assert.deepEqual(encargoInvestigacion({ name: "Textiles", sector: "Confecciones", country: "CO" }, LINEAS, false).bloques.map((b) => b.id), ["digital", "sector"]);
+  assert.deepEqual(encargoInvestigacion(c, LINEAS, true).bloques.map((b) => b.id), ["adopcion", "pares", "exigencias"]);
+  assert.deepEqual(encargoInvestigacion({ name: "Textiles", sector: "Confecciones", country: "CO" }, LINEAS, false).bloques.map((b) => b.id), ["adopcion", "pares", "exigencias", "sector"]);
+  assert.ok(encargoInvestigacion(c, LINEAS, true, ["Laboratorio Uno", "Laboratorio Dos"]).bloques.find((b) => b.id === "pares")!.user.includes("Laboratorio Uno, Laboratorio Dos"));
   // la base de la empresa suma lo curado de su sector y lo investigado
   const inv = parseInvestigacion([{ data: { hechos: [hecho("https://sitio.com/a")] }, urls: ["https://sitio.com/a"] }], { industria: industriaDe(c), model: "m", at: "2026-01-01T00:00:00.000Z" }, LINEAS);
   const curada = baseCombinada(c, null)!, todo = baseCombinada(c, inv)!;
