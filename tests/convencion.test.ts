@@ -74,7 +74,9 @@ test("cobertura de evaluación y resumen/exportación del portafolio", () => {
   const sum = portfolioSummary(rows, ["H1", "H2", "H3"]);
   assert.equal(sum.H1.IMPLEMENTAR, 1); assert.equal(sum.H2.PENDIENTE, 1); assert.equal(sum.H3.PENDIENTE, 0);
   const csv = portfolioCsv(rows);
-  assert.ok(csv.startsWith("id;iniciativa;prioridad"));
+  assert.ok(csv.startsWith("id;iniciativa;categoría;prioridad"));
+  assert.ok(csv.split("\n")[2].startsWith("b;Dos;Iniciativa;"));
+  assert.ok(portfolioCsv([{ ...rows[1], categoria: "disruptiva" }]).split("\n")[1].startsWith("b;Dos;Iniciativa disruptiva;"));
   assert.ok(csv.includes('"Uno; con punto y coma"'));
   assert.equal(csv.split("\n").length, 3);
 });

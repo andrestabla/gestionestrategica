@@ -67,8 +67,25 @@ test("categoría: se mapea sin objetivo ni KR, no se califica hasta tener KR y s
     assert.ok(/1 proyecto especial o iniciativa disruptiva está mapeado/.test(sec.notas?.[0] ?? ""));
     assert.ok((await documentoXlsx(doc)).length > 2000);
 
+    // Priorización y Portafolio: la categoría acompaña a cada iniciativa que sí compite y una nota cuenta las mapeadas que no figuran
+    for (const modulo of ["priorizacion", "portafolio"] as const) {
+      const d = documentoDecisiones(modulo, advisor), s2 = d.secciones[d.secciones.length - 1], k = s2.columnas.indexOf("Categoría");
+      assert.equal(k, 2);
+      assert.equal(s2.anchos?.length, s2.columnas.length);
+      assert.ok(s2.filas.every((f) => f.length === s2.columnas.length));
+      assert.deepEqual(s2.filas.map((f) => [f[1], f[k]]), [[de(esp.id!).name, "Iniciativa"]]);   // la disruptiva sin KR no compite
+      assert.ok(/1 proyecto especial o iniciativa disruptiva no figura/.test(s2.notas?.[0] ?? ""));
+    }
+
     // al quitarle la categoría a una que sigue sin objetivo, vuelve a regir la regla corriente
     const sinCat = upsertInitiative(advisor, { ...de(dis.id!), categoria: null as never });
     assert.ok(!sinCat.ok && sinCat.status === 422);
+
+    // con resultado clave, la disruptiva entra al orden y conserva su categoría en la descarga
+    assert.ok(upsertKpi(advisor, { code: "DIR-02", line: 1, cmi: "OE-01", name: "Ingresos por líneas nuevas", unit: "%", frequency: "Trimestral", ownerId: "R01", baseline: 0, target: 5, goodDirection: "up" }).ok);
+    assert.ok(upsertInitiative(advisor, { ...de(dis.id!), kpi: "DIR-02" }).ok);
+    const conKr = documentoDecisiones("priorizacion", advisor).secciones[0];
+    assert.deepEqual(conKr.filas.map((f) => f[2]).sort(), ["Iniciativa", "Iniciativa disruptiva"]);
+    assert.equal(conKr.notas, undefined);
   });
 });

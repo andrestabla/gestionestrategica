@@ -9,7 +9,7 @@
 //   · resumen y exportación del portafolio por horizonte y decisión
 
 import type { Catalog, Lever } from "@/data/catalogo";
-import { mueveKr } from "@/data/cmi";
+import { mueveKr, categoriaLabel, type IniCategoria } from "@/data/cmi";
 import { horizonsOf, leversOf, isConvencion, horizonesBase } from "@/data/catalogo";
 import type { CmiObjective, InitiativeFull, KpiFull } from "@/data/cmi";
 import type { Consolidated, Decision, Evaluation } from "@/lib/priorizacion";
@@ -158,7 +158,7 @@ export function evaluationCoverage(initiatives: { id: string }[], evaluations: E
   return { total, evaluated, pct: total ? Math.round((evaluated / total) * 100) : 0, complete, evaluators: [...byUser.values()].sort((a, b) => b.count - a.count) };
 }
 
-export type PortfolioRow = { id: string; name: string; horizon: string; suggested: string | null; c: Consolidated; decision?: Decision | null; rationale?: string; lever?: string; owner?: string };
+export type PortfolioRow = { id: string; name: string; categoria?: IniCategoria; horizon: string; suggested: string | null; c: Consolidated; decision?: Decision | null; rationale?: string; lever?: string; owner?: string };
 
 /** Conteo por horizonte y decisión (las no decididas cuentan como «pendiente»). */
 export function portfolioSummary(rows: PortfolioRow[], horizons: string[]): Record<string, Record<Decision | "PENDIENTE", number>> {
@@ -175,9 +175,9 @@ const csvCell = (v: unknown) => { const s = v === null || v === undefined ? "" :
 
 /** Portafolio en CSV (separador «;» para Excel en español). */
 export function portfolioCsv(rows: PortfolioRow[]): string {
-  const head = ["id", "iniciativa", "prioridad", "responsable", "horizonte", "horizonte sugerido", "evaluadores", "D", "E", "M", "L", "puntaje", "tipo", "elegible", "capacidad primero", "decisión", "motivo"];
+  const head = ["id", "iniciativa", "categoría", "prioridad", "responsable", "horizonte", "horizonte sugerido", "evaluadores", "D", "E", "M", "L", "puntaje", "tipo", "elegible", "capacidad primero", "decisión", "motivo"];
   const lines = rows.map((r) => [
-    r.id, r.name, r.lever ?? "", r.owner ?? "", r.horizon, r.suggested ?? "", r.c.n, r.c.n ? r.c.avg.D : "", r.c.n ? r.c.avg.E : "", r.c.n ? r.c.avg.M : "", r.c.n ? r.c.avg.L : "",
+    r.id, r.name, categoriaLabel(r.categoria) ?? "Iniciativa", r.lever ?? "", r.owner ?? "", r.horizon, r.suggested ?? "", r.c.n, r.c.n ? r.c.avg.D : "", r.c.n ? r.c.avg.E : "", r.c.n ? r.c.avg.M : "", r.c.n ? r.c.avg.L : "",
     r.c.n ? r.c.score : "", r.c.type ?? "", r.c.n ? (r.c.eligible ? "sí" : "no") : "", r.c.n ? (r.c.capacityFirst ? "sí" : "no") : "", r.decision ?? "pendiente", r.rationale ?? "",
   ].map(csvCell).join(";"));
   return [head.join(";"), ...lines].join("\n");
