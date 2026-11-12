@@ -4,6 +4,7 @@ import {
   getTasks, getAudit, getEvidenceStatus,
   getComments, getUploads, deviationDays, portfolioSlippage, getBaseline, tenantView, catalog } from "@/server/store";
 import { taskAlerts, workload, portfolioTaskStats } from "@/lib/proyectos";
+import { hoyDe } from "@/data/proyectos";
 import { can } from "@/lib/permissions";
 
 export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
@@ -15,6 +16,7 @@ export const GET = withTenant(async (_req: Request, _ctx: unknown, user) => {
     }),
   );
   return NextResponse.json({
+    today: hoyDe(catalog().company),   // la fecha contra la que se miden vencidas y próximas (real; fija en la empresa de demostración)
     tasks: getTasks(),
     people: catalog().people,
     alerts: taskAlerts(tenantView()),

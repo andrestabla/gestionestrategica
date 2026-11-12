@@ -41,6 +41,7 @@ type GpTask = {
   assigneeId: string; evidenceIds?: string[];
 };
 type GpData = {
+  today?: string;
   tasks: GpTask[];
   people: { id: string; name: string }[];
   stats: {
@@ -53,7 +54,7 @@ const SEM_COLOR: Record<string, string> = { OK: "var(--ok)", WARN: "var(--warn)"
 const SEM_LABEL: Record<string, string> = { OK: "en meta", WARN: "en riesgo", BAD: "crítico" };
 const RISK_COLOR: Record<string, string> = { BAJO: "var(--ok)", MEDIO: "var(--muted)", ALTO: "var(--warn)", "CRÍTICO": "var(--bad)" };
 const RISK_ORDER: Record<string, number> = { "CRÍTICO": 0, ALTO: 1, MEDIO: 2, BAJO: 3 };
-const DEMO_TODAY = "2027-03-10";
+import { hoyReal } from "@/data/proyectos";
 
 /** Secciones del compositor: qué entra en la pieza (pantalla e impresión). */
 const SECTIONS = [
@@ -162,8 +163,9 @@ export default function EjecutivoTab() {
   const gpDerived = useMemo(() => {
     if (!gp) return null;
     const pending = gp.tasks.filter((t) => t.status !== "HECHA");
-    const overdue = pending.filter((t) => t.due < DEMO_TODAY).sort((a, b) => a.due.localeCompare(b.due));
-    const upcoming = pending.filter((t) => t.due >= DEMO_TODAY).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 5);
+    const hoy = gp.today ?? hoyReal();   // la fecha que el servidor usa para esta empresa
+    const overdue = pending.filter((t) => t.due < hoy).sort((a, b) => a.due.localeCompare(b.due));
+    const upcoming = pending.filter((t) => t.due >= hoy).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 5);
     const byIni = new Map<string, { total: number; done: number }>();
     for (const t of gp.tasks) {
       const e = byIni.get(t.iniId) ?? { total: 0, done: 0 };

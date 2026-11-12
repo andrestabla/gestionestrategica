@@ -11,8 +11,9 @@
 
 import { isOrgKind, captureError, progressOf, perceptionOf, isPerceptionAnswer, CAPTURE_FIELDS, type OrgKind, type MadCapture, type MadResponse, type Captures, type MadCut, type SafeguardState, type SafeguardStatus, type CaptureField } from "@/lib/madurez";
 import { instrumentOf } from "@/data/madurez";
+import { riskError, severidad, type ProjectRisk, type RiskInput } from "@/lib/riesgos";
 import { CONSENT_VERSION } from "@/lib/consentimiento";
-import { type Task, type TaskStatus, DEMO_TODAY } from "@/data/proyectos";
+import { type Task, type TaskStatus, DEMO_TODAY, hoyDe } from "@/data/proyectos";
 import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFull } from "@/data/cmi";
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
@@ -24,7 +25,7 @@ import { avg } from "@/lib/od";
 import { periodIndex, isValidPeriod } from "@/lib/period";
 import { krFaltantes, KR_INI_MAX, objetivoConPrioridad, iniciativaConKr } from "@/lib/convencion";
 import { firmaObjetivo } from "@/server/firma";
-import { INI_KR_MAX, mueveKr, iniCategoria, categoriaLabel } from "@/data/cmi";
+import { INI_KR_MAX, mueveKr, iniCategoria, categoriaLabel, krsDeIniciativa } from "@/data/cmi";
 import type { SessionUser } from "@/lib/session";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
@@ -174,7 +175,8 @@ export type TenantState = {
   informes: Map<string, InformeGuardado>;   // análisis con IA del diagnóstico, clave kind|subject
   f2: F2Response[];
   testNotes: Map<string, TestNotes>;
-  madurez: { vars: Map<string, MadCapture>; resps: Map<string, MadResponse>; safeguards: SafeguardState; cuts: MadCut[] };   // madurez digital: captura vigente, salvaguardas y cortes publicados
+  madurez: { vars: Map<string, MadCapture>; resps: Map<string, MadResponse>; safeguards: SafeguardState; cuts: MadCut[] };
+  riesgos: Map<string, ProjectRisk>;   // gestión de proyectos: riesgos y problemas de cada proyecto, clave RG-<ini>-NN   // madurez digital: captura vigente, salvaguardas y cortes publicados
   iniOverrides: Map<string, InitiativeOverride>;
   evals: Map<string, Evaluation>;          // clave iniId|email
   decisions: Map<string, DecisionRecord>;  // clave iniId
@@ -234,6 +236,7 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
     baselines: new Map(catalog.tasks.map((t) => [t.id, { start: t.start, due: t.due }])),
     capture: new Map(), published: null, kpiReports: new Map(), tests: new Map(), f1: new Map(), informes: new Map(), f2: [], testNotes: new Map(),
     madurez: { vars: new Map(), resps: new Map(), safeguards: {}, cuts: [] },
+    riesgos: new Map(),
     iniOverrides: new Map(),
     evals: new Map(catalog.seedEvaluations.map((e) => [`${e.iniId}|${e.by}`, e])),
     decisions: new Map(catalog.seedDecisions.map((d) => [d.iniId, d])),
@@ -530,6 +533,8 @@ async function loadTenant(st: TenantState) {
       else if (r.id.startsWith("cut:")) st.madurez.cuts.push(r.data as MadCut);
     }
     st.madurez.cuts.sort((a, b) => a.at.localeCompare(b.at));
+    st.riesgos = new Map();
+    for (const r of (await db.projectRecord.findMany(W).catch(() => [])) as { id: string; data: unknown }[]) if (r.id.startsWith("risk:")) st.riesgos.set(r.id.slice(5), r.data as ProjectRisk);
     for (const c of itinCommentRows) S().itinComments.set(c.id, c.data as ItineraryComment);
     // usuarios de la empresa, integraciones, branding y notificaciones leídas
     if (dbUsers.length) {
@@ -2261,7 +2266,7 @@ export function updateInitiative(
     if (!["HITO", "ALERTA", "NOTA"].includes(patch.log.type) || !patch.log.text?.trim()) {
       return { ok: false, status: 422, error: "La bitácora exige tipo (HITO/ALERTA/NOTA) y texto." };
     }
-    o.logAppends = [...(o.logAppends ?? []), { date: DEMO_TODAY, type: patch.log.type, text: patch.log.text.trim() }];
+    o.logAppends = [...(o.logAppends ?? []), { date: hoyDe(cat().company), type: patch.log.type, text: patch.log.text.trim() }];
     changes.push(`bitácora: ${patch.log.type.toLowerCase()}`);
   }
 
@@ -4597,4 +4602,59 @@ export function publishMadurez(user: SessionUser, label: unknown): { ok: true; c
   audit(user, "task", `madurez:${cut.id}`, `madurez digital: corte publicado «${cut.label}»`);
   void madRecord(`cut:${cut.id}`, cut);
   return { ok: true, cut };
+}
+
+/* ═══ Gestión de proyectos · riesgos y problemas ═══
+   Cada proyecto (iniciativa) lleva su registro de riesgos. Los edita quien puede editar las tareas de
+   ese proyecto. La auditoría guarda cada cambio con un formato fijo («estado A → B», «nivel 12 → 6»,
+   «severidad N» al final) porque el tablero de impacto lo lee para clasificar el movimiento. */
+
+const riesgosState = () => S().riesgos;
+export const getRisks = (iniId?: string): ProjectRisk[] => [...riesgosState().values()].filter((r) => !iniId || r.iniId === iniId).sort((a, b) => severidad(b) - severidad(a) || a.id.localeCompare(b.id));
+const riesgoRecord = (r: ProjectRisk) => persist("riesgo del proyecto", (db) => db.projectRecord.upsert({ where: { companyId_id: { companyId: cid(), id: `risk:${r.id}` } }, update: { data: r as never }, create: { companyId: cid(), id: `risk:${r.id}`, data: r as never } }));
+type RiskFail = { ok: false; status: number; error: string };
+
+export function upsertRisk(user: SessionUser, input: RiskInput): { ok: true; risk: ProjectRisk } | RiskFail {
+  const c = cat(), prev = input.id ? riesgosState().get(String(input.id)) : undefined;
+  if (input.id && !prev) return { ok: false, status: 404, error: "El riesgo no existe." };
+  const ini = c.initiatives.find((i) => i.id === (prev?.iniId ?? input.iniId));
+  if (!ini) return { ok: false, status: 422, error: "Elige el proyecto al que pertenece el riesgo." };
+  if (!can(user, "edit_tasks", ini)) return { ok: false, status: 403, error: user.role === "DIRECTIVO" ? "Tu rol es de consulta: no registra riesgos." : `No puedes registrar riesgos de ${resName(user, ini)}: tu ámbito es ${scopeName(user)}.` };
+  const datos: RiskInput = { ...prev, ...input };
+  const err = riskError(datos); if (err) return { ok: false, status: 422, error: err };
+  const ownerId = str(datos.ownerId, 10);
+  if (ownerId && !c.people.some((p) => p.id === ownerId)) return { ok: false, status: 422, error: "El responsable de la respuesta debe ser una persona del directorio." };
+  const krsIni = krsDeIniciativa(ini);
+  const krs = Array.isArray(datos.krs) ? [...new Set(datos.krs.map((x) => str(x, 20).toUpperCase()))].filter((x) => krsIni.includes(x)) : [];
+  const now = new Date().toISOString();
+  const id = prev?.id ?? (() => { let n = 1; while (riesgosState().has(`RG-${ini.id}-${String(n).padStart(2, "0")}`)) n++; return `RG-${ini.id}-${String(n).padStart(2, "0")}`; })();
+  const risk: ProjectRisk = {
+    id, iniId: ini.id, title: str(datos.title, 200), ...(str(datos.desc, 1200) ? { desc: str(datos.desc, 1200) } : {}), category: datos.category!, probability: datos.probability!, impact: datos.impact!, status: datos.status!,
+    ...(ownerId ? { ownerId } : {}), ...(str(datos.mitigation, 1200) ? { mitigation: str(datos.mitigation, 1200) } : {}), ...(datos.due ? { due: datos.due } : {}), ...(krs.length && krs.length < krsIni.length ? { krs } : {}),
+    createdBy: prev?.createdBy ?? user.email, createdAt: prev?.createdAt ?? now, updatedAt: now, ...(datos.status === "CERRADO" ? { closedAt: prev?.closedAt ?? now } : {}),
+  };
+  const cambios: string[] = [];
+  if (!prev) cambios.push(`riesgo registrado · «${risk.title}»`);
+  else {
+    if (prev.status !== risk.status) cambios.push(`estado ${prev.status} → ${risk.status}`);
+    if (severidad(prev) !== severidad(risk)) cambios.push(`nivel ${severidad(prev)} → ${severidad(risk)}`);
+    if ((prev.mitigation ?? "") !== (risk.mitigation ?? "")) cambios.push("respuesta actualizada");
+    if (!cambios.length && JSON.stringify({ ...prev, updatedAt: "" }) !== JSON.stringify({ ...risk, updatedAt: "" })) cambios.push("datos del riesgo actualizados");
+    if (!cambios.length) return { ok: true, risk: prev };
+  }
+  riesgosState().set(id, risk);
+  audit(user, "task", id, `${cambios.join(" · ")} · severidad ${severidad(risk)}`);
+  void riesgoRecord(risk);
+  return { ok: true, risk };
+}
+
+export function removeRisk(user: SessionUser, id: unknown): { ok: true } | RiskFail {
+  const prev = riesgosState().get(String(id));
+  if (!prev) return { ok: false, status: 404, error: "El riesgo no existe." };
+  const ini = cat().initiatives.find((i) => i.id === prev.iniId);
+  if (!can(user, "edit_tasks", ini)) return { ok: false, status: 403, error: "No puedes eliminar riesgos de este proyecto." };
+  riesgosState().delete(prev.id);
+  audit(user, "task", prev.id, `riesgo eliminado · «${prev.title}»`);
+  void persist("riesgo del proyecto", (db) => db.projectRecord.deleteMany({ where: { companyId: cid(), id: `risk:${prev.id}` } }));
+  return { ok: true };
 }

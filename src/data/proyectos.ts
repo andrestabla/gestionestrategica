@@ -113,15 +113,23 @@ export const TASKS: Task[] = [
 
 export const tasksOf = (iniId: string) => TASKS.filter((t) => t.iniId === iniId);
 
-export const isOverdue = (t: Task) =>
-  t.status !== "HECHA" && t.due < DEMO_TODAY;
+/** «Hoy» de una empresa (AAAA-MM-DD, hora de Bogotá): la fecha real. La empresa de demostración vive en su fecha
+    fija para que sus datos de ejemplo conserven el sentido (vencidas, próximas, avance esperado). */
+export const hoyReal = (): string => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
+export const hoyDe = (company?: { template?: string } | null): string => (company?.template === "demo" ? DEMO_TODAY : hoyReal());
 
-export const dueSoon = (t: Task, days = 14) => {
-  if (t.status === "HECHA" || isOverdue(t)) return false;
-  const due = new Date(t.due).getTime();
-  const today = new Date(DEMO_TODAY).getTime();
-  return due - today <= days * 86_400_000;
+/** ¿Vencida a la fecha dada? (abierta y con compromiso anterior a hoy) */
+export const vencida = (t: Task, hoy: string) => t.status !== "HECHA" && t.due < hoy;
+/** ¿Vence pronto? (abierta, no vencida y con compromiso dentro de `days` días) */
+export const vencePronto = (t: Task, hoy: string, days = 14) => {
+  if (t.status === "HECHA" || vencida(t, hoy)) return false;
+  return new Date(t.due).getTime() - new Date(hoy).getTime() <= days * 86_400_000;
 };
+export const diasEntre = (desde: string, hasta: string) => Math.round((new Date(hasta).getTime() - new Date(desde).getTime()) / 86_400_000);
+
+/** Versiones con la fecha fija de la demostración (datos de ejemplo y sus pruebas). */
+export const isOverdue = (t: Task) => vencida(t, DEMO_TODAY);
+export const dueSoon = (t: Task, days = 14) => vencePronto(t, DEMO_TODAY, days);
 
 export const TASK_STATUS_META: Record<TaskStatus, { label: string; color: string }> = {
   POR_HACER: { label: "Por hacer", color: "var(--faint)" },

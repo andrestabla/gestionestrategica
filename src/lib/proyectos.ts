@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
-  isOverdue, dueSoon, DEMO_TODAY, assigneesOf,
+  vencida, vencePronto, hoyDe, diasEntre, assigneesOf,
   type Task, type TaskStatus,
 } from "@/data/proyectos";
 // Las tareas, las personas y las iniciativas vienen de la vista de la empresa
@@ -27,11 +27,11 @@ export type TaskAlert = {
   line: number;               // línea de la iniciativa (para dirigir notificaciones)
 };
 
-const daysLate = (t: Task) =>
-  Math.round((new Date(DEMO_TODAY).getTime() - new Date(t.due).getTime()) / 86_400_000);
-
 export function taskAlerts(v: TenantView): TaskAlert[] {
   const alerts: TaskAlert[] = [];
+  const hoy = hoyDe(v.catalog.company);   // la fecha real; en la empresa de demostración, su fecha fija
+  const isOverdue = (t: Task) => vencida(t, hoy);
+  const daysLate = (t: Task) => diasEntre(t.due, hoy);
   const byId = new Map(v.tasks.map((t) => [t.id, t]));
 
   for (const t of v.tasks) {
@@ -115,6 +115,8 @@ export type Workload = {
 };
 
 export function workload(v: TenantView): Workload[] {
+  const hoy = hoyDe(v.catalog.company);
+  const isOverdue = (t: Task) => vencida(t, hoy), dueSoon = (t: Task) => vencePronto(t, hoy);
   return v.catalog.people.map((p) => {
     // cuenta como suya toda tarea donde es principal o corresponsable
     const mine = v.tasks.filter((t) => assigneesOf(t).includes(p.id));
@@ -135,6 +137,8 @@ export function workload(v: TenantView): Workload[] {
 /* ═══ Estadísticas por iniciativa ═══ */
 
 export function initiativeTaskStats(v: TenantView, iniId: string) {
+  const hoy = hoyDe(v.catalog.company);
+  const isOverdue = (t: Task) => vencida(t, hoy);
   const mine = v.tasks.filter((t) => t.iniId === iniId);
   return {
     total: mine.length,
@@ -152,6 +156,8 @@ export function portfolioTaskStats(v: TenantView) {
     POR_HACER: 0, EN_CURSO: 0, EN_REVISION: 0, BLOQUEADA: 0, HECHA: 0,
   };
   for (const t of v.tasks) byStatus[t.status]++;
+  const hoy = hoyDe(v.catalog.company);
+  const isOverdue = (t: Task) => vencida(t, hoy), dueSoon = (t: Task) => vencePronto(t, hoy);
   return {
     total: v.tasks.length,
     byStatus,

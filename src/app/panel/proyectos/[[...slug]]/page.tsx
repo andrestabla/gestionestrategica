@@ -17,7 +17,7 @@ import { AccessChip, useUser, useCan } from "@/components/user-context";
 import { useCatalog, useCatalogRefetch } from "@/components/catalog-context";
 import { evidencesOf, person } from "@/lib/vista";
 import {
-  initials, isOverdue as isOverdueFn, dueSoon as dueSoonFn, DEMO_TODAY,
+  initials, vencida, vencePronto, hoyDe,
   TASK_STATUS_META, assigneesOf,
   type Task, type TaskStatus, type Person,
 } from "@/data/proyectos";
@@ -26,13 +26,16 @@ import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/compon
 import {
   KanbanSquare, CalendarRange, Users, X, Link2, FileText, ShieldCheck,
   AlertTriangle, Lock, ChevronRight, Loader2, Save, History, Paperclip,
-  Plus, Archive,
+  Plus, Archive, Activity, ShieldAlert,
 } from "lucide-react";
+import { ImpactoView } from "./impacto";
+import { RiesgosView } from "./riesgos";
 
-type View = "tablero" | "cronograma" | "personas";
+type View = "impacto" | "tablero" | "cronograma" | "personas" | "riesgos";
 const COLUMNS: TaskStatus[] = ["POR_HACER", "EN_CURSO", "EN_REVISION", "BLOQUEADA", "HECHA"];
 
 type ApiData = {
+  today: string;   // la fecha contra la que el servidor mide vencidas y próximas (real; fija en la empresa de demostración)
   tasks: Task[];
   people: Person[];
   alerts: TaskAlert[];
@@ -58,21 +61,26 @@ const fmtDate = (iso: string) => {
   return `${Number(d)} ${MES[Number(m) - 1]} ${y.slice(2)}`;
 };
 
-const MONTHS = Array.from({ length: 13 }, (_, i) => {
-  const y = 2026 + Math.floor((7 + i) / 12);
-  const m = ((7 + i) % 12) + 1;
-  return { y, m, label: ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][m - 1] + (m === 1 || i === 0 ? `'${String(y).slice(2)}` : "") };
-});
-const monthIndex = (iso: string) => {
-  const [y, m] = iso.split("-").map(Number);
-  return (y - 2026) * 12 + (m - 1) - 7;
-};
+/** Escala de meses del cronograma: del primer inicio al último compromiso de las tareas visibles, con el mes de hoy
+    dentro y entre 6 y 24 meses de ancho. */
+function escalaMeses(tasks: Task[], hoy: string) {
+  const idx = (iso: string) => { const [y, m] = iso.split("-").map(Number); return y * 12 + (m - 1); };
+  const fechas = [...tasks.flatMap((t) => [t.start, t.due]), hoy].map(idx);
+  const desde = Math.min(...fechas), hasta = Math.max(Math.max(...fechas), desde + 5);
+  const n = Math.min(24, hasta - desde + 1);
+  const meses = Array.from({ length: n }, (_, i) => {
+    const y = Math.floor((desde + i) / 12), m = ((desde + i) % 12) + 1;
+    return { y, m, label: ["E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][m - 1] + (m === 1 || i === 0 ? `'${String(y).slice(2)}` : "") };
+  });
+  return { meses, indice: (iso: string) => idx(iso) - desde };
+}
 
 export default function ProyectosPage() {
   const user = useUser();
   const router = useRouter();
   const params = useParams<{ slug?: string[] }>();
-  const [view, setView] = useState<View>("tablero");
+  const [view, setView] = useState<View>("impacto");
+  const [rev, setRev] = useState(0);   // sube con cada cambio guardado: el tablero de impacto y los riesgos se vuelven a leer
   const [data, setData] = useState<ApiData | null>(null);
   const v = useCatalog();
   const refetchCatalog = useCatalogRefetch();
@@ -107,6 +115,7 @@ export default function ProyectosPage() {
   // (las tareas vigentes alimentan los conteos de otras páginas)
   const refetchAll = useCallback(async () => {
     await Promise.all([refetch(), refetchCatalog()]);
+    setRev((n) => n + 1);
   }, [refetch, refetchCatalog]);
   useEffect(() => { refetch(); }, [refetch]);
 
@@ -189,14 +198,16 @@ export default function ProyectosPage() {
   }
 
   const currentIni = iniFilter ? inis.find((i) => i.id === iniFilter) : null;
+  const { meses: MONTHS, indice: monthIndex } = escalaMeses(filtered, data.today);
+  const planView = view === "tablero" || view === "cronograma" || view === "personas";
 
   return (
     <>
-      <PageHeader kicker={`GP · Gestor de proyectos${currentIni ? ` · ${currentIni.id.toUpperCase()}` : ""}`}
-        title={currentIni ? currentIni.name : "Plan de trabajo del portafolio"}
+      <PageHeader kicker={`Gestión de proyectos${currentIni ? ` · ${currentIni.id.toUpperCase()}` : ""}`}
+        title={currentIni ? currentIni.name : "Proyectos del portafolio"}
         desc={currentIni
-          ? `Plan de trabajo de la iniciativa: ${filtered.length} tareas. Hoy (demo): ${fmtDate(DEMO_TODAY)}.`
-          : `${data.stats.total} tareas en ${inis.length} iniciativas · las mutaciones pasan por la matriz de permisos del servidor. Hoy (demo): ${fmtDate(DEMO_TODAY)}.`}
+          ? `Plan de trabajo del proyecto: ${filtered.length} ${filtered.length === 1 ? "tarea" : "tareas"}. Cada movimiento se lee contra los resultados clave que mueve. Hoy: ${fmtDate(data.today)}.`
+          : `${data.stats.total} tareas en ${inis.length} proyectos. Cada avance, entregable, atraso o riesgo se lee contra los resultados clave que mueve. Hoy: ${fmtDate(data.today)}.`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {currentIni && (
@@ -211,8 +222,8 @@ export default function ProyectosPage() {
               </button>
             )}
             <AccessChip module="proyectos" />
-            <div className="flex gap-1 rounded-xl bg-surface-2 p-1">
-              {([["tablero", KanbanSquare, "Tablero"], ["cronograma", CalendarRange, "Cronograma"], ["personas", Users, "Personas"]] as const).map(([v, Icon, label]) => (
+            <div className="flex flex-wrap gap-1 rounded-xl bg-surface-2 p-1">
+              {([["impacto", Activity, "Impacto en KR"], ["tablero", KanbanSquare, "Tablero"], ["cronograma", CalendarRange, "Cronograma"], ["personas", Users, "Personas"], ["riesgos", ShieldAlert, "Riesgos"]] as const).map(([v, Icon, label]) => (
                 <button key={v} onClick={() => setView(v)}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold transition-all ${
                     view === v ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
@@ -241,8 +252,8 @@ export default function ProyectosPage() {
           saving={saving} onCreate={createTask} onClose={() => setCreating(false)} />
       )}
 
-      {/* métricas */}
-      <div className="rise rise-1 mb-5 grid gap-4 sm:grid-cols-4">
+      {/* métricas del plan de trabajo (el tablero de impacto y los riesgos traen las suyas) */}
+      {planView && <div className="rise rise-1 mb-5 grid gap-4 sm:grid-cols-4">
         <StatCard label="Tareas del portafolio" value={data.stats.total}
           unit={`en ${inis.length} iniciativas`}
           foot={`${data.stats.byStatus.HECHA} hechas · ${data.stats.byStatus.EN_CURSO + data.stats.byStatus.EN_REVISION} activas`} />
@@ -257,10 +268,10 @@ export default function ProyectosPage() {
           unit={`de ${data.stats.byStatus.HECHA} hechas`}
           foot={`Regla dura: ninguna actividad se cierra sin soporte · ${data.stats.people} personas asignadas`}
           accent="linear-gradient(90deg, var(--n4), var(--n5))" />
-      </div>
+      </div>}
 
       {/* deslizamiento del cronograma (línea base vs vigente) */}
-      {data.slippage.tasksShifted > 0 && (
+      {planView && data.slippage.tasksShifted > 0 && (
         <div className="rise rise-2 mb-5 flex items-center gap-2.5 rounded-xl px-4 py-2.5"
           style={{ background: "color-mix(in srgb, var(--warn) 9%, var(--surface))" }}>
           <CalendarRange size={14} style={{ color: "var(--warn-text)" }} />
@@ -273,7 +284,7 @@ export default function ProyectosPage() {
       )}
 
       {/* alertas */}
-      {data.alerts.length > 0 && (
+      {planView && data.alerts.length > 0 && (
         <div className="rise rise-2 mb-5 flex flex-wrap gap-2">
           {data.alerts.slice(0, 4).map((a) => (
             <button key={a.id} onClick={() => setOpenTask(a.taskId)}
@@ -293,10 +304,10 @@ export default function ProyectosPage() {
       )}
 
       {/* filtros */}
-      <div className="rise rise-2 mb-5 flex flex-wrap items-center gap-2">
+      <div className="rise rise-2 mb-5 flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 [&>*]:shrink-0">
         <button onClick={() => setIniFilter(null)}
           className={`chip cursor-pointer ${iniFilter === null ? "chip-cyan" : ""}`}>
-          Todas las iniciativas
+          Todos los proyectos
         </button>
         {inis.filter((i) => tasks.some((t) => t.iniId === i.id)).map((i) => (
           <button key={i.id} onClick={() => setIniFilter(iniFilter === i.id ? null : i.id)}
@@ -304,8 +315,8 @@ export default function ProyectosPage() {
             {i.name.length > 26 ? i.name.slice(0, 25) + "…" : i.name}
           </button>
         ))}
-        <span className="mx-1 h-4 w-px bg-line-strong" />
-        {data.people.filter((p) => tasks.some((t) => t.assigneeId === p.id)).map((p) => (
+        {planView && <span className="mx-1 h-4 w-px bg-line-strong" />}
+        {planView && data.people.filter((p) => tasks.some((t) => t.assigneeId === p.id)).map((p) => (
           <button key={p.id} onClick={() => setPersonFilter(personFilter === p.id ? null : p.id)}
             className={`num grid h-7 w-7 cursor-pointer place-items-center rounded-full text-[11px] font-extrabold transition-all ${
               personFilter === p.id
@@ -320,6 +331,8 @@ export default function ProyectosPage() {
 
       <div className={`grid gap-5 ${task ? "lg:grid-cols-[1fr_350px]" : ""}`}>
         <div className="min-w-0">
+          {view === "impacto" && <ImpactoView iniId={iniFilter} rev={rev} onOpenIni={setIniFilter} onOpenTask={setOpenTask} onVer={(x) => setView(x)} />}
+          {view === "riesgos" && <RiesgosView iniId={iniFilter} rev={rev} onChanged={() => setRev((n) => n + 1)} />}
           {/* ═══ TABLERO ═══ */}
           {view === "tablero" && (
             <div className="grid gap-3 lg:grid-cols-5">
@@ -374,7 +387,7 @@ export default function ProyectosPage() {
                           const s = Math.max(0, monthIndex(t.start));
                           const e = Math.min(MONTHS.length - 1, Math.max(s, monthIndex(t.due)));
                           const meta = TASK_STATUS_META[t.status];
-                          const late = isOverdueFn(t);
+                          const late = vencida(t, data.today);
                           return (
                             <div key={t.id} className="grid items-center"
                               style={{ gridTemplateColumns: `240px repeat(${MONTHS.length}, 1fr)` }}>
@@ -527,8 +540,9 @@ export default function ProyectosPage() {
 function TaskCard({ t, person: p, onOpen }: { t: Task; person: Person | null; onOpen: () => void }) {
   const v = useCatalog();
   const ini = v.initiatives.find((i) => i.id === t.iniId);
-  const late = isOverdueFn(t);
-  const soon = dueSoonFn(t);
+  const hoy = hoyDe(v.catalog.company);
+  const late = vencida(t, hoy);
+  const soon = vencePronto(t, hoy);
   return (
     <button onClick={onOpen} className="panel panel-lift block w-full p-3 text-left">
       <div className="text-[12px] font-bold leading-snug text-ink">{t.title}</div>
@@ -594,6 +608,7 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
   baseline: { start: string; due: string } | null;
   allTasks: Task[];
 }) {
+  const hoy = hoyDe(useCatalog().catalog.company);
   const v = useCatalog();
   const evidences = evidencesOf(v);
   const [commentText, setCommentText] = useState("");
@@ -739,10 +754,10 @@ function TaskSheet({ task, people, personOf, editable, canVerify, evidenceStatus
               ) : (
                 <div className="num rounded-lg px-3 py-2 text-[12.5px] font-bold"
                   style={{
-                    background: isOverdueFn(task) ? "color-mix(in srgb, var(--bad) 9%, var(--surface))" : "var(--surface-2)",
-                    color: isOverdueFn(task) ? "var(--bad)" : "var(--ink)",
+                    background: vencida(task, hoy) ? "color-mix(in srgb, var(--bad) 9%, var(--surface))" : "var(--surface-2)",
+                    color: vencida(task, hoy) ? "var(--bad)" : "var(--ink)",
                   }}>
-                  {fmtDate(task.due)}{isOverdueFn(task) ? " · vencida" : ""}
+                  {fmtDate(task.due)}{vencida(task, hoy) ? " · vencida" : ""}
                 </div>
               )}
             </div>
@@ -999,8 +1014,9 @@ function NewTaskForm({ people, allTasks, defaultIni, saving, onCreate, onClose }
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [assigneeId, setAssigneeId] = useState(people[0]?.id ?? "P01");
-  const [start, setStart] = useState(DEMO_TODAY);
-  const [due, setDue] = useState(DEMO_TODAY);
+  const hoy = hoyDe(v.catalog.company);
+  const [start, setStart] = useState(hoy);
+  const [due, setDue] = useState(hoy);
   const [dependsOn, setDependsOn] = useState("");
   const [requiresEvidence, setRequiresEvidence] = useState(false);
 

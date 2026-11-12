@@ -261,6 +261,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
     { href: `/panel/estrategia/${ESTRATEGIA_SLUG.portafolio}`, label: V.tabs.portafolio, icon: Layers, code: undefined as string | undefined, mod: "portafolio" as ModuleId | undefined },
     { href: "/panel/capacidades", label: "Capacidades para ejecutar", icon: ShieldCheck, code: undefined as string | undefined, mod: "capacidades" as ModuleId | undefined },
     { href: "/panel/cascada", label: "Cascada trimestral", icon: CalendarRange, code: "F04" as string | undefined, mod: "cascada" as ModuleId | undefined },
+    { href: "/panel/proyectos", label: "Proyectos", icon: KanbanSquare, code: undefined as string | undefined, mod: "proyectos" as ModuleId | undefined },
     { href: "/panel/bi", label: "Inteligencia", icon: BarChart3, code: "M7" as string | undefined, mod: "inteligencia" as ModuleId | undefined },
   ];
   // los módulos fuera del alcance no aparecen en el menú de nadie (admin y advisor los abren por la URL con aviso);

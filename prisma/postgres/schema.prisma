@@ -102,6 +102,7 @@ model Company {
   diagnosticReports DiagnosticReport[]
   quarterGoals    QuarterGoal[]
   maturityRecords MaturityRecord[]
+  projectRecords ProjectRecord[]
   responsibles    Responsible[]
   objectives      CmiObjective[]
   people          Person[]
@@ -609,6 +610,17 @@ model MailLog {
 /// F04 · Cascada y plan trimestral: metas del trimestre por área con criterio de éxito, hitos, interdependencias y cierre.
 // Madurez digital: captura por variable (id «var:<ID>»), salvaguardas («sg») y cortes publicados («cut:<n>»).
 model MaturityRecord {
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String
+  data      Json
+  at        DateTime @updatedAt
+
+  @@id([companyId, id])
+}
+
+// Gestión de proyectos: registros por empresa (riesgos y problemas de cada proyecto). Clave «risk:<id>».
+model ProjectRecord {
   companyId String
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   id        String

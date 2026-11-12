@@ -36,7 +36,8 @@ test("módulos: tres estados; el valor guardado admite la lista anterior y el ob
 
 test("módulos: cada modo lista los suyos y los nombra con su vocabulario", () => {
   const ac = modulesForMode("acompanamiento").map((m) => m.id);
-  assert.deepEqual(ac, ["diagnostico", "madurez", "prioridades", "direccion", "okr", "iniciativas", "priorizacion", "portafolio", "capacidades", "cascada", "inteligencia"]);
+  assert.deepEqual(ac, ["diagnostico", "madurez", "prioridades", "direccion", "okr", "iniciativas", "priorizacion", "portafolio", "capacidades", "cascada", "proyectos", "inteligencia"]);
+  assert.equal(moduleOfRoute("/panel/proyectos/i3", null, "acompanamiento"), "proyectos");
   assert.equal(moduleOfRoute("/panel/capacidades", null, "acompanamiento"), "capacidades");
   assert.ok(modulesForMode("convencion").map((m) => m.id).includes("itinerario"));
   for (const modo of ["completa", "convencion", "acompanamiento"] as const) assert.ok(modulesForMode(modo).map((m) => m.id).includes("madurez"));
