@@ -33,6 +33,10 @@ model User {
   resetExpires DateTime?
   consentAt    DateTime? // aceptación del tratamiento de datos personales (acceso por QR)
   consentVersion String?
+  otpHash      String? // código de verificación del acceso en dos pasos (resumen; el código va al correo)
+  otpExpires   DateTime?
+  otpAttempts  Int       @default(0) // intentos fallidos con el código vigente
+  otpSentAt    DateTime? // último envío: limita los reenvíos
   memberships  UserMembership[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -87,6 +91,7 @@ model Company {
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia
   logoUrl     String?
+  twoFactor   Boolean @default(false) // acceso en dos pasos: además de la contraseña, un código enviado al correo
   active      Boolean @default(true)
   createdBy   String?
   dataVersion Int     @default(0) // sube con cada escritura de la empresa: las demás instancias recargan su memoria al verla cambiar

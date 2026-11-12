@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight } from "lucide-react";
 import { consentSummary, consentText } from "@/lib/consentimiento";
 import { ENTRY_ROLES, entryRoleNeedsTribe, type EntryRole } from "@/lib/acceso";
+import { PasoCodigo, type PasoCodigoInfo } from "@/components/paso-codigo";
 
 export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
   tenant: string; token: string; company: { name: string; shortName: string }; section: { id: string; label: string; what: string }; tribes?: { id: string; name: string }[];
@@ -20,15 +21,26 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
   const askTribe = tribes.length > 0 && entryRole !== "" && entryRoleNeedsTribe(entryRole);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paso, setPaso] = useState<PasoCodigoInfo | null>(null);   // la empresa exige el acceso en dos pasos: falta el código del correo
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(null);
     try {
       const res = await fetch("/api/auth/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenant, token, name, email, consent, ...(askTribe ? { responsibleId: tribe } : {}), entryRole }) });
       const j = await res.json().catch(() => null);
       if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); setBusy(false); return; }
+      if (j?.paso === "codigo") { setPaso(j as PasoCodigoInfo); setBusy(false); return; }
       router.push(j.next); router.refresh();
     } catch { setError("No se pudo conectar con el servidor."); setBusy(false); }
   };
+  if (paso) return (
+    <main className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-8">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-sm">
+        <div className="label">{company.name} · convención</div>
+        <h1 className="mt-1 text-[22px] font-extrabold leading-tight text-ink">Confirma tu correo</h1>
+        <PasoCodigo info={paso} onOk={(d) => { router.push(d.next ?? `/${tenant}/panel`); router.refresh(); }} onVolver={() => { setPaso(null); setError(null); }} />
+      </div>
+    </main>
+  );
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-8">
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-sm">

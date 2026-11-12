@@ -13,6 +13,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: `La contraseña debe tener al menos ${PASSWORD_MIN} caracteres.` }, { status: 400 });
   const r = await resetPassword(parsed.data.token, parsed.data.password);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
-  await setSession(r.user);
-  return NextResponse.json({ ok: true, user: r.user, next: r.user.company ? `/${r.user.company.slug}/panel` : "/empresas" });
+  // el enlace de restablecimiento llegó al correo de la cuenta: la sesión ya cumple el segundo paso
+  const user = { ...r.user, mfa: true as const };
+  await setSession(user);
+  return NextResponse.json({ ok: true, user, next: r.user.company ? `/${r.user.company.slug}/panel` : "/empresas" });
 }

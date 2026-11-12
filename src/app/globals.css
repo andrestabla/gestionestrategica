@@ -266,6 +266,10 @@ body {
 /* ─── impresión: el informe ejecutivo se imprime limpio ─── */
 .only-print { display: none; }
 
+/* cita de una fuente dentro de un texto: número pequeño que lleva a la lista de fuentes */
+.cita { display: inline-grid; place-items: center; min-width: 17px; height: 17px; margin: 0 1px; padding: 0 4px; border-radius: 999px; background: var(--gold-wash); color: var(--gold-text); font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; line-height: 1; vertical-align: 2px; text-decoration: none; }
+a.cita:hover { background: var(--gold-fill); color: #0D1B2A; }
+
 @media print {
   aside, header, footer, .no-print { display: none !important; }
   .only-print { display: block !important; }

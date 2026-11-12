@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, setSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
-import { hydrateCompanies, companyBySlug, membershipOf } from "@/server/store";
+import { hydrateCompanies, companyBySlug, membershipOf, exigeCodigoEn } from "@/server/store";
 import type { SessionUser } from "@/lib/session";
 
 /** Sesión para operar en otra empresa: el admin conserva su rol; las demás cuentas toman el rol y el ámbito de su membresía allí. */
@@ -25,6 +25,8 @@ export async function GET(req: Request) {
   const slug = url.searchParams.get("slug") ?? "";
   const next = url.searchParams.get("next") ?? "";
   if (!user) return NextResponse.redirect(new URL("/login", req.url));
+  // la empresa exige el acceso en dos pasos y esta sesión no pasó por el código: vuelve a identificarse en su acceso
+  if (companyBySlug(slug) && exigeCodigoEn(slug) && !user.mfa) return NextResponse.redirect(new URL(`/${slug}/login?verificar=1`, req.url));
   const session = await sesionEn(user, slug);
   if (!session) return NextResponse.redirect(new URL(user.company ? `/${user.company.slug}/panel` : "/empresas", req.url));
   await setSession(session);
@@ -41,6 +43,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const c = body?.slug ? companyBySlug(String(body.slug)) : null;
   if (!c) return NextResponse.json({ error: "La empresa no existe." }, { status: 404 });
+  if (exigeCodigoEn(c.slug) && !user.mfa) return NextResponse.json({ error: `${c.name} exige el acceso en dos pasos. Cierra la sesión y entra por su enlace para recibir el código en tu correo.`, verificar: `/${c.slug}/login?verificar=1` }, { status: 403 });
   const session = await sesionEn(user, c.slug);
   if (!session) return NextResponse.json({ error: "Tu cuenta no pertenece a esa empresa." }, { status: 403 });
   await setSession(session);

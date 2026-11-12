@@ -150,7 +150,7 @@ export default function MadurezPage() {
       )}
 
       {tab === "resumen" && (cal || corte) && <LecturaResumen key={sel} fuente={sel} href={`${base}/panel/madurez/informe`} cal={cal} />}
-      {tab === "informe" && <InformeResultados key={sel} ins={ins} caps={caps} sg={sg} fuente={sel} etiqueta={corte ? corte.label : "Captura en curso"} empresa={user.company?.name ?? ""} cal={cal} />}
+      {tab === "informe" && <InformeResultados key={sel} ins={ins} caps={caps} sg={sg} previo={previo && previo !== corte ? previo.vars : null} fuente={sel} etiqueta={corte ? corte.label : "Captura en curso"} empresa={user.company?.name ?? ""} cal={cal} />}
       {tab === "resumen" && <Resumen ins={ins} caps={caps} previo={previo && previo !== corte ? previo.vars : null} />}
       {tab === "variables" && <Variables ins={ins} caps={caps} />}
       {tab === "dominios" && <Dominios ins={ins} caps={caps} />}

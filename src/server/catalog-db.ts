@@ -29,6 +29,7 @@ export function companyRow(c: CompanyInfo) {
     orgKind: c.orgKind === "educativa" ? "educativa" : "empresa",
     instruments: (c.instruments?.length ? c.instruments : null) as never,
     modulesOff: modulesStored(c) as never,
+    twoFactor: c.twoFactor === true,
     access: (c.access && Object.keys(c.access).length ? c.access : null) as never,
     itinerary: (c.itinerary ?? null) as never,
     active: c.active, createdBy: c.createdBy ?? null,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { urlTenant } from "@/server/request-tenant";
 import { getSession, type SessionUser, renewSession } from "@/lib/session";
-import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion, flushOrError } from "@/server/store";
+import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion, flushOrError, exigeCodigoEn } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 
 /** Todas las rutas /api/td/* exigen sesión (compatibilidad). */
@@ -28,6 +28,8 @@ export async function tenantOf(user: SessionUser): Promise<{ slug: string } | Ne
   const c = companyBySlug(slug);
   if (!c) return NextResponse.json({ error: "La empresa de tu sesión ya no existe." }, { status: 409 });
   if (!c.active && user.role !== "ADMIN") return NextResponse.json({ error: "La empresa está desactivada." }, { status: 403 });
+  // acceso en dos pasos: la empresa solo admite sesiones que pasaron por el código enviado al correo
+  if (exigeCodigoEn(slug) && !user.mfa) return NextResponse.json({ error: "Esta empresa exige el acceso en dos pasos. Vuelve a iniciar sesión para recibir el código en tu correo.", verificar: `/${slug}/login?verificar=1` }, { status: 401 });
   return { slug };
 }
 

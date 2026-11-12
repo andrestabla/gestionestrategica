@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions";
 import { leversOf } from "@/data/catalogo";
 import { armarEncargo, parseSugerencias } from "@/lib/okr-sugerencias";
 import { keyResultsOf } from "@/lib/convencion";
+import { baseEmpresa } from "@/server/inteligencia-base";
 import { evidenciaPara } from "@/data/conocimiento-sector";
 
 // GET /api/td/okr/sugerir — si hay modelo configurado. POST { lever, tribe?, objective? }:
@@ -36,7 +37,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   // con el id de un objetivo ya registrado, el modelo conoce sus KR y propone solo los complementarios
   const registrado = o && typeof o.id === "string" ? cat.objectives.find((x) => x.id === o.id && (x.okr || cat.company.mode === "acompanamiento")) : undefined;
   const existing = registrado ? keyResultsOf(cat, registrado).map((k) => k.name) : [];
-  const fuentes = evidenciaPara(cat.company, lever);   // base de conocimiento del sector y del país, numerada
+  const fuentes = evidenciaPara(cat.company, lever, 18, baseEmpresa());   // base de conocimiento del sector y del país, numerada
   const { system, user: prompt } = armarEncargo(cat, lever, tribeName, templates, objective, existing, fuentes);
   try {
     const propuestas = parseSugerencias(await chatJson(system, prompt, { maxTokens: 2200 }), fuentes.length);

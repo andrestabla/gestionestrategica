@@ -22,6 +22,8 @@ export type SessionUser = {
   responsibleId?: string;
   /** Entró por el QR de la convención: ve la agenda de participantes, no el itinerario del equipo organizador. */
   qr?: true;
+  /** La sesión pasó la verificación en dos pasos (código al correo, o enlace de restablecimiento): las empresas que la exigen solo admiten sesiones así. */
+  mfa?: true;
   /** Empresa del usuario. El admin de plataforma no tiene empresa propia: aquí
       va la que eligió como contexto activo (puede cambiarla). */
   company?: SessionCompany;
@@ -55,7 +57,7 @@ export function decodeSession(token: string | undefined): SessionUser | null {
     const empresas = Array.isArray(data.empresas)
       ? (data.empresas as unknown[]).flatMap((e) => (e && typeof e === "object" && typeof (e as { slug?: unknown }).slug === "string" ? [{ slug: String((e as { slug: string }).slug), shortName: String((e as { shortName?: unknown }).shortName ?? ""), role: (e as { role?: SessionUser["role"] }).role ?? "DIRECTIVO" }] : []))
       : [];
-    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, company, ...(empresas.length > 1 ? { empresas } : {}) };
+    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, ...(data.mfa === true ? { mfa: true as const } : {}), company, ...(empresas.length > 1 ? { empresas } : {}) };
   } catch {
     return null;
   }
@@ -94,3 +96,27 @@ export async function clearSession() {
 }
 
 export const SESSION_COOKIE = COOKIE;
+
+/* ═══ Acceso en dos pasos: sesión pendiente del código ═══ */
+// Con la contraseña correcta, si la empresa exige el código, la sesión no se abre todavía: queda firmada en una
+// cookie aparte, de corta vida, hasta que la persona escriba el código que llegó a su correo.
+
+const COOKIE_PEND = "pgtd_2fa";
+export type SesionPendiente = { user: SessionUser; next?: string; created?: boolean; empresa?: string };
+
+export async function setPendiente(p: SesionPendiente, minutos: number) {
+  const body = Buffer.from(JSON.stringify({ ...p, exp: Date.now() + minutos * 60_000 })).toString("base64url");
+  (await cookies()).set(COOKIE_PEND, `${body}.${sign(`2fa:${body}`)}`, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: minutos * 60, path: "/" });
+}
+export async function getPendiente(): Promise<SesionPendiente | null> {
+  const token = (await cookies()).get(COOKIE_PEND)?.value; if (!token) return null;
+  const [body, sig] = token.split("."); if (!body || !sig) return null;
+  const a = Buffer.from(sig), b = Buffer.from(sign(`2fa:${body}`));
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(body, "base64url").toString());
+    if (typeof data.exp !== "number" || data.exp < Date.now() || typeof data.user?.email !== "string") return null;
+    return { user: data.user as SessionUser, next: typeof data.next === "string" ? data.next : undefined, created: data.created === true, empresa: typeof data.empresa === "string" ? data.empresa : undefined };
+  } catch { return null; }
+}
+export async function clearPendiente() { (await cookies()).delete(COOKIE_PEND); }

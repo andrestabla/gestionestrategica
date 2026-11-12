@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findUserForLogin, verifyPassword, companyBySlug, empresasDe } from "@/server/store";
+import { findUserForLogin, verifyPassword, companyBySlug, empresasDe, exigeCodigo, empresaQueExige } from "@/server/store";
+import { pedirCodigo } from "@/server/dos-pasos";
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
@@ -59,6 +60,9 @@ export async function POST(req: Request) {
     company: company ? { slug: company.slug, name: company.name, shortName: company.shortName, mode: company.mode } : undefined,
     ...(empresas.length > 1 ? { empresas: empresas.map((e) => ({ slug: e.slug, shortName: e.shortName, role: e.role })) } : {}),
   };
+  // acceso en dos pasos: si lo exige la empresa (o alguna en la que la cuenta opera), la sesión queda pendiente del
+  // código que se envía al correo; se abre en /api/auth/codigo
+  if (exigeCodigo(found, company)) return pedirCodigo({ user: session, empresa: empresaQueExige(found, company) });
   await setSession(session);
   return NextResponse.json({ ok: true, user: session });
 }

@@ -47,6 +47,7 @@ export type CompanyInfo = {
   mode?: CompanyMode;       // completa (todos los módulos) o convencion (solo Dirección, OKR, Iniciativas → KR, Priorización y Portafolio)
   instruments?: Instrument[]; // instrumentos del diagnóstico habilitados (vacío = todos)
   modulesOff?: ModuleId[];  // módulos fuera del alcance de la empresa (vacío = ninguno)
+  twoFactor?: boolean;      // acceso en dos pasos: además de la contraseña, un código enviado al correo (apagado por defecto)
   modulesPending?: ModuleId[]; // módulos del alcance aún no habilitados (se ven atenuados; vacío = ninguno)
   access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
   itinerary?: Itinerary;    // itinerario de la convención (momentos, publicación y enlace público)

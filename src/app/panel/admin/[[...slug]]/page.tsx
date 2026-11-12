@@ -401,6 +401,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         </div>
       )}
       <div className="space-y-5">
+        <SeguridadAcceso empresa={me.company?.name ?? "la empresa"} />
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Cuentas de ${me.company?.name ?? "la empresa"} (${users.length})`}
             sub="roles válidos solo en esta empresa · desactivar conserva la cuenta; eliminar la borra (no la propia)"
@@ -448,6 +449,70 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         la llave de cada fila envía un enlace de restablecimiento de un solo uso (vale 60 minutos).
       </p>
     </>
+  );
+}
+
+/* ═══ Seguridad del acceso: doble factor con código al correo (apagado por defecto) ═══ */
+type SeguridadApi = { twoFactor: boolean; puede: boolean; correoListo: boolean; minutos: number };
+function SeguridadAcceso({ empresa }: { empresa: string }) {
+  const [d, setD] = useState<SeguridadApi | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pide, setPide] = useState<{ correo: string; aviso?: string } | null>(null);   // activar pide confirmar un código propio
+  const [codigo, setCodigo] = useState("");
+  useEffect(() => { let vivo = true; fetch("/api/td/seguridad", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (vivo && j) setD(j); }).catch(() => {}); return () => { vivo = false; }; }, []);
+  const cambiar = async (on: boolean, cod?: string) => {
+    if (busy) return;
+    if (!on && !(await confirmar({ title: "¿Desactivar el doble factor?", body: `Las cuentas de ${empresa} volverán a entrar solo con su contraseña. Queda registrado en la auditoría con tu nombre.`, confirmLabel: "Desactivar", danger: true }))) return;
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch("/api/td/seguridad", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ twoFactor: on, ...(cod ? { codigo: cod } : {}) }) });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) setError(j?.error ?? `Error ${res.status}`);
+      else if (j?.paso === "codigo") { setPide({ correo: j.correo, aviso: j.aviso }); setCodigo(""); }
+      else { setD((x) => (x ? { ...x, twoFactor: j.twoFactor } : x)); setPide(null); setCodigo(""); avisar(j.twoFactor ? "Doble factor activado: desde ahora se pide el código al entrar." : "Doble factor desactivado."); }
+    } catch { setError("No se pudo conectar con el servidor."); }
+    setBusy(false);
+  };
+  if (!d) return null;
+  return (
+    <Card className="rise rise-1">
+      <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-lg bg-[var(--gold-wash)] text-[var(--gold)]"><ShieldCheck size={17} /></span>
+          <div className="min-w-0">
+            <div className="p-title">Doble factor de autenticación</div>
+            <p className="mt-0.5 max-w-[78ch] text-[12.5px] leading-snug text-muted">Además de la contraseña, cada persona escribe un código de seis dígitos que le llega a su correo (vale {d.minutos} minutos). Al entrar se le explica que es por seguridad del acceso a la información de {empresa}. Aplica a todas las cuentas de la empresa, al acceso por QR y al administrador de la plataforma.</p>
+            {!d.correoListo && <p className="mt-1.5 text-[12px]" style={{ color: "var(--warn-text)" }}>Para activarlo hace falta configurar el envío de correo en Integraciones (AWS SES).</p>}
+            {error && !pide && <p className="mt-1.5 text-[12px]" style={{ color: "var(--bad-text)" }}>{error}</p>}
+          </div>
+        </div>
+        <div className="flex flex-none items-center gap-3">
+          <span className={`chip ${d.twoFactor ? "chip-ok" : ""}`}>{d.twoFactor ? "Activado" : "Apagado"}</span>
+          {d.puede && (
+            <button type="button" role="switch" aria-checked={d.twoFactor} aria-label="Doble factor de autenticación" disabled={busy || (!d.twoFactor && !d.correoListo)} onClick={() => void cambiar(!d.twoFactor)}
+              className="relative h-6 w-11 flex-none rounded-full transition-colors disabled:opacity-50" style={{ background: d.twoFactor ? "var(--ok)" : "var(--line-strong)" }}>
+              <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" style={{ left: d.twoFactor ? 22 : 2 }} />
+            </button>
+          )}
+        </div>
+      </div>
+      {pide && (
+        <Modal variante="dialogo" title="Confirma para activar el doble factor" sub={`enviamos un código a ${pide.correo}`} onClose={() => { if (!busy) { setPide(null); setError(null); } }}
+          footer={<>
+            <button type="button" onClick={() => { setPide(null); setError(null); }} disabled={busy} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+            <button type="button" onClick={() => void cambiar(true, codigo)} disabled={busy || codigo.length !== 6} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{busy ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />} Activar</button>
+          </>}>
+          <p className="text-[13px] leading-relaxed text-ink-soft">Antes de exigirle el código a toda la empresa comprobamos que el correo llega. Escribe el código de seis dígitos que acabamos de enviarte; con eso el doble factor queda activo y tu sesión, verificada.</p>
+          {pide.aviso && <p className="mt-2 text-[12.5px] text-muted">{pide.aviso}</p>}
+          <label className="mt-4 block"><span className="label">Código de 6 dígitos</span>
+            <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={7} autoFocus value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))} onKeyDown={(e) => { if (e.key === "Enter" && codigo.length === 6) void cambiar(true, codigo); }}
+              className="input num mt-1.5 text-center !text-[20px] font-bold tracking-[0.4em]" placeholder="······" /></label>
+          {error && <p role="alert" className="mt-3 rounded-lg px-3.5 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))", color: "var(--bad-text)" }}>{error}</p>}
+          <p className="mt-3 text-[12px] leading-snug text-faint">Las personas que tengan la sesión abierta deberán volver a iniciar sesión y escribir su código.</p>
+        </Modal>
+      )}
+    </Card>
   );
 }
 

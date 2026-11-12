@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { inTenant } from "@/app/api/td/_helpers";
-import { accessUser, companyBySlug, hydrateCompanies, flushOrError } from "@/server/store";
+import { accessUser, companyBySlug, hydrateCompanies, flushOrError, exigeCodigoEn } from "@/server/store";
+import { pedirCodigo } from "@/server/dos-pasos";
 import { setSession } from "@/lib/session";
 import { sectionPath } from "@/lib/acceso";
 
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
   // la cuenta nueva se confirma cuando la base ya la tiene: su siguiente petición puede atenderla otra instancia
   const r = await inTenant(c.slug, async () => { const a = await accessUser(token, { name, email, consent, responsibleId, entryRole }); if (a.ok) { const e = await flushOrError(); if (e) return { ok: false as const, status: 500, error: e }; } return a; });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  // la empresa exige el acceso en dos pasos: también por QR se confirma el correo con el código
+  if (exigeCodigoEn(c.slug)) return pedirCodigo({ user: r.user, empresa: c.name, next: sectionPath(c.slug, r.section), created: r.created });
   await setSession(r.user);
   return NextResponse.json({ ok: true, user: r.user, created: r.created, next: sectionPath(c.slug, r.section) });
 }

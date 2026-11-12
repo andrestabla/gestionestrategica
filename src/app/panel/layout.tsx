@@ -5,7 +5,7 @@ import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
-import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPendingDb } from "@/server/store";
+import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPendingDb, exigeCodigoEn } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { FeedbackProvider } from "@/components/feedback";
 import { CatalogProvider } from "@/components/catalog-context";
@@ -31,6 +31,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
     }
   }
   const company = user.company ? companyBySlug(user.company.slug) : null;
+  // acceso en dos pasos: una sesión que no pasó por el código no entra a una empresa que lo exige
+  if (company && exigeCodigoEn(company.slug) && !user.mfa) redirect(`/${company.slug}/login?verificar=1`);
   const companies = user.role === "ADMIN" ? listCompanies().map((c) => ({ slug: c.slug, name: c.name, shortName: c.shortName, active: c.active }))
     : (user.empresas ?? []).map((e) => { const c = companyBySlug(e.slug); return { slug: e.slug, name: c?.name ?? e.shortName, shortName: e.shortName, active: c?.active ?? true }; });
   // el admin sin empresa activa elige una por pantalla (si existe alguna)

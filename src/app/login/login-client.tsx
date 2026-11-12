@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, LogIn, Loader2 } from "lucide-react";
 import { MarcaGE, DESARROLLADO_POR } from "@/components/logo";
+import { PasoCodigo, type PasoCodigoInfo } from "@/components/paso-codigo";
 
 type Branding = {
   platformName: string; showPlatformName: boolean;
@@ -38,12 +39,15 @@ const pick = <T,>(xs: T[] | undefined): T | null => (xs?.length ? xs[Math.floor(
 
 export type LoginCompany = { slug: string; name: string; shortName: string };
 
-export function LoginClient({ tenant, company }: { tenant: string | null; company: LoginCompany | null }) {
+export function LoginClient({ tenant, company, verificar = false }: { tenant: string | null; company: LoginCompany | null; verificar?: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [paso, setPaso] = useState<PasoCodigoInfo | null>(null);   // la empresa exige el acceso en dos pasos: falta el código del correo
+  // llegó aquí porque su sesión no había pasado por el código y la empresa ahora lo exige
+  const [aviso, setAviso] = useState<string | null>(verificar ? "Esta empresa exige el acceso en dos pasos. Inicia sesión de nuevo: después de la contraseña te pediremos el código que enviamos a tu correo." : null);
   const [recover, setRecover] = useState(false);
   const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
   const recoverNow = async () => {
@@ -68,6 +72,12 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
   const bgImg = useMemo(() => (b ? pick(b.backgroundImages) ?? pick(b.panelImages) ?? "/login.jpg" : "/login.jpg"), [b]);
   const heroMsg = useMemo(() => (b?.showHeroMessages ? pick(b.heroMessages) : null), [b]);
 
+  // cada empresa tiene su ruta: /empresa/panel; el admin sin empresa elige en /empresas
+  // quien pertenece a varias empresas (consultor, sobre todo) elige primero con cuál trabaja
+  const entrar = (u?: { role?: string; company?: { slug?: string }; empresas?: unknown[] }) => {
+    router.push((u?.empresas?.length ?? 0) > 1 ? "/empresas" : u?.company?.slug ? `/${u.company.slug}/panel` : u?.role === "ADMIN" ? "/empresas" : "/panel");
+    router.refresh();
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setError(null);
@@ -78,11 +88,9 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
     });
     if (res.ok) {
       const data = await res.json().catch(() => null);
-      const u = data?.user;
-      // cada empresa tiene su ruta: /empresa/panel; el admin sin empresa elige en /empresas
-      // quien pertenece a varias empresas (consultor, sobre todo) elige primero con cuál trabaja
-      router.push((u?.empresas?.length ?? 0) > 1 ? "/empresas" : u?.company?.slug ? `/${u.company.slug}/panel` : u?.role === "ADMIN" ? "/empresas" : "/panel");
-      router.refresh();
+      // contraseña correcta, pero la empresa exige el acceso en dos pasos: se pide el código que llegó al correo
+      if (data?.paso === "codigo") { setPaso(data as PasoCodigoInfo); setPassword(""); setAviso(null); setBusy(false); return; }
+      entrar(data?.user);
     } else {
       const data = await res.json().catch(() => null);
       setError(data?.error ?? "No fue posible iniciar sesión.");
@@ -185,6 +193,11 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           Acceso de {company.name}
         </div>
       )}
+      {aviso && !paso && <p className="mt-5 rounded-lg bg-gold-wash px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-soft" role="status">{aviso}</p>}
+      {paso ? (
+        <PasoCodigo info={paso} onOk={(d) => entrar(d.user)} onVolver={() => { setPaso(null); setBusy(false); setError(null); }}
+          botonStyle={{ borderRadius: `calc(${radius} / 1.2)`, background: (b?.buttonStyle ?? "solid") === "solid" ? primary : "transparent", color: (b?.buttonStyle ?? "solid") === "solid" ? "#fff" : primary, boxShadow: (b?.buttonStyle ?? "solid") === "outline" ? `inset 0 0 0 1.5px ${primary}` : undefined }} />
+      ) : (<>
       <form onSubmit={submit} className="mt-7 space-y-4">
         <label className="block">
           <span className="label">Correo</span>
@@ -248,6 +261,7 @@ export function LoginClient({ tenant, company }: { tenant: string | null; compan
           </div>
         )}
       </div>
+      </>)}
       <div className="mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line pt-4 text-[12px] text-faint">
         <span>{DESARROLLADO_POR}</span>
         <Link href="/" className="inline-flex items-center gap-1.5 font-semibold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Volver al sitio</Link>

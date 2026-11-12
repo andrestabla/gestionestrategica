@@ -141,7 +141,13 @@ test("madurez con IA: el encargo lleva las cifras de la medición y la respuesta
   const sg = { [ins.safeguards[0].id]: { status: "FALLA" as const } };
   const e = encargoMadInforme({ empresa: { name: "Digital SA", sector: "Comercio" }, contexto: "CONTEXTO DE PRUEBA", ins, caps, sg, medicion: { etiqueta: "Línea base", fecha: "10 de noviembre de 2026", publicada: false }, participacion: { personas: 2, completas: 1 }, previo: null });
   for (const trozo of ["Digital SA · Comercio", "CONTEXTO DE PRUEBA", "captura en curso: cifras provisionales", `${a.id} · ${a.name}`, "percepción 4,5 de 5 (2 resp.)", "brecha P−E +", "hallazgo «La estrategia existe solo en una presentación.»", `hoy «${a.rubric[1]}»`, `nivel siguiente «${a.rubric[2]}»`, "MEDICIÓN PARCIAL", "Falla", "No hay corte anterior", '"prioridades"'])
-    assert.ok(e.user.includes(trozo), `falta en el encargo: ${trozo}`);
+    assert.ok((e.diagnostico + e.cruce).includes(trozo), `falta en el encargo: ${trozo}`);
+  assert.ok(e.diagnostico.includes("Digital SA · Comercio") && e.cruce.includes("Digital SA · Comercio"), "las dos partes llevan los datos de la medición");
+  // el informe se pide en dos partes sobre los mismos datos: el diagnóstico interno y el cruce con la industria, la estrategia y el plan
+  assert.ok(e.diagnostico.includes('"patrones"') && !e.diagnostico.includes('"comparacion"') && e.cruce.includes('"comparacion"') && e.cruce.includes('"escenarios"'));
+  assert.ok(e.cruce.includes("no hay una base de hechos cargada"));
+  const conHechos = encargoMadInforme({ empresa: { name: "Digital SA" }, ins, caps, sg, medicion: { etiqueta: "x", fecha: "x", publicada: true }, participacion: { personas: 1, completas: 1 }, hechos: [{ n: 1, hecho: "El 40 % de las empresas usa analítica.", editor: "Gremio", fecha: "2026" }], prioridades: [{ nombre: "Excelencia comercial", desc: "crecer" }] });
+  assert.ok(conHechos.cruce.includes("[1] El 40 % de las empresas usa analítica. (Gremio, 2026)") && conHechos.cruce.includes("1. Excelencia comercial — crecer"));
   assert.ok(e.system.includes("no inventes cifras") && e.system.includes("empresas medianas"));
   assert.ok(encargoMadInforme({ empresa: { name: "Instituto" }, ins: INSTRUMENTS.educativa, caps: {}, sg: {}, medicion: { etiqueta: "x", fecha: "x", publicada: true }, participacion: { personas: 0, completas: 0 } }).system.includes("instituciones de educación superior"));
 

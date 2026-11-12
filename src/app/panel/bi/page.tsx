@@ -21,17 +21,29 @@ import { inteligenciaOf, titularDe, coincideEmpresa, atc2Nombre } from "@/data/i
 import { EC_POPULATION, EC_POPULATION_SOURCE } from "@/data/demanda-ec";
 import { CO_POPULATION, CO_POPULATION_SOURCE } from "@/data/demanda-co";
 import { demandByTerritory, coverage, openMarkets, competitorsByTerritory } from "@/lib/demanda";
-import { baseDe, type Tema } from "@/data/conocimiento-sector";
-import { Database, Users, ShieldCheck, FlaskConical, Landmark, ExternalLink, Scale, Award, BookOpen } from "lucide-react";
+import { baseDe, type Tema, type BaseConocimiento } from "@/data/conocimiento-sector";
+import { useEffect, useState } from "react";
+import { esInvestigado } from "@/lib/inteligencia-base";
+import { AdopcionIndustria, ParesIndustria, type LineaRef } from "@/app/panel/madurez/[[...slug]]/informe-graficas";
+import { avisar } from "@/components/feedback";
+import { Database, Users, ShieldCheck, FlaskConical, Landmark, ExternalLink, Scale, Award, BookOpen, Loader2, RefreshCw, Sparkles, Cpu } from "lucide-react";
 import { MapaSector, Dispersion, RankingActividad, comparables, CanalesBarra, RadarAtc, Productos } from "@/components/inteligencia-graficos";
 
 const PRESENCE_LABEL = { sede: "Sede", cobertura: "Cobertura", oportunidad: "Oportunidad", ninguna: "Sin presencia" } as const;
 const PRESENCE_CLS = { sede: "chip chip-cyan", cobertura: "chip chip-ok", oportunidad: "chip chip-gold", ninguna: "chip" } as const;
 const fmtPeople = (n: number) => n >= 1_000_000 ? `${fmtNum(n / 1_000_000, 2)} M` : n >= 1000 ? `${fmtNum(n / 1000, 0)} mil` : String(n);
 const TEMAS: { id: Tema; label: string }[] = [
+  { id: "digital", label: "Transformación digital de la industria" },
   { id: "regulacion", label: "Regulación y precios" }, { id: "mercado", label: "Mercado y competencia" }, { id: "macro", label: "Macro y comercio exterior" },
   { id: "demanda", label: "Demanda y canales" }, { id: "margen", label: "Márgenes" }, { id: "expansion", label: "Expansión" }, { id: "talento", label: "Talento" }, { id: "cliente", label: "Cliente" },
 ];
+
+type BaseApi = {
+  disponible: boolean; industria: string; base: BaseConocimiento | null; lineas: LineaRef[]; puedeActualizar: boolean; desactualizada: boolean; falta: string | null;
+  curada: { nombre: string; hechos: number } | null;
+  investigada: { at: string; model: string; by: string; hechos: number; fuentes: number; digitales: number; consultadas: number; descartados: number; industria: string } | null;
+};
+const fechaLarga = (iso: string) => new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
 
 type BiTab = "resumen" | "mercado" | "competencia" | "portafolio" | "territorio" | "senales";
 const BI_TABS: { id: BiTab; label: string; icon: typeof Layers; desc: string; farma?: boolean }[] = [
@@ -102,8 +114,22 @@ export default function BiPage() {
   const comps = comparables(s, intel, selfPeer, titular, ciiuFoco, 8);
   const pctC = (a: number, c: { institucional: number; comercial: number; muestraMedica: number }) => { const t = c.institucional + c.comercial + c.muestraMedica; return t ? Math.round((a / t) * 1000) / 10 : 0; };
 
+  // base de Inteligencia de la empresa: hechos curados de su sector más los investigados para su industria
+  const [ib, setIb] = useState<BaseApi | null>(null);
+  const [investigando, setInvestigando] = useState(false);
+  const [ibError, setIbError] = useState<string | null>(null);
+  useEffect(() => { let vivo = true; fetch("/api/td/inteligencia/base", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (vivo && j) setIb(j); }).catch(() => {}); return () => { vivo = false; }; }, []);
+  const investigar = async () => {
+    if (investigando) return;
+    setInvestigando(true); setIbError(null);
+    try { const r = await fetch("/api/td/inteligencia/base", { method: "POST" }); const j = await r.json().catch(() => ({})); if (r.ok) { setIb(j); avisar("Base de Inteligencia actualizada."); } else setIbError(j.error ?? `Error ${r.status}`); }
+    catch { setIbError("No se pudo conectar con el servidor."); }
+    setInvestigando(false);
+  };
   // hechos con fuente, por tema
-  const kb = baseDe(company);
+  const kb: BaseConocimiento | null = ib ? ib.base : baseDe(company);
+  const numerados = (kb?.hechos ?? []).filter((h) => h.dato || h.par).map((h, i) => ({ h, n: i + 1 }));
+  const nDe = (id: string) => numerados.find((x) => x.h.id === id)?.n;
   const grupos = kb ? TEMAS.map((t) => ({ ...t, hechos: kb.hechos.filter((h) => h.temas[0] === t.id) })).filter((g) => g.hechos.length) : [];
   const fuenteDe = (id: string) => kb?.fuentes.find((f) => f.id === id);
 
@@ -445,6 +471,37 @@ export default function BiPage() {
 
       {t === "senales" && (<>
       {farma && <MercadoFarma empresa={company.name} parte="senales" />}
+      {/* ── la base de Inteligencia de la empresa: de dónde sale y cuándo se actualizó ── */}
+      {ib && (
+        <Card className="rise rise-2 mb-5">
+          <CardHeader title="Base de Inteligencia de la empresa" sub={ib.industria ? `se arma según su industria · ${ib.industria}` : "se arma según la industria de la empresa"}
+            right={ib.puedeActualizar && ib.disponible && !ib.falta ? <button type="button" onClick={() => void investigar()} disabled={investigando} className="btn-primary btn-sm text-[12px] disabled:opacity-50">{investigando ? <Loader2 size={13} className="animate-spin" /> : ib.investigada ? <RefreshCw size={13} /> : <Sparkles size={13} />} {investigando ? "Investigando…" : ib.investigada ? "Actualizar investigación" : "Investigar la industria"}</button> : undefined} />
+          <div className="grid gap-4 px-5 pb-5 md:grid-cols-2">
+            <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Hechos curados del sector</div>
+              <p className="mt-1 text-[13px] leading-snug text-ink-soft">{ib.curada ? <><b className="num text-ink">{ib.curada.hechos}</b> hechos revisados a mano · {ib.curada.nombre}.</> : "Este sector todavía no tiene hechos revisados a mano: la base sale de la investigación de la industria."}</p></div>
+            <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Investigación de la industria</div>
+              <p className="mt-1 text-[13px] leading-snug text-ink-soft">{ib.investigada
+                ? <><b className="num text-ink">{ib.investigada.hechos}</b> hechos de <span className="num">{ib.investigada.fuentes}</span> fuentes, <b className="num text-ink">{ib.investigada.digitales}</b> sobre transformación digital · {fechaLarga(ib.investigada.at)} · {ib.investigada.model}{ib.investigada.by === "plataforma" ? " · al crear el espacio" : ""}.{ib.investigada.descartados > 0 ? ` Se descartaron ${ib.investigada.descartados} cuya fuente no estaba entre las páginas consultadas.` : ""}</>
+                : ib.falta ?? (ib.disponible ? "Aún no se ha investigado la industria de esta empresa. Se hace al crear su espacio; si no quedó, puedes pedirla aquí." : "La investigación usa el modelo configurado en Administración → Integraciones (OpenAI), que hoy no está disponible.")}</p></div>
+          </div>
+          {investigando && <p className="border-t border-line px-5 py-3 text-[12.5px] text-muted" role="status">El modelo está buscando en la web cómo va la industria y cómo están sus empresas en transformación digital. Toma entre uno y dos minutos; puedes seguir en la página.</p>}
+          {ibError && <p className="border-t border-line px-5 py-3 text-[12.5px]" style={{ color: "var(--bad-text)" }}>{ibError}</p>}
+          {ib.desactualizada && !investigando && <p className="border-t border-line bg-gold-wash px-5 py-3 text-[12.5px] text-ink-soft">La industria de la ficha cambió después de la investigación (se hizo para «{ib.investigada?.industria}»).{ib.puedeActualizar ? " Actualízala para que corresponda." : ""}</p>}
+          <p className="border-t border-line px-5 py-3 text-[12px] leading-snug text-faint">Los hechos investigados los recopila un modelo de IA buscando en la web: solo se guardan los que citan una página que el modelo consultó, y cada uno enlaza a su fuente para comprobarlo. Alimentan el asistente de OKR y el informe de madurez digital.</p>
+        </Card>
+      )}
+
+      {/* ── cómo está la industria en transformación digital ── */}
+      {ib && numerados.length > 0 && (
+        <Card className="rise rise-2 mb-5">
+          <CardHeader title="Cómo está la industria en transformación digital" sub="cifras de adopción y lo que han hecho otras empresas de la misma industria · cada número lleva a su fuente, más abajo" />
+          <div className="grid gap-4 px-5 pb-5 lg:grid-cols-2 lg:items-start">
+            <AdopcionIndustria lineas={ib.lineas} datos={numerados.filter((x) => x.h.dato).map(({ h, n }) => ({ n, ...h.dato! }))} />
+            <ParesIndustria lineas={ib.lineas} pares={numerados.filter((x) => x.h.par).map(({ h, n }) => ({ n, empresa: h.par!.empresa, que: h.hecho, anio: h.par!.anio, linea: h.par!.linea }))} />
+          </div>
+        </Card>
+      )}
+
       {/* ── señales del entorno con fuente ── */}
       {kb && grupos.length > 0 && (
         <Card className="rise rise-3 mb-5">
@@ -453,18 +510,19 @@ export default function BiPage() {
             {grupos.map((g) => (
               <div key={g.id}>
                 <div className="mb-2 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.14em] text-faint">
-                  {g.id === "regulacion" ? <ShieldCheck size={13} /> : g.id === "macro" ? <Landmark size={13} /> : g.id === "mercado" ? <Scale size={13} /> : g.id === "demanda" ? <Users size={13} /> : g.id === "margen" ? <Award size={13} /> : <FlaskConical size={13} />}
+                  {g.id === "digital" ? <Cpu size={13} /> : g.id === "regulacion" ? <ShieldCheck size={13} /> : g.id === "macro" ? <Landmark size={13} /> : g.id === "mercado" ? <Scale size={13} /> : g.id === "demanda" ? <Users size={13} /> : g.id === "margen" ? <Award size={13} /> : <FlaskConical size={13} />}
                   {g.label} <span className="num font-normal normal-case tracking-normal">· {g.hechos.length}</span>
                 </div>
                 <ul className="space-y-2">
                   {g.hechos.map((h) => {
                     const f = fuenteDe(h.fuente);
                     return (
-                      <li key={h.id} className="rounded-xl bg-surface-2/60 px-4 py-3">
-                        <p className="text-[12.5px] leading-snug text-ink">{h.hecho}</p>
+                      <li key={h.id} id={nDe(h.id) ? `fuente-${nDe(h.id)}` : undefined} className="scroll-mt-24 rounded-xl bg-surface-2/60 px-4 py-3">
+                        <p className="text-[12.5px] leading-snug text-ink">{nDe(h.id) && <span className="cita mr-1">{nDe(h.id)}</span>}{h.hecho}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-faint">
                           {f && (f.url ? <a href={f.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-cyan-deep hover:underline">{f.editor} · {f.fecha} <ExternalLink size={10} /></a> : <span className="text-ink-soft">{f.editor} · {f.fecha}</span>)}
                           {f && <span className={`chip !py-0 text-[11px] ${f.tipo === "oficial" ? "chip-ok" : ""}`}>{f.tipo}</span>}
+                          {esInvestigado(h) && <span className="chip !py-0 text-[11px]" title="Recopilado por el modelo con búsqueda en la web; comprueba la fuente">investigado con IA</span>}
                           {h.nota && <span className="italic">{h.nota}</span>}
                         </div>
                       </li>

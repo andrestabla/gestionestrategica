@@ -33,7 +33,8 @@ import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Ev
 import { parseKrTemplates } from "@/lib/okr-plantillas";
 import { parsePrioSessions, nextStatus, sessionOf, type PrioSessionAction } from "@/lib/priorizacion-sesion";
 import { ACCESS_SECTIONS, accessSection, isAccessSection, isAccessRole, isCompanyMode, parseAccess, sectionOfToken, type AccessConfig, type AccessSection, type AccessRole, type CompanyMode, isEntryRole, entryRoleNeedsTribe, accessEnabled } from "@/lib/acceso";
-import { randomBytes } from "crypto";
+import { randomBytes, randomInt, createHash, timingSafeEqual } from "crypto";
+import { CODIGO_MINUTOS, CODIGO_INTENTOS, CODIGO_REENVIO_S, CODIGO_DIGITOS } from "@/lib/dos-pasos";
 import { isExpired, RESET_MINUTES, passwordOk } from "@/lib/recuperacion";
 import { parseItinerary, isCommentKind, TOKEN_RE as ITIN_TOKEN_RE, FILE_ID_RE, type Itinerary, type ItineraryComment, type ItineraryFile, URL_RE } from "@/lib/itinerario";
 import type { DecisionRecord } from "@/data/priorizacion-demo";
@@ -369,6 +370,7 @@ export async function hydrateCompanies() {
         orgKind: isOrgKind(c.orgKind) ? c.orgKind : "empresa",
         instruments: (() => { const r = parseInstruments(c.instruments); return r.ok ? r.instruments : undefined; })(),
         ...parseModulesStored(c.modulesOff),
+        ...(c.twoFactor === true ? { twoFactor: true } : {}),
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
@@ -3362,6 +3364,93 @@ export async function moveUser(actor: SessionUser, email: string, toSlug: string
   return { ok: true };
 }
 
+/* ═══ Acceso en dos pasos: código enviado al correo ═══ */
+// Cada empresa decide si lo exige (apagado por defecto). El código es de un solo uso, vence a los pocos minutos y se
+// invalida tras varios intentos fallidos; en la base solo se guarda su resumen. ACCESO_DOS_PASOS=off en el entorno lo
+// desactiva para toda la plataforma: es la salida de emergencia si el correo deja de funcionar.
+
+const dosPasosApagado = () => process.env.ACCESO_DOS_PASOS === "off";
+type Otp = { hash: string | null; expires: number; attempts: number; sentAt: number };
+const otpMem = new Map<string, Otp>();   // sin base de datos, o para cuentas que no tienen fila en ella
+const otpResumen = (email: string, code: string) => createHash("sha256").update(`${email.trim().toLowerCase()}|${code}|${process.env.AUTH_SECRET ?? "pgtd-dev-secret-cambiar-en-produccion"}`).digest("hex");
+
+async function leerOtp(email: string): Promise<Otp | null> {
+  const e = email.trim().toLowerCase();
+  if (hasDb()) {
+    try {
+      const u = await (await prisma()).user.findUnique({ where: { email: e }, select: { otpHash: true, otpExpires: true, otpAttempts: true, otpSentAt: true } });
+      if (u) return u.otpSentAt ? { hash: u.otpHash ?? null, expires: u.otpExpires ? new Date(u.otpExpires).getTime() : 0, attempts: u.otpAttempts ?? 0, sentAt: new Date(u.otpSentAt).getTime() } : null;
+    } catch (err) { console.error("[4shine] código de acceso:", (err as Error).message); }
+  }
+  return otpMem.get(e) ?? null;
+}
+async function guardarOtp(email: string, o: Otp | null): Promise<void> {
+  const e = email.trim().toLowerCase();
+  if (hasDb()) {
+    try {
+      await (await prisma()).user.update({ where: { email: e }, data: o ? { otpHash: o.hash, otpExpires: new Date(o.expires), otpAttempts: o.attempts, otpSentAt: new Date(o.sentAt) } : { otpHash: null, otpExpires: null, otpAttempts: 0, otpSentAt: null } });
+      return;
+    } catch { /* la cuenta no tiene fila en la base (admin sembrado): queda en memoria */ }
+  }
+  if (o) otpMem.set(e, o); else otpMem.delete(e);
+}
+
+/** ¿Hay que pedirle el código a esta cuenta al entrar? Sí, si lo exige la empresa a la que entra o cualquiera en la
+    que puede operar después sin volver a identificarse; el admin de plataforma opera en todas. */
+export function exigeCodigo(found: UsuarioEncontrado, company: CompanyRecord | null): boolean {
+  if (dosPasosApagado()) return false;
+  if (company?.twoFactor) return true;
+  if (found.user.role === "ADMIN") return [...g.companies.values()].some((c) => c.active && c.twoFactor);
+  return [found.company, ...found.otras.map((o) => o.company)].some((c) => !!c && c.active && c.twoFactor === true);
+}
+/** Nombre de la empresa por la que se pide el código: la que se abre, o la primera de la cuenta que lo exige (el admin opera en todas: sin nombre). */
+export function empresaQueExige(found: UsuarioEncontrado, company: CompanyRecord | null): string | undefined {
+  if (company?.twoFactor) return company.name;
+  if (found.user.role === "ADMIN") return undefined;
+  return [found.company, ...found.otras.map((o) => o.company)].find((c) => !!c && c.active && c.twoFactor === true)?.name;
+}
+/** ¿La empresa solo admite sesiones verificadas con el código? */
+export const exigeCodigoEn = (slug: string | null | undefined): boolean => !dosPasosApagado() && !!slug && g.companies.get(slug)?.twoFactor === true;
+
+/** Emite un código nuevo para la cuenta (invalida el anterior). Entre dos envíos debe pasar un mínimo. */
+export async function emitirCodigo(email: string): Promise<{ ok: true; code: string } | { ok: false; status: number; error: string; espera?: number }> {
+  const prev = await leerOtp(email), now = Date.now();
+  const espera = prev ? Math.ceil((prev.sentAt + CODIGO_REENVIO_S * 1000 - now) / 1000) : 0;
+  if (espera > 0) return { ok: false, status: 429, error: `Acabamos de enviarte un código. Espera ${espera} segundos para pedir otro.`, espera };
+  const code = String(randomInt(0, 10 ** CODIGO_DIGITOS)).padStart(CODIGO_DIGITOS, "0");
+  await guardarOtp(email, { hash: otpResumen(email, code), expires: now + CODIGO_MINUTOS * 60_000, attempts: 0, sentAt: now });
+  return { ok: true, code };
+}
+
+/** Invalida el código vigente (no se pudo enviar). */
+export const anularCodigo = (email: string) => guardarOtp(email, null);
+
+/** Comprueba el código. Si es correcto queda usado; si no, cuenta el intento y, al agotarlos, lo invalida. */
+export async function verificarCodigo(email: string, code: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const o = await leerOtp(email);
+  if (!o || !o.hash || o.expires < Date.now()) return { ok: false, status: 410, error: "El código venció o ya se usó. Pide uno nuevo." };
+  if (o.attempts >= CODIGO_INTENTOS) return { ok: false, status: 429, error: "Demasiados intentos con este código. Pide uno nuevo." };
+  const a = Buffer.from(otpResumen(email, code)), b = Buffer.from(o.hash);
+  if (a.length === b.length && timingSafeEqual(a, b)) { await guardarOtp(email, null); return { ok: true }; }   // usado: no vuelve a servir
+  const attempts = o.attempts + 1, quedan = CODIGO_INTENTOS - attempts;
+  await guardarOtp(email, { ...o, attempts, ...(quedan <= 0 ? { hash: null, expires: 0 } : {}) });
+  return quedan <= 0 ? { ok: false, status: 429, error: "Código incorrecto. Se agotaron los intentos: pide un código nuevo." } : { ok: false, status: 401, error: `Código incorrecto. Te ${quedan === 1 ? "queda 1 intento" : `quedan ${quedan} intentos`}.` };
+}
+
+/** Activa o desactiva el acceso en dos pasos de la empresa activa (quien administra sus usuarios). */
+export function setTwoFactor(actor: SessionUser, on: boolean): { ok: true; twoFactor: boolean } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo quien administra los usuarios de la empresa cambia la seguridad del acceso." };
+  const c = g.companies.get(S().slug);
+  if (!c) return { ok: false, status: 404, error: "La empresa no existe." };
+  if ((c.twoFactor === true) === on) return { ok: true, twoFactor: on };
+  if (on) c.twoFactor = true; else delete c.twoFactor;
+  const t = g.tenants.get(c.slug); if (t) t.catalog.company = { ...t.catalog.company, twoFactor: on || undefined };
+  audit(actor, "task", `empresa:${c.slug}`, on ? "acceso en dos pasos activado: se pide un código enviado al correo" : "acceso en dos pasos desactivado");
+  if (hasDb() && c.dbId) { const dbId = c.dbId; void persist("seguridad del acceso", (db) => db.company.update({ where: { id: dbId }, data: { twoFactor: on, dataVersion: { increment: 1 } } })); }
+  return { ok: true, twoFactor: on };
+}
+
+
 /** Contraseña real contra la base (bcrypt). Devuelve null cuando no hay base
     o el usuario no tiene contraseña fijada: entonces aplica la demo, si está
     permitida (DEMO_LOGIN distinto de «off»). */
@@ -4607,6 +4696,25 @@ export function saveMadInforme(user: SessionUser, kind: "madurez" | "madurez-per
   });
   return { ok: true, saved };
 }
+
+/* ═══ Base de Inteligencia de la empresa: hechos investigados para su industria ═══ */
+
+export type BaseInteligenciaGuardada = { base: unknown; at: string; model: string; by: string };
+/** La base investigada que tiene guardada la empresa, o nulo si aún no se ha investigado su industria. */
+export const getBaseInteligencia = (): BaseInteligenciaGuardada | null => { const g = informes().get("inteligencia|base"); return g ? { base: g.informe as unknown, at: g.at, model: g.model, by: g.by } : null; };
+/** Guarda la base investigada (la reemplaza completa). `by`: quien la pidió, o «plataforma» cuando se crea con el espacio de la empresa. */
+export function saveBaseInteligencia(by: string, content: unknown, model: string, industria: string): BaseInteligenciaGuardada {
+  const at = ahora().toISOString();
+  informes().set("inteligencia|base", { kind: "inteligencia", subject: "base", inputHash: industria.slice(0, 190), informe: content as InformeIA, model, by, at });
+  void persist("base de inteligencia", async (db) => {
+    const companyId = cid();
+    const data = { inputHash: industria.slice(0, 190), content: content as object, model, by, at: new Date(at) };
+    await db.diagnosticReport.upsert({ where: { companyId_kind_subject: { companyId, kind: "inteligencia", subject: "base" } }, update: data, create: { companyId, kind: "inteligencia", subject: "base", ...data } });
+  });
+  return { base: content, at, model, by };
+}
+/** Líneas del instrumento de madurez digital de la empresa: con ellas se clasifican los hechos digitales de la industria. */
+export const lineasMadurez = () => madInstrument().lines.map((l) => ({ n: l.n, name: l.name, short: l.short, color: l.color }));
 
 export function setMadSafeguard(user: SessionUser, id: unknown, status: unknown, note: unknown): { ok: true; safeguards: SafeguardState } | MadFail {
   if (!gradesMadurez(user)) return { ok: false, status: 403, error: "Las salvaguardas las evalúa el advisor." };

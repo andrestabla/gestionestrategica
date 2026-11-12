@@ -5,6 +5,7 @@ import { chatJson, iaDisponible } from "@/server/ia";
 import { leversOf } from "@/data/catalogo";
 import { keyResultsOf, okrChecks, initiativesOfKr } from "@/lib/convencion";
 import { armarValidacion, parseValidacion, type KrDatos, type ValidacionOkr } from "@/lib/okr-sugerencias";
+import { baseEmpresa } from "@/server/inteligencia-base";
 import { evidenciaPara, type Evidencia } from "@/data/conocimiento-sector";
 
 // POST /api/td/okr/validar { objective } — el asistente revisa los resultados
@@ -34,7 +35,7 @@ export const POST = withTenant(async (req: Request) => {
   const key = `${cat.company.slug}|${o.id}|${hash(JSON.stringify([o.name, o.desc, o.indicator, krs, alertas]))}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return NextResponse.json({ ...hit.value, cached: true });
-  const fuentes = evidenciaPara(cat.company, lever);   // base de conocimiento del sector y del país, numerada
+  const fuentes = evidenciaPara(cat.company, lever, 18, baseEmpresa());   // base de conocimiento del sector y del país, numerada
   const { system, user: prompt } = armarValidacion(cat, lever, tribeName, { name: o.name, desc: o.desc, indicator: o.indicator }, krs, alertas, fuentes);
   try {
     const v = parseValidacion(await chatJson(system, prompt, { maxTokens: 2600 }), krs.map((k) => k.code), fuentes.length);
