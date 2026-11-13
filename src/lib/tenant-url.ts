@@ -5,7 +5,7 @@
 
 export const RESERVED = new Set([
   "api", "login", "panel", "empresas", "acceso", "acceder", "restablecer", "p", "e", "_next", "favicon.ico", "robots.txt", "sitemap.xml",
-  "img", "fonts", "uploads", "static", "admin", "www", "4shine", "algoritmot",
+  "img", "fonts", "uploads", "static", "admin", "www", "4shine", "algoritmot", "codigo", "diagnosticos", "r",
 ]);
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 

@@ -13,7 +13,8 @@ import { PERSPECTIVES } from "@/data/cmi";
 import { PageHeader, Card, CardHeader, StatCard, ModuleCard, StateDot } from "@/components/ui";
 import { MaturityRadar, ScoreGauge, type ScoresMap } from "@/components/charts";
 import { useCatalog } from "@/components/catalog-context";
-import { useBase } from "@/components/user-context";
+import { useBase, useUser } from "@/components/user-context";
+import { DiagnosticosHome, soloDiagnosticos } from "./diagnosticos-home";
 import { LINES, fmtCOP } from "@/data/demo";
 import { prevScores } from "@/lib/vista";
 import { buildAlerts, executiveSummary } from "@/lib/logic";
@@ -39,10 +40,14 @@ export default function Panel() {
   const base = useBase();
   const v = useCatalog();
   const router = useRouter();
+  const user = useUser();
   const convencion = isConvencion(v.catalog.company);
   // modo convención: el inicio es Dirección
   useEffect(() => { if (convencion) router.replace(`${base}/panel/convencion?t=itinerario`); }, [convencion, base, router]);
-  return convencion ? null : <PanelHome />;
+  if (convencion) return null;
+  // espacio que nació con un código de acceso: solo tiene los diagnósticos de entrada
+  if (soloDiagnosticos(v.catalog.company)) return <DiagnosticosHome company={v.catalog.company} base={base} nombre={user?.name ?? ""} />;
+  return <PanelHome />;
 }
 
 function PanelHome() {

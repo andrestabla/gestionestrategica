@@ -20,7 +20,9 @@ import { type AssessmentRecord, type CellScore, type KpiFull, type InitiativeFul
 import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
   type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, isAcompanamiento, type Horizon, type Lever } from "@/data/catalogo";
-import { currentTenant, DEFAULT_TENANT, hasTenantContext, ahora } from "@/server/tenant";
+import { currentTenant, DEFAULT_TENANT, hasTenantContext, ahora, runWithTenant } from "@/server/tenant";
+import { CODIGO_ALFABETO, CODIGO_LARGO, CODIGO_DIAS, alcanceDe, estadoCodigo, normalizarCodigo, validarCodigoNuevo, validarOrganizacion, type CodigoAcceso, type AlcanceCodigo } from "@/lib/codigos";
+import { ALL_MODULES as TODOS_LOS_MODULOS } from "@/lib/modulos";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL, THRESHOLD } from "@/data/mapa";
 import { lecturaF1 } from "@/lib/f1";
 import { avg } from "@/lib/od";
@@ -3364,6 +3366,135 @@ export async function moveUser(actor: SessionUser, email: string, toSlug: string
   return { ok: true };
 }
 
+/* ═══ Códigos de acceso a los diagnósticos ═══ */
+// El admin o el advisor genera un código para una persona que aún no tiene espacio. Al usarlo, la persona registra su
+// organización y la plataforma le crea un espacio limitado a los diagnósticos del código, con ella como directivo.
+// Los códigos son de la plataforma, no de una empresa: viven en su propia tabla (o en memoria si no hay base).
+
+type CodFail = { ok: false; status: number; error: string };
+const codMem = new Map<string, CodigoAcceso>();   // sin base de datos (pruebas)
+const iso = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString() : undefined);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const codDe = (r: any): CodigoAcceso => ({ id: r.id, code: r.code, name: r.name, email: r.email, ...(r.organization ? { organization: r.organization } : {}), scope: alcanceDe(r.scope), createdBy: r.createdBy, createdByName: r.createdByName,
+  createdByRole: r.createdByRole === "ADMIN" ? "ADMIN" : "CONSULTOR", createdAt: iso(r.createdAt)!, expiresAt: iso(r.expiresAt)!, ...(r.sentAt ? { sentAt: iso(r.sentAt) } : {}), ...(r.usedAt ? { usedAt: iso(r.usedAt) } : {}), ...(r.companySlug ? { companySlug: r.companySlug } : {}), ...(r.revokedAt ? { revokedAt: iso(r.revokedAt) } : {}) });
+async function codBuscar(code: string): Promise<CodigoAcceso | null> {
+  if (!hasDb()) return codMem.get(code) ?? null;
+  const r = await (await prisma()).accessCode.findUnique({ where: { code } });
+  return r ? codDe(r) : null;
+}
+async function codGuardar(c: CodigoAcceso, nuevo = false): Promise<void> {
+  if (!hasDb()) { codMem.set(c.code, c); return; }
+  const data = { name: c.name, email: c.email, organization: c.organization ?? null, scope: c.scope.join(","), createdBy: c.createdBy, createdByName: c.createdByName, createdByRole: c.createdByRole, expiresAt: new Date(c.expiresAt),
+    sentAt: c.sentAt ? new Date(c.sentAt) : null, usedAt: c.usedAt ? new Date(c.usedAt) : null, companySlug: c.companySlug ?? null, revokedAt: c.revokedAt ? new Date(c.revokedAt) : null };
+  const db = await prisma();
+  if (nuevo) await db.accessCode.create({ data: { id: c.id, code: c.code, createdAt: new Date(c.createdAt), ...data } }); else await db.accessCode.update({ where: { code: c.code }, data });
+}
+const puedeCodigos = (u: SessionUser) => u.role === "ADMIN" || u.role === "CONSULTOR";
+
+/** Genera un código para una persona. El correo no puede tener ya una cuenta: el código crea una nueva. */
+export async function crearCodigo(actor: SessionUser, input: { name?: unknown; email?: unknown; organization?: unknown; scope?: unknown }): Promise<{ ok: true; codigo: CodigoAcceso } | CodFail> {
+  if (!puedeCodigos(actor)) return { ok: false, status: 403, error: "Los códigos de acceso los genera el administrador o el advisor." };
+  const mal = validarCodigoNuevo(input); if (mal) return { ok: false, status: 422, error: mal };
+  const email = String(input.email).trim().toLowerCase(), name = String(input.name).trim().replace(/\s+/g, " ");
+  const ya = await findUserForLogin(email);
+  if (ya) return { ok: false, status: 409, error: ya.company ? `Ese correo ya tiene una cuenta en ${ya.company.name}: no necesita código, entra por el acceso de su empresa.` : "Ese correo es de un administrador de la plataforma." };
+  let code = "";
+  for (let i = 0; i < 6 && (!code || (await codBuscar(code))); i++) code = Array.from({ length: CODIGO_LARGO }, () => CODIGO_ALFABETO[randomInt(0, CODIGO_ALFABETO.length)]).join("");
+  const now = new Date();
+  const organization = String(input.organization ?? "").trim().slice(0, 120);
+  const codigo: CodigoAcceso = { id: `cod_${randomBytes(9).toString("hex")}`, code, name, email, ...(organization ? { organization } : {}), scope: alcanceDe(input.scope), createdBy: actor.email, createdByName: actor.name,
+    createdByRole: actor.role === "ADMIN" ? "ADMIN" : "CONSULTOR", createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + CODIGO_DIAS * 86_400_000).toISOString() };
+  // un código anterior de la misma persona que siga abierto deja de valer: solo cuenta el último
+  for (const viejo of await listarCodigosDe(email)) if (!viejo.usedAt && !viejo.revokedAt) await codGuardar({ ...viejo, revokedAt: now.toISOString() });
+  await codGuardar(codigo, true);
+  return { ok: true, codigo };
+}
+async function listarCodigosDe(email: string): Promise<CodigoAcceso[]> {
+  if (!hasDb()) return [...codMem.values()].filter((c) => c.email === email);
+  return ((await (await prisma()).accessCode.findMany({ where: { email } })) as unknown[]).map(codDe);
+}
+/** Códigos generados: el admin ve todos; el advisor, los suyos. Del más reciente al más antiguo. */
+export async function listarCodigos(actor: SessionUser): Promise<CodigoAcceso[]> {
+  if (!puedeCodigos(actor)) return [];
+  const todos: CodigoAcceso[] = hasDb() ? (await (await prisma()).accessCode.findMany({ orderBy: { createdAt: "desc" }, take: 300 })).map(codDe) : [...codMem.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return actor.role === "ADMIN" ? todos : todos.filter((c) => c.createdBy.toLowerCase() === actor.email.toLowerCase());
+}
+/** Código por identificador, si quien pregunta puede administrarlo. */
+export async function codigoDe(actor: SessionUser, id: string): Promise<CodigoAcceso | null> { return (await listarCodigos(actor)).find((c) => c.id === id) ?? null; }
+/** Deja constancia de que el código se envió por correo. */
+export async function marcarCodigoEnviado(c: CodigoAcceso): Promise<CodigoAcceso> { const n = { ...c, sentAt: new Date().toISOString() }; await codGuardar(n); return n; }
+/** Anula un código que no se ha usado: deja de servir. */
+export async function anularCodigoAcceso(actor: SessionUser, id: string): Promise<{ ok: true; codigo: CodigoAcceso } | CodFail> {
+  const c = await codigoDe(actor, id);
+  if (!c) return { ok: false, status: 404, error: "Ese código no existe o lo generó otra persona." };
+  if (c.usedAt) return { ok: false, status: 422, error: "El código ya se usó: la persona ya tiene su espacio. Para retirar su acceso, desactiva su cuenta." };
+  const n = { ...c, revokedAt: c.revokedAt ?? new Date().toISOString() }; await codGuardar(n);
+  return { ok: true, codigo: n };
+}
+
+const CODIGO_INVALIDO = "El código no es válido. Revisa que esté completo, tal como llegó a tu correo.";
+/** Lo que la página necesita saber de un código antes de usarlo (sin datos de otras personas). */
+export async function consultarCodigo(raw: unknown): Promise<{ ok: true; codigo: CodigoAcceso; estado: "nuevo" | "usado" } | CodFail> {
+  const code = normalizarCodigo(raw);
+  const c = code ? await codBuscar(code) : null;
+  if (!c) return { ok: false, status: 404, error: CODIGO_INVALIDO };
+  const e = estadoCodigo(c);
+  if (e === "anulado") return { ok: false, status: 410, error: "Este código fue anulado. Pide uno nuevo a quien te lo envió." };
+  if (e === "vencido") return { ok: false, status: 410, error: "Este código venció. Pide uno nuevo a quien te lo envió." };
+  return { ok: true, codigo: c, estado: e === "usado" ? "usado" : "nuevo" };
+}
+
+const modulosDe = (scope: AlcanceCodigo[]) => { const on = new Set<string>([...(scope.includes("madurez") ? ["madurez"] : []), ...(scope.includes("test") ? ["diagnostico"] : [])]); return TODOS_LOS_MODULOS.filter((m) => !on.has(m)); };
+/** A dónde entra quien usa el código: a la portada de su espacio, que presenta sus diagnósticos. */
+export const destinoCodigo = (slug: string) => `/${slug}/panel`;   // la portada del espacio presenta sus diagnósticos
+
+/** Usa un código nuevo: crea el espacio de la organización, limitado a los diagnósticos del código, y la cuenta de la
+    persona como directivo. Quien generó el código queda como advisor del espacio si es consultor. Devuelve la sesión. */
+export async function canjearCodigo(raw: unknown, datos: Record<string, unknown>): Promise<{ ok: true; user: SessionUser; slug: string; next: string } | CodFail> {
+  const q = await consultarCodigo(raw);
+  if (!q.ok) return q;
+  if (q.estado === "usado") return { ok: false, status: 409, error: "Este código ya se usó para registrar una organización." };
+  const c = q.codigo, v = validarOrganizacion(datos);
+  if (!v.ok) return { ok: false, status: 422, error: v.error };
+  await hydrateCompanies();
+  if (await findUserForLogin(c.email)) return { ok: false, status: 409, error: "Ese correo ya tiene una cuenta en la plataforma: entra por el acceso de tu empresa." };
+  const sistema: SessionUser = { email: c.createdBy, name: c.createdByName, role: "ADMIN" };
+  const base = slugify(v.org.organizacion) || "organizacion";
+  let slug = base; for (let i = 2; g.companies.has(slug) || RESERVED.has(slug) || slug.length < 2; i++) slug = `${base.slice(0, 36)}-${i}`;
+  const creada = await createCompany(sistema, { name: v.org.organizacion, slug, sector: v.org.sector, city: v.org.ciudad, country: v.org.pais, currency: v.org.pais === "EC" ? "USD" : "COP", size: v.org.tamano, template: "vacia", mode: "completa",
+    modulesOff: modulosDe(c.scope), ...(c.scope.includes("test") ? { instruments: ["test"] } : {}) });
+  if (!creada.ok) return creada;
+  const rec = creada.company;
+  const fallo = await runWithTenant(rec.slug, async (): Promise<CodFail | null> => {
+    const u = createUser(sistema, { email: c.email, name: c.name, role: "DIRECTIVO" });
+    if (!u.ok) return u;
+    let e = await flushOrError(); if (e) return { ok: false, status: 500, error: e };
+    // el tratamiento de datos lo aceptó en el formulario del código
+    const consentAt = new Date(); u.user.consentAt = consentAt.toISOString();
+    void persist("usuario", async (db) => { await db.user.update({ where: { email: c.email }, data: { consentAt, consentVersion: CONSENT_VERSION } }); });
+    // quien generó el código acompaña el diagnóstico: si es consultor, queda con acceso al espacio (el admin ya opera en todas)
+    if (c.createdByRole === "CONSULTOR") { const m = await addMembership(sistema, c.createdBy, { role: "CONSULTOR" }); if (!m.ok) console.warn("[4shine] código de acceso: no se pudo dar acceso al advisor:", m.error); }
+    audit(sistema, "task", c.email, `espacio creado con un código de acceso (${c.scope.join(" y ")}) para ${c.name}`);
+    e = await flushOrError(); return e ? { ok: false, status: 500, error: e } : null;
+  });
+  if (fallo) return fallo;
+  await codGuardar({ ...c, usedAt: new Date().toISOString(), companySlug: rec.slug });
+  return { ok: true, slug: rec.slug, next: destinoCodigo(rec.slug), user: { email: c.email, name: c.name, role: "DIRECTIVO", company: { slug: rec.slug, name: rec.name, shortName: rec.shortName, mode: rec.mode } } };
+}
+
+/** Vuelve a entrar con un código ya usado, mientras siga vigente: abre la sesión de la persona en su espacio. */
+export async function entrarConCodigo(raw: unknown): Promise<{ ok: true; user: SessionUser; slug: string; next: string } | CodFail> {
+  const q = await consultarCodigo(raw);
+  if (!q.ok) return q;
+  if (q.estado !== "usado" || !q.codigo.companySlug) return { ok: false, status: 409, error: "Este código aún no se ha usado: registra primero tu organización." };
+  await hydrateCompanies();
+  const f = await findUserForLogin(q.codigo.email), rec = g.companies.get(q.codigo.companySlug);
+  if (!f || !rec || !rec.active || f.company?.slug !== rec.slug) return { ok: false, status: 403, error: "Tu cuenta ya no está activa en ese espacio. Escríbele a quien te envió el código." };
+  if (exigeCodigoEn(rec.slug)) return { ok: false, status: 403, error: `${rec.name} ahora exige el acceso en dos pasos: entra con tu correo y tu contraseña por su enlace de acceso (usa «¿Olvidaste tu contraseña?» si aún no tienes una).` };
+  return { ok: true, slug: rec.slug, next: destinoCodigo(rec.slug), user: { email: f.user.email, name: f.user.name, role: f.user.role, line: f.user.line, responsibleId: f.user.responsibleId, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName, mode: rec.mode } } };
+}
+
+
 /* ═══ Acceso en dos pasos: código enviado al correo ═══ */
 // Cada empresa decide si lo exige (apagado por defecto). El código es de un solo uso, vence a los pocos minutos y se
 // invalida tras varios intentos fallidos; en la base solo se guarda su resumen. ACCESO_DOS_PASOS=off en el entorno lo
@@ -4137,6 +4268,7 @@ export function resetStore() {
   const c = g.companies.get(slug);
   if (!c) return;
   g.tenants.set(slug, newState(slug, slug === DEFAULT_TENANT ? ANDINA_CATALOG : (g.tenants.get(slug)?.catalog ?? emptyCatalog(c)), c.dbId));
+  codMem.clear(); otpMem.clear();   // códigos de acceso y de verificación en memoria (sin base de datos)
 }
 
 export { DEMO_TODAY };

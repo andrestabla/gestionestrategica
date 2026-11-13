@@ -42,6 +42,29 @@ model User {
   updatedAt    DateTime  @updatedAt
 }
 
+// ─── Códigos de acceso a los diagnósticos: los genera el admin o el advisor para una persona que aún no tiene espacio ───
+// Al usarlo, la persona registra su organización y la plataforma le crea un espacio limitado a sus diagnósticos.
+
+model AccessCode {
+  id            String    @id @default(cuid())
+  code          String    @unique // ocho caracteres sin ambigüedad; se muestra como GE-XXXX-XXXX
+  name          String
+  email         String
+  organization  String? // organización que anotó quien lo generó (referencia; la definitiva la escribe la persona)
+  scope         String // "madurez", "test" o "madurez,test"
+  createdBy     String // correo de quien lo generó
+  createdByName String
+  createdByRole String // ADMIN | CONSULTOR
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+  sentAt        DateTime?
+  usedAt        DateTime?
+  companySlug   String? // espacio que se creó al usarlo
+  revokedAt     DateTime?
+
+  @@index([email])
+}
+
 // ─── Membresías: un usuario (sobre todo un consultor) puede pertenecer a más de una empresa ───
 // La fila de User conserva su empresa principal; cada empresa adicional es una membresía con su propio rol y ámbito.
 

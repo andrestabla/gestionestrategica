@@ -411,3 +411,42 @@
   }
 }
 @media (prefers-reduced-motion: reduce) { .sp-vivo i { animation: none; } }
+
+/* ── páginas de cada diagnóstico (/diagnosticos/<slug>) ── */
+.sp-sub-hero-in { padding-block: clamp(120px, 14vw, 168px) clamp(56px, 7vw, 88px); }
+.sp-sub-volver { display: flex; width: fit-content; align-items: center; gap: 6px; margin-bottom: 26px; font-size: 13.5px; font-weight: 600; color: rgb(255 255 255 / 0.7); }
+.sp-sub-volver:hover { color: #fff; }
+.sp-sub-hero .sp-kicker { color: var(--sp-gold); }
+.sp-sub-h1 { margin-top: 14px; max-width: 18ch; font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 800; line-height: 1.06; letter-spacing: -0.035em; color: #fff; text-wrap: balance; }
+.sp-sub-hero .sp-hero-p { max-width: 60ch; }
+.sp-sub-cifras { margin-top: 48px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 16px; overflow: hidden; background: rgb(255 255 255 / 0.12); }
+@media (min-width: 760px) { .sp-sub-cifras { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.sp-sub-cifras div { padding: 20px 22px; background: rgb(13 27 42 / 0.82); }
+.sp-sub-cifras dt { font-family: var(--sp-mono); font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; color: #fff; }
+.sp-sub-cifras dd { margin-top: 4px; font-size: 13px; line-height: 1.4; color: rgb(255 255 255 / 0.66); }
+.sp-sub-grid { margin-top: 40px; display: grid; gap: 16px; }
+@media (min-width: 760px) { .sp-sub-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .sp-sub-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.sp-sub-tarjeta { padding: 24px 24px 22px; border-radius: 16px; background: var(--surface-2); }
+.sp-sub-tarjeta h3 { font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.sp-sub-tarjeta p { margin-top: 8px; font-size: 14.5px; line-height: 1.6; color: var(--muted); }
+.sp-sub-dos { display: grid; gap: 40px 64px; align-items: start; }
+@media (min-width: 1024px) { .sp-sub-dos { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr); } }
+.sp-sub-pasos { margin-top: 36px; display: grid; gap: 26px; counter-reset: paso; }
+.sp-sub-pasos li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; }
+.sp-sub-pasos li > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--sp-navy); font-family: var(--sp-mono); font-size: 14px; font-weight: 700; color: var(--sp-gold); }
+.sp-sub-pasos h3 { font-size: 1.08rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.sp-sub-pasos p { margin-top: 6px; font-size: 14.5px; line-height: 1.6; color: var(--muted); max-width: 60ch; }
+.sp-sub-recibes { padding: 28px 28px 26px; border-radius: 18px; background: var(--sp-navy); color: #fff; }
+@media (min-width: 1024px) { .sp-sub-recibes { position: sticky; top: 96px; } }
+.sp-sub-recibes h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.025em; }
+.sp-sub-recibes ul { margin-top: 18px; display: grid; gap: 13px; }
+.sp-sub-recibes li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; font-size: 14.5px; line-height: 1.5; color: rgb(255 255 255 / 0.84); }
+.sp-sub-recibes svg { margin-top: 2px; color: var(--sp-gold); }
+.sp-sub-enlace { font-weight: 700; color: var(--sp-gold); text-decoration: underline; text-underline-offset: 3px; }
+.sp-nav a[aria-current="page"] { color: #fff; }
+.sp-entrada-pie { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; }
+
+/* el gestor de proyectos tiene más pestañas: en pantallas angostas se muestran las tres primeras */
+@media (max-width: 1099px) { .sp-tabs-gp span:nth-child(n + 5) { display: none; } }
+@media (max-width: 699px) { .sp-tabs-gp span:nth-child(n + 4) { display: none; } }

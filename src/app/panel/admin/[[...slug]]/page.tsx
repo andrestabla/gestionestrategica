@@ -20,11 +20,12 @@ import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
 import { CorreosTab } from "./correos-tab";
+import { CodigosTab } from "./codigos-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
   UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays } from "lucide-react"
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays, Ticket } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
 
@@ -126,10 +127,11 @@ function ActividadTab() {
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "empresas" | "usuarios" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding";
+type Tab = "empresas" | "usuarios" | "codigos" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
+  { id: "codigos", label: "Códigos de acceso", icon: Ticket },
   { id: "actividad", label: "Actividad en vivo", icon: Activity },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "permisos", label: "Permisos de acceso", icon: KeyRound },
@@ -149,7 +151,7 @@ export default function AdminPage() {
 
   // el consultor administra usuarios, roles y el catálogo (también el líder); el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "usuarios" || t.id === "actividad" || t.id === "correos" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
+    t.id === "codigos" ? (me.role === "ADMIN" || me.role === "CONSULTOR") : t.id === "usuarios" || t.id === "actividad" || t.id === "correos" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
@@ -184,6 +186,7 @@ export default function AdminPage() {
 
       {tab === "empresas" && <EmpresasTab />}
       {tab === "usuarios" && <UsersTab canCompanies={canCompanies} />}
+      {tab === "codigos" && <CodigosTab />}
       {tab === "actividad" && <ActividadTab />}
       {tab === "catalogo" && <CatalogoTab />}
       {tab === "permisos" && <PermisosTab />}

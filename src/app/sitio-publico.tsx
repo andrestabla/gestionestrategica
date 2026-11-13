@@ -8,18 +8,16 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, Building2, Check, ExternalLink, FileDown, History, Paperclip, Presentation, Radio, Scale, ShieldCheck, Smartphone, Target, UsersRound } from "lucide-react";
 import { DESARROLLADO_POR, MarcaGE } from "@/components/logo";
 import { CRITERIA, LEVEL_NAMES, type Level } from "@/lib/priorizacion";
+import { DIAGNOSTICOS_PUBLICOS } from "@/data/diagnosticos-publicos";
 import "./sitio.css";
 
 /** Correo de contacto. Pendiente de confirmar con el dueño del producto. */
 const CONTACTO = "hola@algoritmot.com";
+export const CONTACTO_SITIO = CONTACTO;
 const correo = (asunto: string) => `mailto:${CONTACTO}?subject=${encodeURIComponent(asunto)}`;
 const DEMO = correo("Demostración de Gestión estratégica");
 
-// Dos puertas de entrada. El acceso no es abierto: se habilita después de recibir la solicitud.
-const ENTRADAS = [
-  { t: "Diagnóstico de madurez en transformación digital", d: "Compara el nivel de madurez digital de la organización con un marco de referencia y entrega hallazgos, recomendaciones y la evidencia que los respalda.", a: "Acceso al diagnóstico de madurez en transformación digital" },
-  { t: "Test de capacidades", d: "Veinticinco preguntas sobre cómo funciona la empresa. El resultado es un informe de una página con la lectura de sus capacidades y el desafío que domina hoy.", a: "Acceso al test de capacidades" },
-];
+// Dos puertas de entrada, cada una con su página (/diagnosticos/<slug>). Se entra con un código personal que envía el equipo que acompaña.
 
 const es = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 });
 const v = (o: Record<string, string | number>) => o as React.CSSProperties;
@@ -40,7 +38,7 @@ const AVANCE = [["Canal digital", 72], ["Tablero del comité", 88], ["Servicio p
 const AREAS = [
   { t: "Estrategia", d: "Prioridades, objetivos y resultados clave ligados entre sí.", h: "#ruta" },
   { t: "Priorización", d: "El comité califica y decide en sesión, con una misma regla.", h: "#sesion" },
-  { t: "Proyectos", d: "Cada iniciativa aprobada, con tareas, fechas y evidencia.", h: "#proyectos" },
+  { t: "Proyectos", d: "Cada iniciativa aprobada, con tareas, riesgos, presupuesto y su efecto en los resultados.", h: "#proyectos" },
   { t: "Inteligencia", d: "Datos del sector y del mercado con la fuente declarada.", h: "#inteligencia" },
 ];
 
@@ -54,12 +52,14 @@ const PASOS = [
 
 // ── gestión de proyectos (vista ilustrativa; «hoy» es el 10 de noviembre) ──
 const RASGOS_GP = [
-  ["Tablero por estados.", "Por hacer, en curso, en revisión, bloqueada y hecha."],
-  ["Cronograma con línea base.", "Cada reprogramación se mide contra la fecha comprometida."],
-  ["Dependencias.", "Cuando se reprograma una tarea, el sistema permite ajustar las fechas de las tareas que dependen de ella."],
-  ["Cierre con evidencia.", "Una tarea pasa al estado «Hecha» cuando incluye el soporte correspondiente."],
-  ["Carga por persona.", "Tareas abiertas, vencidas y próximas a vencer de cada responsable."],
-  ["Alertas e historial.", "Vencimientos, bloqueos y el registro de cada cambio."],
+  ["Impacto en resultados clave.", "Cada proyecto declara qué resultado clave debe mover, y la plataforma muestra si la ejecución lo acerca a la meta o lo aleja."],
+  ["Confianza de entrega.", "Un índice de 0 a 100 por proyecto y para todo el portafolio, que resume si lo aprobado se va a cumplir."],
+  ["Tablero y cronograma.", "Tareas por estado, línea base, dependencias, hitos y ruta crítica: cada reprogramación se mide contra la fecha comprometida."],
+  ["Riesgos.", "Probabilidad e impacto de cada riesgo, su respuesta, su responsable y el resultado clave que pondría en peligro."],
+  ["Presupuesto frente al avance.", "Lo comprometido y lo ejecutado se comparan con lo avanzado, y se proyecta el costo al cierre."],
+  ["Cierre con evidencia.", "Una tarea pasa al estado «Hecha» cuando incluye su soporte, y el asesor verifica la evidencia."],
+  ["Carga por persona.", "Tareas abiertas, vencidas y próximas a vencer de cada responsable y de sus corresponsables."],
+  ["Alertas e historial.", "Vencimientos, bloqueos y el registro de cada cambio, con su fecha y su autor."],
 ];
 type Tarea = { t: string; q: string; f: string; ev?: boolean; tarde?: boolean };
 const TABLERO: { col: string; tareas: Tarea[] }[] = [
@@ -86,6 +86,7 @@ const RASGOS_BI = [
   ["Competencia.", "Pares, rankings y concentración del sector."],
   ["Territorio.", "Dónde está el sector y dónde hay demanda por cubrir."],
   ["Señales del entorno.", "Regulación, mercado, macroeconomía y demanda, con la fuente y la fecha de cada dato."],
+  ["Transformación digital de la industria.", "Cifras de adopción y lo que han hecho otras empresas del sector. La base se arma según la industria de cada empresa al crear su espacio."],
 ];
 // Nube de sociedades del sector: generador fijo para que la figura no cambie entre cargas.
 const NUBE = (() => {
@@ -102,6 +103,7 @@ const SENALES = [
 
 const INCLUYE = [
   ["Diagnóstico de capacidades", "Tres fuentes y una lectura de brechas para saber de dónde se parte."],
+  ["Madurez digital", "El nivel de las prácticas digitales, contrastado con evidencia y con la industria, y un informe con prioridades."],
   ["Comparación sectorial", "La empresa frente a su sector, con datos abiertos de estados financieros."],
   ["Prioridades y objetivos", "Pocas prioridades estratégicas y los objetivos directivos que responden a cada una."],
   ["Resultados clave e indicadores", "Línea base, meta, fecha y responsable, con su tablero de seguimiento."],
@@ -110,9 +112,10 @@ const INCLUYE = [
   ["Portafolio", "Las iniciativas organizadas por horizonte: implementar, preparar, aplazar o renunciar."],
   ["Capacidades para ejecutar", "Lo que hay que resolver antes de implementar lo que se aprobó."],
   ["Cascada trimestral", "Del año al trimestre, con compromisos y responsables."],
-  ["Gestión de proyectos", "Tablero, cronograma con línea base, dependencias y carga por persona."],
-  ["Inteligencia", "Datos del sector, la competencia y el territorio con su fuente y fecha de corte."],
+  ["Gestión de proyectos", "Impacto en resultados clave, tablero, cronograma con ruta crítica, riesgos y presupuesto."],
+  ["Inteligencia", "Datos del sector, la competencia, el territorio y la transformación digital de la industria, con su fuente."],
   ["Informe ejecutivo", "El estado de la estrategia en un documento, con descargas en PDF, Word y Excel."],
+  ["Acceso seguro", "Roles por empresa, doble factor con código al correo y registro de cada cambio."],
 ];
 
 const ROLES = [
@@ -310,21 +313,21 @@ export function SitioPublico() {
             <div className="sp-doble">
               <div>
                 <span className="sp-kicker">Gestión de proyectos</span>
-                <h2 className="sp-h2">Cada iniciativa aprobada tiene su plan de trabajo.</h2>
-                <p className="sp-lead">Cada iniciativa que el comité aprueba se convierte en un plan de trabajo con tareas, responsables, fechas y evidencias. El avance se consulta por iniciativa y por persona.</p>
+                <h2 className="sp-h2">Cada iniciativa aprobada tiene su plan de trabajo, y se sabe si mueve el resultado.</h2>
+                <p className="sp-lead">Cada iniciativa que el comité aprueba se convierte en un proyecto con tareas, responsables, fechas, riesgos y presupuesto. El avance se lee por proyecto, por persona y por el resultado clave que cada proyecto debe mover.</p>
               </div>
               <Rasgos items={RASGOS_GP} />
             </div>
 
             <figure className="sp-gp sp-ver" role="img"
-              aria-label="Vista ilustrativa del gestor de proyectos: tablero de tareas por estado, cronograma comparado con la línea base y carga de trabajo por persona.">
+              aria-label="Vista ilustrativa del gestor de proyectos: confianza de entrega, tablero de tareas por estado, cronograma comparado con la línea base, resultado clave que el proyecto mueve y carga de trabajo por persona.">
               <div aria-hidden="true">
                 <div className="sp-gp-top">
                   <div><strong>Expansión del canal digital</strong><small>Plan de trabajo de la iniciativa</small></div>
-                  <div className="sp-tabs"><span className="sp-on">Tablero</span><span>Cronograma</span><span>Personas</span></div>
+                  <div className="sp-tabs sp-tabs-gp"><span>Impacto</span><span className="sp-on">Tablero</span><span>Cronograma</span><span>Personas</span><span>Riesgos</span><span>Presupuesto</span></div>
                 </div>
                 <div className="sp-gp-stats">
-                  <div><b>7</b><span>Tareas</span></div>
+                  <div><b>78</b><span>Confianza de entrega</span></div>
                   <div><b className="sp-mal">1</b><span>Vencida</span></div>
                   <div><b>3</b><span>Vencen en 14 días</span></div>
                   <div><b>2</b><span>Hechas con evidencia</span></div>
@@ -360,6 +363,12 @@ export function SitioPublico() {
                         ))}
                       </div>
                       <p className="sp-leyenda"><i className="sp-l-base" />Línea base<i className="sp-l-vig" />Vigente</p>
+                    </div>
+                    <div>
+                      <h5>Resultado clave que mueve</h5>
+                      <div className="sp-carga">
+                        <div><span className="sp-ava">KR</span><div><b>Ventas por el canal digital</b><small>Meta 20 % · va en 15 % · la ejecución va a favor</small></div></div>
+                      </div>
                     </div>
                     <div>
                       <h5>Carga por persona</h5>
@@ -473,7 +482,7 @@ export function SitioPublico() {
             </div>
             <ul className="sp-garantias">
               <li><Building2 size={20} /><span><b>Un espacio por empresa.</b> Los datos de cada organización se mantienen separados de los de las demás.</span></li>
-              <li><ShieldCheck size={20} /><span><b>Roles y permisos.</b> Cada persona entra con su cuenta y ve lo que su rol permite.</span></li>
+              <li><ShieldCheck size={20} /><span><b>Roles y acceso seguro.</b> Cada persona ve lo que su rol permite, y la empresa puede exigir un código al correo además de la contraseña.</span></li>
               <li><History size={20} /><span><b>Registro de actividad.</b> Queda constancia de quién decidió qué y cuándo.</span></li>
               <li><FileDown size={20} /><span><b>Decisiones descargables.</b> Cada módulo se exporta a PDF, Word y Excel.</span></li>
             </ul>
@@ -481,25 +490,25 @@ export function SitioPublico() {
         </section>
 
         {/* ── cierre ── */}
-        <section className="sp-sec sp-cierre">
+        <section id="diagnosticos" className="sp-sec sp-cierre">
           <Anillos cx={720} cy={900} n={9} paso={92} />
           <div className="sp-wrap">
             <h2 className="sp-h2">El primer paso es saber dónde está tu empresa.</h2>
-            <p className="sp-lead">Dos diagnósticos sirven de punto de partida. El acceso se habilita después de recibir la solicitud.</p>
+            <p className="sp-lead">Dos diagnósticos sirven de punto de partida. Se entra con un código personal que envía el equipo que acompaña el diagnóstico.</p>
             <div className="sp-entradas">
-              {ENTRADAS.map((e, i) => (
-                <article className="sp-entrada" key={e.t}>
-                  <div className="sp-entrada-cab"><code>0{i + 1}</code><span>Acceso con solicitud previa</span></div>
-                  <h3>{e.t}</h3>
-                  <p>{e.d}</p>
-                  <a href={correo(e.a)}>Solicitar acceso <ArrowRight size={16} strokeWidth={2.4} /></a>
+              {DIAGNOSTICOS_PUBLICOS.map((e, i) => (
+                <article className="sp-entrada" key={e.slug}>
+                  <div className="sp-entrada-cab"><code>0{i + 1}</code><span>Acceso con código</span></div>
+                  <h3>{e.titulo}</h3>
+                  <p>{e.resumen}</p>
+                  <Link href={`/diagnosticos/${e.slug}`}>Conocer más <ArrowRight size={16} strokeWidth={2.4} /></Link>
                 </article>
               ))}
             </div>
             <p className="sp-cierre-o">¿Prefieres ver primero la plataforma completa?</p>
             <div className="sp-cta">
               <a href={DEMO} className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
-              <Link href="/login" className="sp-btn sp-btn-linea">Iniciar sesión</Link>
+              <Link href="/codigo" className="sp-btn sp-btn-linea">Tengo un código</Link>
             </div>
           </div>
         </section>
@@ -511,6 +520,8 @@ export function SitioPublico() {
           <nav aria-label="Pie de página">
             {SECCIONES.map(([h, t]) => <a key={h} href={h}>{t}</a>)}
             <a href="#roles">Para quién</a>
+            <a href="#diagnosticos">Diagnósticos</a>
+            <Link href="/codigo">Tengo un código</Link>
             <Link href="/login">Iniciar sesión</Link>
           </nav>
         </div>
