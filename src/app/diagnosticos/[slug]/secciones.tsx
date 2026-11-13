@@ -297,7 +297,7 @@ function MadMide() {
           <ul className="sp-dx-dik">
             {p.evidencia.map((e) => <li key={e.k}><span className="sp-dx-ico"><e.icono size={18} /></span><div><b>{e.k}</b><i>{e.q}</i><span>{e.ej}</span><Medidor valor={e.val} rotulo={e.k} /></div></li>)}
           </ul>
-          <p className="sp-dx-min">El asesor califica cada componente de 0 a 4 con lo que encuentra.</p>
+          <p className="sp-dx-min">El consultor califica cada componente de 0 a 4 con lo que encuentra.</p>
         </article>
         <article className="sp-dx-bloque">
           <span className="sp-dx-paso">3 · Cómo se asigna el nivel</span>
@@ -380,7 +380,7 @@ function MadCalculo() {
             <p><span>−100</span><span>−20</span><span>+20</span><span>+100</span></p>
           </div>
         </Regla>
-        <Regla n={5} t="Nivel y meta" d="El asesor asigna el nivel de 1 a 5 con la rúbrica y se fija la meta a la que la organización quiere llegar.">
+        <Regla n={5} t="Nivel y meta" d="El consultor asigna el nivel de 1 a 5 con la rúbrica y se fija la meta a la que la organización quiere llegar.">
           <Escalera nombres={NIVELES.map((n) => n.name)} marcas={{ [p.nivel]: { t: "Hoy", tipo: "hoy" }, [p.meta]: { t: "Meta", tipo: "meta" } }} rotulo={`Cinco niveles de madurez; en el ejemplo, nivel ${p.nivel} hoy y meta ${p.meta}`} />
           <ol className="sp-dx-niveles">{NIVELES.map((n, i) => <li key={n.name} style={v({ "--c": `var(--n${i + 1})` })}><b>{i + 1}</b><div><strong>{n.name}</strong>{n.d}</div></li>)}</ol>
         </Regla>
@@ -399,7 +399,7 @@ function MadResultados() {
   return (
     <Sec id="resultados" blanca kicker="Qué resultados arroja" titulo="Un informe que se lee en gráficas y termina en decisiones"
       lead="El informe de resultados reúne los niveles, las brechas, la comparación con la industria y las prioridades. Estas son sus vistas principales.">
-      <Caso>Comercial Andina es una empresa ficticia de distribución, con 180 personas. Doce personas respondieron la percepción y el asesor verificó la evidencia de las 48 prácticas. Todas las cifras de esta sección son inventadas para mostrar cómo se lee el informe.</Caso>
+      <Caso>Comercial Andina es una empresa ficticia de distribución, con 180 personas. Doce personas respondieron la percepción y el consultor verificó la evidencia de las 48 prácticas. Todas las cifras de esta sección son inventadas para mostrar cómo se lee el informe.</Caso>
       <div className="sp-dx-galeria">
         <Fig titulo="Índice general de madurez digital" nota="Pondera los cuatro frentes. Es la cifra con la que se compara la siguiente medición.">
           <Escala100 valor={E.general} rotulo="Índice general" />
@@ -728,7 +728,7 @@ function TestResultados() {
               <div data-asesor=""><small>Qué no necesita ahora</small><p>{E.asesor.noNecesita}</p></div>
               <div><small>Pendientes de verificación</small><p>{E.pendientes}. Una práctica declarada y no demostrada queda como máximo en nivel 2.</p></div>
             </div>
-            <footer><span><i />Lo calcula la plataforma con tus respuestas</span><span data-asesor=""><i />Lo completa el asesor contigo, al verificar la evidencia</span></footer>
+            <footer><span><i />Lo calcula la plataforma con tus respuestas</span><span data-asesor=""><i />Lo completa el consultor contigo, al verificar la evidencia</span></footer>
           </div>
         </Fig>
       </div>

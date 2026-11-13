@@ -52,7 +52,7 @@ export function CodigoClient({ inicial }: { inicial: string }) {
             <form onSubmit={(e) => { e.preventDefault(); if (codigo.trim()) void consultar(codigo); }}>
               <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--gold-wash)] text-[var(--gold)]"><KeyRound size={20} /></span>
               <h1 className="mt-4 text-[23px] font-extrabold leading-tight tracking-[-0.02em] text-ink">Tengo un código</h1>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-muted">Escribe el código que te envió tu asesor por correo. Con él registras tu organización y entras a tus diagnósticos.</p>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-muted">Escribe el código que te envió tu consultor por correo. Con él registras tu organización y entras a tus diagnósticos.</p>
               <label className="mt-6 block"><span className="label">Código de acceso</span>
                 <input value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} autoFocus autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={20} placeholder="GE-XXXX-XXXX"
                   aria-describedby={error ? "codigo-error" : undefined} className="input num mt-1.5 text-center !text-[20px] font-bold tracking-[0.18em]" /></label>

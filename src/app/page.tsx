@@ -6,10 +6,10 @@ import { SitioPublico } from "./sitio-publico";
 export const metadata: Metadata = {
   title: "Gestión estratégica · De la estrategia declarada a la estrategia cumplida",
   description:
-    "Plataforma para comités directivos: diagnóstico de capacidades, definición de prioridades, objetivos y resultados clave, priorización de iniciativas y seguimiento trimestral.",
+    "Consultores expertos en análisis y toma de decisiones acompañan al comité directivo, con una plataforma para el diagnóstico, las prioridades, los resultados clave, la priorización de iniciativas y el seguimiento trimestral.",
   openGraph: {
     title: "Gestión estratégica",
-    description: "Del diagnóstico de capacidades al seguimiento trimestral: cada decisión conserva sus criterios, responsables y evidencias.",
+    description: "Acompañamiento de consultores expertos y una plataforma: del diagnóstico al seguimiento trimestral, cada decisión conserva sus criterios, responsables y evidencias.",
     locale: "es_CO",
     type: "website",
   },

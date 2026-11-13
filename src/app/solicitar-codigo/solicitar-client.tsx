@@ -93,7 +93,7 @@ export function SolicitarClient({ inicial, volver }: { inicial: AlcanceCodigo[];
               <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}><label>Sitio web<input tabIndex={-1} autoComplete="off" value={f.sitio} onChange={set("sitio")} /></label></div>
 
               <label className="mt-4 flex items-start gap-2.5"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--navy)]" {...mal("consent")} />
-                <span className="text-[12px] leading-snug text-ink-soft">Autorizo a 4Shine Empresas a usar estos datos para responder mi solicitud y contactarme sobre el diagnóstico. Puedo pedir que los corrijan o los eliminen escribiendo a plataforma@algoritmot.com.</span></label>
+                <span className="text-[12px] leading-snug text-ink-soft">Autorizo a Algoritmo T · 4Shine Empresas a usar estos datos para responder mi solicitud y contactarme sobre el diagnóstico. Puedo pedir que los corrijan o los eliminen escribiendo a plataforma@algoritmot.com.</span></label>
               {error && <p id="solicitud-error" role="alert" className="mt-4 rounded-lg px-3.5 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))", color: "var(--bad-text)" }}>{error.texto}</p>}
               <button type="submit" disabled={busy || !consent} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 !py-2.5 text-[13.5px] font-bold disabled:opacity-50">
                 {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {busy ? "Enviando…" : "Enviar solicitud"}

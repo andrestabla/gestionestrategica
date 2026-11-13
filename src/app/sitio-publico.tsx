@@ -1,11 +1,14 @@
 // Sitio público (/): lo que ve quien llega sin sesión. Componente de servidor,
-// sin JavaScript propio. Presenta la plataforma por lo que hace (estrategia,
-// priorización en sesión, gestión de proyectos, inteligencia), sin nombrar el
-// método ni su mapa. Las vistas son ilustrativas, con datos de ejemplo que
+// sin JavaScript propio. Gestión estratégica es dos cosas, en este orden: el
+// acompañamiento de un equipo de consultores expertos en análisis y toma de
+// decisiones, y la plataforma donde esas decisiones se registran y se cumplen.
+// El sitio presenta primero el acompañamiento (por fases, con sesiones
+// presenciales y virtuales) y después la plataforma por lo que hace, sin nombrar
+// el método ni su mapa. Las vistas son ilustrativas, con datos de ejemplo que
 // cumplen las reglas reales de la matriz de priorización.
 
 import Link from "next/link";
-import { ArrowDown, ArrowRight, Building2, Check, ExternalLink, FileDown, History, Paperclip, Presentation, Radio, Scale, ShieldCheck, Smartphone, Target, UsersRound } from "lucide-react";
+import { ArrowDown, ArrowRight, Building2, Check, ExternalLink, FileDown, History, Laptop, LineChart, MessageCircleQuestion, Paperclip, Presentation, Radio, Route, Scale, ScanSearch, SearchCheck, ShieldCheck, Smartphone, Target, Telescope, UsersRound, Video } from "lucide-react";
 import { DESARROLLADO_POR, MarcaGE } from "@/components/logo";
 import { CRITERIA, LEVEL_NAMES, type Level } from "@/lib/priorizacion";
 import { DIAGNOSTICOS_PUBLICOS } from "@/data/diagnosticos-publicos";
@@ -41,12 +44,50 @@ const AREAS = [
   { t: "Inteligencia", d: "Datos del sector y del mercado con la fuente declarada.", h: "#inteligencia" },
 ];
 
-const PASOS = [
-  { t: "Diagnosticar", d: "Un diagnóstico de capacidades con tres fuentes muestra el punto de partida: autoevaluación del equipo directivo, percepción anónima de los equipos y evidencia verificada.", s: "Brechas y punto de partida" },
-  { t: "Elegir", d: "El comité define pocas prioridades estratégicas y los objetivos que responden a cada una. Solo ingresan al portafolio los objetivos vinculados con una prioridad.", s: "Prioridades y objetivos" },
-  { t: "Medir", d: "Cada objetivo se concreta en resultados clave con línea base, meta y fecha. La validación asistida por IA señala lo que le falta a cada formulación.", s: "Resultados clave" },
-  { t: "Priorizar", d: "El comité califica las iniciativas con cuatro criterios. El puntaje ordena y el comité decide: implementar, preparar, aplazar o renunciar.", s: "Matriz y portafolio" },
-  { t: "Cumplir", d: "Lo aprobado se traduce en compromisos trimestrales y en un plan de trabajo con tareas, responsables y evidencias. El informe ejecutivo muestra el avance en cada corte.", s: "Cascada y proyectos" },
+// Cada paso de la ruta y cómo lo acompaña el equipo consultor: qué se define, quiénes deciden, a quiénes involucra,
+// qué hace el consultor y en qué tipo de sesión se trabaja (presencial, virtual o ambas).
+type Sesion = { tipo: "presencial" | "virtual"; d: string };
+const PASOS: { t: string; d: string; s: string; define: string; actores: string; interesados: string; consultor: string; sesiones: Sesion[] }[] = [
+  { t: "Diagnosticar", d: "Un diagnóstico de capacidades con tres fuentes muestra el punto de partida: autoevaluación del equipo directivo, percepción anónima de los equipos y evidencia verificada.", s: "Brechas y punto de partida",
+    define: "El punto de partida: las brechas de capacidad y de madurez digital.", actores: "Equipo directivo", interesados: "Los equipos de la organización, con su percepción anónima",
+    consultor: "Verifica la evidencia y lee los resultados con la dirección.",
+    sesiones: [{ tipo: "virtual", d: "Levantamiento y revisión de evidencia" }, { tipo: "presencial", d: "Lectura de resultados" }] },
+  { t: "Elegir", d: "El comité define pocas prioridades estratégicas y los objetivos que responden a cada una. Solo ingresan al portafolio los objetivos vinculados con una prioridad.", s: "Prioridades y objetivos",
+    define: "Las prioridades estratégicas y los objetivos que responden a cada una.", actores: "Comité directivo", interesados: "Junta o propietarios y líderes de área",
+    consultor: "Prepara el análisis y facilita la sesión en la que el comité elige y renuncia.",
+    sesiones: [{ tipo: "presencial", d: "Sesión estratégica del comité" }] },
+  { t: "Medir", d: "Cada objetivo se concreta en resultados clave con línea base, meta y fecha. La validación asistida por IA señala lo que le falta a cada formulación.", s: "Resultados clave",
+    define: "Los resultados clave: línea base, meta, fecha y responsable.", actores: "Líderes y responsables de área", interesados: "Comité directivo, que los aprueba",
+    consultor: "Revisa cada formulación con quien la escribe, antes de que llegue al comité.",
+    sesiones: [{ tipo: "virtual", d: "Sesiones de trabajo por área" }] },
+  { t: "Priorizar", d: "El comité califica las iniciativas con cuatro criterios. El puntaje ordena y el comité decide: implementar, preparar, aplazar o renunciar.", s: "Matriz y portafolio",
+    define: "El portafolio: qué se implementa, qué se prepara, qué se aplaza y a qué se renuncia.", actores: "Comité directivo", interesados: "Líderes de las iniciativas",
+    consultor: "Conduce la sesión y lleva la conversación a donde hay desacuerdo.",
+    sesiones: [{ tipo: "presencial", d: "Sesión de priorización" }] },
+  { t: "Cumplir", d: "Lo aprobado se traduce en compromisos trimestrales y en un plan de trabajo con tareas, responsables y evidencias. El informe ejecutivo muestra el avance en cada corte.", s: "Cascada y proyectos",
+    define: "Los compromisos del trimestre y el plan de trabajo de cada proyecto.", actores: "Líderes y responsables", interesados: "Comité directivo, que recibe el informe de cada corte",
+    consultor: "Acompaña cada corte, verifica las evidencias y ayuda a corregir el rumbo.",
+    sesiones: [{ tipo: "virtual", d: "Seguimiento con responsables" }, { tipo: "presencial", d: "Corte trimestral del comité" }] },
+];
+const SESION = { presencial: { label: "Presencial", icon: UsersRound }, virtual: { label: "Virtual", icon: Video } } as const;
+
+// ── el acompañamiento ──
+const CONSULTOR_HACE = [
+  { icon: LineChart, t: "Analiza", d: "Convierte el diagnóstico y la inteligencia en lecturas que la dirección puede discutir." },
+  { icon: Presentation, t: "Facilita", d: "Conduce las sesiones en las que el comité elige, califica y renuncia." },
+  { icon: MessageCircleQuestion, t: "Cuestiona", d: "Revisa cada objetivo, resultado clave e iniciativa antes de que se decida sobre ellos." },
+  { icon: SearchCheck, t: "Verifica", d: "Comprueba la evidencia del diagnóstico y de cada entrega." },
+  { icon: Route, t: "Acompaña", d: "Sigue cada corte con la dirección y ayuda a corregir el rumbo." },
+];
+const FUENTES_DECISION = [
+  { icon: ScanSearch, t: "Conocimiento profundo de la organización", chips: ["Capacidades", "Madurez digital", "Evidencia verificada"] },
+  { icon: Telescope, t: "Inteligencia del entorno", chips: ["Competencia", "Tendencias", "Proyecciones"] },
+  { icon: UsersRound, t: "Consultores expertos", chips: ["Análisis", "Facilitación", "Criterio"], fuerte: true },
+];
+const MODALIDADES = [
+  { icon: UsersRound, t: "Sesiones presenciales", d: "Para las definiciones que comprometen a todo el comité: elegir prioridades, calificar iniciativas y decidir el portafolio." },
+  { icon: Video, t: "Sesiones virtuales", d: "Para el trabajo por áreas y el seguimiento: formular resultados clave, revisar avances y verificar evidencias." },
+  { icon: Laptop, t: "Entre sesiones, la plataforma", d: "Lo decidido queda registrado con sus criterios, y cada responsable sabe qué le corresponde y para cuándo." },
 ];
 
 // ── gestión de proyectos (vista ilustrativa; «hoy» es el 10 de noviembre) ──
@@ -56,7 +97,7 @@ const RASGOS_GP = [
   ["Tablero y cronograma.", "Tareas por estado, línea base, dependencias, hitos y ruta crítica: cada reprogramación se mide contra la fecha comprometida."],
   ["Riesgos.", "Probabilidad e impacto de cada riesgo, su respuesta, su responsable y el resultado clave que pondría en peligro."],
   ["Presupuesto frente al avance.", "Lo comprometido y lo ejecutado se comparan con lo avanzado, y se proyecta el costo al cierre."],
-  ["Cierre con evidencia.", "Una tarea pasa al estado «Hecha» cuando incluye su soporte, y el asesor verifica la evidencia."],
+  ["Cierre con evidencia.", "Una tarea pasa al estado «Hecha» cuando incluye su soporte, y el consultor verifica la evidencia."],
   ["Carga por persona.", "Tareas abiertas, vencidas y próximas a vencer de cada responsable y de sus corresponsables."],
   ["Alertas e historial.", "Vencimientos, bloqueos y el registro de cada cambio, con su fecha y su autor."],
 ];
@@ -119,11 +160,11 @@ const INCLUYE = [
 
 const ROLES = [
   { icon: Target, t: "Comité directivo", d: "Decide con la misma regla y ve el avance de lo que aprobó.", l: ["Define prioridades y objetivos", "Califica iniciativas desde el celular", "Decide qué implementar, preparar, aplazar o descartar"] },
-  { icon: Presentation, t: "Asesor estratégico", d: "Conduce el proceso y deja el registro de cada decisión.", l: ["Facilita las sesiones de trabajo", "Revisa la formulación antes de calificar", "Verifica las evidencias"] },
+  { icon: Presentation, t: "Consultor estratégico", d: "Conduce el proceso y deja el registro de cada decisión.", l: ["Facilita las sesiones presenciales y virtuales", "Revisa la formulación antes de calificar", "Verifica las evidencias"] },
   { icon: UsersRound, t: "Líderes y responsables", d: "Reciben lo aprobado con fechas y reportan su avance.", l: ["Resultados clave e iniciativas a cargo", "Tareas y proyectos del trimestre", "Evidencia de cada entrega"] },
 ];
 
-const SECCIONES = [["#ruta", "La ruta"], ["#sesion", "En sesión"], ["#proyectos", "Proyectos"], ["#inteligencia", "Inteligencia"], ["#plataforma", "Plataforma"]];
+const SECCIONES = [["#acompanamiento", "Acompañamiento"], ["#ruta", "La ruta"], ["#sesion", "En sesión"], ["#proyectos", "Proyectos"], ["#inteligencia", "Inteligencia"], ["#plataforma", "Plataforma"]];
 
 /** Anillos concéntricos del isotipo: uno de cada tres en dorado. */
 function Anillos({ cx, cy, n = 12, paso = 104 }: { cx: number; cy: number; n?: number; paso?: number }) {
@@ -167,11 +208,11 @@ export function SitioPublico() {
           <Anillos cx={1080} cy={410} />
           <div className="sp-wrap sp-hero-in">
             <div>
-              <span className="sp-kicker rise" style={{ color: "var(--gold-fill)" }}>Plataforma de gestión estratégica</span>
+              <span className="sp-kicker rise" style={{ color: "var(--gold-fill)" }}>Consultores expertos y plataforma</span>
               <h1 className="sp-h1 rise rise-1"><span>De la estrategia</span> <span><i>declarada</i></span> <span>a la estrategia</span> <span><em>cumplida</em>.</span></h1>
               <p className="sp-hero-p rise rise-2">
-                Gestión estratégica acompaña al comité directivo desde la definición de prioridades hasta el seguimiento de cada proyecto.
-                Los objetivos, los resultados clave y las iniciativas quedan conectados y visibles para quienes participan.
+                Un equipo de consultores expertos en análisis y toma de decisiones acompaña al comité directivo, desde el diagnóstico hasta el seguimiento de cada proyecto.
+                La plataforma conecta lo que se decide (objetivos, resultados clave e iniciativas) y lo mantiene visible para quienes participan.
               </p>
               <div className="sp-cta rise rise-3">
                 <a href={DEMO} className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
@@ -234,12 +275,54 @@ export function SitioPublico() {
           </div>
         </section>
 
+        {/* ── el acompañamiento ── */}
+        <section id="acompanamiento" className="sp-sec sp-blanca">
+          <div className="sp-wrap">
+            <div className="sp-acomp">
+              <div>
+                <span className="sp-kicker">El acompañamiento</span>
+                <h2 className="sp-h2">Antes que una plataforma, un equipo de consultores expertos.</h2>
+                <p className="sp-lead">
+                  Gestión estratégica es, ante todo, acompañamiento. Las decisiones se toman a partir del conocimiento profundo de la organización y de la inteligencia de su entorno,
+                  con consultores expertos en análisis y toma de decisiones al lado de la dirección. La plataforma registra lo decidido y ayuda a cumplirlo.
+                </p>
+                <ul className="sp-puntos-clave">
+                  {CONSULTOR_HACE.map((x) => <li key={x.t}><span className="sp-ico"><x.icon size={20} /></span><div><b>{x.t}</b><span>{x.d}</span></div></li>)}
+                </ul>
+              </div>
+
+              <figure className="sp-decision sp-ver" role="img" aria-label="De dónde sale cada decisión: del conocimiento profundo de la organización, de la inteligencia del entorno y del trabajo con consultores expertos. La plataforma registra la decisión y sigue su cumplimiento.">
+                <figcaption>De dónde sale cada decisión</figcaption>
+                <div className="sp-decision-f" aria-hidden="true">
+                  {FUENTES_DECISION.map((f) => (
+                    <div key={f.t} className={f.fuerte ? "sp-fuerte" : undefined}>
+                      <span className="sp-ico"><f.icon size={20} /></span>
+                      <b>{f.t}</b>
+                      <p>{f.chips.map((c) => <i key={c}>{c}</i>)}</p>
+                    </div>
+                  ))}
+                </div>
+                <ArrowDown className="sp-decision-fl" size={22} strokeWidth={2.4} aria-hidden="true" />
+                <div className="sp-decision-d" aria-hidden="true"><b>La decisión del comité</b><span>Con sus criterios, sus responsables y su evidencia</span></div>
+                <ArrowDown className="sp-decision-fl" size={22} strokeWidth={2.4} aria-hidden="true" />
+                <div className="sp-decision-p" aria-hidden="true"><b>La plataforma</b><span>La registra, la conecta con el resto de la estrategia y sigue su cumplimiento</span></div>
+              </figure>
+            </div>
+
+            <div className="sp-modalidades">
+              {MODALIDADES.map((m) => (
+                <article key={m.t} className="sp-ver"><span className="sp-ico"><m.icon size={22} /></span><h3>{m.t}</h3><p>{m.d}</p></article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── la ruta ── */}
         <section id="ruta" className="sp-sec sp-oscura">
           <div className="sp-wrap">
             <span className="sp-kicker">La ruta</span>
             <h2 className="sp-h2">Cinco pasos, del diagnóstico al trimestre.</h2>
-            <p className="sp-lead">Cada paso deja una decisión registrada y habilita el siguiente. Toda iniciativa se vincula con un resultado clave antes de ser calificada.</p>
+            <p className="sp-lead">Cada paso deja una decisión registrada y habilita el siguiente. Toda iniciativa se vincula con un resultado clave antes de ser calificada. El equipo consultor acompaña cada paso.</p>
             <ol className="sp-ruta">
               {PASOS.map((p, i) => (
                 <li className="sp-paso" key={p.t} style={v({ "--i": i })}>
@@ -250,6 +333,26 @@ export function SitioPublico() {
                 </li>
               ))}
             </ol>
+
+            <h3 className="sp-fases-t">El acompañamiento en cada fase</h3>
+            <p className="sp-fases-p">Cada fase tiene su propia definición, sus protagonistas y su forma de trabajo. El consultor ajusta la sesión a lo que se va a decidir y a quiénes deben estar.</p>
+            <div className="sp-fases">
+              <div className="sp-fases-cab" aria-hidden="true"><span />{PASOS.map((p, i) => <span key={p.t}><code>0{i + 1}</code>{p.t}</span>)}</div>
+              {([["define", "Qué se define"], ["actores", "Quiénes deciden"], ["interesados", "A quiénes involucra"], ["consultor", "Qué hace el consultor"]] as const).map(([k, rotulo]) => (
+                <div className="sp-fases-fila" key={k} data-fila={k}>
+                  <span className="sp-fases-r">{rotulo}</span>
+                  {PASOS.map((p, i) => <div key={p.t} data-fase={`0${i + 1} · ${p.t}`} data-rotulo={rotulo}>{p[k]}</div>)}
+                </div>
+              ))}
+              <div className="sp-fases-fila" data-fila="sesiones">
+                <span className="sp-fases-r">Cómo se trabaja</span>
+                {PASOS.map((p, i) => (
+                  <div key={p.t} data-fase={`0${i + 1} · ${p.t}`} data-rotulo="Cómo se trabaja">
+                    {p.sesiones.map((x) => { const I = SESION[x.tipo].icon; return <span key={x.tipo} className="sp-sesion-chip" data-tipo={x.tipo}><b><I size={14} aria-hidden="true" />{SESION[x.tipo].label}</b>{x.d}</span>; })}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

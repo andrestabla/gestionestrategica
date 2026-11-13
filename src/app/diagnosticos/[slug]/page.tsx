@@ -21,7 +21,7 @@ const ICONOS: Record<string, LucideIcon> = {
   SearchCheck, Shield, Signpost, Target, TrendingUp, Users, Wallet,
 };
 const Ico = ({ n, size = 20 }: { n: string; size?: number }) => { const I = ICONOS[n] ?? Signpost; return <I size={size} aria-hidden="true" />; };
-const QUIEN: Record<string, string> = { "Tú": "tu", "La plataforma": "plataforma", "Tu asesor": "asesor" };
+const QUIEN: Record<string, string> = { "Tú": "tu", "La plataforma": "plataforma", "Tu consultor": "asesor" };
 const INDICE = [["proposito", "Propósito"], ["mide", "Qué mide"], ["como", "Cómo se hace"], ["calculo", "Cómo se calcula"], ["resultados", "Resultados"], ["usos", "Para qué sirven"], ["antes", "Antes de empezar"]];
 export function generateStaticParams() { return DIAGNOSTICOS_PUBLICOS.map((d) => ({ slug: d.slug })); }
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
