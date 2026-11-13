@@ -303,7 +303,10 @@ const hasDb = () => Boolean(process.env.DATABASE_URL);
 // páginas cliente importan el store), pero el cliente Prisma y el driver
 // SQLite son solo-servidor. new Function esconde el import del bundler;
 // en el navegador nunca se ejecuta (hasDb() es false sin DATABASE_URL).
-const serverImport = new Function("m", "return import(m)") as (m: string) => Promise<Record<string, unknown>>;
+// La función se crea la primera vez que se usa, nunca al cargar el módulo: este archivo llega también al navegador
+// (una pantalla importa de aquí sus constantes) y allí la política de contenido prohíbe evaluar texto como código.
+let importar: ((m: string) => Promise<Record<string, unknown>>) | null = null;
+const serverImport = (m: string): Promise<Record<string, unknown>> => (importar ??= new Function("m", "return import(m)") as (m: string) => Promise<Record<string, unknown>>)(m);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyPrisma = any;
