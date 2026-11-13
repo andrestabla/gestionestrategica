@@ -25,6 +25,28 @@ export function splitTenantPath(pathname: string): { tenant: string | null; path
   return { tenant: first, path: "/" + rest.join("/") };
 }
 
+/** Cabecera con la que el navegador declara la empresa de la página que origina una llamada a la API. La sesión
+    (cookie) es una sola para todas las pestañas: sin esto, una pestaña abierta en la empresa A operaría sobre la B
+    si otra pestaña cambió la empresa activa. */
+export const PAGE_TENANT_HEADER = "x-tenant-pagina";
+
+const slugValido = (s: string | null | undefined): s is string => !!s && SLUG_RE.test(s) && !RESERVED.has(s);
+
+/** Empresa de la página que originó la petición: la que declara el cliente (cabecera x-tenant-pagina) o, si no llega
+    —enlaces de descarga, imágenes, formularios: no pueden llevar cabeceras propias—, la del Referer cuando es de este
+    mismo sitio. Nulo cuando la página no es de ninguna empresa (/empresas, /login) o no se puede saber. */
+export function pageTenant(o: { declarada?: string | null; referer?: string | null; hosts?: (string | null | undefined)[] }): string | null {
+  const declarada = o.declarada?.trim().toLowerCase();
+  if (slugValido(declarada)) return declarada;
+  if (!o.referer) return null;
+  try {
+    const u = new URL(o.referer);
+    const hosts = (o.hosts ?? []).flatMap((h) => (h ? [h.split(",")[0].trim().toLowerCase()] : []));
+    if (!hosts.includes(u.host.toLowerCase())) return null;   // un Referer de otro sitio no dice nada de nuestras empresas
+    return splitTenantPath(u.pathname).tenant;
+  } catch { return null; }
+}
+
 /** Prefijo de rutas de una empresa («/cresio») o vacío sin empresa. */
 export const tenantBase = (slug?: string | null): string => (slug && SLUG_RE.test(slug) ? `/${slug}` : "");
 

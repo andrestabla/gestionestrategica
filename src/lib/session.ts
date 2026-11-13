@@ -90,6 +90,14 @@ export async function renewSession(user: SessionUser) {
   } catch { /* token ilegible: no se renueva */ }
 }
 
+/** Cambia datos de la cuenta en la sesión vigente (nombre, verificación en dos pasos) sin tocar su empresa activa.
+    Las rutas de la API reciben la sesión tal como opera en la empresa de la PÁGINA, que puede no ser la activa de la
+    cookie (otra pestaña la cambió): reescribir la cookie con esa copia cambiaría de empresa a las demás pestañas. */
+export async function patchSession(cambios: Partial<Pick<SessionUser, "name" | "mfa">>) {
+  const actual = await getSession();
+  if (actual) await setSession({ ...actual, ...cambios });
+}
+
 export async function clearSession() {
   const store = await cookies();
   store.delete(COOKIE);

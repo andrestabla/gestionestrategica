@@ -1,0 +1,49 @@
+// Empresa sobre la que opera una petición a la API.
+//
+// Regla: una petición nunca opera sobre una empresa distinta de la que muestra la página que la originó. La sesión
+// (cookie) guarda una empresa activa, pero es una sola para todas las pestañas; la página, en cambio, sabe en qué
+// empresa está. Por eso manda la empresa de la petición —el prefijo de la URL (/empresa/api/…) o la que declara la
+// página— y la de la sesión solo se usa cuando la petición no dice ninguna (p. ej. desde /empresas).
+//
+// Si la empresa pedida no es la activa de la sesión (otra pestaña la cambió), se opera sobre la pedida siempre que
+// la cuenta tenga acceso a ella —el administrador de la plataforma, o una cuenta con esa empresa como principal o
+// membresía, con el rol y el ámbito que tiene ALLÍ—; si no lo tiene, la petición se rechaza sin tocar nada. La
+// sesión no cambia: cada pestaña sigue operando en su empresa.
+
+import type { SessionUser } from "@/lib/session";
+import { companyBySlug, membershipOf, exigeCodigoEn, hydrateCompanies } from "@/server/store";
+
+export type EmpresaPeticion =
+  | { ok: true; slug: string; actor: SessionUser }
+  | { ok: false; status: number; error: string; verificar?: string; recargar?: true };
+
+/** `url`: empresa del prefijo de la ruta (cabecera x-tenant del proxy). `pagina`: empresa de la página que lanzó la
+    petición (x-tenant-pagina o Referer). `actor` es la sesión tal como opera en la empresa resuelta. */
+export async function resolverEmpresa(user: SessionUser, origen: { url?: string | null; pagina?: string | null } = {}): Promise<EmpresaPeticion> {
+  await hydrateCompanies();
+  const sesion = user.company?.slug ?? null;
+  const pedida = origen.url ?? origen.pagina ?? null;
+  const slug = pedida ?? sesion;
+  if (!slug) return { ok: false, status: 409, error: user.role === "ADMIN" ? "Elige una empresa para operar." : "Tu cuenta no tiene empresa asignada." };
+  const c = companyBySlug(slug);
+  let actor = user;
+  if (slug !== sesion) {
+    // la petición es de una empresa que no es la activa de la sesión: solo sigue si la cuenta tiene acceso a ella
+    if (user.role !== "ADMIN") {
+      const m = c ? await membershipOf(user.email, slug) : null;
+      if (!m) {
+        if (origen.url) return { ok: false, status: 403, error: "Esta ruta es de otra empresa. Entra por el enlace de la tuya." };
+        return { ok: false, status: 409, recargar: true, error: `Esta página es de otra empresa y tu sesión ${user.company ? `está ahora en «${user.company.name || user.company.slug}»` : "ya no tiene una empresa activa"}. No se hizo ningún cambio: recarga la página para continuar.` };
+      }
+      actor = { ...user, role: m.role, line: m.line, responsibleId: m.responsibleId };
+    }
+    if (c) actor = { ...actor, company: { slug: c.slug, name: c.name, shortName: c.shortName, mode: c.mode } };
+  }
+  if (!c) return { ok: false, status: 409, error: slug === sesion ? "La empresa de tu sesión ya no existe." : "La empresa de esta página ya no existe." };
+  if (!c.active && user.role !== "ADMIN") return { ok: false, status: 403, error: "La empresa está desactivada." };
+  // acceso en dos pasos: la empresa solo admite sesiones que pasaron por el código enviado al correo
+  if (exigeCodigoEn(slug) && !user.mfa) return { ok: false, status: 401, error: "Esta empresa exige el acceso en dos pasos. Vuelve a iniciar sesión para recibir el código en tu correo.", verificar: `/${slug}/login?verificar=1` };
+  // el modo de la empresa viaja en la sesión; si la cookie es anterior o la empresa cambió de modo, se toma de la empresa
+  if (actor.company && c.mode && actor.company.mode !== c.mode) actor = { ...actor, company: { ...actor.company, mode: c.mode } };
+  return { ok: true, slug, actor };
+}

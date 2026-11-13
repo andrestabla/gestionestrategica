@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { catalog, setTwoFactor, verificarCodigo } from "@/server/store";
 import { can } from "@/lib/permissions";
-import { setSession } from "@/lib/session";
+import { patchSession } from "@/lib/session";
 import { mailConfigured } from "@/server/mail";
 import { enviarCodigo } from "@/server/dos-pasos";
 import { limpiarCodigo, codigoValido, enmascarar, CODIGO_DIGITOS, CODIGO_MINUTOS } from "@/lib/dos-pasos";
@@ -43,6 +43,6 @@ export const PATCH = withTenant(async (req: Request, _ctx: unknown, user) => {
   }
   const r = setTwoFactor(user, true);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
-  await setSession({ ...user, mfa: true });
+  await patchSession({ mfa: true });
   return NextResponse.json({ ok: true, twoFactor: true });
 });

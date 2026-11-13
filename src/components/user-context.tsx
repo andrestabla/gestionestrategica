@@ -7,6 +7,10 @@ import { createContext, useContext, type ReactNode } from "react";
 import type { SessionUser } from "@/lib/session";
 import { describeAccess, can, type ModuleKey, type Action, type Scope } from "@/lib/permissions";
 import { useScopeName } from "@/components/catalog-context";
+import { instalarFetchEmpresa } from "@/lib/fetch-empresa";
+
+// toda llamada a la API de empresa declara la empresa de la página que la lanza (ver lib/fetch-empresa)
+instalarFetchEmpresa();
 
 const Ctx = createContext<SessionUser | null>(null);
 

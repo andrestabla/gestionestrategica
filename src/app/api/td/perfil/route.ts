@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { ownProfile, updateOwnProfile, deleteOwnAccount, hasPassword, flushOrError } from "@/server/store";
-import { setSession, clearSession } from "@/lib/session";
+import { patchSession, clearSession } from "@/lib/session";
 
 // GET    /api/td/perfil — datos de la propia cuenta.
 // PATCH  /api/td/perfil { name } — actualiza los datos básicos (y la sesión).
@@ -17,7 +17,7 @@ export const PATCH = withTenant(async (req: Request, _ctx: unknown, user) => {
   const r = updateOwnProfile(user, { name: body?.name });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
-  await setSession({ ...user, name: r.name });
+  await patchSession({ name: r.name });
   return NextResponse.json({ ok: true, name: r.name });
 });
 

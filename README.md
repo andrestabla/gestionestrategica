@@ -184,6 +184,25 @@ empresa (401 en otra) y una ruta ajena la devuelve a la suya; el admin entra
 por `/login`, y al abrir `/<empresa>/…` esa empresa queda activa en su
 sesión. El identificador se edita en el formulario de la empresa.
 
+**La empresa de una petición es la de la página que la lanza.** La sesión es
+una cookie compartida por todas las pestañas, y las llamadas del cliente van a
+`/api/td/…` sin prefijo de empresa: con una pestaña en la empresa A y otra en
+la B, la última abierta fija la empresa activa y la otra seguiría leyendo y
+escribiendo en ella. Para evitarlo, el navegador declara en cada llamada la
+empresa de su página con la cabecera `x-tenant-pagina` (`src/lib/fetch-empresa.ts`,
+instalado al cargar el panel) y, cuando la cabecera no puede viajar —enlaces de
+descarga, imágenes—, el servidor la toma del `Referer` del mismo sitio.
+`withTenant()` resuelve la empresa con `resolverEmpresa()`
+(`src/server/empresa-peticion.ts`): prefijo de la URL, si lo hay; si no, la
+empresa de la página; y solo cuando la petición no dice ninguna (p. ej. desde
+`/empresas`), la activa de la sesión. Si la empresa de la página no es la
+activa, se opera sobre la de la página cuando la cuenta tiene acceso a ella —el
+admin de plataforma, o una cuenta con esa empresa como principal o membresía,
+con el rol y el ámbito que tiene allí—; sin acceso responde 409
+(`recargar: true`) y no toca nada. El acceso en dos pasos y la desactivación se
+exigen sobre la empresa finalmente resuelta, y la cookie no cambia: cada
+pestaña sigue en su empresa. `tests/empresa-de-pagina.test.ts` lo cubre.
+
 El administrador de la plataforma elige la empresa con la que opera en la
 pantalla `/empresas` (una tarjeta por empresa con su sector, ciudad, moneda,
 iniciativas, KPI y cuentas; alta de empresa en modal). Es la primera pantalla

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { urlTenant } from "@/server/request-tenant";
+import { urlTenant, paginaTenant } from "@/server/request-tenant";
 import { getSession, type SessionUser, renewSession } from "@/lib/session";
-import { hydrateFromDb, hydrateCompanies, companyBySlug, registrarSinSesion, flushOrError, exigeCodigoEn } from "@/server/store";
+import { hydrateFromDb, hydrateCompanies, registrarSinSesion, flushOrError } from "@/server/store";
+import { resolverEmpresa } from "@/server/empresa-peticion";
 import { runWithTenant } from "@/server/tenant";
 
 /** Todas las rutas /api/td/* exigen sesión (compatibilidad). */
@@ -14,23 +15,14 @@ export async function guard() {
   return null;
 }
 
-/** Resuelve la empresa activa de la sesión: la del usuario, o la elegida por el admin. */
-export async function tenantOf(user: SessionUser): Promise<{ slug: string } | NextResponse> {
-  await hydrateCompanies();
-  const fromUrl = await urlTenant();
-  if (fromUrl && user.role !== "ADMIN" && user.company?.slug !== fromUrl) {
-    return NextResponse.json({ error: "Esta ruta es de otra empresa. Entra por el enlace de la tuya." }, { status: 403 });
-  }
-  const slug = fromUrl ?? user.company?.slug;
-  if (!slug) {
-    return NextResponse.json({ error: user.role === "ADMIN" ? "Elige una empresa para operar." : "Tu cuenta no tiene empresa asignada." }, { status: 409 });
-  }
-  const c = companyBySlug(slug);
-  if (!c) return NextResponse.json({ error: "La empresa de tu sesión ya no existe." }, { status: 409 });
-  if (!c.active && user.role !== "ADMIN") return NextResponse.json({ error: "La empresa está desactivada." }, { status: 403 });
-  // acceso en dos pasos: la empresa solo admite sesiones que pasaron por el código enviado al correo
-  if (exigeCodigoEn(slug) && !user.mfa) return NextResponse.json({ error: "Esta empresa exige el acceso en dos pasos. Vuelve a iniciar sesión para recibir el código en tu correo.", verificar: `/${slug}/login?verificar=1` }, { status: 401 });
-  return { slug };
+/** Resuelve la empresa de la petición: la de la página que la originó (o el prefijo de la URL) y, si la petición
+    no dice ninguna, la activa de la sesión. Devuelve también la sesión tal como opera en esa empresa: cuando otra
+    pestaña cambió la empresa activa, el rol y el ámbito son los de la cuenta en la empresa de la página
+    (src/server/empresa-peticion.ts). */
+export async function tenantOf(user: SessionUser): Promise<{ slug: string; actor: SessionUser } | NextResponse> {
+  const r = await resolverEmpresa(user, { url: await urlTenant(), pagina: await paginaTenant() });
+  if (r.ok) return { slug: r.slug, actor: r.actor };
+  return NextResponse.json({ error: r.error, ...(r.verificar ? { verificar: r.verificar } : {}), ...(r.recargar ? { recargar: true } : {}) }, { status: r.status });
 }
 
 type Handler<C> = (req: Request, ctx: C, user: SessionUser) => Promise<Response> | Response;
@@ -48,9 +40,8 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
     const t = await tenantOf(user);
     if (t instanceof NextResponse) return t;
     await renewSession(user).catch(() => undefined);
-    // el modo de la empresa viaja en la sesión; si la cookie es anterior o la empresa cambió de modo, se toma de la empresa
-    const modo = companyBySlug(t.slug)?.mode;
-    const actor: SessionUser = user.company && user.company.slug === t.slug && modo && user.company.mode !== modo ? { ...user, company: { ...user.company, mode: modo } } : user;
+    // quien actúa es la sesión tal como opera en la empresa de la petición (rol y ámbito de allí); la cookie no cambia
+    const actor = t.actor;
     return runWithTenant(t.slug, async () => {
       // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
       await hydrateFromDb({ force: req.method !== "GET" });
