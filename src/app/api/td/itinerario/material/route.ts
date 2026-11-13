@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../../_helpers";
-import { addItineraryFile, itineraryOf } from "@/server/store";
+import { addItineraryFile, itineraryOf, canItinerary } from "@/server/store";
 import { putObject } from "@/server/storage";
 import { fileIdFrom, FILE_ID_RE, uploadKindOf, FILE_TYPES } from "@/lib/itinerario";
 
@@ -9,6 +9,8 @@ const MAX = 25 * 1024 * 1024;
 // POST /api/td/itinerario/material — sube un PDF o un PowerPoint (multipart:
 // file, name?, group?) al almacenamiento (R2) y lo registra en el itinerario.
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
+  // el permiso va antes de recibir nada: sin él, un archivo con el identificador de un material publicado lo reemplazaría
+  if (!canItinerary(user)) return NextResponse.json({ error: "Los materiales los administra el advisor o la gerencia." }, { status: 403 });
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Adjunta un archivo PDF o PowerPoint." }, { status: 400 });

@@ -4,7 +4,8 @@
 
 import { createHmac, timingSafeEqual } from "crypto";
 
-const SECRET = process.env.AUTH_SECRET ?? "pgtd-dev-secret-cambiar-en-produccion";
+import { authSecret } from "@/lib/clave";
+
 const TOKEN_LEN = 24;
 
 /** Separa un enlace firmado «<slug>-<token>». El slug puede llevar guiones (empresa-vacia), así que el token
@@ -15,7 +16,7 @@ export function splitSignedLink(link: string): { slug: string; token: string } |
 }
 
 export function publicToken(slug: string): string {
-  return createHmac("sha256", SECRET).update(`public:${slug}`).digest("base64url").slice(0, 24);
+  return createHmac("sha256", authSecret()).update(`public:${slug}`).digest("base64url").slice(0, 24);
 }
 
 export function verifyPublicToken(slug: string, token: string): boolean {
@@ -26,7 +27,7 @@ export function verifyPublicToken(slug: string, token: string): boolean {
 
 /** Enlace anónimo de la Fuente 2 (percepción de equipos): token distinto del de la vista pública. */
 export function surveyToken(slug: string): string {
-  return createHmac("sha256", SECRET).update(`f2:${slug}`).digest("base64url").slice(0, 24);
+  return createHmac("sha256", authSecret()).update(`f2:${slug}`).digest("base64url").slice(0, 24);
 }
 export function verifySurveyToken(slug: string, token: string): boolean {
   const expected = surveyToken(slug);
@@ -36,7 +37,7 @@ export function verifySurveyToken(slug: string, token: string): boolean {
 
 /** Enlace de solo lectura del informe consolidado del diagnóstico (sin nombres): lo comparten el administrador o el advisor. */
 export function informeToken(slug: string): string {
-  return createHmac("sha256", SECRET).update(`informe:${slug}`).digest("base64url").slice(0, 24);
+  return createHmac("sha256", authSecret()).update(`informe:${slug}`).digest("base64url").slice(0, 24);
 }
 export function verifyInformeToken(slug: string, token: string): boolean {
   const expected = informeToken(slug);

@@ -4,10 +4,15 @@ import { accessLinks, updateAccess, flushOrError } from "@/server/store";
 import { accessUrl } from "@/lib/acceso";
 
 // Origen público (detrás de Vercel llega en x-forwarded-*).
+/** Origen con el que se arman los enlaces que salen de la plataforma (correos, QR, enlaces públicos). En producción
+    solo se acepta el dominio propio o los que asigna el despliegue; si la petición dice otro (una cabecera Host o
+    X-Forwarded-Host falsificada), se usa el dominio propio. Así un correo de restablecimiento nunca lleva a otro sitio. */
+const SITIO = (process.env.SITIO_ORIGEN?.trim() || "https://gestionestrategica.io").replace(/\/$/, "");
 export function originOf(req: Request): string {
-  const h = req.headers; const host = h.get("x-forwarded-host") ?? h.get("host") ?? new URL(req.url).host;
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
+  const h = req.headers; const host = (h.get("x-forwarded-host") ?? h.get("host") ?? new URL(req.url).host).trim().toLowerCase();
+  if (process.env.NODE_ENV !== "production") return `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
+  const propios = [SITIO.replace(/^https?:\/\//, ""), process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(Boolean).map((x) => String(x).toLowerCase());
+  return propios.includes(host) || propios.includes(host.replace(/^www\./, "")) ? `https://${host}` : SITIO;
 }
 
 // GET /api/td/convencion/acceso — enlaces de acceso de las cinco secciones

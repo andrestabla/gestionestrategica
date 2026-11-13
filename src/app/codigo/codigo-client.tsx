@@ -60,7 +60,7 @@ export function CodigoClient({ inicial }: { inicial: string }) {
               <button type="submit" disabled={busy || !codigo.trim()} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 !py-2.5 text-[13.5px] font-bold disabled:opacity-50">
                 {busy ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />} Continuar
               </button>
-              <p className="mt-4 text-[12.5px] leading-snug text-faint">¿No tienes un código? Los genera el equipo que acompaña el diagnóstico. Puedes <Link href="/#diagnosticos" className="font-semibold text-cyan-deep hover:underline">conocer los diagnósticos</Link> y solicitar el tuyo.</p>
+              <p className="mt-4 text-[12.5px] leading-snug text-faint">¿No tienes un código? Los genera el equipo que acompaña el diagnóstico. Puedes <Link href="/#diagnosticos" className="font-semibold text-cyan-deep hover:underline">conocer los diagnósticos</Link> o <Link href="/solicitar-codigo" className="font-semibold text-cyan-deep hover:underline">solicitar el tuyo</Link>.</p>
             </form>
           ) : info.estado === "usado" ? (
             <div>

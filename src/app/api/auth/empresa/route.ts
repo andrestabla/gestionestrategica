@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession, setSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
-import { hydrateCompanies, companyBySlug, membershipOf, exigeCodigoEn } from "@/server/store";
+import { hydrateCompanies, companyBySlug, membershipOf, exigeCodigoEn, sesionVigente } from "@/server/store";
+import { rutaInterna } from "@/lib/tenant-url";
 import type { SessionUser } from "@/lib/session";
 
 /** Sesión para operar en otra empresa: el admin conserva su rol; las demás cuentas toman el rol y el ámbito de su membresía allí. */
@@ -24,13 +25,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const slug = url.searchParams.get("slug") ?? "";
   const next = url.searchParams.get("next") ?? "";
-  if (!user) return NextResponse.redirect(new URL("/login", req.url));
+  if (!user || !(await sesionVigente(user)).ok) return NextResponse.redirect(new URL("/login", req.url));
   // la empresa exige el acceso en dos pasos y esta sesión no pasó por el código: vuelve a identificarse en su acceso
   if (companyBySlug(slug) && exigeCodigoEn(slug) && !user.mfa) return NextResponse.redirect(new URL(`/${slug}/login?verificar=1`, req.url));
   const session = await sesionEn(user, slug);
   if (!session) return NextResponse.redirect(new URL(user.company ? `/${user.company.slug}/panel` : "/empresas", req.url));
   await setSession(session);
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : `/${slug}/panel`;
+  // solo se vuelve a una ruta de este mismo sitio: «/\\otro.sitio» o «//otro.sitio» saldrían de él
+  const safeNext = rutaInterna(next) ?? `/${slug}/panel`;
   return NextResponse.redirect(new URL(safeNext, req.url));
 }
 
@@ -39,7 +41,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   await hydrateCompanies();
   const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (!user || !(await sesionVigente(user)).ok) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);
   const c = body?.slug ? companyBySlug(String(body.slug)) : null;
   if (!c) return NextResponse.json({ error: "La empresa no existe." }, { status: 404 });

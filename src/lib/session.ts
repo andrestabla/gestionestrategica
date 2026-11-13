@@ -3,8 +3,8 @@
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { authSecret, hayClave } from "@/lib/clave";
 
-const SECRET = process.env.AUTH_SECRET ?? "pgtd-dev-secret-cambiar-en-produccion";
 const COOKIE = "pgtd_session";
 import { INACTIVIDAD_MIN } from "@/lib/inactividad";
 const MAX_AGE = 60 * INACTIVIDAD_MIN; // 30 minutos de inactividad: cada petición a la API renueva la cookie (renewSession)
@@ -29,14 +29,17 @@ export type SessionUser = {
   company?: SessionCompany;
   /** Empresas en las que la cuenta opera (principal y membresías) cuando son más de una: el selector de empresa. */
   empresas?: { slug: string; shortName: string; role: SessionUser["role"] }[];
+  /** Momento en que la persona se identificó (ms). Se conserva al renovar la cookie o cambiar de empresa: las
+      sesiones abiertas antes de un cambio de contraseña dejan de valer (sesionVigente, en el store). */
+  iat?: number;
 };
 
 const sign = (payload: string) =>
-  createHmac("sha256", SECRET).update(payload).digest("base64url");
+  createHmac("sha256", authSecret()).update(payload).digest("base64url");
 
 export function encodeSession(user: SessionUser): string {
   const body = Buffer.from(
-    JSON.stringify({ ...user, exp: Date.now() + MAX_AGE * 1000 }),
+    JSON.stringify({ ...user, iat: typeof user.iat === "number" ? user.iat : Date.now(), exp: Date.now() + MAX_AGE * 1000 }),
   ).toString("base64url");
   return `${body}.${sign(body)}`;
 }
@@ -44,20 +47,21 @@ export function encodeSession(user: SessionUser): string {
 export function decodeSession(token: string | undefined): SessionUser | null {
   if (!token) return null;
   const [body, sig] = token.split(".");
-  if (!body || !sig) return null;
+  if (!body || !sig || !hayClave()) return null;
   const expected = sign(body);
   const a = Buffer.from(sig), b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
     const data = JSON.parse(Buffer.from(body, "base64url").toString());
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
+    if (typeof data.email !== "string" || typeof data.role !== "string") return null;
     const company = data.company && typeof data.company.slug === "string"
       ? { slug: String(data.company.slug), name: String(data.company.name ?? ""), shortName: String(data.company.shortName ?? ""), ...(typeof data.company.mode === "string" ? { mode: data.company.mode as CompanyMode } : {}) }
       : undefined;
     const empresas = Array.isArray(data.empresas)
       ? (data.empresas as unknown[]).flatMap((e) => (e && typeof e === "object" && typeof (e as { slug?: unknown }).slug === "string" ? [{ slug: String((e as { slug: string }).slug), shortName: String((e as { shortName?: unknown }).shortName ?? ""), role: (e as { role?: SessionUser["role"] }).role ?? "DIRECTIVO" }] : []))
       : [];
-    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, ...(data.mfa === true ? { mfa: true as const } : {}), company, ...(empresas.length > 1 ? { empresas } : {}) };
+    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, ...(data.qr === true ? { qr: true as const } : {}), ...(data.mfa === true ? { mfa: true as const } : {}), company, ...(empresas.length > 1 ? { empresas } : {}), ...(typeof data.iat === "number" ? { iat: data.iat } : {}) };
   } catch {
     return null;
   }
@@ -98,6 +102,13 @@ export async function patchSession(cambios: Partial<Pick<SessionUser, "name" | "
   if (actual) await setSession({ ...actual, ...cambios });
 }
 
+/** Vuelve a emitir la cookie de la sesión vigente como recién abierta: la persona acaba de probar que es ella
+    (cambió su contraseña), así que su sesión sigue valiendo aunque las anteriores a ese cambio se cierren. */
+export async function refrescarSesion() {
+  const actual = await getSession();
+  if (actual) await setSession({ ...actual, iat: Date.now() });
+}
+
 export async function clearSession() {
   const store = await cookies();
   store.delete(COOKIE);
@@ -118,7 +129,7 @@ export async function setPendiente(p: SesionPendiente, minutos: number) {
 }
 export async function getPendiente(): Promise<SesionPendiente | null> {
   const token = (await cookies()).get(COOKIE_PEND)?.value; if (!token) return null;
-  const [body, sig] = token.split("."); if (!body || !sig) return null;
+  const [body, sig] = token.split("."); if (!body || !sig || !hayClave()) return null;
   const a = Buffer.from(sig), b = Buffer.from(sign(`2fa:${body}`));
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {

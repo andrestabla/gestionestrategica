@@ -22,6 +22,7 @@ import {
   type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, isAcompanamiento, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext, ahora, runWithTenant } from "@/server/tenant";
 import { CODIGO_ALFABETO, CODIGO_LARGO, CODIGO_DIAS, alcanceDe, estadoCodigo, normalizarCodigo, validarCodigoNuevo, validarOrganizacion, type CodigoAcceso, type AlcanceCodigo } from "@/lib/codigos";
+import { validarSolicitud, esEstadoSolicitud, type SolicitudCodigo } from "@/lib/solicitudes";
 import { ALL_MODULES as TODOS_LOS_MODULOS } from "@/lib/modulos";
 import { PRACTICES, DIMS, dimOf, F2_GENERAL, THRESHOLD } from "@/data/mapa";
 import { lecturaF1 } from "@/lib/f1";
@@ -31,6 +32,7 @@ import { krFaltantes, KR_INI_MAX, objetivoConPrioridad, iniciativaConKr } from "
 import { firmaObjetivo } from "@/server/firma";
 import { INI_KR_MAX, mueveKr, iniCategoria, categoriaLabel, krsDeIniciativa } from "@/data/cmi";
 import type { SessionUser } from "@/lib/session";
+import { authSecret } from "@/lib/clave";
 import { consolidate, decisionCheck, isLevel, TYPE_RULES, type TypeRule, type Evaluation, type Decision, type Consolidated, type CriterionKey } from "@/lib/priorizacion";
 import { parseKrTemplates } from "@/lib/okr-plantillas";
 import { parsePrioSessions, nextStatus, sessionOf, type PrioSessionAction } from "@/lib/priorizacion-sesion";
@@ -871,6 +873,7 @@ export async function createCompany(actor: SessionUser, input: CompanyInput): Pr
 }
 
 export async function updateCompany(actor: SessionUser, slug: string, patch: Partial<CompanyInput> & { active?: boolean }): Promise<{ ok: true; company: CompanyRecord } | { ok: false; status: number; error: string }> {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma edita empresas." };
   const c = g.companies.get(slug);
   if (!c) return { ok: false, status: 404, error: "La empresa no existe." };
@@ -961,6 +964,7 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
 
 /** Elimina una empresa con todos sus datos (en cascada). La demo no se elimina. */
 export async function deleteCompany(actor: SessionUser, slug: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma elimina empresas." };
   const c = g.companies.get(slug);
   if (!c) return { ok: false, status: 404, error: "La empresa no existe." };
@@ -1016,11 +1020,96 @@ export const empresasDe = (f: UsuarioEncontrado): { slug: string; name: string; 
   [...(f.company ? [{ slug: f.company.slug, name: f.company.name, shortName: f.company.shortName, role: f.user.role }] : []), ...f.otras.map((o) => ({ slug: o.company.slug, name: o.company.name, shortName: o.company.shortName, role: o.role }))];
 
 /** Rol y ámbito con los que una cuenta opera en una empresa dada (principal o membresía); nulo si no pertenece. */
+/** ¿El correo ya tiene una cuenta en la base que pertenece a OTRA empresa, esté activa o no? El correo es único en
+    la base: crear aquí una cuenta con él movería esa fila (con su contraseña) a la empresa activa. */
+export async function correoDeOtraEmpresa(email: string): Promise<boolean> {
+  if (!hasDb()) return false;
+  try {
+    const fila = await (await prisma()).user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { companyId: true } });
+    return Boolean(fila && fila.companyId && fila.companyId !== cid());
+  } catch { return false; }
+}
 export async function membershipOf(email: string, slug: string): Promise<Membresia | null> {
   const f = await findUserForLogin(email);
-  if (!f) return null;
+  return f ? membresiaEn(f, slug) : null;
+}
+/** Rol y ámbito con los que una cuenta opera en una empresa: su empresa principal o una membresía. Nulo si no opera allí. */
+export function membresiaEn(f: UsuarioEncontrado, slug: string): Membresia | null {
   if (f.company?.slug === slug) return { company: f.company, role: f.user.role, line: f.user.line, responsibleId: f.user.responsibleId };
   return f.otras.find((o) => o.company.slug === slug) ?? null;
+}
+
+/* ═══ Vigencia de la sesión ═══ */
+// La cookie de sesión va firmada, pero lo que dice (rol, ámbito, empresa) se emitió al entrar. Cada petición vuelve
+// a mirar la cuenta: si se desactivó, se retiró de la empresa o cambió de rol, la sesión deja de valer o toma el rol
+// vigente. Y si la contraseña cambió después de abrir la sesión, esa sesión se cierra. La cuenta se consulta como
+// máximo una vez cada CUENTA_TTL por instancia, así que un retiro tarda a lo sumo ese tiempo en aplicarse.
+
+const CUENTA_TTL = 20_000;
+const cuentaCache = new Map<string, { at: number; f: UsuarioEncontrado | null; desde: number | null }>();
+const sesionesDesdeMem = new Map<string, number>();   // sin base de datos (pruebas)
+/** Olvida lo que se sabía de una cuenta (o de todas): la siguiente petición la vuelve a consultar. */
+export const olvidarCuentas = (email?: string) => { if (email) cuentaCache.delete(email.trim().toLowerCase()); else cuentaCache.clear(); };
+async function cuentaActual(email: string): Promise<{ f: UsuarioEncontrado | null; desde: number | null }> {
+  const e = email.trim().toLowerCase(), hit = cuentaCache.get(e);
+  if (hit && Date.now() - hit.at < CUENTA_TTL) return hit;
+  const f = await findUserForLogin(e);
+  let desde: number | null = sesionesDesdeMem.get(e) ?? null, fiable = true;
+  if (hasDb()) {
+    try { const row = await (await prisma()).user.findUnique({ where: { email: e }, select: { sessionsFrom: true } }); desde = row?.sessionsFrom ? new Date(row.sessionsFrom).getTime() : null; }
+    catch (err) { fiable = false; console.error("[4shine] vigencia de la sesión:", (err as Error).message); }
+  }
+  const r = { at: Date.now(), f, desde };
+  if (fiable) { cuentaCache.set(e, r); if (cuentaCache.size > 5000) cuentaCache.clear(); }
+  return r;
+}
+/** Cierra las sesiones de la cuenta abiertas hasta ahora (cambio de contraseña): solo valen las que se abran después. */
+export async function cerrarSesionesDe(email: string): Promise<void> {
+  const e = email.trim().toLowerCase(), ahoraMs = Date.now();
+  sesionesDesdeMem.set(e, ahoraMs);
+  if (hasDb()) { try { await (await prisma()).user.updateMany({ where: { email: e }, data: { sessionsFrom: new Date(ahoraMs) } }); } catch (err) { console.error("[4shine] cierre de sesiones:", (err as Error).message); } }
+  olvidarCuentas(e);
+}
+const TOLERANCIA_RELOJ = 2000;   // dos instancias pueden tener relojes ligeramente distintos
+export type SesionVigente = { ok: true; cuenta: UsuarioEncontrado } | { ok: false; error: string };
+/** ¿La sesión corresponde todavía a una cuenta activa, con el mismo tipo de cuenta, y es posterior al último cambio de contraseña? */
+export async function sesionVigente(user: SessionUser): Promise<SesionVigente> {
+  const c = await cuentaActual(user.email);
+  if (!c.f) return { ok: false, error: "Tu cuenta ya no está activa. Vuelve a iniciar sesión." };
+  // una sesión de administrador de la plataforma solo vale para una cuenta que hoy lo es
+  if (user.role === "ADMIN" && (c.f.user.role !== "ADMIN" || c.f.company)) return { ok: false, error: "Tu cuenta ya no administra la plataforma. Vuelve a iniciar sesión." };
+  if (c.desde !== null && (user.iat ?? 0) + TOLERANCIA_RELOJ < c.desde) return { ok: false, error: "La contraseña de tu cuenta cambió y esta sesión se cerró. Vuelve a iniciar sesión." };
+  return { ok: true, cuenta: c.f };
+}
+
+/* ═══ Bloqueo por intentos fallidos de inicio de sesión ═══ */
+// Tras LOGIN_MAX contraseñas incorrectas seguidas la cuenta queda bloqueada LOGIN_BLOQUEO_MIN minutos. Restablecer la
+// contraseña por correo levanta el bloqueo. El contador vive en la base (vale para todas las instancias).
+
+export const LOGIN_MAX = 8, LOGIN_BLOQUEO_MIN = 15;
+const fallosMem = new Map<string, { n: number; hasta: number }>();   // sin base de datos (pruebas)
+/** Minutos que le faltan al bloqueo de la cuenta; 0 si no está bloqueada. */
+export async function bloqueoLogin(email: string): Promise<number> {
+  const e = email.trim().toLowerCase();
+  let hasta = fallosMem.get(e)?.hasta ?? 0;
+  if (hasDb()) { try { const u = await (await prisma()).user.findUnique({ where: { email: e }, select: { lockedUntil: true } }); hasta = u?.lockedUntil ? new Date(u.lockedUntil).getTime() : 0; } catch { hasta = 0; } }
+  return hasta > Date.now() ? Math.ceil((hasta - Date.now()) / 60_000) : 0;
+}
+/** Anota una contraseña incorrecta; al llegar al tope bloquea la cuenta. */
+export async function registrarFalloLogin(email: string): Promise<void> {
+  const e = email.trim().toLowerCase();
+  if (!hasDb()) { const f = fallosMem.get(e) ?? { n: 0, hasta: 0 }; f.n += 1; if (f.n >= LOGIN_MAX) { f.hasta = Date.now() + LOGIN_BLOQUEO_MIN * 60_000; f.n = 0; } fallosMem.set(e, f); return; }
+  try {
+    const db = await prisma();
+    const u = await db.user.update({ where: { email: e }, data: { failedLogins: { increment: 1 } }, select: { failedLogins: true } });
+    if (u.failedLogins >= LOGIN_MAX) await db.user.update({ where: { email: e }, data: { failedLogins: 0, lockedUntil: new Date(Date.now() + LOGIN_BLOQUEO_MIN * 60_000) } });
+  } catch { /* la cuenta no tiene fila en la base (administrador sembrado): cuenta solo el freno en memoria */ }
+}
+/** Borra el contador tras un inicio de sesión correcto. */
+export async function limpiarFallosLogin(email: string): Promise<void> {
+  const e = email.trim().toLowerCase();
+  fallosMem.delete(e);
+  if (hasDb()) { try { await (await prisma()).user.updateMany({ where: { email: e, OR: [{ failedLogins: { gt: 0 } }, { lockedUntil: { not: null } }] }, data: { failedLogins: 0, lockedUntil: null } }); } catch { /* sin fila */ } }
 }
 
 /** Membresías de una empresa tal como están en la base: se leen antes de recrearla para no perder los accesos ya concedidos. */
@@ -1053,6 +1142,7 @@ export async function restaurarMembresias(slug: string, rows: MembresiaGuardada[
 
 /** Agrega a la empresa activa una cuenta que ya existe en otra empresa (membresía con rol y ámbito propios). */
 export async function addMembership(actor: SessionUser, email: string, input: { role: SessionUser["role"]; line?: number; responsibleId?: string | null }): Promise<{ ok: true; user: ManagedUser } | { ok: false; status: number; error: string }> {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   const e = email.trim().toLowerCase();
   if (users().some((u) => u.email.toLowerCase() === e)) return { ok: false, status: 422, error: "Ya existe un usuario con ese correo en esta empresa." };
@@ -1572,8 +1662,10 @@ export function createTask(
     };
   }
 
-  const title = input.title?.trim() ?? "";
-  const desc = input.desc?.trim() ?? "";
+  // el texto llega del navegador: solo cadenas, y con tope (el estado de la empresa viaja a todos sus usuarios)
+  const title = typeof input.title === "string" ? input.title.trim().slice(0, 240) : "";
+  const desc = typeof input.desc === "string" ? input.desc.trim().slice(0, 4000) : "";
+  if (Array.isArray(input.dependsOn) && input.dependsOn.length > 50) return { ok: false, status: 422, error: "Una actividad admite como máximo 50 dependencias." };
   if (title.length < 8) return { ok: false, status: 422, error: "El título debe describir la actividad (mínimo 8 caracteres)." };
   if (desc.length < 20) return { ok: false, status: 422, error: "La descripción debe declarar qué se hace y qué produce (mínimo 20 caracteres)." };
   if (!cat().people.some((p) => p.id === input.assigneeId)) {
@@ -1608,7 +1700,7 @@ export function createTask(
     requiresEvidence: Boolean(input.requiresEvidence),
     ...(input.milestone ? { milestone: true } : {}),
     dependsOn: input.dependsOn?.length ? input.dependsOn : undefined,
-    note: input.note?.trim() || undefined,
+    note: typeof input.note === "string" ? input.note.trim().slice(0, 2000) || undefined : undefined,
   };
   tasks().push(task);
   baselines().set(id, { start: task.start, due: task.due });
@@ -2063,12 +2155,12 @@ export function saveF2Response(
   if (answered < 30) {
     return { ok: false, status: 422, error: `Responde al menos 30 de las 40 afirmaciones (llevas ${answered}).` };
   }
-  const abierta = (input.abierta ?? "").trim().slice(0, 600);
+  const abierta = (typeof input.abierta === "string" ? input.abierta : "").trim().slice(0, 600);
   const response: F2Response = {
     // id único también entre instancias (dos respuestas simultáneas en funciones distintas no deben chocar en la base)
     id: `F2-${String(f2Store().length + 1).padStart(4, "0")}-${randomBytes(2).toString("hex")}`,
     at: ahora().toISOString(),
-    area: (input.area ?? "").trim().slice(0, 60) || undefined,
+    area: (typeof input.area === "string" ? input.area : "").trim().slice(0, 60) || undefined,
     r, abierta: abierta || undefined,
   };
   f2Store().push(response);
@@ -2085,8 +2177,8 @@ export function saveF2Response(
    dimensión (promedio redondeado de los niveles de sus prácticas); test =
    respuestas guardadas. El motor (lib/od) consolida igual que con la demo. */
 
-export function platformResponses(): OdResponse[] {
-  const out: OdResponse[] = [];
+export function platformResponses(opts: { conCorreo?: boolean } = {}): (OdResponse & { email?: string })[] {
+  const out: (OdResponse & { email?: string })[] = [];
   if (f1Store().size) {
     // autoevaluación directiva por persona (cada quien los 68 ítems); con ella, la percepción de la captura A3 no se duplica
     for (const f of f1Store().values()) out.push({ tipo: "f1", meta: { nombre: f.name, cargo: f.cargo ?? f.role }, r: { ...f.r } });
@@ -2111,7 +2203,8 @@ export function platformResponses(): OdResponse[] {
     if (levels.length) { lv[d.code] = Math.round(levels.reduce((x, y) => x + y, 0) / levels.length); any = true; }
   }
   if (any) out.push({ tipo: "f3", meta: { nombre: "Advisor" }, r: r3, lv });
-  for (const t of testStore().values()) out.push({ tipo: "test", meta: { nombre: t.name, cargo: t.cargo ?? t.role }, r: t.r });
+  // `conCorreo` deja saber de quién es cada test: la ruta lo usa para entregar a cada persona solo el suyo y no lo envía
+  for (const t of testStore().values()) out.push({ tipo: "test", meta: { nombre: t.name, cargo: t.cargo ?? t.role }, r: t.r, ...(opts.conCorreo ? { email: t.email } : {}) });
   return out;
 }
 
@@ -2493,7 +2586,7 @@ export function decideInitiative(
   }
   // acompañamiento: una iniciativa sin resultado clave no pasa a priorización ni al portafolio
   if (cat().company.mode === "acompanamiento" && !iniciativaConKr(cat(), base)) return { ok: false, status: 422, error: "La iniciativa no está vinculada a un resultado clave: vincúlala en Iniciativas antes de priorizarla o decidir su tiempo." };
-  const rationale = typeof input.rationale === "string" ? input.rationale.trim() : "";
+  const rationale = typeof input.rationale === "string" ? input.rationale.trim().slice(0, 2000) : "";
   const check = decisionCheck(d, consolidatedOf(iniId), rationale);
   if (!check.ok) return { ok: false, status: 422, error: check.reason };
   const rec: DecisionRecord = { iniId, decision: d, rationale: rationale || undefined, by: user.email.toLowerCase(), name: user.name, at: ahora().toISOString() };
@@ -2581,16 +2674,25 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   if (!consent && (!user || !user.consentAt)) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
   if (!user && (!entryRole || (entryRoleNeedsTribe(entryRole) && !tribeId))) return { ok: false, status: 422, error: "Elige tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál." };
   const consentAt = ahora();
+  // el QR identifica a quien entra solo por su correo, sin contraseña. Por eso no abre cuentas que pueden más que un
+  // asistente (advisor, cuentas de otra empresa, gerencia sin tribu) ni cuentas que ya tienen contraseña: esas entran
+  // con su correo y su contraseña. Si no, bastaría conocer el correo de alguien para entrar como esa persona.
+  if (user && (user.membresia || user.role === "CONSULTOR" || user.role === "ADMIN" || (user.role === "LIDER" && !user.responsibleId) || (await hasPassword(email)))) {
+    return { ok: false, status: 403, error: "Esta cuenta entra con su correo y su contraseña por el acceso de la empresa, no por el QR." };
+  }
   if (!user) {
     // el correo puede existir en otra empresa (es único en la base): no se duplica ni se mueve
     const elsewhere = await findUserForLogin(email);
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
+    if (await correoDeOtraEmpresa(email)) return { ok: false, status: 409, error: "Ese correo ya tiene una cuenta en otra empresa. Entra por su enlace o usa otro correo." };
     const role: SessionUser["role"] = entryRole === "lider" ? "LIDER" : entryRole === "directivo" ? "DIRECTIVO" : "RESPONSABLE";
     user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: ahora().toISOString(), consentAt: consentAt.toISOString() };
     users().push(user);
     created = true;
     void persist("usuario", async (db) => {
       const companyId = cid();
+      const fila = await db.user.findUnique({ where: { email }, select: { companyId: true } });
+      if (fila && fila.companyId && fila.companyId !== companyId) return;   // la cuenta es de otra empresa: no se mueve
       await db.user.upsert({ where: { email }, update: { name, active: true, companyId, consentAt, consentVersion: CONSENT_VERSION, ...(tribeId ? { responsibleId: tribeId } : {}) }, create: { email, name, role, passwordHash: "", companyId, consentAt, consentVersion: CONSENT_VERSION, ...(tribeId ? { responsibleId: tribeId } : {}) } });
     });
   } else if (!user.consentAt) {
@@ -2601,7 +2703,8 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   // una cuenta ya existente que entra como líder recibe el rol de edición solo en la sesión; la cuenta guardada conserva el suyo.
   // Si aún no tiene tribu y la indica, se le guarda.
   if (!created && tribeId && !user.responsibleId) { user.responsibleId = tribeId; void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { responsibleId: tribeId } }); }); }
-  const sessionRole: SessionUser["role"] = entryRole === "lider" && (user.role === "RESPONSABLE" || user.role === "DIRECTIVO") ? "LIDER" : user.role;
+  // editar como líder exige tribu: sin ella no habría ámbito que limitara lo que la sesión puede cambiar
+  const sessionRole: SessionUser["role"] = entryRole === "lider" && (user.role === "RESPONSABLE" || user.role === "DIRECTIVO") && user.responsibleId ? "LIDER" : user.role;
   // la sesión queda marcada como entrada por QR: el itinerario que ve es la agenda de participantes
   const session: SessionUser = { email: user.email, name: user.name, role: sessionRole, line: user.line, responsibleId: user.responsibleId, qr: true, company: { slug: rec.slug, name: rec.name, shortName: rec.shortName } };
   const como = entryRole === "lider" ? "líder de tribu" : entryRole === "directivo" ? "directivo" : "miembro de tribu";
@@ -2724,6 +2827,7 @@ export function deleteItineraryComment(actor: SessionUser, id: unknown): { ok: t
 /** Emite un enlace de restablecimiento para una cuenta activa (de empresa o de
     plataforma). Devuelve null si el correo no tiene cuenta: la respuesta al
     usuario es la misma en ambos casos. Con empresa indicada, solo su cuenta. */
+const resumenToken = (token: string) => createHash("sha256").update(`reset:${token}`).digest("hex");
 export async function requestPasswordReset(email: string, tenant: string | null): Promise<{ email: string; name: string; slug: string | null; token: string } | null> {
   if (!hasDb()) return null;
   const found = await findUserForLogin(email);
@@ -2733,7 +2837,8 @@ export async function requestPasswordReset(email: string, tenant: string | null)
   const expires = new Date(Date.now() + RESET_MINUTES * 60_000);
   try {
     const db = await prisma();
-    await db.user.update({ where: { email: found.user.email.toLowerCase() }, data: { resetToken: token, resetExpires: expires } });
+    // en la base queda el resumen del token, no el token: quien lea la tabla no puede usar los enlaces vigentes
+    await db.user.update({ where: { email: found.user.email.toLowerCase() }, data: { resetToken: resumenToken(token), resetExpires: expires } });
   } catch (e) { console.error("[4shine] recuperación:", (e as Error).message); return null; }
   return { email: found.user.email, name: found.user.name, slug: found.company?.slug ?? null, token };
 }
@@ -2743,12 +2848,13 @@ export async function resetPassword(token: string, password: unknown): Promise<{
   if (!hasDb()) return { ok: false, status: 503, error: "Sin base de datos no se puede restablecer la contraseña." };
   if (!passwordOk(password)) return { ok: false, status: 422, error: "La contraseña debe tener al menos 10 caracteres." };
   const db = await prisma();
-  const u = await db.user.findUnique({ where: { resetToken: token }, include: { company: true } });
+  const u = await db.user.findUnique({ where: { resetToken: resumenToken(token) }, include: { company: true } });
   if (!u || !u.active) return { ok: false, status: 404, error: "El enlace no es válido o ya se usó. Pide uno nuevo desde «¿Olvidaste tu contraseña?»." };
   if (isExpired(u.resetExpires)) { await db.user.update({ where: { id: u.id }, data: { resetToken: null, resetExpires: null } }); return { ok: false, status: 410, error: `El enlace venció (vale ${RESET_MINUTES} minutos). Pide uno nuevo.` }; }
   const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
   const hash = await (bcrypt.default ?? bcrypt).hash(password, 10);
   await db.user.update({ where: { id: u.id }, data: { passwordHash: hash, resetToken: null, resetExpires: null, failedLogins: 0, lockedUntil: null } });
+  await cerrarSesionesDe(u.email);   // las sesiones abiertas con la contraseña anterior dejan de valer
   await hydrateCompanies();
   const company = u.company ? g.companies.get(u.company.slug) ?? null : null;
   const user: SessionUser = { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, company: company ? { slug: company.slug, name: company.name, shortName: company.shortName } : undefined };
@@ -3247,10 +3353,18 @@ export function setTerritories(user: SessionUser, input: unknown): CatResult {
 
 import { emptyAssessment, type TenantView } from "@/lib/vista";
 
+/** Ficha de la empresa sin lo que solo administra el equipo organizador: los tokens de acceso por QR, el itinerario
+    (con sus enlaces públicos) y los identificadores internos. Cada uno se consulta por su propia ruta, con permiso. */
+export function fichaPublica<T extends object>(company: T): T {
+  const { access: _a, itinerary: _i, dbId: _d, ...resto } = company as T & { access?: unknown; itinerary?: unknown; dbId?: unknown };
+  void _a; void _i; void _d;
+  return resto as unknown as T;
+}
 export function tenantView(): TenantView {
   const current = effectiveCurrent();
+  const c = cat();
   return {
-    catalog: cat(),
+    catalog: { ...c, company: fichaPublica(c.company) },
     initiatives: effectiveInitiatives(),
     kpis: effectiveKpis(),
     tasks: getTasks(),
@@ -3307,6 +3421,7 @@ export function createUser(
   actor: SessionUser,
   input: { email: string; name: string; role: SessionUser["role"]; line?: number; responsibleId?: string | null },
 ): { ok: true; user: ManagedUser } | { ok: false; status: number; error: string } {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_users")) {
     return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   }
@@ -3337,6 +3452,9 @@ export function createUser(
   users().push(user);
   void persist("usuario", async (db) => {
     const companyId = cid();
+    // si el correo ya es de otra empresa (cuenta desactivada allá), su fila no se mueve ni se reactiva desde aquí
+    const fila = await db.user.findUnique({ where: { email }, select: { companyId: true } });
+    if (fila && fila.companyId && fila.companyId !== companyId) return;
     await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, active: true, companyId }, create: { email, name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, passwordHash: "", companyId } });
   });
   audit(actor, "task", email, `usuario creado (${input.role}${user.role === "RESPONSABLE" ? ` · ${scopeName(user)}` : ""})`);
@@ -3345,6 +3463,7 @@ export function createUser(
 
 /** Reasigna un usuario de la empresa activa a otra empresa (solo admin de plataforma). */
 export async function moveUser(actor: SessionUser, email: string, toSlug: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma reasigna usuarios entre empresas." };
   const u = users().find((x) => x.email.toLowerCase() === email.toLowerCase());
   if (!u) return { ok: false, status: 404, error: "El usuario no existe en esta empresa." };
@@ -3432,6 +3551,67 @@ export async function anularCodigoAcceso(actor: SessionUser, id: string): Promis
   return { ok: true, codigo: n };
 }
 
+/* ═══ Solicitudes de código de acceso ═══ */
+// Quien no tiene código lo pide desde el sitio público. La solicitud queda pendiente hasta que el admin o un advisor
+// la aprueba (se genera el código a nombre de quien aprueba, que queda acompañando ese espacio) o la rechaza.
+// Como los códigos, son de la plataforma y no de una empresa: tabla propia, o memoria si no hay base.
+
+const solMem = new Map<string, SolicitudCodigo>();   // sin base de datos (pruebas)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const solDe = (r: any): SolicitudCodigo => ({ id: r.id, name: r.name, company: r.company, industry: r.industry, country: r.country, email: r.email, ...(r.phone ? { phone: r.phone } : {}), source: r.source, scope: alcanceDe(r.scope),
+  status: esEstadoSolicitud(r.status) ? r.status : "pendiente", createdAt: iso(r.createdAt)!, ...(r.decidedAt ? { decidedAt: iso(r.decidedAt) } : {}), ...(r.decidedBy ? { decidedBy: r.decidedBy } : {}),
+  ...(r.decidedByName ? { decidedByName: r.decidedByName } : {}), ...(r.codeId ? { codeId: r.codeId } : {}), ...(r.note ? { note: r.note } : {}) });
+async function solGuardar(x: SolicitudCodigo, nueva = false): Promise<void> {
+  if (!hasDb()) { solMem.set(x.id, x); return; }
+  const data = { name: x.name, company: x.company, industry: x.industry, country: x.country, email: x.email, phone: x.phone ?? null, source: x.source, scope: x.scope.join(","), status: x.status,
+    decidedAt: x.decidedAt ? new Date(x.decidedAt) : null, decidedBy: x.decidedBy ?? null, decidedByName: x.decidedByName ?? null, codeId: x.codeId ?? null, note: x.note ?? null };
+  const db = await prisma();
+  if (nueva) await db.accessRequest.create({ data: { id: x.id, createdAt: new Date(x.createdAt), ...data } }); else await db.accessRequest.update({ where: { id: x.id }, data });
+}
+async function solTodas(): Promise<SolicitudCodigo[]> {
+  if (!hasDb()) return [...solMem.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return ((await (await prisma()).accessRequest.findMany({ orderBy: { createdAt: "desc" }, take: 300 })) as unknown[]).map(solDe);
+}
+export const SOLICITUDES_POR_HORA = 40;   // tope de la plataforma: frena un envío masivo desde el formulario público
+
+/** Guarda la solicitud que llega del formulario público. Si la persona ya tiene una pendiente, no crea otra. */
+export async function crearSolicitud(input: Record<string, unknown>): Promise<{ ok: true; solicitud: SolicitudCodigo; repetida: boolean } | (CodFail & { campo?: string })> {
+  const v = validarSolicitud(input);
+  if (!v.ok) return { ok: false, status: 422, error: v.error, campo: v.campo };
+  const todas = await solTodas();
+  const abierta = todas.find((x) => x.status === "pendiente" && x.email === v.datos.email);
+  if (abierta) return { ok: true, solicitud: abierta, repetida: true };
+  const haceUnaHora = Date.now() - 3_600_000;
+  if (todas.filter((x) => new Date(x.createdAt).getTime() > haceUnaHora).length >= SOLICITUDES_POR_HORA) return { ok: false, status: 429, error: "Estamos recibiendo muchas solicitudes. Inténtalo de nuevo en una hora." };
+  const solicitud: SolicitudCodigo = { id: `sol_${randomBytes(9).toString("hex")}`, ...v.datos, status: "pendiente", createdAt: new Date().toISOString() };
+  await solGuardar(solicitud, true);
+  return { ok: true, solicitud, repetida: false };
+}
+/** Solicitudes que ve quien administra códigos: todas las pendientes; de las decididas, el admin ve todas y el advisor las suyas. */
+export async function listarSolicitudes(actor: SessionUser): Promise<SolicitudCodigo[]> {
+  if (!puedeCodigos(actor)) return [];
+  const yo = actor.email.toLowerCase();
+  return (await solTodas()).filter((x) => x.status === "pendiente" || actor.role === "ADMIN" || x.decidedBy?.toLowerCase() === yo);
+}
+/** Aprueba (genera el código a nombre de quien aprueba) o rechaza una solicitud pendiente. */
+export async function decidirSolicitud(actor: SessionUser, id: string, accion: "aprobar" | "rechazar", extra: { scope?: unknown; note?: unknown } = {}): Promise<{ ok: true; solicitud: SolicitudCodigo; codigo?: CodigoAcceso } | CodFail> {
+  if (!puedeCodigos(actor)) return { ok: false, status: 403, error: "Las solicitudes de código las decide el administrador o el advisor." };
+  const x = (await solTodas()).find((y) => y.id === id);
+  if (!x) return { ok: false, status: 404, error: "Esa solicitud no existe." };
+  if (x.status !== "pendiente") return { ok: false, status: 409, error: `La solicitud ya fue ${x.status}${x.decidedByName ? ` por ${x.decidedByName}` : ""}.` };
+  const decision = { decidedAt: new Date().toISOString(), decidedBy: actor.email, decidedByName: actor.name };
+  if (accion === "rechazar") {
+    const note = String(extra.note ?? "").trim().replace(/\s+/g, " ").slice(0, 300);
+    const n: SolicitudCodigo = { ...x, status: "rechazada", ...decision, ...(note ? { note } : {}) }; await solGuardar(n);
+    return { ok: true, solicitud: n };
+  }
+  const scope = extra.scope === undefined ? x.scope : alcanceDe(extra.scope);
+  const r = await crearCodigo(actor, { name: x.name, email: x.email, organization: x.company, scope });
+  if (!r.ok) return r;
+  const n: SolicitudCodigo = { ...x, scope: r.codigo.scope, status: "aprobada", ...decision, codeId: r.codigo.id }; await solGuardar(n);
+  return { ok: true, solicitud: n, codigo: r.codigo };
+}
+
 const CODIGO_INVALIDO = "El código no es válido. Revisa que esté completo, tal como llegó a tu correo.";
 /** Lo que la página necesita saber de un código antes de usarlo (sin datos de otras personas). */
 export async function consultarCodigo(raw: unknown): Promise<{ ok: true; codigo: CodigoAcceso; estado: "nuevo" | "usado" } | CodFail> {
@@ -3503,7 +3683,7 @@ export async function entrarConCodigo(raw: unknown): Promise<{ ok: true; user: S
 const dosPasosApagado = () => process.env.ACCESO_DOS_PASOS === "off";
 type Otp = { hash: string | null; expires: number; attempts: number; sentAt: number };
 const otpMem = new Map<string, Otp>();   // sin base de datos, o para cuentas que no tienen fila en ella
-const otpResumen = (email: string, code: string) => createHash("sha256").update(`${email.trim().toLowerCase()}|${code}|${process.env.AUTH_SECRET ?? "pgtd-dev-secret-cambiar-en-produccion"}`).digest("hex");
+const otpResumen = (email: string, code: string) => createHash("sha256").update(`${email.trim().toLowerCase()}|${code}|${authSecret()}`).digest("hex");
 
 async function leerOtp(email: string): Promise<Otp | null> {
   const e = email.trim().toLowerCase();
@@ -3585,6 +3765,12 @@ export function setTwoFactor(actor: SessionUser, on: boolean): { ok: true; twoFa
 /** Contraseña real contra la base (bcrypt). Devuelve null cuando no hay base
     o el usuario no tiene contraseña fijada: entonces aplica la demo, si está
     permitida (DEMO_LOGIN distinto de «off»). */
+/** Gasta el tiempo de una comparación de contraseña sin cuenta contra la cual comparar. Siempre falso. */
+const HASH_VACIO = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8rXyDzN4LrQJxQe5vE6m0bX8k1pP3S";
+export async function compararEnVacio(password: string): Promise<false> {
+  try { const bcrypt = await serverImport("bcryptjs") as AnyPrisma; await (bcrypt.default ?? bcrypt).compare(password, HASH_VACIO); } catch { /* sin bcrypt: no hay demora que igualar */ }
+  return false;
+}
 export async function verifyPassword(email: string, password: string): Promise<boolean | null> {
   if (!hasDb()) return null;
   try {
@@ -3605,16 +3791,22 @@ export async function setUserPassword(
   if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   const target = users().find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (!target) return { ok: false, status: 404, error: "El usuario no existe." };
+  // una cuenta agregada desde otra empresa conserva allá su contraseña: fijarla desde aquí daría el control de la cuenta entera
+  if (target.membresia) return { ok: false, status: 403, error: "Esta cuenta pertenece a otra empresa: su contraseña no se fija desde aquí. La persona puede cambiarla con «¿Olvidaste tu contraseña?»." };
   if (typeof password !== "string" || password.length < 10) return { ok: false, status: 422, error: "La contraseña debe tener al menos 10 caracteres." };
   if (!hasDb()) return { ok: false, status: 422, error: "Fijar contraseñas exige base de datos; en modo demo todos entran con la contraseña demo." };
+  // el correo es único en la base: si la fila es de otra empresa (cuenta desactivada allá), tampoco se toca
+  { const fila = await (await prisma()).user.findUnique({ where: { email: target.email.toLowerCase() }, select: { companyId: true } });
+    if (fila && fila.companyId && fila.companyId !== cid()) return { ok: false, status: 403, error: "Ese correo tiene una cuenta en otra empresa: su contraseña no se fija desde aquí." }; }
   const bcrypt = await serverImport("bcryptjs") as AnyPrisma;
   const hash = await (bcrypt.default ?? bcrypt).hash(password, 10);
   const db = await prisma();
   await db.user.upsert({
     where: { email: target.email.toLowerCase() },
-    update: { passwordHash: hash },
+    update: { passwordHash: hash, failedLogins: 0, lockedUntil: null },
     create: { email: target.email.toLowerCase(), name: target.name, role: target.role, line: target.line ?? null, passwordHash: hash, companyId: target.role === "ADMIN" ? null : cid() },
   });
+  await cerrarSesionesDe(target.email);   // quien tuviera una sesión abierta con la contraseña anterior vuelve a entrar
   audit(actor, "task", target.email, "contraseña fijada");
   return { ok: true };
 }
@@ -3662,6 +3854,7 @@ function purgeUserData(email: string): { name: string } | null {
 
 /** Elimina una cuenta de la empresa (no la propia) con toda su información. */
 export function removeUser(actor: SessionUser, email: string): { ok: true } | { ok: false; status: number; error: string } {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   const key = email.trim().toLowerCase();
   const u = users().find((x) => x.email.toLowerCase() === key);
@@ -3759,12 +3952,14 @@ export async function changeOwnPassword(user: SessionUser, actual: unknown, nuev
   const hash = await (bcrypt.default ?? bcrypt).hash(nueva, 10);
   const db = await prisma();
   await db.user.update({ where: { email: user.email.toLowerCase() }, data: { passwordHash: hash, failedLogins: 0, lockedUntil: null, resetToken: null, resetExpires: null } });
+  await cerrarSesionesDe(user.email);   // las demás sesiones abiertas dejan de valer; la ruta renueva la de quien la cambió
   audit(user, "task", user.email, "contraseña cambiada desde el perfil");
   return { ok: true };
 }
 
 /** La persona elimina su propia cuenta y toda su información. Exige su contraseña (o la palabra ELIMINAR si no tiene). */
 export async function deleteOwnAccount(user: SessionUser, input: { password?: unknown; confirm?: unknown }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (user.role === "ADMIN") return { ok: false, status: 422, error: "La cuenta de administrador de la plataforma no se elimina desde el perfil." };
   const u = propio(user);
   if (!u) return { ok: false, status: 404, error: "La cuenta no existe." };
@@ -3784,6 +3979,7 @@ export function updateUser(
   email: string,
   patch: { role?: SessionUser["role"]; line?: number | null; responsibleId?: string | null; active?: boolean },
 ): { ok: true; user: ManagedUser } | { ok: false; status: number; error: string } {
+  olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_users")) {
     return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   }
@@ -4255,7 +4451,8 @@ export const getNotifRead = (email: string): Set<string> =>
 
 export function markNotifRead(email: string, ids: string[]) {
   const set = notifRead().get(email) ?? new Set<string>();
-  for (const id of ids) set.add(id);
+  // solo identificadores con forma de tal y con tope: la lista se guarda entera por persona
+  for (const id of ids.slice(0, 500)) if (typeof id === "string" && id.length <= 120 && set.size < 5000) set.add(id);
   notifRead().set(email, set);
   void persist("notificaciones", (db) => db.notifRead.upsert({ where: { companyId_email: { companyId: cid(), email } }, update: { ids: [...set] }, create: { companyId: cid(), email, ids: [...set] } }));
 }
@@ -4268,7 +4465,7 @@ export function resetStore() {
   const c = g.companies.get(slug);
   if (!c) return;
   g.tenants.set(slug, newState(slug, slug === DEFAULT_TENANT ? ANDINA_CATALOG : (g.tenants.get(slug)?.catalog ?? emptyCatalog(c)), c.dbId));
-  codMem.clear(); otpMem.clear();   // códigos de acceso y de verificación en memoria (sin base de datos)
+  codMem.clear(); solMem.clear(); otpMem.clear(); cuentaCache.clear(); sesionesDesdeMem.clear(); fallosMem.clear();   // códigos de acceso y de verificación en memoria (sin base de datos)
 }
 
 export { DEMO_TODAY };

@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
-import { hydrateCompanies, hydrateFromDb, listCompanies, createCompany, updateCompany, deleteCompany } from "@/server/store";
+import { hydrateCompanies, hydrateFromDb, listCompanies, createCompany, updateCompany, deleteCompany, sesionVigente, fichaPublica } from "@/server/store";
 import { runWithTenant } from "@/server/tenant";
 import { investigarIndustria } from "@/server/inteligencia-base";
 import { iaDisponible } from "@/server/ia";
@@ -15,8 +15,9 @@ export const maxDuration = 300;
 export async function GET() {
   await hydrateCompanies();
   const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  const all = listCompanies().map(({ dbId: _d, ...c }) => { void _d; return c; });
+  if (!user || !(await sesionVigente(user)).ok) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  // la ficha va sin los tokens de acceso ni el itinerario del organizador: cada uno tiene su propia ruta, con permiso
+  const all = listCompanies().map((c) => fichaPublica(c));
   const companies = can(user, "manage_companies") ? all : all.filter((c) => c.slug === user.company?.slug);
   return NextResponse.json({ companies, active: user.company?.slug ?? null });
 }
@@ -24,7 +25,7 @@ export async function GET() {
 export async function POST(req: Request) {
   await hydrateCompanies();
   const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (!user || !(await sesionVigente(user)).ok) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);
   if (!body?.name) return NextResponse.json({ error: "Falta el nombre de la empresa." }, { status: 400 });
   const r = await createCompany(user, body);
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   await hydrateCompanies();
   const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (!user || !(await sesionVigente(user)).ok) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const body = await req.json().catch(() => null);
   if (!body?.slug) return NextResponse.json({ error: "Falta el slug de la empresa." }, { status: 400 });
   const r = await updateCompany(user, String(body.slug), body);
@@ -55,7 +56,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   await hydrateCompanies();
   const user = await getSession();
-  if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (!user || !(await sesionVigente(user)).ok) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const slug = new URL(req.url).searchParams.get("slug");
   if (!slug) return NextResponse.json({ error: "Falta el slug de la empresa." }, { status: 400 });
   const r = await deleteCompany(user, slug);

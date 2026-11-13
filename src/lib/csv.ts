@@ -4,7 +4,8 @@
 
 export function downloadCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
   const esc = (v: string | number | null | undefined) => {
-    const s = v === null || v === undefined ? "" : String(v);
+    // un texto que empieza por = + - @ lo ejecutaría la hoja de cálculo como fórmula: se antepone un apóstrofo
+    const s = v === null || v === undefined ? "" : typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v);
     return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const csv = "﻿" + [headers, ...rows].map((r) => r.map(esc).join(";")).join("\n");

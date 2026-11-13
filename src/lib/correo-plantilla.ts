@@ -4,7 +4,9 @@
 export const MAIL_ORIGIN = "https://gestionestrategica.io";
 export const MAIL_CONTACT = "plataforma@algoritmot.com";
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+/** Texto seguro para insertar en el HTML de un correo. */
+export const escHtml = esc;
 
 /** Envuelve el cuerpo HTML (párrafos, botones, tablas) con cabecera y pie. */
 export function mailLayout(input: { title: string; body: string; company?: string; preheader?: string; origin?: string }): string {

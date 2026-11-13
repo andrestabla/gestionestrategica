@@ -5,7 +5,7 @@
 
 export const RESERVED = new Set([
   "api", "login", "panel", "empresas", "acceso", "acceder", "restablecer", "p", "e", "_next", "favicon.ico", "robots.txt", "sitemap.xml",
-  "img", "fonts", "uploads", "static", "admin", "www", "4shine", "algoritmot", "codigo", "diagnosticos", "r",
+  "img", "fonts", "uploads", "static", "admin", "www", "4shine", "algoritmot", "codigo", "solicitar-codigo", "diagnosticos", "r",
 ]);
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
@@ -66,4 +66,11 @@ export function parseSessionCookie(value: string | undefined): { role?: string; 
   } catch {
     return null;
   }
+}
+
+/** Ruta de este mismo sitio a la que se puede redirigir, o nulo. Rechaza lo que el navegador resolvería hacia otro
+    sitio: «//otro», «/\\otro» (trata la barra invertida como barra) y los caracteres de control que el analizador ignora. */
+export function rutaInterna(next: unknown): string | null {
+  if (typeof next !== "string" || !/^\/(?![/\\])[^\\\u0000-\u001f]*$/.test(next)) return null;
+  try { const u = new URL(next, "http://interno.invalid"); return u.origin === "http://interno.invalid" ? u.pathname + u.search + u.hash : null; } catch { return null; }
 }

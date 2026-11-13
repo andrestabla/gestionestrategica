@@ -171,7 +171,8 @@ export function portfolioSummary(rows: PortfolioRow[], horizons: string[]): Reco
   return out;
 }
 
-const csvCell = (v: unknown) => { const s = v === null || v === undefined ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+// un texto que empieza por = + - @ lo ejecutaría la hoja de cálculo como fórmula: se antepone un apóstrofo
+export const csvCell = (v: unknown) => { const s = v === null || v === undefined ? "" : typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
 /** Portafolio en CSV (separador «;» para Excel en español). */
 export function portfolioCsv(rows: PortfolioRow[]): string {

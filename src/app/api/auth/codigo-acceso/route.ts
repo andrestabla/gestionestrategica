@@ -6,6 +6,7 @@ import { investigarIndustria } from "@/server/inteligencia-base";
 import { iaDisponible } from "@/server/ia";
 import { ALCANCES, formatoCodigo } from "@/lib/codigos";
 import { enmascarar } from "@/lib/dos-pasos";
+import { frenado, ipDe } from "@/server/freno";
 
 // POST /api/auth/codigo-acceso — uso de un código de acceso a los diagnósticos (página pública /codigo).
 //   { codigo }                                   consulta el código: a quién pertenece, qué incluye y si ya se usó.
@@ -17,6 +18,8 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null) as Record<string, unknown> | null;
   if (!body || typeof body.codigo !== "string") return NextResponse.json({ error: "Escribe tu código." }, { status: 400 });
+  // freno a quien pruebe códigos al azar
+  if (frenado(`codigo-acceso:${ipDe(req)}`, 30, 10 * 60_000)) return NextResponse.json({ error: "Demasiados intentos. Espera unos minutos y vuelve a escribir tu código." }, { status: 429 });
   await hydrateCompanies();
   if (body.accion === "registrar") {
     const r = await canjearCodigo(body.codigo, body);

@@ -26,6 +26,9 @@ export async function GET(
     headers: {
       "Content-Type": MIME[ext] ?? "application/octet-stream",
       "Cache-Control": "public, max-age=3600",
+      // abierto directamente, un SVG es un documento: sin esto, un script dentro del logo correría con el origen de la plataforma
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

@@ -5,6 +5,7 @@ import { accessUser, companyBySlug, hydrateCompanies, flushOrError, exigeCodigoE
 import { pedirCodigo } from "@/server/dos-pasos";
 import { setSession } from "@/lib/session";
 import { sectionPath } from "@/lib/acceso";
+import { frenado, ipDe } from "@/server/freno";
 
 const Body = z.object({ tenant: z.string().max(40), token: z.string().min(16).max(64), name: z.string().max(120), email: z.string().max(160), consent: z.boolean().optional(), responsibleId: z.string().max(40).optional(), entryRole: z.string().max(16).optional() });
 
@@ -13,6 +14,8 @@ const Body = z.object({ tenant: z.string().max(40), token: z.string().min(16).ma
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  // tope amplio: en una convención muchas personas entran a la vez desde la misma red
+  if (frenado(`acceso-qr:${ipDe(req)}`, 400, 10 * 60_000)) return NextResponse.json({ error: "Demasiados ingresos desde esta red. Espera unos minutos." }, { status: 429 });
   const { tenant, token, name, email, consent, responsibleId, entryRole } = parsed.data;
   await hydrateCompanies();
   const c = companyBySlug(tenant);

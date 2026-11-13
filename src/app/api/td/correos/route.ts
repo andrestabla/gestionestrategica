@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { frenado } from "@/server/freno";
 import { withTenant, inTenant } from "../_helpers";
 import { getUsers, companyBySlug, listMailLog, listCompanies } from "@/server/store";
 import { can } from "@/lib/permissions";
@@ -25,6 +26,8 @@ export const GET = withTenant(async (req: Request, _ctx: unknown, user) => {
 
 export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
   if (!can(user, "manage_users")) return NextResponse.json({ error: "Sin permiso." }, { status: 403 });
+  // tope de envíos por persona: los correos salen con la identidad de la plataforma y cuestan reputación de entrega
+  if (frenado(`correos:${user.email.toLowerCase()}`, user.role === "ADMIN" ? 60 : 12, 3_600_000)) return NextResponse.json({ error: "Llegaste al tope de envíos por hora. Inténtalo más tarde." }, { status: 429 });
   if (!mailConfigured()) return NextResponse.json({ error: "El envío de correo no está configurado (Administración → Integraciones → AWS SES)." }, { status: 503 });
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });

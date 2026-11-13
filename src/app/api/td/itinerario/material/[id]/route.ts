@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../../../_helpers";
-import { itineraryFileOf } from "@/server/store";
+import { itineraryFileOf, canItinerary } from "@/server/store";
 import { getObject, signedUrl, materialDisposition } from "@/server/storage";
 import { fileKindOf, FILE_TYPES } from "@/lib/itinerario";
 
 // GET /api/td/itinerario/material/:id — el archivo del material (con sesión): el PDF en línea, el PowerPoint como descarga; un enlace redirige a su URL.
 export const GET = withTenant(async (_req: Request, { params }: { params: Promise<{ id: string }> }, user) => {
   const { id } = await params;
+  // los materiales son del equipo organizador: la agenda de participantes no los incluye
+  if (!canItinerary(user)) return NextResponse.json({ error: "Los materiales los consulta el equipo organizador." }, { status: 403 });
   const f = itineraryFileOf(id);
   if (!f) return NextResponse.json({ error: "El material no existe." }, { status: 404 });
   const kind = fileKindOf(f);

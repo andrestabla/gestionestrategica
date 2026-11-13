@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { urlTenant, paginaTenant } from "@/server/request-tenant";
 import { getSession, type SessionUser, renewSession } from "@/lib/session";
-import { hydrateFromDb, hydrateCompanies, registrarSinSesion, flushOrError } from "@/server/store";
+import { hydrateFromDb, hydrateCompanies, registrarSinSesion, flushOrError, olvidarCuentas } from "@/server/store";
 import { resolverEmpresa } from "@/server/empresa-peticion";
 import { runWithTenant } from "@/server/tenant";
+import { frenado, ipDe } from "@/server/freno";
 
 /** Todas las rutas /api/td/* exigen sesión (compatibilidad). */
 export async function guard() {
@@ -27,14 +28,32 @@ export async function tenantOf(user: SessionUser): Promise<{ slug: string; actor
 
 type Handler<C> = (req: Request, ctx: C, user: SessionUser) => Promise<Response> | Response;
 
+/** ¿La petición la originó una página de otro sitio? El navegador envía Origin en toda escritura entre sitios. */
+function origenAjeno(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  try {
+    const host = new URL(origin).host.toLowerCase();
+    return ![req.headers.get("x-forwarded-host"), req.headers.get("host"), new URL(req.url).host].some((h) => h && h.toLowerCase() === host);
+  } catch { return true; }
+}
+
 /** Envuelve un handler: exige sesión, fija la empresa como contexto de la
     petición e hidrata su estado. Dentro del handler el store ya es «de la
     empresa». */
 export function withTenant<C = unknown>(handler: Handler<C>) {
   return async (req: Request, ctx: C): Promise<Response> => {
+    // una escritura lanzada desde otro sitio no se atiende aunque el navegador envíe la cookie
+    if (req.method !== "GET" && origenAjeno(req)) return NextResponse.json({ error: "Petición de otro origen." }, { status: 403 });
     const user = await getSession();
     if (!user) {
-      if (req.method !== "GET") { const ref = req.headers.get("referer") ?? ""; const m = ref.match(/^https?:\/\/[^/]+\/([a-z0-9-]+)\/panel/i); void registrarSinSesion(m ? m[1].toLowerCase() : null, `${req.method} ${new URL(req.url).pathname}`); }
+      // el aviso de «escritura sin sesión» solo se anota si la petición viene de una página de este mismo sitio, y con
+      // tope por dirección: sin eso, cualquiera podría llenar la auditoría de una empresa
+      if (req.method !== "GET") {
+        const ref = req.headers.get("referer") ?? ""; const m = ref.match(/^https?:\/\/([^/]+)\/([a-z0-9-]+)\/panel/i);
+        const propio = m && [req.headers.get("x-forwarded-host"), req.headers.get("host")].some((h) => h && h.toLowerCase() === m[1].toLowerCase());
+        if (m && propio && !frenado(`sin-sesion:${ipDe(req)}`, 5, 10 * 60_000)) void registrarSinSesion(m[2].toLowerCase(), `${req.method} ${new URL(req.url).pathname}`.slice(0, 200));
+      }
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
     const t = await tenantOf(user);
@@ -46,6 +65,8 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
       // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
       await hydrateFromDb({ force: req.method !== "GET" });
       const res = await handler(req, ctx, actor);
+      // un cambio en cuentas o empresas se refleja de inmediato en la vigencia de las sesiones de esta instancia
+      if (req.method !== "GET" && /\/api\/td\/(users|perfil|empresas|seguridad)/.test(new URL(req.url).pathname)) olvidarCuentas();
       // ninguna mutación responde «guardado» hasta que la base confirmó la escritura: si falló, el usuario lo ve y puede reintentar
       if (req.method !== "GET" && res.ok) {
         const error = await flushOrError();

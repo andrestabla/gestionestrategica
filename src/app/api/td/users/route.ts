@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "../_helpers";
 import { randomBytes } from "crypto";
-import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword, removeUser, flushOrError, findUserForLogin, addMembership } from "@/server/store";
+import { getUsers, createUser, updateUser, moveUser, getPlatformUsers, setUserPassword, removeUser, flushOrError, findUserForLogin, addMembership, correoDeOtraEmpresa } from "@/server/store";
 import { can } from "@/lib/permissions";
 import { passwordOk } from "@/lib/recuperacion";
 import { passwordFromBytes } from "@/lib/correos";
@@ -33,6 +33,8 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     const e = await flushOrError(); if (e) return NextResponse.json({ error: e }, { status: 500 });
     return NextResponse.json({ user: m.user, membership: true, principal: existente.company.name, mailed: false }, { status: 201 });
   }
+  // el correo es único en la base: si ya es de otra empresa (aunque esté desactivado allá), no se crea aquí ni se mueve
+  if (typeof body.email === "string" && (await correoDeOtraEmpresa(body.email))) return NextResponse.json({ error: "Ese correo ya tiene una cuenta en otra empresa. Pide al administrador de la plataforma que la reasigne." }, { status: 409 });
   const result = createUser(user, body);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   let password: string | undefined; let generated = false;

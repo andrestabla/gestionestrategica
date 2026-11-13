@@ -5,7 +5,7 @@ import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
-import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPendingDb, exigeCodigoEn } from "@/server/store";
+import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPendingDb, exigeCodigoEn, sesionVigente, membresiaEn } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { FeedbackProvider } from "@/components/feedback";
 import { CatalogProvider } from "@/components/catalog-context";
@@ -18,6 +18,10 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   const user = await getSession();
   if (!user) redirect("/login");
   await hydrateCompanies();
+  // la cuenta pudo desactivarse, salir de la empresa o cambiar su contraseña después de abrir la sesión
+  const vigente = await sesionVigente(user);
+  if (!vigente.ok) redirect("/login");
+  if (user.role !== "ADMIN" && user.company && !membresiaEn(vigente.cuenta, user.company.slug)) redirect("/login");
   // la empresa la fija la URL (/empresa/panel/…): cada usuario solo en la suya;
   // el admin activa en su sesión la empresa de la URL si aún no coincide
   const fromUrl = await urlTenant();

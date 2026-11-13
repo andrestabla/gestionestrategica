@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findUserForLogin, verifyPassword, companyBySlug, empresasDe, exigeCodigo, empresaQueExige } from "@/server/store";
+import { findUserForLogin, verifyPassword, compararEnVacio, companyBySlug, empresasDe, exigeCodigo, empresaQueExige, bloqueoLogin, registrarFalloLogin, limpiarFallosLogin, LOGIN_MAX, LOGIN_BLOQUEO_MIN } from "@/server/store";
+import { frenado, liberar, ipDe } from "@/server/freno";
 import { pedirCodigo } from "@/server/dos-pasos";
 import { setSession, type SessionUser } from "@/lib/session";
 
 const DEMO_PASSWORD = "4shine-demo-2026";
-// La contraseña demo solo vale con DEMO_LOGIN=on (desarrollo local). En
-// producción entra únicamente quien tiene contraseña fijada en la base (bcrypt).
-const demoAllowed = () => process.env.DEMO_LOGIN === "on";
+// La contraseña demo solo vale en desarrollo y con DEMO_LOGIN=on. En producción no existe, aunque la variable
+// esté puesta: entra únicamente quien tiene contraseña fijada en la base (bcrypt).
+const demoAllowed = () => process.env.NODE_ENV !== "production" && process.env.DEMO_LOGIN === "on";
 
-const Body = z.object({ email: z.string().email(), password: z.string().min(4), tenant: z.string().max(40).optional() });
+const Body = z.object({ email: z.string().max(160).email(), password: z.string().min(4).max(200), tenant: z.string().max(40).optional() });
+const DEMASIADOS = () => NextResponse.json({ error: `Demasiados intentos fallidos. Espera ${LOGIN_BLOQUEO_MIN} minutos o restablece tu contraseña con «¿Olvidaste tu contraseña?».` }, { status: 429 });
 
 // El usuario pertenece a una empresa (su rol vale solo allí). El admin de
 // plataforma no tiene empresa: entra con la primera activa como contexto y
@@ -20,15 +22,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
   }
   const { email, password, tenant } = parsed.data;
+  // frenos a la adivinación de contraseñas: por dirección, por cuenta (en memoria) y el bloqueo de la cuenta en la
+  // base. La respuesta es la misma exista o no la cuenta, para no revelar qué correos están registrados.
+  const clave = `login:${email.trim().toLowerCase()}`;
+  if (frenado(`login-ip:${ipDe(req)}`, 30, 15 * 60_000) || frenado(clave, LOGIN_MAX, LOGIN_BLOQUEO_MIN * 60_000)) return DEMASIADOS();
+  if (await bloqueoLogin(email)) return DEMASIADOS();
   const found = await findUserForLogin(email);
-  const real = found ? await verifyPassword(found.user.email, password) : false;
+  // sin cuenta también se gasta el tiempo de una comparación: la demora no delata si el correo existe
+  const real = found ? await verifyPassword(found.user.email, password) : await compararEnVacio(password);
   const ok = real === true || (real === null && demoAllowed() && password === DEMO_PASSWORD);
   if (!found || !ok) {
+    if (found) await registrarFalloLogin(found.user.email);
     return NextResponse.json(
       { error: "Credenciales incorrectas. Verifica el correo y la contraseña." },
       { status: 401 },
     );
   }
+  liberar(clave);
+  await limpiarFallosLogin(found.user.email);
   if (found.company && !found.company.active) {
     return NextResponse.json({ error: "La empresa de tu cuenta está desactivada." }, { status: 403 });
   }

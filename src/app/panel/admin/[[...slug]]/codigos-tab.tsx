@@ -9,6 +9,7 @@ import { Card, CardHeader, Modal, ResponsiveTable } from "@/components/ui";
 import { avisar, confirmar } from "@/components/feedback";
 import { ALCANCES, ESTADO_CODIGO, CODIGO_DIAS, type AlcanceCodigo, type EstadoCodigo } from "@/lib/codigos";
 import { Copy, KeyRound, Loader2, Send, Ban, ExternalLink } from "lucide-react";
+import { SolicitudesCard } from "./solicitudes-card";
 
 type Fila = { id: string; codigo: string; name: string; email: string; organization?: string; scope: AlcanceCodigo[]; createdByName: string; createdAt: string; expiresAt: string; sentAt?: string; usedAt?: string; companySlug?: string; estado: EstadoCodigo; enlace: string; empresa: string | null };
 const dia = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -44,7 +45,8 @@ export function CodigosTab() {
   return (
     <>
       {error && <p className="mb-4 rounded-xl px-4 py-2.5 text-[12.5px]" role="alert" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))", color: "var(--bad-text)" }}>{error}</p>}
-      <Card className="rise rise-1 overflow-hidden">
+      <SolicitudesCard onAprobada={cargar} />
+      <Card className="rise rise-2 overflow-hidden">
         <CardHeader title={`Códigos de acceso a los diagnósticos${filas ? ` (${filas.length})` : ""}`}
           sub={`para personas que aún no tienen espacio en la plataforma · cada código es personal y vale ${CODIGO_DIAS} días`}
           right={<button type="button" onClick={() => setNuevo(true)} className="btn-primary btn-sm text-[12px]"><KeyRound size={12} /> Nuevo código</button>} />

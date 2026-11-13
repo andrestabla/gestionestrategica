@@ -11,7 +11,8 @@ import { pageTenant, PAGE_TENANT_HEADER } from "../src/lib/tenant-url";
 import { initConEmpresa } from "../src/lib/fetch-empresa";
 import type { SessionUser } from "../src/lib/session";
 
-const admin: SessionUser = { email: "admin@plataforma.test", name: "Admin", role: "ADMIN" };
+// la sesión se revalida contra la cuenta en cada petición: el administrador es uno que existe en la plataforma
+const admin: SessionUser = { email: "andrestablarico@gmail.com", name: "Admin", role: "ADMIN" };
 type Empresa = { slug: string; name: string; shortName: string };
 type Caso = { A: Empresa; B: Empresa; advisor: string; soloB: string };
 let serie = 0;

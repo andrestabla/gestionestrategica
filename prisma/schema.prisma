@@ -29,6 +29,7 @@ model User {
   active       Boolean   @default(true)
   failedLogins Int       @default(0)
   lockedUntil  DateTime?
+  sessionsFrom DateTime? // las sesiones abiertas antes de este momento no valen (cambio de contraseña)
   resetToken   String?   @unique // enlace de restablecimiento de contraseña (un solo uso)
   resetExpires DateTime?
   consentAt    DateTime? // aceptación del tratamiento de datos personales (acceso por QR)
@@ -62,6 +63,30 @@ model AccessCode {
   companySlug   String? // espacio que se creó al usarlo
   revokedAt     DateTime?
 
+  @@index([email])
+}
+
+// ─── Solicitudes de código de acceso (formulario público; las decide el admin o el advisor) ───
+
+model AccessRequest {
+  id            String    @id
+  name          String
+  company       String
+  industry      String
+  country       String
+  email         String
+  phone         String?
+  source        String // cómo se enteró: Google, Redes sociales, Evento, Referido, Otro
+  scope         String // "madurez", "test" o "madurez,test"
+  status        String    @default("pendiente") // pendiente | aprobada | rechazada
+  createdAt     DateTime  @default(now())
+  decidedAt     DateTime?
+  decidedBy     String? // correo de quien la aprobó o la rechazó
+  decidedByName String?
+  codeId        String? // código que se generó al aprobarla
+  note          String? // motivo del rechazo, para uso interno
+
+  @@index([status])
   @@index([email])
 }
 

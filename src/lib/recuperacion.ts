@@ -1,7 +1,7 @@
 // Recuperación de contraseña: un enlace de un solo uso, con vencimiento, que
 // llega por correo. Reglas puras; el store emite y consume los tokens.
 import { renderPlantilla, defaultTemplate, type MailTemplate } from "@/lib/plantillas-correo";
-const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 export const RESET_MINUTES = 60;
 export const TOKEN_RE = /^[A-Za-z0-9_-]{32,96}$/;
 export const PASSWORD_MIN = 10;

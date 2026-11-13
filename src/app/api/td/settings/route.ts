@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { mailLayout, mailText } from "@/lib/correo-plantilla";
+import { mailLayout, mailText, escHtml } from "@/lib/correo-plantilla";
 import { withTenant } from "../_helpers";
 import { can } from "@/lib/permissions";
 import {
@@ -36,7 +36,7 @@ export const POST = withTenant(async (req: Request, _ctx: unknown, user) => {
     const company = user.company?.name;
     const r = await sendMail({ to: user.email, subject: "Prueba de envío · Gestión estratégica (Amazon SES)",
       text: mailText({ company, body: `Hola ${user.name},\n\nEste es un correo de prueba enviado desde Administración → Integraciones de la plataforma de gestión estratégica. Si lo recibes, el correo transaccional (bienvenida, recuperación de contraseña, notificaciones) está operativo.` }),
-      html: mailLayout({ title: "Prueba de envío", company, body: `<p style="margin:0 0 10px">Hola ${user.name},</p><p style="margin:0">Este es un correo de prueba enviado desde Administración → Integraciones. Si lo recibes, el correo transaccional de la plataforma (bienvenida, recuperación de contraseña, notificaciones) está operativo.</p>` }) });
+      html: mailLayout({ title: "Prueba de envío", company, body: `<p style="margin:0 0 10px">Hola ${escHtml(user.name)},</p><p style="margin:0">Este es un correo de prueba enviado desde Administración → Integraciones. Si lo recibes, el correo transaccional de la plataforma (bienvenida, recuperación de contraseña, notificaciones) está operativo.</p>` }) });
     if (!r.ok) return NextResponse.json({ error: r.error }, { status: 503 });
     return NextResponse.json({ ok: true, message: `Correo de prueba enviado a ${user.email} (id ${r.id ?? "—"}).` });
   }

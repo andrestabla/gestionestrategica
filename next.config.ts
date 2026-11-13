@@ -34,7 +34,47 @@ const SERVER_PACKAGES = [
   "./node_modules/xtend/**"
 ];
 
+// Cabeceras de seguridad de toda respuesta. La política de contenido limita de dónde carga el navegador: todo sale
+// de este mismo origen, salvo las imágenes (los logos de marca pueden ser enlaces externos) y las descargas directas
+// del almacenamiento. Next necesita scripts y estilos en línea para arrancar; en desarrollo, además, eval y el canal
+// de recarga. Nadie puede incrustar la plataforma en un marco ajeno ni enviar sus formularios a otro sitio.
+const DEV = process.env.NODE_ENV !== "production";
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${DEV ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",   // la tipografía de marca de una empresa puede venir de Google Fonts
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  `connect-src 'self' https://*.r2.cloudflarestorage.com${DEV ? " ws: wss:" : ""}`,
+  "media-src 'self' blob: https:",
+  "frame-src 'self' blob:",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  ...(DEV ? [] : ["upgrade-insecure-requests"]),
+].join("; ");
+const SEGURIDAD = [
+  { key: "Content-Security-Policy", value: CSP },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+];
+const SIN_CACHE = [{ key: "Cache-Control", value: "no-store" }];
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,   // no anunciar la tecnología del servidor
+  async headers() {
+    return [
+      { source: "/:path*", headers: SEGURIDAD },
+      // las respuestas de la API con sesión no se guardan en ninguna caché intermedia ni en el navegador
+      { source: "/api/td/:path*", headers: SIN_CACHE },
+      { source: "/api/auth/:path*", headers: SIN_CACHE },
+    ];
+  },
   serverExternalPackages: ["@prisma/client", "@prisma/adapter-pg", "@prisma/adapter-better-sqlite3", "better-sqlite3", "pg", "bcryptjs"],
   outputFileTracingIncludes: { "/**": SERVER_PACKAGES },
 };

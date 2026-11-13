@@ -66,10 +66,25 @@ export const SAMPLE_VARS: Record<MailTemplateKey, Record<string, string>> = {
   restablecer: { nombre: "Ana Gómez", empresa: "Siegfried", enlace: "https://gestionestrategica.io/siegfried/restablecer/abc123", minutos: "60" },
 };
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 /** Sustituye {{variable}} (sin distinguir mayúsculas ni espacios). Lo desconocido queda vacío. */
-export const sustituir = (s: string, vars: Record<string, string>) => s.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (_, k: string) => vars[k] ?? vars[k.toLowerCase()] ?? "");
-const autolink = (s: string) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, (u) => `<a href="${u}" style="color:#0D1B2A;font-weight:700;word-break:break-all">${u}</a>`);
+const VAR = /\{\{\s*([a-zA-Z_]+)\s*\}\}/g;
+export const sustituir = (s: string, vars: Record<string, string>) => s.replace(VAR, (_, k: string) => vars[k] ?? vars[k.toLowerCase()] ?? "");
+// las direcciones del texto se vuelven enlaces; la dirección termina antes de cualquier comilla ya escapada
+const autolink = (s: string) => esc(s).replace(/(https?:\/\/(?:[^\s<&]|&amp;)+)/g, (u) => `<a href="${u}" style="color:#0D1B2A;font-weight:700;word-break:break-all">${u}</a>`);
+/** Una línea de la plantilla en HTML. El texto de la plantilla (lo escribe el administrador) puede traer enlaces;
+    los valores de las variables (nombres, empresas, lo que alguien escribió en un formulario) entran solo como
+    texto escapado: no se convierten en enlaces ni en marcado. La excepción es {{enlace}}, que arma el servidor. */
+const lineaHtml = (l: string, vars: Record<string, string>): string => {
+  let out = "", desde = 0;
+  for (const m of l.matchAll(VAR)) {
+    out += autolink(l.slice(desde, m.index));
+    const k = m[1], valor = vars[k] ?? vars[k.toLowerCase()] ?? "";
+    out += k.toLowerCase() === "enlace" ? autolink(valor) : esc(valor);
+    desde = m.index + m[0].length;
+  }
+  return out + autolink(l.slice(desde));
+};
 
 /** Validación de una plantilla editada. */
 export function validarPlantilla(t: Partial<MailTemplate>): string | null {
@@ -83,25 +98,30 @@ export function validarPlantilla(t: Partial<MailTemplate>): string | null {
 }
 
 /** Renderiza una plantilla con sus variables: asunto, texto plano y HTML listos para enviar. */
-export function renderPlantilla(t: MailTemplate, vars: Record<string, string>, opts: { company?: string; origin?: string } = {}): { subject: string; text: string; html: string } {
+export function renderPlantilla(t: MailTemplate, variables: Record<string, string>, opts: { company?: string; origin?: string } = {}): { subject: string; text: string; html: string } {
+  // un valor no trae saltos de línea: así no abre párrafos, citas ni botones propios dentro del correo
+  const vars = Object.fromEntries(Object.entries(variables).map(([k, x]) => [k, String(x ?? "").replace(/[\r\n]+/g, " ")]));
   const subject = sustituir(t.subject, vars).trim();
   const title = sustituir(t.title, vars).trim();
-  const body = sustituir(t.body, vars).replace(/\r\n/g, "\n").trim();
-  const parrafos = body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-  const htmlParts = parrafos.map((p) => {
+  // la estructura (párrafos, citas, botones) sale de la plantilla, antes de poner los valores
+  const parrafos = t.body.replace(/\r\n/g, "\n").trim().split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const htmlParts: string[] = [], textParts: string[] = [];
+  for (const p of parrafos) {
     const boton = p.match(/^\[\[(.+?)\]\]$/);
-    if (boton) return vars.enlace ? mailButton(vars.enlace, boton[1].trim()) : `<p style="margin:0 0 12px"><b>${esc(boton[1].trim())}</b></p>`;
-    const lineas = p.split("\n");
-    if (lineas.every((l) => /^>\s?/.test(l))) {
-      return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px"><tr><td style="background:#F3F5F8;border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.6">${lineas.map((l) => autolink(l.replace(/^>\s?/, ""))).join("<br>")}</td></tr></table>`;
+    if (boton) {
+      const rotulo = sustituir(boton[1], vars).trim();
+      htmlParts.push(vars.enlace ? mailButton(vars.enlace, rotulo) : `<p style="margin:0 0 12px"><b>${esc(rotulo)}</b></p>`);
+      textParts.push(vars.enlace ? `${rotulo}: ${vars.enlace}` : rotulo);
+      continue;
     }
-    return `<p style="margin:0 0 12px">${lineas.map(autolink).join("<br>")}</p>`;
-  });
-  const textParts = parrafos.map((p) => {
-    const boton = p.match(/^\[\[(.+?)\]\]$/);
-    if (boton) return vars.enlace ? `${boton[1].trim()}: ${vars.enlace}` : boton[1].trim();
-    return p.split("\n").map((l) => l.replace(/^>\s?/, "")).join("\n");
-  });
+    const lineas = p.split("\n");
+    const texto = lineas.map((l) => sustituir(l.replace(/^>\s?/, ""), vars)).join("\n");
+    if (!texto.trim()) continue;   // un párrafo que era solo una variable vacía no deja hueco
+    textParts.push(texto);
+    if (lineas.every((l) => /^>\s?/.test(l))) {
+      htmlParts.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px"><tr><td style="background:#F3F5F8;border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.6">${lineas.map((l) => lineaHtml(l.replace(/^>\s?/, ""), vars)).join("<br>")}</td></tr></table>`);
+    } else htmlParts.push(`<p style="margin:0 0 12px">${lineas.map((l) => lineaHtml(l, vars)).join("<br>")}</p>`);
+  }
   return {
     subject,
     text: mailText({ company: opts.company, origin: opts.origin, body: textParts.join("\n\n") }),

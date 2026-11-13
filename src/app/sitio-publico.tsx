@@ -13,7 +13,6 @@ import "./sitio.css";
 
 /** Correo de contacto. Pendiente de confirmar con el dueño del producto. */
 const CONTACTO = "hola@algoritmot.com";
-export const CONTACTO_SITIO = CONTACTO;
 const correo = (asunto: string) => `mailto:${CONTACTO}?subject=${encodeURIComponent(asunto)}`;
 const DEMO = correo("Demostración de Gestión estratégica");
 

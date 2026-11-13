@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { DESARROLLADO_POR, MarcaGE } from "@/components/logo";
 import { DIAGNOSTICOS_PUBLICOS, diagnosticoPublico } from "@/data/diagnosticos-publicos";
-import { CONTACTO_SITIO } from "@/app/sitio-publico";
 import { SECCIONES } from "./secciones";
 import "../../sitio.css";
 
@@ -34,7 +33,7 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ sl
   const d = diagnosticoPublico((await params).slug);
   if (!d) notFound();
   const otro = DIAGNOSTICOS_PUBLICOS.find((x) => x.slug !== d.slug)!;
-  const solicitar = `mailto:${CONTACTO_SITIO}?subject=${encodeURIComponent(d.asunto)}`;
+  const solicitar = `/solicitar-codigo?d=${d.slug}`;
   const S = SECCIONES[d.slug];
   return (
     <div className="sp">
@@ -61,7 +60,7 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ sl
                 <p className="sp-hero-p">{d.bajada}</p>
                 <div className="sp-cta">
                   <Link href="/codigo" className="sp-btn sp-btn-oro">Tengo un código <ArrowRight size={17} strokeWidth={2.4} /></Link>
-                  <a href={solicitar} className="sp-btn sp-btn-linea">Solicitar un código</a>
+                  <Link href={solicitar} className="sp-btn sp-btn-linea">Solicitar un código</Link>
                 </div>
               </div>
               {S && <div className="sp-dx-hero-vista"><S.portada /><p className="sp-nota-fig">Vista ilustrativa del informe, con datos de ejemplo.</p></div>}
@@ -130,10 +129,10 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ sl
         <section className="sp-sec sp-cierre">
           <div className="sp-wrap">
             <h2 className="sp-h2">El acceso es con un código personal.</h2>
-            <p className="sp-lead">Lo genera y lo envía el equipo que acompaña el diagnóstico. Con él registras tu organización y entras directo.</p>
+            <p className="sp-lead">Lo genera y lo envía el equipo que acompaña el diagnóstico. Si aún no tienes uno, solicítalo con un formulario breve. Con el código registras tu organización y entras directo.</p>
             <div className="sp-cta">
               <Link href="/codigo" className="sp-btn sp-btn-oro">Tengo un código <ArrowRight size={17} strokeWidth={2.4} /></Link>
-              <a href={solicitar} className="sp-btn sp-btn-linea">Solicitar un código</a>
+              <Link href={solicitar} className="sp-btn sp-btn-linea">Solicitar un código</Link>
             </div>
             <p className="sp-cierre-o">También puedes conocer el <Link href={`/diagnosticos/${otro.slug}`} className="sp-sub-enlace">{otro.titulo.charAt(0).toLowerCase() + otro.titulo.slice(1)}</Link>.</p>
           </div>
@@ -147,6 +146,7 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ sl
             <Link href="/">Inicio</Link>
             {DIAGNOSTICOS_PUBLICOS.map((x) => <Link key={x.slug} href={`/diagnosticos/${x.slug}`}>{x.corto}</Link>)}
             <Link href="/codigo">Tengo un código</Link>
+            <Link href="/solicitar-codigo">Solicitar un código</Link>
             <Link href="/login">Iniciar sesión</Link>
           </nav>
         </div>

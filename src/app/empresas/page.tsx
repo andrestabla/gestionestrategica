@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { hydrateCompanies, listCompanies, tenantView, getUsers, companyBySlug } from "@/server/store";
+import { hydrateCompanies, listCompanies, tenantView, getUsers, companyBySlug, sesionVigente } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { CompanyChooser, type ChooserCompany } from "@/components/company-chooser";
 
@@ -10,6 +10,7 @@ export default async function EmpresasPage() {
   const user = await getSession();
   if (!user) redirect("/login");
   await hydrateCompanies();
+  if (!(await sesionVigente(user)).ok) redirect("/login");
   const admin = user.role === "ADMIN";
   // quien no administra la plataforma elige solo entre las empresas a las que pertenece (si son varias)
   const mias = (user.empresas ?? []).map((e) => companyBySlug(e.slug)).filter((c): c is NonNullable<typeof c> => !!c && c.active);

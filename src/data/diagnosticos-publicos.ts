@@ -17,7 +17,6 @@ export type DiagnosticoPublico = {
   usos: Tarjeta[];      // para qué sirven los resultados
   noEs: { t: string; d: string }[];
   responde: Tarjeta[];
-  asunto: string;       // asunto del correo de «Solicitar un código»
 };
 
 export const DIAGNOSTICOS_PUBLICOS: DiagnosticoPublico[] = [
@@ -73,7 +72,6 @@ export const DIAGNOSTICOS_PUBLICOS: DiagnosticoPublico[] = [
       { icono: "Briefcase", t: "Qué necesitas", d: "Conocer cómo funciona hoy la organización. La percepción no exige preparar documentos; la evidencia la revisa después el asesor contigo." },
       { icono: "Lock", t: "Qué pasa con tus datos", d: "Tu nombre y tu correo se usan solo para el diagnóstico de tu organización. Las respuestas se leen como un promedio de la organización, no como una evaluación de la persona." },
     ],
-    asunto: "Código para el diagnóstico de madurez en transformación digital",
   },
   {
     slug: "test-de-capacidades",
@@ -125,7 +123,6 @@ export const DIAGNOSTICOS_PUBLICOS: DiagnosticoPublico[] = [
       { icono: "Briefcase", t: "Qué necesitas", d: "Conocer la operación de la empresa. No requiere preparar información: si no tienes cómo responder una pregunta, la marcas «Sin información»." },
       { icono: "Lock", t: "Qué pasa con tus datos", d: "Tu nombre y tu correo se usan solo para el diagnóstico de tu organización. El resultado es una hipótesis de trabajo, no una calificación de las personas." },
     ],
-    asunto: "Código para el test de capacidades",
   },
 ];
 
