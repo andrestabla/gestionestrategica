@@ -14,10 +14,8 @@ import { CRITERIA, LEVEL_NAMES, type Level } from "@/lib/priorizacion";
 import { DIAGNOSTICOS_PUBLICOS } from "@/data/diagnosticos-publicos";
 import "./sitio.css";
 
-/** Correo de contacto. Pendiente de confirmar con el dueño del producto. */
-const CONTACTO = "hola@algoritmot.com";
-const correo = (asunto: string) => `mailto:${CONTACTO}?subject=${encodeURIComponent(asunto)}`;
-const DEMO = correo("Demostración de Gestión estratégica");
+/** Agenda en línea de Algoritmo T: quien pide una demostración elige el día y la hora. */
+const DEMO = "https://bookings.cloud.microsoft/bookwithme/user/9cf8e211b713432295f17969db08b402%40algoritmot.com?anonymous&ismsaljsauthenabled=true";
 
 // Dos puertas de entrada, cada una con su página (/diagnosticos/<slug>). Se entra con un código personal que envía el equipo que acompaña.
 
@@ -215,7 +213,7 @@ export function SitioPublico() {
                 La plataforma conecta lo que se decide (objetivos, resultados clave e iniciativas) y lo mantiene visible para quienes participan.
               </p>
               <div className="sp-cta rise rise-3">
-                <a href={DEMO} className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
+                <a href={DEMO} target="_blank" rel="noopener noreferrer" className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
                 <Link href="/login" className="sp-btn sp-btn-linea">Iniciar sesión</Link>
               </div>
             </div>
@@ -609,7 +607,7 @@ export function SitioPublico() {
             </div>
             <p className="sp-cierre-o">¿Prefieres ver primero la plataforma completa?</p>
             <div className="sp-cta">
-              <a href={DEMO} className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
+              <a href={DEMO} target="_blank" rel="noopener noreferrer" className="sp-btn sp-btn-oro">Solicitar una demostración <ArrowRight size={17} strokeWidth={2.4} /></a>
               <Link href="/codigo" className="sp-btn sp-btn-linea">Tengo un código</Link>
             </div>
           </div>
