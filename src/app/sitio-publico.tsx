@@ -14,8 +14,9 @@ import { CRITERIA, LEVEL_NAMES, type Level } from "@/lib/priorizacion";
 import { DIAGNOSTICOS_PUBLICOS } from "@/data/diagnosticos-publicos";
 import "./sitio.css";
 
-/** Agenda en línea de Algoritmo T: quien pide una demostración elige el día y la hora. */
-const DEMO = "https://bookings.cloud.microsoft/bookwithme/user/9cf8e211b713432295f17969db08b402%40algoritmot.com?anonymous&ismsaljsauthenabled=true";
+/** Agenda de demostraciones en algoritmot.com: quien la pide elige el día y la hora, y la cita queda en
+ *  algoritmot.com/admin/bookings marcada como «Gestión Estratégica · demostración». */
+const DEMO = "https://www.algoritmot.com/agendar/gestion-estrategica";
 
 // Dos puertas de entrada, cada una con su página (/diagnosticos/<slug>). Se entra con un código personal que envía el equipo que acompaña.
 
