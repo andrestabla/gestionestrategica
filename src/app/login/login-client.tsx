@@ -183,7 +183,7 @@ export function LoginClient({ tenant, company, verificar = false }: { tenant: st
       )}
       {(b?.showLoginWelcome ?? true) && (
         <p className="mt-1 text-[13px] text-muted">
-          {b?.loginWelcome ?? "Entra con la cuenta que te asignó el asesor estratégico de tu empresa."}
+          {b?.loginWelcome ?? "Entra con la cuenta que te asignó el consultor estratégico de tu empresa."}
         </p>
       )}
 
