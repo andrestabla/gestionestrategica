@@ -25,7 +25,7 @@ import { CodigosTab } from "./codigos-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
-  UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff, Eye, EyeOff,
+  UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff, Eye, EyeOff, LockKeyhole,
   Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays, Ticket, Compass } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
@@ -384,6 +384,8 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
     setCreated({ name: j.user.name, email: j.user.email, password: j.password, mailed: !!j.mailed, mailError: j.mailError, membership: !!j.membership, principal: j.principal });
     await refetch(); setSaving(false); return true;
   };
+  const [fijarPara, setFijarPara] = useState<ManagedUser | null>(null);   // cuenta a la que el administrador le fija la contraseña
+
   const sendReset = async (u: ManagedUser) => {
     if (!(await confirmar(`¿Enviar a ${u.name} (${u.email}) un enlace para restablecer su contraseña?`))) return;
     setSaving(true); setError(null); setNotice(null);
@@ -437,6 +439,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                       {companies.map((c) => <option key={c.slug} value={c.slug}>{c.shortName}</option>)}
                     </select>
                   )}
+                  {!u.membresia && <button disabled={saving || !u.active} onClick={() => setFijarPara(u)} title="Fijar la contraseña: escríbela tú (útil para cuentas sin buzón, como la de demostración)" aria-label="Fijar la contraseña" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40"><LockKeyhole size={14} /></button>}
                   <button disabled={saving || !u.active} onClick={() => void sendReset(u)} title="Enviar por correo un enlace para restablecer la contraseña (vale 60 minutos)" aria-label="Enviar enlace para restablecer la contraseña" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40"><KeyRound size={14} /></button>
                   {!u.membresia && <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, soloLectura: !u.soloLectura })} title={u.soloLectura ? "Permitir que edite" : "Dejar en solo lectura (cuenta de demostración)"} aria-label={u.soloLectura ? "Permitir que edite" : "Dejar en solo lectura"} className={`rounded-lg p-2 transition-colors hover:bg-surface-2 disabled:opacity-40 ${u.soloLectura ? "text-[color:var(--gold)]" : "text-muted hover:text-ink"}`}>{u.soloLectura ? <Eye size={14} /> : <EyeOff size={14} />}</button>}
                   <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, active: !u.active })} title={u.active ? "Desactivar" : "Reactivar"} aria-label={u.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">{u.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
@@ -449,6 +452,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
           </div>
         </Card>
 
+        {fijarPara && <FijarContrasena u={fijarPara} onClose={() => setFijarPara(null)} onListo={(msg) => { setFijarPara(null); setNotice(msg); }} />}
         {newOpen && (
           <NewUserCard saving={saving} responsibles={responsibles} existentes={canCompanies ? existentes : null} onClose={() => setNewOpen(false)}
             onCreate={async (input) => { const ok = await createAccount(input); if (ok) setNewOpen(false); return ok; }} />
@@ -459,7 +463,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
         <ShieldCheck size={12} className="mt-0.5 shrink-0" />
         Reglas del servidor: no puedes desactivar ni eliminar tu propia cuenta y debe quedar al menos un
         administrador activo. Contraseñas: al crear la cuenta se fija manual o automática y puede enviarse por correo;
-        la llave de cada fila envía un enlace de restablecimiento de un solo uso (vale 60 minutos).
+        la llave de cada fila envía un enlace de restablecimiento de un solo uso (vale 60 minutos); el candado fija la contraseña que escribas, sin correo.
       </p>
     </>
   );
@@ -874,5 +878,46 @@ function ErrorBanner({ error, onClose }: { error: string; onClose: () => void })
       <p className="flex-1 text-[12.5px] leading-relaxed text-ink-soft">{error}</p>
       <button onClick={onClose} className="text-faint hover:text-ink"><X size={14} /></button>
     </div>
+  );
+}
+
+/** Fijar la contraseña de una cuenta de esta empresa: la escribe el administrador (cuentas sin buzón, como la de
+    demostración). Va directo al servidor, que la guarda cifrada y cierra las sesiones abiertas con la anterior. */
+function FijarContrasena({ u, onClose, onListo }: { u: ManagedUser; onClose: () => void; onListo: (msg: string) => void }) {
+  const [clave, setClave] = useState("");
+  const [otra, setOtra] = useState("");
+  const [ver, setVer] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const corta = clave.length > 0 && clave.length < 10, distinta = otra.length > 0 && otra !== clave;
+  const guardar = async () => {
+    if (busy || clave.length < 10 || clave !== otra) return;
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch("/api/td/users/password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: u.email, password: clave }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(j.error ?? `Error ${r.status}`); return; }
+      setClave(""); setOtra("");
+      onListo(`Contraseña fijada para ${u.name} (${u.email}). Las sesiones abiertas con la anterior se cerraron.`);
+    } catch { setError("No se pudo conectar con el servidor."); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Modal variante="dialogo" title="Fijar contraseña" sub={`${u.name} · ${u.email}`} onClose={() => { if (!busy) onClose(); }}
+      footer={<>
+        <button type="button" onClick={onClose} disabled={busy} className="btn-ghost !py-2 text-[12px]">Cancelar</button>
+        <button type="button" onClick={() => void guardar()} disabled={busy || clave.length < 10 || clave !== otra} className="btn-primary !py-2 text-[12.5px] disabled:opacity-40">{busy ? <Loader2 size={13} className="animate-spin" /> : <LockKeyhole size={13} />} Fijar contraseña</button>
+      </>}>
+      <p className="text-[13px] leading-relaxed text-ink-soft">Escribe la contraseña con la que entrará esta cuenta. Mínimo 10 caracteres. No se vuelve a mostrar: compártela por un canal seguro.{u.soloLectura ? " Es una cuenta de solo lectura: quien entre con ella no podrá cambiarla." : ""}</p>
+      <label className="mt-4 block"><span className="label">Contraseña nueva</span>
+        <input type={ver ? "text" : "password"} autoComplete="new-password" autoFocus value={clave} onChange={(e) => setClave(e.target.value)} className="input mt-1 w-full" />
+      </label>
+      <label className="mt-3 block"><span className="label">Confírmala</span>
+        <input type={ver ? "text" : "password"} autoComplete="new-password" value={otra} onChange={(e) => setOtra(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void guardar(); }} className="input mt-1 w-full" />
+      </label>
+      <label className="mt-3 flex items-center gap-2 text-[12px] text-muted"><input type="checkbox" checked={ver} onChange={(e) => setVer(e.target.checked)} /> Mostrar la contraseña</label>
+      {(corta || distinta) && <p className="mt-2 text-[12px]" style={{ color: "var(--bad-text)" }}>{corta ? "Le faltan caracteres: mínimo 10." : "Las dos contraseñas no coinciden."}</p>}
+      {error && <p className="mt-2 text-[12px]" style={{ color: "var(--bad-text)" }}>{error}</p>}
+    </Modal>
   );
 }
