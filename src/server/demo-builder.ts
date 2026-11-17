@@ -11,7 +11,7 @@
 // sesiones de noviembre de 2026 y la empresa vive detenida a mitad del segundo trimestre de 2027.
 
 import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError, leerMembresias, restaurarMembresias, reiniciarEmpresaDemo, type MembresiaGuardada } from "@/server/store";
-import { saveTestResponse, saveF2Response, captureVariable } from "@/server/store";
+import { saveTestResponse, saveF2Response, captureVariable, publishCapture } from "@/server/store";
 import { upsertPerson, createTask, updateTask, attachEvidence, verifyUploadedEvidence, upsertRisk, addGasto, reportKpi, updateInitiative, getMetas, cerrarMeta, respondMadurezLote, captureMadurez, setMadSafeguard, publishMadurez } from "@/server/store";
 import { runWithTenant, fijarReloj, DEFAULT_TENANT } from "@/server/tenant";
 import { putObject } from "@/server/storage";
@@ -85,13 +85,15 @@ export type PaqueteDemo = {
   articulacion: Record<string, AreaArticulada[]>;
   metas: MetaDemo[];
   f1Perfil: Record<string, number>;
+  /** Dimensiones en las que el comité no comparte el diagnóstico: mitad de los directivos por encima y mitad por debajo, ± este valor. */
+  f1Dispersion?: Record<string, number>;
   f1Directivos: { email: string; name: string; cargo: string }[];
   /** Los otros instrumentos del diagnóstico (opcional): test de entrada, percepción de equipos y la captura A3 en curso. */
   diagnostico?: {
     test: { email: string; name: string; cargo: string; objetivo: string; perfil: number; q25: "A" | "B" | "C" | "D" | "E"; fecha: string }[];
-    f2: { n: number; desde: string; areas: string[]; abiertas: string[]; sesgo: number };
+    f2: { n: number; desde: string; areas: string[]; abiertas: string[]; sesgo: number; sesgoDim?: Record<string, number> };   // sesgoDim: los equipos ven esa dimensión más baja que la dirección
     /** Prácticas que el advisor ya verificó en la captura A3 a la fecha de la demo (en el orden del mapa). */
-    captura: { practicas: number; fecha: string };
+    captura: { practicas: number; fecha: string; publicar?: string; nivelDim?: Record<string, number> };   // nivelDim: nivel verificado promedio de las prácticas de esa dimensión   // publicar: día en que el advisor publica el corte A3 (con las 68 prácticas)
   };
   ejecucion: {
     hoy: string;
@@ -189,7 +191,7 @@ export async function construirDemo(actor: SessionUser, P: PaqueteDemo, opts: { 
     const rand = rng(20261105);
     for (const [n, d] of P.f1Directivos.entries()) {
       const r: Record<string, number> = {};
-      for (const p of PRACTICES) { const m = P.f1Perfil[p.dim] ?? 3.3; const v = Math.round(m + (rand() - 0.5) * 2.2 + ((n % 3) - 1) * 0.3); r[p.code] = Math.max(1, Math.min(5, v)); }
+      for (const p of PRACTICES) { const m = P.f1Perfil[p.dim] ?? 3.3, dsp = P.f1Dispersion?.[p.dim] ?? 0; const v = Math.round(m + (rand() - 0.5) * 2.2 + ((n % 3) - 1) * 0.3 + (dsp ? (n % 2 ? dsp : -dsp) : 0)); r[p.code] = Math.max(1, Math.min(5, v)); }
       check(`F1 ${d.email}`, saveF1Response(demoUser({ email: d.email, name: d.name, role: "DIRECTIVO" }), { r, cargo: d.cargo }));
     }
 
@@ -210,7 +212,8 @@ export async function construirDemo(actor: SessionUser, P: PaqueteDemo, opts: { 
         const r: Record<string, number> = {};
         for (const code of codigos) {
           if (az() < 0.04) continue;   // alguna afirmación sin responder
-          const base = (P.f1Perfil[dimDe.get(code) ?? ""] ?? 3) - D.f2.sesgo;
+          const dim = dimDe.get(code) ?? "";
+          const base = (P.f1Perfil[dim] ?? 3) - D.f2.sesgo - (D.f2.sesgoDim?.[dim] ?? 0);
           r[code] = clamp(Math.round(base + (az() - 0.5) * 2.4), 1, 5);
         }
         check(`F2 ${n + 1}`, saveF2Response({ r, area: D.f2.areas[n % D.f2.areas.length], abierta: D.f2.abiertas[n] ?? "" }));
@@ -404,12 +407,13 @@ export async function sembrarEjecucion(P: PaqueteDemo, avisos: string[], opts: {
     const az = rng(20270510), D = P.diagnostico;
     for (const [i, p] of PRACTICES.slice(0, D.captura.practicas).entries()) {
       reloj(sumarDias(D.captura.fecha, Math.floor(i / 8)));
-      const m = P.f1Perfil[p.dim] ?? 3, level = clamp(Math.round(m - 0.4 + (az() - 0.5) * 1.6), 1, 5);
+      const m = P.f1Perfil[p.dim] ?? 3, level = clamp(Math.round((D.captura.nivelDim?.[p.dim] ?? m - 0.4) + (az() - 0.5) * 1.6), 1, 5);
       const evidence = level >= 4 ? "V" : level === 3 ? (az() < 0.7 ? "V" : "P") : level === 2 ? (az() < 0.6 ? "P" : "N") : "N";
       check(`captura ${p.code}`, captureVariable(advisor, p.code, { perception: clamp(Math.round(m + (az() - 0.3)), 1, 5), evidence, level,
         note: evidence === "V" ? "Evidencia revisada en la sesión de verificación." : evidence === "P" ? "La evidencia existe pero no está al día o no cubre todas las sedes." : "No se encontró evidencia de la práctica." }));
     }
     await vaciar();
+    if (D.captura.publicar) { reloj(D.captura.publicar); check("publicación del corte A3", publishCapture(advisor)); await vaciar(); }
   }
 
   // 8. madurez digital: percepción de los directivos, evidencia y nivel del advisor, salvaguardas y corte publicado

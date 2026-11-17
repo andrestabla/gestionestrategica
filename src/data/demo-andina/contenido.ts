@@ -268,8 +268,8 @@ export const METAS: MetaDemo[] = [
 
 /** Autoevaluación directiva (Fuente 1): perfil por dimensión (promedio de 1 a 5), con la brecha en liderazgo del gerente y en sucesión. */
 export const F1_PERFIL: Record<string, number> = {
-  "DIR-1": 3.6, "DIR-2": 3.2, "DIR-3": 3.0, "DIR-4": 3.1, "LID-1": 2.5, "LID-2": 3.0, "LID-3": 3.2, "LID-4": 2.3,
-  "EJE-1": 2.9, "EJE-2": 2.7, "EJE-3": 2.8, "EJE-4": 3.0, "MUL-1": 2.6, "MUL-2": 2.4, "MUL-3": 2.2, "MUL-4": 3.3, "MUL-5": 2.5,
+  "DIR-1": 3.6, "DIR-2": 3.2, "DIR-3": 3.0, "DIR-4": 3.1, "LID-1": 3.3, "LID-2": 3.0, "LID-3": 3.2, "LID-4": 2.3,
+  "EJE-1": 2.9, "EJE-2": 3.3, "EJE-3": 2.8, "EJE-4": 3.0, "MUL-1": 2.6, "MUL-2": 2.4, "MUL-3": 2.2, "MUL-4": 3.3, "MUL-5": 2.5,
 };
 export const F1_DIRECTIVOS = [
   { email: "gerencia@andina.demo", name: "Gerencia general", cargo: "Gerente general" },

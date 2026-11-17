@@ -20,6 +20,10 @@ const TERRITORIOS: Catalog["territories"] = A.territories.map((t) =>
   : t.name === "Bolívar" ? { ...t, reading: "Demanda industrial de Cartagena (Mamonal) atendida hoy desde Barranquilla; candidata a cobertura con visita semanal en 2028." }
   : t);
 
+/** Mediciones de capacidades: la línea base (agosto de 2026), el primer seguimiento (febrero de 2027) y el segundo,
+    que se captura en abril y se publica en mayo de 2027 con las tres fuentes de la plataforma. */
+const MEDICIONES: Catalog["assessments"] = A.assessments.map((a) => a.id === "A3" ? { ...a, label: "Corte de seguimiento 2", period: "2027-05", note: "Captura con las tres fuentes en la plataforma: ocho autoevaluaciones directivas, 24 respuestas de equipos y la verificación de evidencia de las 68 prácticas." } : a);
+
 const objetivosLB = A.objectives.map((o) => ({ ...o, horizon: "LB", lever: LB_PALANCA[o.id] }));
 const kpisLB = A.kpis.map((k) => ({ ...k, due: "2026", series: k.series.filter((p) => p.period <= "2026-T4") }));
 
@@ -28,12 +32,14 @@ export const PAQUETE_ANDINA: PaqueteDemo = {
   company: { city: INSTITUTION.city, department: INSTITUTION.department, sector: INSTITUTION.sector, size: "85 colaboradores · 4 sedes", sectorKey: INSTITUTION.sectorKey, ciiu: INSTITUTION.ciiu, horizons: HORIZONTES },
   typeRule: "cresio", mode: "acompanamiento", instruments: ["test", "f1", "f2", "captura"],
   base: { responsibles: RESPONSABLES, objectives: objetivosLB, kpis: kpisLB },
-  previo: { assessments: A.assessments, evidences: A.evidences, financials: A.financials, territories: TERRITORIOS },
+  previo: { assessments: MEDICIONES, evidences: A.evidences, financials: A.financials, territories: TERRITORIOS },
   levers: LEVERS, objetivos: OBJETIVOS, krs: KRS, iniciativas: INICIATIVAS, iniciativasMapeadas: INICIATIVAS_MAPEADAS,
   objetivoSinPrioridad: OBJETIVO_SIN_PRIORIDAD, iniciativaSinKr: INICIATIVA_SIN_KR,
   textos: { justificacionObjetivo: JUSTIFICACION_OBJETIVO, justificacionIni: JUSTIFICACION_INI, ...TEXTOS },
   evaluadores: EVALUADORES, calificaciones: CALIFICACIONES, decisiones: DECISIONES, capacidades: CAPACIDADES, checklists: CHECKLISTS_PERSONALIZADOS,
   articulacion: ARTICULACION, metas: METAS, f1Perfil: F1_PERFIL, f1Directivos: F1_DIRECTIVOS,
+  // el comité no comparte el diagnóstico sobre dónde juega la empresa (comercial y gerencia lo ven claro; operaciones, no)
+  f1Dispersion: { "DIR-2": 1.4 },
   diagnostico: {
     test: [
       { email: "gerencia@andina.demo", name: "Gerencia general", cargo: "Gerente general", objetivo: "Crecer en la costa sin que la operación dependa de mí.", perfil: 3.1, q25: "C", fecha: "2026-09-14" },
@@ -42,6 +48,8 @@ export const PAQUETE_ANDINA: PaqueteDemo = {
     ],
     f2: {
       n: 24, desde: "2026-10-13", sesgo: 0.35,
+      // los equipos ven al gerente mucho menos presente de lo que el comité cree (brecha jerárquica)
+      sesgoDim: { "LID-1": 1.4 },
       areas: ["Gerencia comercial", "Operaciones", "Administración y finanzas", "Servicio y posventa", "Sede Medellín", "Sede Cali"],
       abiertas: [
         "Las prioridades cambian cada semana según lo que pida el cliente más grande.",
@@ -55,7 +63,8 @@ export const PAQUETE_ANDINA: PaqueteDemo = {
         "Cuando falta alguien, el trabajo se queda quieto.",
       ],
     },
-    captura: { practicas: 40, fecha: "2027-04-26" },
+    // la evidencia no respalda lo que el comité cree de su disciplina de seguimiento (relato sobre realidad)
+    captura: { practicas: 68, fecha: "2027-04-19", publicar: "2027-05-10", nivelDim: { "EJE-2": 1.6 } },
   },
   ejecucion: {
     hoy: HOY, personas: PERSONAS, planes: PLANES, riesgos: RIESGOS, gastos: GASTOS,

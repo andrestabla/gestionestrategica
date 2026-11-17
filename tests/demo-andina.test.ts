@@ -35,7 +35,7 @@ test("Andina Suministros se reconstruye como caso demo completo, sin avisos y co
     assert.ok(getTasks().length >= 60);
     assert.ok(getRisks().length >= 10 && getGastos().length >= 20);
     assert.ok(Object.keys(getChecklistsCap()).length >= 1 && Object.keys(getRevisionesCap()).length >= 12);
-    assert.equal(Object.keys(getCapture()).length, 40, "la captura A3 va en curso");
+    assert.equal(Object.keys(getCapture()).length, 68, "la captura A3 está completa y publicada");
     assert.ok(getMadurez(admin).cuts.length === 1, "la madurez digital tiene su corte publicado");
   });
   // reconstruirla otra vez da el mismo resultado (sin duplicados)

@@ -2005,10 +2005,11 @@ export function publishCapture(
       target: base[d.line][d.code].target,     // la meta a 24 meses no cambia con el corte
     };
   }
+  const a3 = cat().assessments.find((a) => a.id === "A3");   // el corte que la empresa tiene programado (nombre y periodo)
   const assessment: AssessmentRecord = {
     id: "A3",
-    label: "Corte de seguimiento 2",
-    period: "2027-08",
+    label: a3?.label ?? "Corte de seguimiento 2",
+    period: a3?.period ?? "2027-08",
     status: "PUBLICADA",
     note: `Publicada desde la plataforma por ${user.name}: 68 prácticas calificadas, autoevaluación ${prog.perception}/68, evidencia ${prog.dik}/68.`,
     scores,
@@ -2025,7 +2026,7 @@ export function publishCapture(
     });
     for (const d of DIMS) {
       const sc = scores[d.line][d.code];
-      await db.dimensionScore.upsert({ where: { assessmentId_dimension: { assessmentId: "A3", dimension: d.code } }, update: { value: sc.value, target: sc.target }, create: { assessmentId: "A3", line: d.line, dimension: d.code, value: sc.value, target: sc.target } });
+      await db.dimensionScore.upsert({ where: { companyId_assessmentId_dimension: { companyId: company.id, assessmentId: "A3", dimension: d.code } }, update: { value: sc.value, target: sc.target }, create: { companyId: company.id, assessmentId: "A3", line: d.line, dimension: d.code, value: sc.value, target: sc.target } });
     }
   });
   return { ok: true, assessment };
