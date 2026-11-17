@@ -11,7 +11,7 @@
 // sesiones de noviembre de 2026 y la empresa vive detenida a mitad del segundo trimestre de 2027.
 
 import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError, leerMembresias, restaurarMembresias, reiniciarEmpresaDemo, type MembresiaGuardada } from "@/server/store";
-import { saveTestResponse, saveF2Response, captureVariable, publishCapture } from "@/server/store";
+import { saveTestResponse, saveF2Response, captureVariable, publishCapture, setTour } from "@/server/store";
 import { upsertPerson, createTask, updateTask, attachEvidence, verifyUploadedEvidence, upsertRisk, addGasto, reportKpi, updateInitiative, getMetas, cerrarMeta, respondMadurezLote, captureMadurez, setMadSafeguard, publishMadurez } from "@/server/store";
 import { runWithTenant, fijarReloj, DEFAULT_TENANT } from "@/server/tenant";
 import { putObject } from "@/server/storage";
@@ -93,8 +93,10 @@ export type PaqueteDemo = {
     test: { email: string; name: string; cargo: string; objetivo: string; perfil: number; q25: "A" | "B" | "C" | "D" | "E"; fecha: string }[];
     f2: { n: number; desde: string; areas: string[]; abiertas: string[]; sesgo: number; sesgoDim?: Record<string, number> };   // sesgoDim: los equipos ven esa dimensión más baja que la dirección
     /** Prácticas que el advisor ya verificó en la captura A3 a la fecha de la demo (en el orden del mapa). */
-    captura: { practicas: number; fecha: string; publicar?: string; nivelDim?: Record<string, number> };   // nivelDim: nivel verificado promedio de las prácticas de esa dimensión   // publicar: día en que el advisor publica el corte A3 (con las 68 prácticas)
+    captura: { practicas: number; fecha: string; publicar?: string; nivelDim?: Record<string, number>; ajuste?: number };   // ajuste: nivel verificado frente a la autoevaluación (por defecto, 0,4 por debajo)   // nivelDim: nivel verificado promedio de las prácticas de esa dimensión   // publicar: día en que el advisor publica el corte A3 (con las 68 prácticas)
   };
+  /** Tour guiado de la instancia (Administración → Tour), opcional. */
+  tour?: unknown;
   ejecucion: {
     hoy: string;
     personas: { name: string; cargo: string; responsibleId: string; dependencia: string }[];
@@ -267,6 +269,7 @@ export async function construirDemo(actor: SessionUser, P: PaqueteDemo, opts: { 
     let metas = 0;
     for (const m of P.metas) { const r = upsertMeta(advisor, { ...m, estado: m.estado ?? "PLANEADA" } as never); check(`meta ${m.initiative} ${m.quarter}`, r); if (r.ok) metas++; }
 
+    if (P.tour) check("tour guiado", setTour(advisor, P.tour));
     const cc = catalog();
     return { responsables: cc.responsibles.length, objetivos: cc.objectives.length, resultadosClave: cc.kpis.length, iniciativas: cc.initiatives.length, autoevaluaciones: P.f1Directivos.length, calificaciones: evaluaciones, decisiones, revisionesCapacidades: revisiones, articulaciones, metasTrimestrales: metas };
   });
@@ -407,7 +410,8 @@ export async function sembrarEjecucion(P: PaqueteDemo, avisos: string[], opts: {
     const az = rng(20270510), D = P.diagnostico;
     for (const [i, p] of PRACTICES.slice(0, D.captura.practicas).entries()) {
       reloj(sumarDias(D.captura.fecha, Math.floor(i / 8)));
-      const m = P.f1Perfil[p.dim] ?? 3, level = clamp(Math.round((D.captura.nivelDim?.[p.dim] ?? m - 0.4) + (az() - 0.5) * 1.6), 1, 5);
+      const m = P.f1Perfil[p.dim] ?? 3, fijo = D.captura.nivelDim?.[p.dim];   // con nivel fijado para la dimensión, la variación es menor
+      const level = clamp(Math.round((fijo ?? m + (D.captura.ajuste ?? -0.4)) + (az() - 0.5) * (fijo !== undefined ? 0.6 : 1.6)), 1, 5);
       const evidence = level >= 4 ? "V" : level === 3 ? (az() < 0.7 ? "V" : "P") : level === 2 ? (az() < 0.6 ? "P" : "N") : "N";
       check(`captura ${p.code}`, captureVariable(advisor, p.code, { perception: clamp(Math.round(m + (az() - 0.3)), 1, 5), evidence, level,
         note: evidence === "V" ? "Evidencia revisada en la sesión de verificación." : evidence === "P" ? "La evidencia existe pero no está al día o no cubre todas las sedes." : "No se encontró evidencia de la práctica." }));

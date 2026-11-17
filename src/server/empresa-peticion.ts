@@ -41,6 +41,9 @@ export async function resolverEmpresa(user: SessionUser, origen: { url?: string 
     actor = { ...user, role: rolDeSesion(user, m), line: m.line, responsibleId: m.responsibleId };
   }
   if (slug !== sesion && c) actor = { ...actor, company: { slug: c.slug, name: c.name, shortName: c.shortName, mode: c.mode } };
+  // solo lectura: lo decide la cuenta tal como está hoy en la base (en su empresa principal), no la cookie
+  const lectura = vigente.cuenta.user.soloLectura === true && vigente.cuenta.company?.slug === slug;
+  if (lectura) actor = { ...actor, lectura: true }; else if (actor.lectura) { const { lectura: _l, ...resto } = actor; void _l; actor = resto; }
   if (!c) return { ok: false, status: 409, error: slug === sesion ? "La empresa de tu sesión ya no existe." : "La empresa de esta página ya no existe." };
   if (!c.active && user.role !== "ADMIN") return { ok: false, status: 403, error: "La empresa está desactivada." };
   // acceso en dos pasos: la empresa solo admite sesiones que pasaron por el código enviado al correo

@@ -8,7 +8,7 @@
 import { construirDemo, type PaqueteDemo } from "@/server/demo-builder";
 import { DEFAULT_TENANT } from "@/server/tenant";
 import { ANDINA_CATALOG, type Catalog } from "@/data/catalogo";
-import { ANDINA_DOMINIO, HORIZONTES, RESPONSABLES, LEVERS, LB_PALANCA, OBJETIVOS, OBJETIVO_SIN_PRIORIDAD, KRS, INICIATIVAS, INICIATIVA_SIN_KR, INICIATIVAS_MAPEADAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, TEXTOS, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-andina/contenido";
+import { ANDINA_DOMINIO, HORIZONTES, RESPONSABLES, LEVERS, LB_PALANCA, OBJETIVOS, OBJETIVO_SIN_PRIORIDAD, KRS, INICIATIVAS, INICIATIVA_SIN_KR, INICIATIVAS_MAPEADAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, TEXTOS, TOUR_ANDINA, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-andina/contenido";
 import { HOY, PERSONAS, PLANES, RIESGOS, GASTOS, AVANCE_KR_T1, AVANCE_KR_POR_DEFECTO, NOTAS_KR_T1, AVANCE_INICIATIVAS, CIERRES_T1, MADUREZ_PERFIL, MADUREZ_SESGO, MADUREZ_SALVAGUARDAS, MADUREZ_CORTE } from "@/data/demo-andina/ejecucion";
 import type { SessionUser } from "@/lib/session";
 
@@ -64,8 +64,9 @@ export const PAQUETE_ANDINA: PaqueteDemo = {
       ],
     },
     // la evidencia no respalda lo que el comité cree de su disciplina de seguimiento (relato sobre realidad)
-    captura: { practicas: 68, fecha: "2027-04-19", publicar: "2027-05-10", nivelDim: { "EJE-2": 1.6 } },
+    captura: { practicas: 68, fecha: "2027-04-19", publicar: "2027-05-10", nivelDim: { "EJE-2": 1.1 }, ajuste: 0.15 },
   },
+  tour: TOUR_ANDINA,
   ejecucion: {
     hoy: HOY, personas: PERSONAS, planes: PLANES, riesgos: RIESGOS, gastos: GASTOS,
     avanceKrT1: AVANCE_KR_T1, avanceKrPorDefecto: AVANCE_KR_POR_DEFECTO, notasKrT1: NOTAS_KR_T1, avanceIniciativas: AVANCE_INICIATIVAS, cierresT1: CIERRES_T1,

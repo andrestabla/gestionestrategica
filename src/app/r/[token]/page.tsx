@@ -30,6 +30,7 @@ export default async function InformePublico({ params }: { params: Promise<{ tok
   return (
     <main className="mx-auto max-w-[1080px] px-4 py-6 sm:px-6">
       <InformeEjecutivo kind="consolidado" empresa={company.name} fecha={fecha} datos={datos} informe={informe?.informe ?? null}
+        pdf={{ token, titulo: "Informe ejecutivo del comité" }}
         estado={informe ? "listo" : "pendiente"} meta={informe ? `Lectura con IA generada el ${fecha} · modelo ${informe.model} · enlace de solo lectura, sin nombres.` : "Enlace de solo lectura, sin nombres."} />
     </main>
   );

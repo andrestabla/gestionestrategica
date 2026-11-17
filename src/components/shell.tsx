@@ -18,6 +18,7 @@ import { vocabOf, ESTRATEGIA_SLUG } from "@/lib/vocabulario";
 import { moduleOfRoute, moduleLabel, moduleState, type ModuleId, type ModuleState } from "@/lib/modulos";
 const CV_ICON = { direccion: Target, okr: Gauge, iniciativas: Rocket, priorizacion: Scale, portafolio: Layers } as const;
 import { CommandPalette, SearchButton } from "@/components/command-palette";
+import { TourControl, AvisoSoloLectura } from "@/components/tour-guia";
 import type { SessionUser } from "@/lib/session";
 import { applyTheme } from "@/lib/branding";
 
@@ -334,6 +335,9 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
     </nav>
   );
 
+  // modo documento (el servidor genera el PDF del informe): solo el contenido, sin menú, barra, avisos ni tour
+  if (searchParams.get("documento") === "1") return <div className="documento"><ModuloGuard path={path} t={searchParams.get("t")} mode={mode} modulesOff={modulesOff} modulesPending={modulesPending} base={base} gestiona={user.role === "ADMIN" || user.role === "CONSULTOR"}>{children}</ModuloGuard></div>;
+
   return (
     <div className="flex min-h-screen">
       {/* rail escritorio */}
@@ -443,6 +447,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
 
           <div className="ml-auto flex items-center gap-2.5">
             <span className="hidden sm:inline-flex"><SearchButton /></span>
+            <TourControl base={base} slug={user.company?.slug ?? null} email={user.email} />
             <NotificationsBell />
             <ThemeToggle />
             {/* la vista pública de la plataforma completa no aplica a la convención: se oculta en ese modo */}
@@ -460,6 +465,7 @@ export function AppShell({ children, user, companies = [], mode = "completa", mo
             </div>
           </div>
         </header>
+        {user.lectura && <AvisoSoloLectura />}
 
         <main id="contenido" tabIndex={-1} className="mx-auto w-full max-w-[1220px] flex-1 px-4 py-5 sm:px-8 sm:py-8 2xl:max-w-[1520px] outline-none"><ModuloGuard path={path} t={searchParams.get("t")} mode={mode} modulesOff={modulesOff} modulesPending={modulesPending} base={base} gestiona={user.role === "ADMIN" || user.role === "CONSULTOR"}>{children}</ModuloGuard></main>
 

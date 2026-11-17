@@ -5,6 +5,7 @@ import { hydrateFromDb, hydrateCompanies, registrarSinSesion, flushOrError, olvi
 import { resolverEmpresa } from "@/server/empresa-peticion";
 import { runWithTenant } from "@/server/tenant";
 import { frenado, ipDe } from "@/server/freno";
+import { SOLO_LECTURA, bloqueaSoloLectura } from "@/lib/solo-lectura";
 
 /** Todas las rutas /api/td/* exigen sesión (compatibilidad). */
 export async function guard() {
@@ -25,6 +26,8 @@ export async function tenantOf(user: SessionUser): Promise<{ slug: string; actor
   if (r.ok) return { slug: r.slug, actor: r.actor };
   return NextResponse.json({ error: r.error, ...(r.verificar ? { verificar: r.verificar } : {}), ...(r.recargar ? { recargar: true } : {}) }, { status: r.status });
 }
+
+export { SOLO_LECTURA } from "@/lib/solo-lectura";
 
 type Handler<C> = (req: Request, ctx: C, user: SessionUser) => Promise<Response> | Response;
 
@@ -61,6 +64,8 @@ export function withTenant<C = unknown>(handler: Handler<C>) {
     await renewSession(user).catch(() => undefined);
     // quien actúa es la sesión tal como opera en la empresa de la petición (rol y ámbito de allí); la cookie no cambia
     const actor = t.actor;
+    // cuenta de solo lectura (demostración): recorre todo, pero ninguna escritura se atiende (salvo marcar avisos como leídos)
+    if (actor.lectura && bloqueaSoloLectura(req.method, new URL(req.url).pathname)) return NextResponse.json({ error: SOLO_LECTURA, soloLectura: true }, { status: 403 });
     return runWithTenant(t.slug, async () => {
       // las escrituras se sincronizan siempre con la base antes de aplicarse; las lecturas, como máximo una vez por segundo
       await hydrateFromDb({ force: req.method !== "GET" });

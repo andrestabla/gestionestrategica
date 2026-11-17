@@ -21,6 +21,7 @@ import {
   ANDINA_CATALOG, emptyCatalog, catalogFromTemplate, PLATFORM_USERS, responsibleIn,
   type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, isAcompanamiento, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext, ahora, runWithTenant } from "@/server/tenant";
+import { parseTour, type Tour } from "@/lib/tour";
 import { CODIGO_ALFABETO, CODIGO_LARGO, CODIGO_DIAS, alcanceDe, estadoCodigo, normalizarCodigo, validarCodigoNuevo, validarOrganizacion, type CodigoAcceso, type AlcanceCodigo } from "@/lib/codigos";
 import { validarSolicitud, esEstadoSolicitud, type SolicitudCodigo } from "@/lib/solicitudes";
 import { ALL_MODULES as TODOS_LOS_MODULOS } from "@/lib/modulos";
@@ -385,6 +386,7 @@ export async function hydrateCompanies() {
         ...(c.twoFactor === true ? { twoFactor: true } : {}),
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
+        tour: (() => { const r = parseTour(c.tour); return r.ok ? r.tour : undefined; })(),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       // misma dirección pero otra empresa en la base (se eliminó y se volvió a crear, p. ej. la demo): lo que esta
@@ -564,8 +566,8 @@ async function loadTenant(st: TenantState) {
       const list = users();
       for (const u of dbUsers) {
         const existing = list.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
-        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; existing.consentAt = u.consentAt?.toISOString(); }
-        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString() } : {}) });
+        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; existing.consentAt = u.consentAt?.toISOString(); existing.soloLectura = u.readOnly === true || undefined; }
+        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString() } : {}), ...(u.readOnly ? { soloLectura: true } : {}) });
       }
     }
     // membresías: cuentas de otra empresa que también operan en esta, con su propio rol y ámbito
@@ -1065,7 +1067,7 @@ export async function findUserForLogin(email: string): Promise<UsuarioEncontrado
         const company = u.company ? g.companies.get(u.company.slug) ?? null : null;
         if (u.companyId && !company) return null;
         const otras: Membresia[] = (u.memberships as { role: string; line: number | null; responsibleId: string | null; company: { slug: string } }[]).flatMap((m) => { const c = g.companies.get(m.company.slug); return c && c.active && c.slug !== company?.slug ? [{ company: c, role: m.role as SessionUser["role"], line: m.line ?? undefined, responsibleId: m.responsibleId ?? undefined }] : []; });
-        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: true, seeded: false }, company, otras };
+        return { user: { email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: true, seeded: false, ...(u.readOnly ? { soloLectura: true } : {}) }, company, otras };
       }
     } catch (e2) { console.error("[4shine] búsqueda de usuario falló:", (e2 as Error).message); }
   }
@@ -2797,6 +2799,25 @@ function saveItinerary(actor: SessionUser, it: Itinerary | undefined, what: stri
 }
 export const itineraryOf = (): Itinerary | undefined => companyRec()?.itinerary;
 
+/* ═══ Tour guiado de la empresa ═══ */
+
+export const tourOf = (): Tour | undefined => companyRec()?.tour;
+/** Guarda el tour de la empresa activa (lo administra el equipo consultor). Cada guardado sube la versión: quien ya lo
+    había visto lo vuelve a ver con los cambios. `null` lo elimina. */
+export function setTour(actor: SessionUser, input: unknown): { ok: true; tour: Tour | undefined } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "El tour lo administra el equipo consultor." };
+  const rec = companyRec(); if (!rec) return { ok: false, status: 404, error: "La empresa no existe." };
+  const p = parseTour(input);
+  if (!p.ok) return { ok: false, status: 422, error: p.error };
+  const tour = p.tour ? { ...p.tour, version: (rec.tour?.version ?? 0) + 1, at: ahora().toISOString(), by: actor.name } : undefined;
+  rec.tour = tour;
+  const t = g.tenants.get(rec.slug);
+  if (t) t.catalog.company = { ...t.catalog.company, tour };
+  audit(actor, "task", `empresa:${rec.slug}`, tour ? `tour guardado (${tour.pasos.length} pasos, ${tour.activo ? "activo" : "inactivo"})` : "tour eliminado");
+  if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("tour", (db) => db.company.update({ where: { id: dbId }, data: { tour: (tour ?? null) as never, dataVersion: { increment: 1 } } })); }
+  return { ok: true, tour };
+}
+
 /** Carga o reemplaza el itinerario (manage_catalog); conserva publicación y enlace. */
 /** El itinerario y sus materiales los administra el equipo organizador: advisor, gerencia y admin con cuenta;
     quien entra por el QR (aunque sea líder de tribu) solo lo ve. */
@@ -3458,6 +3479,7 @@ export type ManagedUser = {
   createdBy?: string;
   at?: string;
   consentAt?: string;          // aceptación del tratamiento de datos personales
+  soloLectura?: boolean;       // cuenta de demostración: recorre todo y no guarda cambios (no aplica a membresías)
 };
 
 
@@ -3484,13 +3506,14 @@ function resolveScope(line: unknown, responsibleId: unknown):
 
 export function createUser(
   actor: SessionUser,
-  input: { email: string; name: string; role: SessionUser["role"]; line?: number; responsibleId?: string | null },
+  input: { email: string; name: string; role: SessionUser["role"]; line?: number; responsibleId?: string | null; soloLectura?: boolean },
 ): { ok: true; user: ManagedUser } | { ok: false; status: number; error: string } {
   olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_users")) {
     return { ok: false, status: 403, error: "Solo el equipo consultor administra usuarios." };
   }
   const email = input.email?.trim().toLowerCase() ?? "";
+  const soloLectura = input.soloLectura === true;
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return { ok: false, status: 422, error: "Correo inválido." };
   }
@@ -3513,6 +3536,7 @@ export function createUser(
     line: scope.line, responsibleId: scope.responsibleId,
     active: true, seeded: false,
     createdBy: actor.name, at: ahora().toISOString(),
+    ...(soloLectura ? { soloLectura: true } : {}),
   };
   users().push(user);
   void persist("usuario", async (db) => {
@@ -3520,9 +3544,9 @@ export function createUser(
     // si el correo ya es de otra empresa (cuenta desactivada allá), su fila no se mueve ni se reactiva desde aquí
     const fila = await db.user.findUnique({ where: { email }, select: { companyId: true } });
     if (fila && fila.companyId && fila.companyId !== companyId) return;
-    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, active: true, companyId }, create: { email, name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, passwordHash: "", companyId } });
+    await db.user.upsert({ where: { email }, update: { name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, active: true, companyId, readOnly: soloLectura }, create: { email, name: user.name, role: user.role, line: user.line ?? null, responsibleId: user.responsibleId ?? null, passwordHash: "", companyId, readOnly: soloLectura } });
   });
-  audit(actor, "task", email, `usuario creado (${input.role}${user.role === "RESPONSABLE" ? ` · ${scopeName(user)}` : ""})`);
+  audit(actor, "task", email, `usuario creado (${input.role}${user.role === "RESPONSABLE" ? ` · ${scopeName(user)}` : ""}${soloLectura ? " · solo lectura" : ""})`);
   return { ok: true, user };
 }
 
@@ -4042,7 +4066,7 @@ export async function deleteOwnAccount(user: SessionUser, input: { password?: un
 export function updateUser(
   actor: SessionUser,
   email: string,
-  patch: { role?: SessionUser["role"]; line?: number | null; responsibleId?: string | null; active?: boolean },
+  patch: { role?: SessionUser["role"]; line?: number | null; responsibleId?: string | null; active?: boolean; soloLectura?: boolean },
 ): { ok: true; user: ManagedUser } | { ok: false; status: number; error: string } {
   olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_users")) {
@@ -4084,10 +4108,17 @@ export function updateUser(
     u.line = scope.line; u.responsibleId = scope.responsibleId;
   }
 
+  if (patch.soloLectura !== undefined && patch.soloLectura !== !!u.soloLectura) {
+    if (u.membresia) return { ok: false, status: 422, error: "La cuenta vive en otra empresa: el modo de solo lectura se fija allá." };
+    if (patch.soloLectura && u.email.toLowerCase() === actor.email.toLowerCase()) return { ok: false, status: 422, error: "No puedes dejar tu propia cuenta en solo lectura." };
+    u.soloLectura = patch.soloLectura || undefined;
+    changes.push(patch.soloLectura ? "solo lectura" : "puede editar");
+  }
+
   if (changes.length === 0) return { ok: false, status: 422, error: "Nada que actualizar." };
   audit(actor, "task", u.email, `usuario: ${changes.join(" · ")}`);
   if (u.membresia) void persist("membresía", (db) => db.userMembership.updateMany({ where: { companyId: cid(), user: { email: u.email.toLowerCase() } }, data: { role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active } }));
-  else void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active } }));
+  else void persist("usuario", (db) => db.user.updateMany({ where: { email: u.email }, data: { name: u.name, role: u.role, line: u.line ?? null, responsibleId: u.responsibleId ?? null, active: u.active, readOnly: !!u.soloLectura } }));
   return { ok: true, user: u };
 }
 

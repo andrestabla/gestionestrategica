@@ -62,7 +62,7 @@ export const PATCH = withTenant(async (req: Request, _ctx: unknown, user) => {
     if (!moved.ok) return NextResponse.json({ error: moved.error }, { status: moved.status });
     return NextResponse.json({ ok: true });
   }
-  const result = updateUser(user, body.email, body);
+  const result = updateUser(user, body.email, { ...body, soloLectura: typeof body.soloLectura === "boolean" ? body.soloLectura : undefined });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ user: result.user });
 });

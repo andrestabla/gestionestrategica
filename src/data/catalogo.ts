@@ -14,6 +14,7 @@ import type { Instrument } from "@/lib/instrumentos";
 import type { ModuleId } from "@/lib/modulos";
 import type { OrgKind } from "@/lib/madurez";
 import type { Itinerary } from "@/lib/itinerario";
+import type { Tour } from "@/lib/tour";
 import {
   RESPONSIBLES, CMI_OBJECTIVES, KPI_CATALOG, EVIDENCE_CATALOG, INITIATIVES_FULL, SCORES_HISTORY,
   type Responsible, type CmiObjective, type KpiFull, type EvidenceFull, type InitiativeFull, type AssessmentRecord,
@@ -51,6 +52,7 @@ export type CompanyInfo = {
   modulesPending?: ModuleId[]; // módulos del alcance aún no habilitados (se ven atenuados; vacío = ninguno)
   access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
   itinerary?: Itinerary;    // itinerario de la convención (momentos, publicación y enlace público)
+  tour?: Tour;              // tour guiado de la empresa (Administración → Tour)
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;

@@ -11,7 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { useDocumento, PortadaDocumento } from "@/components/documento";
 import { PageHeader, Card, CardHeader, EmptyNote, Modal, Skeleton } from "@/components/ui";
 import { useBase, useUser } from "@/components/user-context";
 import { avisar, confirmar } from "@/components/feedback";
@@ -73,7 +74,9 @@ export default function MadurezPage() {
   const seg = params.slug?.[0]?.toLowerCase();
   const [data, setData] = useState<Api | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fuente, setFuente] = useState<string | null>(null);   // id del corte o "curso"; nulo = el último corte, o la captura si no hay
+  const documento = useDocumento();
+  const fuenteUrl = useSearchParams().get("fuente");
+  const [fuente, setFuente] = useState<string | null>(fuenteUrl);   // id del corte o "curso"; nulo = el último corte, o la captura si no hay
   const [respondiendo, setRespondiendo] = useState(false);     // cuestionario de percepción abierto en modo focal
 
   useEffect(() => {
@@ -115,6 +118,15 @@ export default function MadurezPage() {
   const caps = corte ? corte.vars : data.vars;
   const sg = corte ? corte.safeguards : data.safeguards;
   const previo = corte ? data.cuts[data.cuts.indexOf(corte) - 1] : ultimo;
+
+  // el informe como documento (PDF): portada y el informe, sin cabecera, pestañas ni selector
+  if (documento && tab === "informe") return (
+    <>
+      <PortadaDocumento kicker={`Informe de resultados · ${corte ? corte.label : "Captura en curso"}`} titulo="Diagnóstico de transformación digital" empresa={user.company?.name ?? ""}
+        subtitulo="Madurez digital en clientes, operación, innovación y arquitectura" fecha={corte?.at ? new Date(corte.at).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) : undefined} />
+      <div className="doc-flujo"><InformeResultados ins={ins} caps={caps} sg={sg} previo={previo && previo !== corte ? previo.vars : null} fuente={sel} etiqueta={corte ? corte.label : "Captura en curso"} empresa={user.company?.name ?? ""} cal={cal} /></div>
+    </>
+  );
 
   return (
     <div>

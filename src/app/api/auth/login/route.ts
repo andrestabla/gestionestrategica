@@ -70,6 +70,8 @@ export async function POST(req: Request) {
     responsibleId: membresia ? membresia.responsibleId : found.user.responsibleId,
     company: company ? { slug: company.slug, name: company.name, shortName: company.shortName, mode: company.mode } : undefined,
     ...(empresas.length > 1 ? { empresas: empresas.map((e) => ({ slug: e.slug, shortName: e.shortName, role: e.role })) } : {}),
+    // cuenta de demostración en su propia empresa: la interfaz lo avisa (el servidor lo exige desde la cuenta en la base)
+    ...(found.user.soloLectura && !membresia && company?.slug === found.company?.slug ? { lectura: true as const } : {}),
   };
   // acceso en dos pasos: si lo exige la empresa (o alguna en la que la cuenta opera), la sesión queda pendiente del
   // código que se envía al correo; se abre en /api/auth/codigo

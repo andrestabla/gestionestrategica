@@ -75,8 +75,9 @@ const nextConfig: NextConfig = {
       { source: "/api/auth/:path*", headers: SIN_CACHE },
     ];
   },
-  serverExternalPackages: ["@prisma/client", "@prisma/adapter-pg", "@prisma/adapter-better-sqlite3", "better-sqlite3", "pg", "bcryptjs"],
-  outputFileTracingIncludes: { "/**": SERVER_PACKAGES },
+  serverExternalPackages: ["@prisma/client", "@prisma/adapter-pg", "@prisma/adapter-better-sqlite3", "better-sqlite3", "pg", "bcryptjs", "@sparticuz/chromium", "puppeteer-core"],
+  // los PDF de los informes (src/server/pdf.ts) necesitan el Chromium empaquetado: solo en sus dos rutas
+  outputFileTracingIncludes: { "/**": SERVER_PACKAGES, "/api/td/pdf": ["./node_modules/@sparticuz/chromium/**"], "/api/r/pdf": ["./node_modules/@sparticuz/chromium/**"] },
 };
 
 export default nextConfig;

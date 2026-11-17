@@ -281,3 +281,26 @@ export const F1_DIRECTIVOS = [
   { email: "sistemas@andina.demo", name: "Tecnología", cargo: "Analista de sistemas" },
   { email: "compras@andina.demo", name: "Compras y abastecimiento", cargo: "Jefe de compras y abastecimiento" },
 ];
+
+/** Tour guiado del caso demo: lo que un cliente potencial ve en cada módulo, contado con la historia de Andina. Se abre
+    solo a las cuentas de solo lectura; el equipo consultor lo edita en Administración → Tour. */
+export const TOUR_ANDINA = {
+  activo: true, audiencia: "lectura" as const, version: 1,
+  pasos: [
+    { id: "bienvenida", titulo: "Bienvenido a Andina Suministros", texto: "Andina es una empresa ficticia: una distribuidora de suministros industriales de 85 personas que en 2027 abre su sede en Barranquilla. Este recorrido muestra cómo definió su estrategia con los consultores y cómo la está ejecutando. Sal cuando quieras y vuelve con el botón «Tour».", ruta: "/panel" },
+    { id: "panel", titulo: "El panel: cómo va el plan hoy", texto: "Al 17 de mayo de 2027: doce proyectos en marcha, la confianza de entrega del plan y los resultados clave que la ejecución mueve o frena. Arriba a la derecha, las alertas que piden una decisión del comité.", ruta: "/panel", ancla: "main h1" },
+    { id: "diagnostico", titulo: "Diagnóstico de capacidades", texto: "Ocho directivos se autoevaluaron, 24 personas de los equipos respondieron la encuesta y el consultor verificó la evidencia de las 68 prácticas. Andina está en 2,9 de 5 —subió desde 2,6 en agosto de 2026—, con brechas en Liderazgo, Ejecución y Multiplicación.", ruta: "/panel/diagnostico" },
+    { id: "diagnostico-informe", titulo: "Donde la dirección se ve distinto", texto: "El informe cruza las tres fuentes: el comité cree que el gerente está presente, pero los equipos no lo ven así (brecha jerárquica); y la disciplina de seguimiento que el comité describe no tiene evidencia (relato sobre realidad).", ruta: "/panel/diagnostico/informe" },
+    { id: "madurez", titulo: "Madurez digital", texto: "La transformación digital en clientes, operación, innovación y arquitectura: Andina está en 2,0 de 5. El informe con IA la compara con lo que ya hacen otras empresas del canal industrial.", ruta: "/panel/madurez" },
+    { id: "prioridades", titulo: "Cuatro prioridades, cada una con su renuncia", texto: "Crecimiento rentable en la costa, cliente industrial que recompra, operación sin fricción y equipo que decide y crece. Cada una dice qué resultado busca a 2029 y a qué renuncia Andina para lograrlo.", ruta: "/panel/estrategia/prioridades" },
+    { id: "objetivos", titulo: "Objetivos 2027 validados", texto: "Nueve objetivos directivos, validados con IA. También quedan a la vista los casos que no avanzan: un objetivo descartado con su motivo y otro que aún no cuelga de ninguna prioridad.", ruta: "/panel/estrategia/objetivos" },
+    { id: "kr", titulo: "Resultados clave", texto: "Cada objetivo con dos o tres resultados clave, su línea base 2026, la meta 2027 y un dueño. Por ejemplo: ventas de la sede Barranquilla de $1.900 a $5.200 millones.", ruta: "/panel/estrategia/resultados-clave" },
+    { id: "priorizacion", titulo: "El comité prioriza", texto: "Tres evaluadores calificaron las dieciséis iniciativas con la matriz (impacto, transversalidad, madurez y urgencia). Las que resultan tácticas se transfieren al área.", ruta: "/panel/estrategia/priorizacion" },
+    { id: "portafolio", titulo: "El portafolio decidido", texto: "Ocho iniciativas para implementar ya, cuatro para preparar con un piloto y dos en espera, cada una con su sustento. Así se ve en una página qué hace Andina este año y qué no.", ruta: "/panel/estrategia/portafolio" },
+    { id: "capacidades", titulo: "¿Puede ejecutarlo?", texto: "Antes de arrancar, cada iniciativa se revisa en cinco frentes. La integración del ERP tiene una brecha crítica: depende de una sola persona. Se resuelve antes de salir en vivo.", ruta: "/panel/capacidades" },
+    { id: "cascada", titulo: "La estrategia baja a cada área", texto: "Metas trimestrales por área, con criterio de éxito, hitos y lo que cada área necesita de las demás. El primer trimestre ya se cerró con su cumplimiento y su aprendizaje.", ruta: "/panel/cascada" },
+    { id: "proyectos", titulo: "La ejecución, al día", texto: "Sesenta y cuatro tareas, entregables con evidencia, riesgos y presupuesto. Se ven los tropiezos reales: la renuncia de un asesor en Barranquilla y un flete por encima de lo presupuestado.", ruta: "/panel/proyectos" },
+    { id: "inteligencia", titulo: "Inteligencia del sector", texto: "Andina frente a sus competidores directos reales (datos de Supersociedades), las normas que mueven la demanda de su portafolio y las señales del entorno, cada cifra con su fuente.", ruta: "/panel/bi" },
+    { id: "cierre", titulo: "Así acompañamos a una empresa", texto: "Todo lo que viste lo construye la dirección de la empresa con el acompañamiento de los consultores, en sesiones presenciales y virtuales. Sigue recorriendo los módulos por tu cuenta o agenda una conversación para ver cómo sería con tu empresa.", ruta: "/panel" },
+  ],
+};

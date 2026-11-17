@@ -294,6 +294,43 @@ a.cita:hover { background: var(--gold-fill); color: #0D1B2A; }
 }
 
 
+/* ═══ Informes como documento (PDF del servidor, ?documento=1) ═══
+   Portada a página completa; el cuerpo en páginas A4 con márgenes, encabezado y pie (los pone el servidor) y
+   tipografía editorial. Las tarjetas y gráficas no se parten entre páginas. */
+.documento { background: white; min-height: 100vh; }
+.documento .no-print, .documento .no-documento { display: none !important; }
+.documento .doc-flujo { padding: 0 15mm; }
+/* el servidor imprime la portada y el cuerpo por separado (src/server/pdf.ts) */
+.pdf-cuerpo .doc-portada { display: none !important; }
+.pdf-portada .doc-flujo { display: none !important; }
+.doc-portada { display: none; }
+.documento .doc-portada {
+  display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;
+  width: 210mm; height: 296.8mm; overflow: hidden; padding: 22mm 20mm 18mm; color: white; break-after: page; page-break-after: always;
+  background: radial-gradient(120% 80% at 100% 0%, rgba(201,162,74,.22), transparent 55%), linear-gradient(160deg, #0d1b2e 0%, #13284a 58%, #0b1626 100%);
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.doc-portada-marca { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: -.01em; font-size: 15px; }
+.doc-portada-marca small { display: block; font-weight: 600; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.55); margin-top: 2px; }
+.doc-portada-logo { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: #c9a24a; color: #0d1b2e; }
+.doc-portada-cuerpo { max-width: 150mm; }
+.doc-portada-kicker { font-size: 10px; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: #e2c27a; padding-bottom: 10px; border-bottom: 1.5px solid rgba(226,194,122,.55); display: inline-block; }
+.doc-portada-titulo { margin-top: 18px; font-size: 40px; line-height: 1.06; font-weight: 800; letter-spacing: -.03em; }
+.doc-portada-empresa { margin-top: 22px; font-size: 19px; font-weight: 700; color: rgba(255,255,255,.92); }
+.doc-portada-sub { margin-top: 4px; font-size: 12.5px; color: rgba(255,255,255,.62); }
+.doc-portada-tesis { margin-top: 26px; padding-left: 16px; border-left: 2px solid #e2c27a; font-size: 13.5px; line-height: 1.6; color: rgba(255,255,255,.88); }
+.doc-portada-pie { display: flex; justify-content: space-between; gap: 16px; font-size: 8.5px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.5); border-top: 1px solid rgba(255,255,255,.14); padding-top: 10px; }
+@media print {
+  .documento .doc-portada { page: portada; }
+  .documento .doc-flujo { page: flujo; }
+  @page portada { size: A4; margin: 0; }
+  @page flujo { size: A4; margin: 18mm 0 18mm 0; }
+  .documento .doc-flujo h2, .documento .doc-flujo h3 { break-after: avoid; page-break-after: avoid; }
+  .documento .doc-flujo .card, .documento .doc-flujo .panel, .documento .doc-flujo figure, .documento .doc-flujo svg, .documento .doc-flujo table, .documento .doc-flujo li { break-inside: avoid; page-break-inside: avoid; }
+  .documento .doc-flujo .doc-seccion { break-before: page; page-break-before: always; }
+  .documento .doc-flujo * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(12px) scale(0.995); }
   to { opacity: 1; transform: translateY(0) scale(1); }

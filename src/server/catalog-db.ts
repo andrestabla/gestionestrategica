@@ -32,6 +32,7 @@ export function companyRow(c: CompanyInfo) {
     twoFactor: c.twoFactor === true,
     access: (c.access && Object.keys(c.access).length ? c.access : null) as never,
     itinerary: (c.itinerary ?? null) as never,
+    tour: (c.tour ?? null) as never,
     active: c.active, createdBy: c.createdBy ?? null,
   };
 }

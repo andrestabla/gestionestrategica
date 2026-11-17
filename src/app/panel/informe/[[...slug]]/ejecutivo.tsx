@@ -6,6 +6,7 @@
 // consultor se escribe aquí y se imprime como texto. «Imprimir» produce el PDF
 // del navegador (los estilos de impresión ocultan la navegación y el editor).
 
+import { DescargarPdf } from "@/components/documento";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +17,7 @@ import { LINES, DIMENSIONS, fmtCOP, fmtNum } from "@/data/demo";
 import { useMaturity } from "@/lib/use-maturity";
 import { downloadCsv } from "@/lib/csv";
 import {
-  Printer, FileDown, Loader2, ChevronDown, ChevronRight, ArrowUpDown,
+  FileDown, Loader2, ChevronDown, ChevronRight, ArrowUpDown,
   ExternalLink, PenLine,
 } from "lucide-react";
 
@@ -115,6 +116,14 @@ export default function EjecutivoTab() {
   useEffect(() => {
     fetch("/api/td/summary").then((r) => (r.ok ? r.json() : null)).then(setS).catch(() => null);
     fetch("/api/td/tasks").then((r) => (r.ok ? r.json() : null)).then(setGp).catch(() => null);
+    // como documento (PDF del servidor), las secciones y la nota llegan en la dirección; en pantalla, del navegador
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("documento") === "1") {
+      const sec = (q.get("secciones") ?? "").split(",").filter(Boolean);
+      if (sec.length) setOn(Object.fromEntries(SECTIONS.map(([k]) => [k, sec.includes(k)])) as Record<SectionKey, boolean>);
+      setNota(q.get("nota") ?? "");
+      return;
+    }
     try {
       const savedOn = localStorage.getItem("4shine-informe-secciones");
       if (savedOn) setOn((prev) => ({ ...prev, ...JSON.parse(savedOn) }));
@@ -208,13 +217,11 @@ export default function EjecutivoTab() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-[520px] text-[12.5px] leading-relaxed text-muted">
             Pieza interactiva para comité: elige las secciones, ordena las tablas y navega al
-            detalle. «Imprimir» genera el PDF con lo que esté activado.
+            detalle. «Descargar PDF» genera el documento con lo que esté activado.
           </p>
           {(
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => window.print()} className="btn-primary !py-2 text-[12px]">
-                <Printer size={13} /> Imprimir / PDF
-              </button>
+              <DescargarPdf ruta={`/panel/informe?secciones=${SECTIONS.filter(([k]) => on[k]).map(([k]) => k).join(",")}${nota.trim() ? `&nota=${encodeURIComponent(nota.trim().slice(0, 1200))}` : ""}`} titulo="Informe de la capacidad organizacional" className="btn-primary !py-2 text-[12px]" />
               <button
                 onClick={() => downloadCsv("kpis-pgtd",
                   ["Código", "Indicador", "Último valor", "Periodo", "Semáforo", "% de la meta"],

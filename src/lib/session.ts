@@ -24,6 +24,7 @@ export type SessionUser = {
   qr?: true;
   /** La sesión pasó la verificación en dos pasos (código al correo, o enlace de restablecimiento): las empresas que la exigen solo admiten sesiones así. */
   mfa?: true;
+  lectura?: true;            // cuenta de solo lectura (demostración): la interfaz lo muestra; el servidor lo exige desde la cuenta en la base
   /** Empresa del usuario. El admin de plataforma no tiene empresa propia: aquí
       va la que eligió como contexto activo (puede cambiarla). */
   company?: SessionCompany;
@@ -61,7 +62,7 @@ export function decodeSession(token: string | undefined): SessionUser | null {
     const empresas = Array.isArray(data.empresas)
       ? (data.empresas as unknown[]).flatMap((e) => (e && typeof e === "object" && typeof (e as { slug?: unknown }).slug === "string" ? [{ slug: String((e as { slug: string }).slug), shortName: String((e as { shortName?: unknown }).shortName ?? ""), role: (e as { role?: SessionUser["role"] }).role ?? "DIRECTIVO" }] : []))
       : [];
-    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, ...(data.qr === true ? { qr: true as const } : {}), ...(data.mfa === true ? { mfa: true as const } : {}), company, ...(empresas.length > 1 ? { empresas } : {}), ...(typeof data.iat === "number" ? { iat: data.iat } : {}) };
+    return { email: data.email, name: data.name, role: data.role, line: data.line, responsibleId: typeof data.responsibleId === "string" ? data.responsibleId : undefined, ...(data.qr === true ? { qr: true as const } : {}), ...(data.mfa === true ? { mfa: true as const } : {}), ...(data.lectura === true ? { lectura: true as const } : {}), company, ...(empresas.length > 1 ? { empresas } : {}), ...(typeof data.iat === "number" ? { iat: data.iat } : {}) };
   } catch {
     return null;
   }

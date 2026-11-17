@@ -5,9 +5,10 @@
 // el Resumen y el informe de resultados completo de una medición. El análisis se guarda con la
 // huella de los datos: si cambian, se avisa que quedó desactualizado.
 
+import { DescargarPdf } from "@/components/documento";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, BookOpen, Building2, CircleHelp, Compass, FileText, Flag, Layers, Lightbulb, Loader2, Printer, RefreshCw, Route, Scale, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpen, Building2, CircleHelp, Compass, FileText, Flag, Layers, Lightbulb, Loader2, RefreshCw, Route, Scale, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui";
 import { avisar } from "@/components/feedback";
 import {
@@ -215,7 +216,7 @@ export function InformeResultados({ ins, caps, sg, previo, fuente, etiqueta, emp
                   {busy ? <Loader2 size={13} className="animate-spin" /> : I ? <RefreshCw size={13} /> : <Sparkles size={13} />} {busy ? "Generando…" : I ? "Actualizar con IA" : "Generar con IA"}
                 </button>
               )}
-              {I && <button type="button" onClick={() => window.print()} className="btn-on-dark btn-sm"><Printer size={13} /> Imprimir o PDF</button>}
+              {I && <DescargarPdf ruta={`/panel/madurez/informe?fuente=${encodeURIComponent(fuente)}`} titulo={`Madurez digital · ${etiqueta}`} className="btn-on-dark btn-sm" />}
             </div>
           </div>
           <h2 className="mt-3 max-w-[30ch] text-[25px] font-extrabold leading-[1.14] tracking-[-0.02em] sm:text-[31px]">{I ? I.titulo : "Diagnóstico de transformación digital"}</h2>

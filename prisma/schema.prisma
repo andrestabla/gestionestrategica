@@ -30,6 +30,7 @@ model User {
   failedLogins Int       @default(0)
   lockedUntil  DateTime?
   sessionsFrom DateTime? // las sesiones abiertas antes de este momento no valen (cambio de contraseña)
+  readOnly     Boolean   @default(false) // cuenta de solo lectura (demostración): recorre todo, no guarda cambios
   resetToken   String?   @unique // enlace de restablecimiento de contraseña (un solo uso)
   resetExpires DateTime?
   consentAt    DateTime? // aceptación del tratamiento de datos personales (acceso por QR)
@@ -135,6 +136,7 @@ model Company {
   modulesOff  Json? // módulos apagados para la empresa ["benchmark","proyectos",…]; nulo = todos encendidos
   access      Json? // acceso por sección de la convención con QR: {seccion: {token, role, at}}
   itinerary   Json? // itinerario de la convención {title, days, items, public, token}
+  tour        Json? // tour guiado de la empresa {activo, audiencia, version, pasos}
   financials  Json? // estados financieros de cierre (COP millones)
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia

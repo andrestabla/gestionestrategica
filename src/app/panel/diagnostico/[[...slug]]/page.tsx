@@ -9,6 +9,7 @@
 //   /panel/diagnostico/brechas              → brechas priorizadas y nivel de acompañamiento
 //   /panel/diagnostico/captura              → captura del corte A3 (autoevaluación y verificación)
 
+import { DescargarPdf, PortadaDocumento, useDocumento } from "@/components/documento";
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -82,6 +83,7 @@ export default function DiagnosticoPage() {
   const arg2 = slug[2] ? decodeURIComponent(slug[2]) : null;
   const router = useRouter();
   const v = useCatalog();
+  const documento = useDocumento();
   const [od, setOd] = useState<OdApi | null>(null);
   const [src, setSrc] = useState<"vigente" | "curso" | null>(null);
   useEffect(() => { fetch("/api/td/od").then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) setOd(j); }).catch(() => null); }, [tab]);
@@ -107,6 +109,16 @@ export default function DiagnosticoPage() {
 
   // el informe ejecutivo ocupa la pantalla: solo una miga de pan, sin la cabecera ni las pestañas del diagnóstico
   const informeFocal = tab === "autoevaluacion" && arg === "INFORME";
+  // como documento (PDF del servidor): portada y el informe, sin cabecera, pestañas ni selector de corte
+  if (documento && tab === "test" && arg === "INFORME" && arg2) return <div className="doc-flujo pt-2"><InformeTest id={arg2} /></div>;
+  if (documento && (tab === "informe" || (tab === "autoevaluacion" && arg === "RESULTADO"))) return (
+    <CutCtx.Provider value={cut}>
+      <PortadaDocumento kicker={tab === "informe" ? `Diagnóstico de capacidades · ${cut.label}` : "Autoevaluación directiva · lectura individual"}
+        titulo={tab === "informe" ? "Capacidad organizacional de la empresa" : "Lectura de la autoevaluación"} empresa={v.catalog.company.name}
+        subtitulo={tab === "informe" ? "Las cinco salidas del diagnóstico: radar, mapa de calor, brechas priorizadas, comparativo de fuentes y ruta" : "Las 68 prácticas del mapa de capacidades, una por una"} />
+      <div className="doc-flujo">{tab === "informe" ? <InformeDiagnostico /> : <ResultadoF1 email={arg2} />}</div>
+    </CutCtx.Provider>
+  );
   return (
     <CutCtx.Provider value={cut}>
       {informeFocal && <div className="no-print mb-3 flex items-center gap-1.5 text-[12px] text-muted"><Link href="/panel/diagnostico" className="font-semibold text-cyan-deep hover:underline">Diagnóstico</Link><span>›</span><Link href="/panel/diagnostico/autoevaluacion" className="font-semibold text-cyan-deep hover:underline">Autoevaluación</Link><span>›</span><span className="font-semibold text-ink">Informe ejecutivo</span></div>}
@@ -1112,7 +1124,7 @@ function ResultadoF1({ email }: { email: string | null }) {
         <Link href="/panel/diagnostico/autoevaluacion" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Autoevaluación</Link>
         <span className="flex gap-2">
           {!data.closed && f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() && <Link href="/panel/diagnostico/autoevaluacion/responder" onClick={pedirPantallaCompleta} className="chip">Corregir respuestas</Link>}
-          <button type="button" onClick={() => window.print()} className="chip inline-flex items-center gap-1"><Printer size={12} /> Imprimir o guardar en PDF</button>
+          <DescargarPdf ruta={`/panel/diagnostico/autoevaluacion/resultado${f.email.toLowerCase() === (data.mine?.email ?? "").toLowerCase() ? "" : `/${encodeURIComponent(f.email)}`}`} titulo={`Autoevaluación · ${f.name}`} className="chip" />
         </span>
       </div>
       <Card className="rise rise-1 mb-5">
@@ -1213,7 +1225,7 @@ function InformeTest({ id }: { id: string }) {
     <>
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href="/panel/diagnostico/test" className="inline-flex items-center gap-1 text-[12px] font-bold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Participantes</Link>
-        <div className="flex items-center gap-2">{msg && <span className="text-[12px] text-muted">{msg}</span>}<button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button></div>
+        <div className="flex items-center gap-2">{msg && <span className="text-[12px] text-muted">{msg}</span>}<DescargarPdf ruta={`/panel/diagnostico/test/informe/${encodeURIComponent(id)}`} titulo={`Test de capacidad · ${String(resp.meta.nombre ?? "participante")}`} className="btn-primary text-[12px]" /></div>
       </div>
       <div className="panel px-7 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
@@ -1289,8 +1301,8 @@ function InformeDiagnostico() {
     <>
       <AlcanceDiagnostico compacto />
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[12.5px] text-muted">Las cinco salidas del diagnóstico completo sobre <b className="text-ink">{label}</b>, listas para la devolución de 90 minutos. El navegador las guarda en PDF.</p>
-        <button onClick={() => window.print()} className="btn-primary inline-flex items-center gap-1.5 text-[12px]"><Printer size={13} /> Imprimir o guardar en PDF</button>
+        <p className="text-[12.5px] text-muted">Las cinco salidas del diagnóstico completo sobre <b className="text-ink">{label}</b>, listas para la devolución de 90 minutos. Se descargan en un PDF con portada.</p>
+        <DescargarPdf ruta="/panel/diagnostico/informe" titulo={`Diagnóstico de capacidades · ${label}`} className="btn-primary text-[12px]" />
       </div>
       <div className="panel mb-5 px-7 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1593,6 +1605,7 @@ function InformeF1({ email }: { email: string | null }) {
   const meta = d?.at ? `Lectura con IA generada el ${new Date(d.at).toLocaleString("es-CO", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}${d.model ? ` · modelo ${d.model}` : ""}.` : undefined;
   return (
     <InformeEjecutivo kind={consolidado ? "consolidado" : "f1"} empresa={cv.catalog.company.name} persona={persona} fecha={fecha} datos={datos} informe={d?.informe ?? null}
+      pdf={{ ruta: `/panel/diagnostico/autoevaluacion/informe${consolidado ? "/consolidado" : email ? `/${encodeURIComponent(email)}` : ""}`, titulo: consolidado ? "Informe ejecutivo del comité" : `Informe ejecutivo · ${persona?.nombre ?? ""}` }}
       estado={estado} meta={meta} shareUrl={consolidado ? d?.shareUrl : null} canRegen={canAll || (!consolidado && !!f && !!data?.mine && f.email.toLowerCase() === data.mine.email.toLowerCase())} onRegen={() => void ia.generar()} busy={ia.busy} error={ia.error}
       volverHref={consolidado ? "/panel/diagnostico/autoevaluacion" : `/panel/diagnostico/autoevaluacion/resultado${email && canAll && !consolidado ? `/${encodeURIComponent(email)}` : ""}`} />
   );

@@ -19,13 +19,14 @@ import { CompanyForm, type CompanyLite } from "@/components/company-form";
 import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
+import { TourTab } from "./tour-tab";
 import { CorreosTab } from "./correos-tab";
 import { CodigosTab } from "./codigos-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
-  UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff,
-  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays, Ticket } from "lucide-react"
+  UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff, Eye, EyeOff,
+  Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays, Ticket, Compass } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
 
@@ -127,7 +128,7 @@ function ActividadTab() {
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "empresas" | "usuarios" | "codigos" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding";
+type Tab = "empresas" | "usuarios" | "codigos" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding" | "tour";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
@@ -138,6 +139,7 @@ const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "correos", label: "Correos", icon: Mail },
   { id: "integraciones", label: "Integraciones", icon: Plug },
   { id: "branding", label: "Branding", icon: Palette },
+  { id: "tour", label: "Tour", icon: Compass },
 ];
 
 export default function AdminPage() {
@@ -151,7 +153,7 @@ export default function AdminPage() {
 
   // el consultor administra usuarios, roles y el catálogo (también el líder); el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "codigos" ? (me.role === "ADMIN" || me.role === "CONSULTOR") : t.id === "usuarios" || t.id === "actividad" || t.id === "correos" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
+    t.id === "codigos" ? (me.role === "ADMIN" || me.role === "CONSULTOR") : t.id === "usuarios" || t.id === "actividad" || t.id === "correos" || t.id === "tour" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
@@ -193,6 +195,7 @@ export default function AdminPage() {
       {tab === "correos" && <CorreosTab />}
       {tab === "integraciones" && <IntegracionesTab />}
       {tab === "branding" && <BrandingTab />}
+      {tab === "tour" && <TourTab />}
     </>
   );
 }
@@ -203,6 +206,7 @@ type ManagedUser = {
   membresia?: boolean; principal?: string;
   email: string; name: string; role: "ADMIN" | "CONSULTOR" | "LIDER" | "RESPONSABLE" | "DIRECTIVO";
   line?: number; responsibleId?: string; active: boolean; seeded: boolean; createdBy?: string; at?: string;
+  soloLectura?: boolean;
 };
 
 type ResponsibleLite = { id: string; cargo: string; dependencia: string };
@@ -416,7 +420,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
             right={<button type="button" onClick={() => setNewOpen(true)} className="btn-primary btn-sm text-[12px]"><UserPlus size={12} /> Nueva cuenta</button>} />
           <div className="px-2 pb-2">
             <ResponsiveTable rows={users} rowKey={(u) => u.email} empty="Sin cuentas." columns={[
-              { key: "usuario", header: "Usuario", priority: 1, cell: (u) => <div className={u.active ? "" : "opacity-45"}><div className="font-semibold text-ink">{u.name}{u.membresia && <span className="chip chip-cyan ml-1.5 !py-0 text-[10.5px]" title={`Cuenta de ${u.principal ?? "otra empresa"}: aquí opera por membresía con su propio rol`}>también en {u.principal ?? "otra empresa"}</span>}</div><div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div></div> },
+              { key: "usuario", header: "Usuario", priority: 1, cell: (u) => <div className={u.active ? "" : "opacity-45"}><div className="font-semibold text-ink">{u.name}{u.membresia && <span className="chip chip-cyan ml-1.5 !py-0 text-[10.5px]" title={`Cuenta de ${u.principal ?? "otra empresa"}: aquí opera por membresía con su propio rol`}>también en {u.principal ?? "otra empresa"}</span>}{u.soloLectura && <span className="chip chip-gold ml-1.5 !py-0 text-[10.5px]" title="Cuenta de demostración: recorre todo y no guarda cambios">solo lectura</span>}</div><div className="num break-all text-[12px] text-faint">{u.email}{u.seeded ? " · seed" : u.createdBy ? ` · creado por ${u.createdBy}` : ""}</div></div> },
               { key: "rol", header: "Rol", priority: 2, cell: (u) => (
                 <select value={u.role} disabled={saving} aria-label={`Rol de ${u.name}`} onChange={(e) => mutate("PATCH", { email: u.email, role: e.target.value })} className="input w-auto !py-1 pr-7 !text-[12px]">
                   {(Object.keys(ROLE_LABEL) as ManagedUser["role"][]).filter((r) => r !== "ADMIN").map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
@@ -434,6 +438,7 @@ function UsersTab({ canCompanies }: { canCompanies: boolean }) {
                     </select>
                   )}
                   <button disabled={saving || !u.active} onClick={() => void sendReset(u)} title="Enviar por correo un enlace para restablecer la contraseña (vale 60 minutos)" aria-label="Enviar enlace para restablecer la contraseña" className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40"><KeyRound size={14} /></button>
+                  {!u.membresia && <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, soloLectura: !u.soloLectura })} title={u.soloLectura ? "Permitir que edite" : "Dejar en solo lectura (cuenta de demostración)"} aria-label={u.soloLectura ? "Permitir que edite" : "Dejar en solo lectura"} className={`rounded-lg p-2 transition-colors hover:bg-surface-2 disabled:opacity-40 ${u.soloLectura ? "text-[color:var(--gold)]" : "text-muted hover:text-ink"}`}>{u.soloLectura ? <Eye size={14} /> : <EyeOff size={14} />}</button>}
                   <button disabled={saving} onClick={() => mutate("PATCH", { email: u.email, active: !u.active })} title={u.active ? "Desactivar" : "Reactivar"} aria-label={u.active ? "Desactivar" : "Reactivar"} className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40">{u.active ? <PowerOff size={14} /> : <Power size={14} />}</button>
                   <button disabled={saving || u.email.toLowerCase() === me.email.toLowerCase()}
                     onClick={async () => { if (await confirmarEliminar(`la cuenta de ${u.name} (${u.email})`, "Sus calificaciones y su rastro en la actividad se conservan; la cuenta deja de existir.")) void mutate("DELETE", { email: u.email }, true); }}
@@ -543,6 +548,7 @@ function NewUserCard({ saving, responsibles, existentes, onCreate, onClose }: {
   const [pwdMode, setPwdMode] = useState<"auto" | "manual" | "none">("auto");
   const [password, setPassword] = useState("");
   const [sendWelcome, setSendWelcome] = useState(true);
+  const [soloLectura, setSoloLectura] = useState(false);
 
   const elegido = modo === "existente" ? (existentes ?? []).find((u) => u.email === existente) : undefined;
   const submit = async () => {
@@ -554,6 +560,7 @@ function NewUserCard({ saving, responsibles, existentes, onCreate, onClose }: {
     if (await onCreate({
       name, email, role, line: role === "RESPONSABLE" ? line ?? null : undefined, responsibleId: role === "RESPONSABLE" ? responsibleId ?? null : undefined,
       ...(pwdMode === "auto" ? { password: "auto" } : pwdMode === "manual" ? { password } : {}), sendWelcome: pwdMode !== "none" && sendWelcome,
+      ...(soloLectura ? { soloLectura: true } : {}),
     })) {
       setName(""); setEmail(""); setPassword("");
     }
@@ -623,6 +630,10 @@ function NewUserCard({ saving, responsibles, existentes, onCreate, onClose }: {
             </label>
           )}
           {pwdMode === "auto" && <p className="mt-1.5 text-[12px] leading-snug text-faint">La contraseña generada se muestra una sola vez al crear la cuenta.</p>}
+          <label className="mt-3 flex items-start gap-2 rounded-lg bg-gold-wash/60 px-3 py-2 text-[12px] text-ink-soft">
+            <input type="checkbox" checked={soloLectura} onChange={(e) => setSoloLectura(e.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[var(--navy)]" />
+            <span><b className="text-ink">Solo lectura (cuenta de demostración).</b> Recorre toda la plataforma con el rol elegido, pero no guarda ningún cambio. Útil para compartir el caso demo con un cliente potencial; si la empresa tiene tour, se le abre al entrar.</span>
+          </label>
         </div>}
       </div>
     </Modal>

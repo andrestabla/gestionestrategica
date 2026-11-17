@@ -7,6 +7,7 @@
 // que se imprime en lugar de la pantalla. Todo en lenguaje de hipótesis: es la evaluación que el directivo
 // hace de la compañía, no un diagnóstico de la persona.
 
+import { DescargarPdf } from "@/components/documento";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { MiniRadar } from "@/components/charts";
@@ -109,9 +110,11 @@ type SeccionId = (typeof SECCIONES)[number]["id"];
 
 /* ═══ Informe ═══ */
 
-export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe, estado, meta, shareUrl, canRegen, onRegen, busy, volverHref, error }: {
+export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe, estado, meta, shareUrl, canRegen, onRegen, busy, volverHref, error, pdf }: {
   kind: InformeKind; empresa: string; persona?: { nombre: string; cargo?: string }; fecha: string; datos: DatosEjec; informe: InformeIA | null;
   estado: Estado; meta?: string; shareUrl?: string | null; canRegen?: boolean; onRegen?: () => void; busy?: boolean; volverHref?: string; error?: string | null;
+  /** Descarga en PDF: la ruta del informe en el panel o, en el enlace público, su token. */
+  pdf?: { ruta?: string; token?: string; titulo: string };
 }) {
   const [tab, setTab] = useState<SeccionId>("resumen");
   const [sel, setSel] = useState<string | null>(null);
@@ -162,7 +165,7 @@ export function InformeEjecutivo({ kind, empresa, persona, fecha, datos, informe
             {estado === "desactualizado" && <span className="chip chip-warn hidden lg:inline-flex" title="Hay respuestas o contexto nuevos desde que se generó este análisis"><AlertTriangle size={11} /> Análisis desactualizado</span>}
             {canRegen && onRegen && (kind === "consolidado" || estado === "desactualizado" || estado === "pendiente") && <button type="button" onClick={onRegen} disabled={busy} className="btn-ghost btn-sm !px-2.5" title={informe ? "Actualizar análisis con IA" : "Generar análisis con IA"}>{busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}</button>}
             {shareUrl && <button type="button" onClick={compartir} className="btn-ghost btn-sm !px-2.5" title="Compartir enlace"><Link2 size={14} /></button>}
-            <button type="button" onClick={() => window.print()} className="btn-primary btn-sm" title="Se abre el diálogo de impresión: elige «Guardar como PDF»"><Printer size={13} /> <span className="hidden sm:inline">PDF</span></button>
+            {pdf ? <DescargarPdf {...(pdf.token ? { endpoint: `/api/r/pdf?t=${encodeURIComponent(pdf.token)}` } : { ruta: pdf.ruta })} titulo={pdf.titulo} hojas className="btn-primary btn-sm" /> : <button type="button" onClick={() => window.print()} className="btn-primary btn-sm" title="Se abre el diálogo de impresión: elige «Guardar como PDF»"><Printer size={13} /> Imprimir</button>}
           </span>
         </div>
 
