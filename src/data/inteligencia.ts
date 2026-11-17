@@ -41,7 +41,12 @@ const GENERICAS = new Set(["LABORATORIOS", "LABORATORIO", "FARMACEUTICA", "FARMA
 
 /** ¿Este nombre (titular, sociedad) es la empresa? Compara las palabras propias del nombre de la empresa,
     sin forma jurídica ni genéricos, con el nombre normalizado. */
-export function coincideEmpresa(c: { name: string; shortName?: string }, nombre: string): boolean {
+/** Empresas ficticias de demostración: nunca se cruzan por nombre con sociedades reales (Andina coincidiría, por la
+    palabra, con «GEA ANDINA SAS» y mostraría las cifras de una empresa real como si fueran suyas). */
+export const EMPRESAS_FICTICIAS = new Set(["andina"]);
+
+export function coincideEmpresa(c: { name: string; shortName?: string; slug?: string }, nombre: string): boolean {
+  if (c.slug && EMPRESAS_FICTICIAS.has(c.slug)) return false;
   const k = normTitular(nombre);
   const candidatos = [c.shortName, c.name].filter((x): x is string => !!x).map(normTitular)
     .map((x) => x.split(" ").filter((w) => w.length >= 3 && !GENERICAS.has(w)).join(" ")).filter(Boolean);
@@ -50,8 +55,8 @@ export function coincideEmpresa(c: { name: string; shortName?: string }, nombre:
 
 /** Titular que corresponde a la empresa: coincide el nombre o el nombre corto (sin palabras genéricas) con la
     clave del titular. Devuelve nulo si la empresa no está entre los titulares con detalle. */
-export function titularDe(c: { name: string; shortName?: string }, data: Inteligencia | null): TitularDetalle | null {
-  if (!data) return null;
+export function titularDe(c: { name: string; shortName?: string; slug?: string }, data: Inteligencia | null): TitularDetalle | null {
+  if (!data || (c.slug && EMPRESAS_FICTICIAS.has(c.slug))) return null;
   const candidatos = [c.shortName, c.name].filter((x): x is string => !!x).map(normTitular)
     .map((x) => x.split(" ").filter((w) => w.length >= 3 && !GENERICAS.has(w)).join(" ")).filter(Boolean);
   for (const cand of candidatos) {

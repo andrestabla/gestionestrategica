@@ -43,3 +43,9 @@ test("Andina Suministros se reconstruye como caso demo completo, sin avisos y co
   assert.ok(r2.ok && r2.avisos.length === 0, r2.ok ? r2.avisos.join(" · ") : r2.error);
   assert.deepEqual(r2.ok && r2.resumen, r.resumen);
 });
+
+test("la empresa ficticia no se cruza por nombre con una sociedad real del sector", async () => {
+  const { coincideEmpresa } = await import("../src/data/inteligencia");
+  assert.equal(coincideEmpresa({ slug: "andina", name: "Andina Suministros", shortName: "Andina" }, "GEA ANDINA SOCIEDAD POR ACCIONES SIMPLIFICADA - GEA ANDINA SAS"), false);
+  assert.equal(coincideEmpresa({ slug: "siegfried", name: "Laboratorios Siegfried", shortName: "Siegfried" }, "LABORATORIOS SIEGFRIED SAS"), true);
+});
