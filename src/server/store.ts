@@ -255,6 +255,11 @@ function newState(slug: string, source: Catalog, dbId: string | null): TenantSta
   };
 }
 
+/** Catálogo de partida de una empresa: la demo por defecto nace de la plantilla de código mientras no se haya
+    reconstruido (plantilla «demo»); reconstruida con el generador de demos, como cualquier empresa, de la base. */
+const semillaDe = (slug: string, c: CompanyInfo | undefined): Catalog =>
+  slug === DEFAULT_TENANT && c?.template !== "vacia" ? ANDINA_CATALOG : emptyCatalog(c ?? ANDINA_CATALOG.company);
+
 /** Estado de la empresa activa (se crea la primera vez que se usa). */
 function S(): TenantState {
   const slug = currentTenant();
@@ -262,7 +267,7 @@ function S(): TenantState {
   if (!t) {
     const c = g.companies.get(slug);
     if (!c) throw new Error(`Empresa desconocida: ${slug}`);
-    t = newState(slug, slug === DEFAULT_TENANT ? ANDINA_CATALOG : emptyCatalog(c), c.dbId);
+    t = newState(slug, semillaDe(slug, c), c.dbId);
     g.tenants.set(slug, t);
   }
   return t;
@@ -468,8 +473,8 @@ async function loadTenant(st: TenantState) {
     const writesBefore = st.writes;
     const verRow = await db.company.findUnique({ where: { id: companyId }, select: { dataVersion: true } });
     const version: number = verRow?.dataVersion ?? 0;
-    // catálogo: la demo nace del seed; las demás empresas, de la base (con el registro fresco de la empresa)
-    if (st.slug !== DEFAULT_TENANT) {
+    // catálogo: la demo por defecto nace del seed mientras no se reconstruya; las demás empresas (y la demo reconstruida), de la base (con el registro fresco de la empresa)
+    if (st.slug !== DEFAULT_TENANT || g.companies.get(st.slug)?.template === "vacia") {
       const rec = g.companies.get(st.slug);
       const fresh = await readCatalog(db, { ...st.catalog.company, ...(rec ?? {}), dbId: companyId });
       const next = newState(st.slug, fresh, companyId);
@@ -986,6 +991,62 @@ export async function deleteCompany(actor: SessionUser, slug: string): Promise<{
   return { ok: true };
 }
 
+/** Reinicia la empresa de demostración por defecto (no se elimina): borra todos sus datos de trabajo —catálogo,
+    diagnósticos, madurez, proyectos, cascada, priorización, auditoría— y la deja como empresa en blanco con la
+    configuración dada (horizontes, palancas, modo…), más lo que traiga de antes (`previo`: mediciones de capacidades,
+    evidencias, finanzas y territorio). Conserva la fila de la empresa, sus cuentas, membresías, branding e integraciones:
+    quien tenía acceso lo sigue teniendo. Desde aquí su catálogo vive en la base (plantilla «vacia»), como cualquier
+    empresa; la plantilla de código solo se usa sin base de datos. La usa el generador de demos (demo-builder.ts). */
+export async function reiniciarEmpresaDemo(actor: SessionUser, slug: string, input: CompanyInput, previo?: Pick<Catalog, "assessments" | "evidences" | "financials" | "territories">): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  olvidarCuentas();
+  if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma reinicia la empresa de demostración." };
+  if (slug !== DEFAULT_TENANT) return { ok: false, status: 422, error: "Solo la empresa de demostración por defecto se reinicia; las demás se eliminan y se vuelven a crear." };
+  const prev = g.companies.get(slug);
+  const lv = parseLevers(input.levers); if (!lv.ok) return { ok: false, status: 422, error: lv.error };
+  const hz = parseHorizons(input.horizons); if (!hz.ok) return { ok: false, status: 422, error: hz.error };
+  const tr = parseTypeRule(input.typeRule); if (!tr.ok) return { ok: false, status: 422, error: tr.error };
+  const ins = parseInstruments(input.instruments); if (!ins.ok) return { ok: false, status: 422, error: ins.error };
+  const info: CompanyInfo = {
+    slug, name: input.name, shortName: input.shortName ?? input.name.split(" ")[0], city: input.city ?? "", department: input.department ?? "",
+    sector: input.sector ?? "", size: input.size ?? "", sectorKey: input.sectorKey || "suministros-industriales", ciiu: input.ciiu ?? "",
+    active: true, template: "vacia", country: input.country === "EC" ? "EC" : "CO", currency: input.currency === "USD" ? "USD" : "COP",
+    orgKind: "empresa", createdBy: prev?.createdBy ?? actor.name, createdAt: prev?.createdAt ?? ahora().toISOString(),
+    ...(hz.horizons ? { horizons: hz.horizons } : {}), ...(lv.levers ? { levers: lv.levers } : {}), ...(tr.rule ? { typeRule: tr.rule } : {}),
+    ...(isCompanyMode(input.mode) ? { mode: input.mode } : {}), ...(ins.instruments ? { instruments: ins.instruments } : {}),
+  };
+  const base: Catalog = { ...emptyCatalog(info), ...(previo ? { assessments: structuredClone(previo.assessments), evidences: structuredClone(previo.evidences), financials: structuredClone(previo.financials), territories: structuredClone(previo.territories) } : {}) };
+  const rec: CompanyRecord = { ...info, dbId: prev?.dbId ?? null };
+  if (hasDb()) {
+    try {
+      const db = await prisma();
+      if (!rec.dbId) rec.dbId = (await db.company.findUnique({ where: { slug } }))?.id ?? null;
+      if (!rec.dbId) rec.dbId = (await db.company.create({ data: companyRow(info) })).id;
+      const companyId = rec.dbId!;
+      const W = { where: { companyId } };
+      await dbClearCatalog(db, companyId);
+      await db.dimensionScore.deleteMany(W); await db.assessment.deleteMany(W); await db.evidence.deleteMany(W); await db.practiceCapture.deleteMany(W);
+      await db.f1Response.deleteMany(W); await db.testResponse.deleteMany(W); await db.testNote.deleteMany(W); await db.teamResponse.deleteMany(W);
+      await db.diagnosticReport.deleteMany(W); await db.maturityRecord.deleteMany(W); await db.projectRecord.deleteMany(W); await db.quarterGoal.deleteMany(W);
+      await db.itineraryComment.deleteMany(W); await db.notifRead.deleteMany(W); await db.auditEvent.deleteMany(W);
+      // la configuración de la convención (sesiones, itinerario, accesos con QR, módulos) también vuelve a cero: companyRow la escribe nula
+      await db.company.update({ where: { id: companyId }, data: { ...companyRow(info), dataVersion: { increment: 1 } } });
+      await writeCatalog(db, companyId, base);
+    } catch (e) {
+      return { ok: false, status: 500, error: `No se pudo reiniciar la empresa en la base: ${(e as Error).message}` };
+    }
+  }
+  const antes = g.tenants.get(slug);
+  g.companies.set(slug, rec);
+  const st = newState(slug, base, rec.dbId);
+  st.users = antes?.users.filter((u) => !u.seeded) ?? [];   // las cuentas de la empresa siguen; las sembradas por la plantilla no
+  st.integrations = antes?.integrations ?? st.integrations; if (antes?.branding) st.branding = antes.branding;
+  st.hydrated = true; st.version = -1;   // la próxima petición vuelve a leer la empresa (cuentas y membresías incluidas)
+  g.tenants.set(slug, st);
+  g.companiesHydratedAt = 0;
+  audit(actor, "task", `empresa:${slug}`, "empresa de demostración reiniciada");
+  return { ok: true };
+}
+
 /** Busca un usuario en cualquier empresa (login): admins de plataforma, memoria y base. */
 /** Pertenencia a otra empresa (membresía): la cuenta vive en su empresa principal y opera también aquí con este rol y ámbito. */
 export type Membresia = { company: CompanyRecord; role: SessionUser["role"]; line?: number; responsibleId?: string };
@@ -1010,7 +1071,7 @@ export async function findUserForLogin(email: string): Promise<UsuarioEncontrado
   }
   let principal: { user: ManagedUser; company: CompanyRecord } | null = null; const otras: Membresia[] = [];
   for (const [slug, c] of g.companies) {
-    const st = g.tenants.get(slug) ?? (slug === DEFAULT_TENANT ? (g.tenants.set(slug, newState(slug, ANDINA_CATALOG, c.dbId)), g.tenants.get(slug)!) : null);
+    const st = g.tenants.get(slug) ?? (slug === DEFAULT_TENANT ? (g.tenants.set(slug, newState(slug, semillaDe(slug, c), c.dbId)), g.tenants.get(slug)!) : null);
     const u = st?.users.find((x) => x.active && x.email.toLowerCase() === e);
     if (!u) continue;
     if (u.membresia) otras.push({ company: c, role: u.role, line: u.line, responsibleId: u.responsibleId }); else if (!principal) principal = { user: u, company: c };
@@ -3476,7 +3537,7 @@ export async function moveUser(actor: SessionUser, email: string, toSlug: string
   users().splice(users().indexOf(u), 1);
   let dest = g.tenants.get(toSlug);
   if (!dest) {
-    dest = newState(toSlug, toSlug === DEFAULT_TENANT ? ANDINA_CATALOG : emptyCatalog(target), target.dbId);
+    dest = newState(toSlug, semillaDe(toSlug, target), target.dbId);
     g.tenants.set(toSlug, dest);
   }
   dest.users.push({ ...u, seeded: false });
@@ -4467,7 +4528,7 @@ export function resetStore() {
   const slug = currentTenant();
   const c = g.companies.get(slug);
   if (!c) return;
-  g.tenants.set(slug, newState(slug, slug === DEFAULT_TENANT ? ANDINA_CATALOG : (g.tenants.get(slug)?.catalog ?? emptyCatalog(c)), c.dbId));
+  g.tenants.set(slug, newState(slug, slug === DEFAULT_TENANT && c.template !== "vacia" ? ANDINA_CATALOG : (g.tenants.get(slug)?.catalog ?? emptyCatalog(c)), c.dbId));
   codMem.clear(); solMem.clear(); otpMem.clear(); cuentaCache.clear(); sesionesDesdeMem.clear(); fallosMem.clear();   // códigos de acceso y de verificación en memoria (sin base de datos)
 }
 

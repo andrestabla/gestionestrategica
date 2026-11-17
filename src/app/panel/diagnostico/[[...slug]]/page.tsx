@@ -94,7 +94,9 @@ export default function DiagnosticoPage() {
     const responses = v.catalog.demoResponses;
     return { src: "vigente", responses, C: consolidate(responses), label: `Corte publicado · ${v.current.id}`, scores: null };
   }, [v]);
-  const eff = src ?? (od?.published ? "curso" : "vigente");
+  // sin fuentes demo (toda empresa que vive en la base), el corte publicado está vacío: se lee lo capturado en la plataforma
+  const hayDemo = v.catalog.demoResponses.length > 0;
+  const eff = src ?? (od?.published || !hayDemo ? "curso" : "vigente");
   const cut = useMemo<Cut>(() => {
     if (eff === "curso" && od && hasCurso) {
       const C = consolidate(od.responses);
@@ -127,7 +129,7 @@ export default function DiagnosticoPage() {
             </button>
           );
         })}
-        {hasCurso && tab !== "captura" && tab !== "test" && tab !== "autoevaluacion" && (
+        {hasCurso && hayDemo && tab !== "captura" && tab !== "test" && tab !== "autoevaluacion" && (
           <div className="ml-auto flex items-center gap-1 pr-1 text-[12px]">
             <span className="hidden text-faint sm:inline">Leer:</span>
             <button onClick={() => setSrc("vigente")} className={`chip ${cut.src === "vigente" ? "chip-cyan" : ""}`}>Corte publicado</button>

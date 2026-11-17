@@ -249,17 +249,21 @@ function EmpresasTab() {
     if (res.ok) setCompanies((await res.json()).companies);
   }, []);
   useEffect(() => { refetch(); }, [refetch]);
-  const crearDemo = async () => {
-    const existe = companies.some((c) => c.slug === "demo-siegfried");
-    if (!(await confirmar(existe ? "La instancia DEMO SIEGFRIED ya existe. ¿Eliminarla y crearla de nuevo con el recorrido ideal?" : "Se crea la instancia DEMO SIEGFRIED (modo acompañamiento, solo autoevaluación directiva) con el recorrido ideal del método: prioridades con resultado del ciclo y renuncia, objetivos 2027, resultados clave, iniciativas, validaciones, calificaciones, decisiones, capacidades, articulación y cascada. ¿Continuar?"))) return;
+  const crearDemo = async (demo: "siegfried" | "andina") => {
+    const andina = demo === "andina";
+    const existe = andina ? companies.some((c) => c.slug === "andina" && c.template === "vacia") : companies.some((c) => c.slug === "demo-siegfried");
+    const pregunta = andina
+      ? (existe ? "Andina Suministros ya es un caso demo completo. ¿Reconstruirla desde cero? Se borra todo lo que se haya trabajado en ella y se vuelve al recorrido ideal; sus cuentas y accesos se conservan." : "Andina Suministros se reconstruye como caso demo completo para mostrar a clientes potenciales: prioridades, objetivos 2027, resultados clave, iniciativas, priorización, portafolio, capacidades, cascada, diagnóstico y la ejecución a mayo de 2027. Se reemplaza lo que tiene hoy; sus cuentas y accesos se conservan. ¿Continuar?")
+      : (existe ? "La instancia DEMO SIEGFRIED ya existe. ¿Eliminarla y crearla de nuevo con el recorrido ideal?" : "Se crea la instancia DEMO SIEGFRIED (modo acompañamiento, solo autoevaluación directiva) con el recorrido ideal del método: prioridades con resultado del ciclo y renuncia, objetivos 2027, resultados clave, iniciativas, validaciones, calificaciones, decisiones, capacidades, articulación y cascada. ¿Continuar?");
+    if (!(await confirmar(pregunta))) return;
     setSaving(true); setError(null);
     try {
-      const res = await fetch("/api/td/empresas/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recrear: existe }) });
+      const res = await fetch("/api/td/empresas/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ demo, recrear: existe }) });
       const j = await res.json().catch(() => null);
       if (!res.ok) { setError(j?.error ?? `Error ${res.status}`); return; }
       await refetch();
       const r = j.resumen ?? {};
-      avisar(`Demo creada: ${r.objetivos ?? 0} objetivos, ${r.resultadosClave ?? 0} resultados clave, ${r.iniciativas ?? 0} iniciativas, ${r.calificaciones ?? 0} calificaciones, ${r.decisiones ?? 0} decisiones, ${r.revisionesCapacidades ?? 0} revisiones de capacidades, ${r.metasTrimestrales ?? 0} metas.${j.avisos?.length ? ` Avisos: ${j.avisos.slice(0, 2).join(" · ")}` : ""}`, j.avisos?.length ? "warn" : "ok");
+      avisar(`${andina ? "Andina Suministros reconstruida" : "Demo creada"}: ${r.objetivos ?? 0} objetivos, ${r.resultadosClave ?? 0} resultados clave, ${r.iniciativas ?? 0} iniciativas, ${r.calificaciones ?? 0} calificaciones, ${r.decisiones ?? 0} decisiones, ${r.revisionesCapacidades ?? 0} revisiones de capacidades, ${r.metasTrimestrales ?? 0} metas, ${r.tareas ?? 0} tareas.${j.avisos?.length ? ` Avisos: ${j.avisos.slice(0, 2).join(" · ")}` : ""}`, j.avisos?.length ? "warn" : "ok");
     } finally { setSaving(false); }
   };
   const call = async (method: string, body?: Record<string, unknown>, query = "", confirmado = false) => {
@@ -283,7 +287,8 @@ function EmpresasTab() {
         <Card className="rise rise-1 overflow-hidden">
           <CardHeader title={`Empresas (${companies.length})`} sub="cada empresa es un contexto independiente: usuarios, diagnóstico, portafolio y archivos propios"
             right={<span className="inline-flex flex-wrap gap-2">
-              <button type="button" disabled={saving} onClick={() => void crearDemo()} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="Crea la instancia DEMO SIEGFRIED con el recorrido ideal del método, de las prioridades a la cascada trimestral, para mostrar al advisor y al comité lo que se espera"><Sparkles size={12} /> {companies.some((c) => c.slug === "demo-siegfried") ? "Recrear DEMO SIEGFRIED" : "Crear DEMO SIEGFRIED"}</button>
+              <button type="button" disabled={saving} onClick={() => void crearDemo("andina")} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="Reconstruye Andina Suministros (empresa ficticia) con todo el recorrido del método y la ejecución a mayo de 2027, para mostrarla a clientes potenciales"><Sparkles size={12} /> {companies.some((c) => c.slug === "andina" && c.template === "vacia") ? "Reconstruir caso demo Andina" : "Construir caso demo Andina"}</button>
+              <button type="button" disabled={saving} onClick={() => void crearDemo("siegfried")} className="btn-ghost btn-sm text-[12px] disabled:opacity-50" title="Crea la instancia DEMO SIEGFRIED con el recorrido ideal del método, de las prioridades a la cascada trimestral, para mostrar al advisor y al comité lo que se espera"><Sparkles size={12} /> {companies.some((c) => c.slug === "demo-siegfried") ? "Recrear DEMO SIEGFRIED" : "Crear DEMO SIEGFRIED"}</button>
               <button type="button" onClick={() => setOpen("new")} className="btn-primary btn-sm text-[12px]"><Building2 size={12} /> Nueva empresa</button>
             </span>} />
           <div className="px-2 pb-2">

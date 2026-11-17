@@ -1,132 +1,40 @@
-// Construye la instancia demo «TEST SIEGFRIED» con todo el recorrido del método hecho: catálogo real de
-// Siegfried (prioridades, responsables, resultados 2026) más la capa demo (objetivos 2027, resultados clave,
-// iniciativas completas, validaciones en verde, calificaciones de tres evaluadores, decisiones de tiempo,
-// capacidades para ejecutar y cascada trimestral) y diez autoevaluaciones directivas. Pasa por las mismas
-// funciones del store que usa la plataforma, así el resultado es exactamente lo que vería un advisor.
-// Después siembra la capa de ejecución (demo-siegfried-ejecucion.ts): la empresa a mitad del año, con sus proyectos
-// en marcha, riesgos, presupuesto, mediciones, cierre de trimestre y madurez digital, detenida en su fecha fija.
+// Instancia «DEMO SIEGFRIED» con todo el recorrido del método hecho: catálogo real de Siegfried (prioridades,
+// responsables, resultados 2026) más la capa demo (objetivos 2027, resultados clave, iniciativas completas,
+// validaciones en verde, calificaciones de tres evaluadores, decisiones de tiempo, capacidades para ejecutar y
+// cascada trimestral), diez autoevaluaciones directivas y la capa de ejecución a mitad de 2027. Lleva el contexto real
+// de un cliente: es para uso interno del equipo consultor. El generador es común (src/server/demo-builder.ts).
 
 import base from "@/data/demo-siegfried/base.json";
 import { DEMO_SLUG, DEMO_NAME, DEMO_SHORT, LEVERS, OBJETIVOS, KRS, INICIATIVAS, OBJETIVO_SIN_PRIORIDAD, INICIATIVA_SIN_KR, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-siegfried/contenido";
-import { createCompany, deleteCompany, listCompanies, upsertResponsible, upsertObjective, upsertKpi, upsertInitiative, saveF1Response, saveAlineacion, setPrioSession, evaluateInitiative, decideInitiative, saveChecklistCap, saveRevisionCap, saveArticulacion, upsertMeta, catalog, flushOrError, leerMembresias, restaurarMembresias, type MembresiaGuardada } from "@/server/store";
-import { runWithTenant, fijarReloj } from "@/server/tenant";
-import { sembrarEjecucion } from "@/server/demo-siegfried-ejecucion";
-import { INICIATIVAS_MAPEADAS } from "@/data/demo-siegfried/ejecucion";
-import { huellaAlineacion, huellaIniciativas } from "@/server/huellas";
-import { PRACTICES } from "@/data/mapa";
-import { leversOf } from "@/data/catalogo";
+import { DEMO_HOY, PERSONAS, PLANES, RIESGOS, GASTOS, AVANCE_KR_T1, AVANCE_KR_POR_DEFECTO, NOTAS_KR_T1, AVANCE_INICIATIVAS, CIERRES_T1, MADUREZ_PERFIL, MADUREZ_SESGO, MADUREZ_SALVAGUARDAS, MADUREZ_CORTE, INICIATIVAS_MAPEADAS } from "@/data/demo-siegfried/ejecucion";
+import { construirDemo, type PaqueteDemo } from "@/server/demo-builder";
 import type { SessionUser } from "@/lib/session";
-import type { AlineacionIA } from "@/lib/alineacion";
-import type { ValidacionIni } from "@/lib/iniciativas-ia";
 
-type R = { ok: true } | { ok: false; status: number; error: string };
-const demoUser = (u: { email: string; name: string; role: SessionUser["role"] }): SessionUser => ({ ...u, company: { slug: DEMO_SLUG, name: DEMO_NAME } } as SessionUser);
+const co = base.company as Record<string, unknown>;
 
-/** Generador determinista (mulberry32) para que las autoevaluaciones sean estables entre ejecuciones. */
-function rng(seed: number) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+export const PAQUETE_SIEGFRIED: PaqueteDemo = {
+  slug: DEMO_SLUG, name: DEMO_NAME, shortName: DEMO_SHORT, dominio: "demo-siegfried.demo",
+  company: { city: String(co.city ?? ""), department: String(co.department ?? ""), sector: String(co.sector ?? ""), size: String(co.size ?? ""), sectorKey: String(co.sectorKey ?? ""), ciiu: String(co.ciiu ?? ""), horizons: co.horizons },
+  typeRule: "cresio", mode: "acompanamiento", instruments: ["f1"],
+  base: { responsibles: base.responsibles, objectives: base.objectives, kpis: base.kpis },
+  levers: LEVERS, objetivos: OBJETIVOS, krs: KRS, iniciativas: INICIATIVAS, iniciativasMapeadas: INICIATIVAS_MAPEADAS,
+  objetivoSinPrioridad: OBJETIVO_SIN_PRIORIDAD, iniciativaSinKr: INICIATIVA_SIN_KR,
+  textos: {
+    justificacionObjetivo: JUSTIFICACION_OBJETIVO, justificacionIni: JUSTIFICACION_INI,
+    resumenAlineacion: "Dieciséis objetivos directivos 2027 están alineados con las siete prioridades (de dos a tres por prioridad): cada uno tiene verbo de logro, resultado, indicador impulsor declarado y el plazo del horizonte, sin cifras de meta, sin duplicidades y sin enunciados que sean resultados clave o iniciativas. Un objetivo (OE-18) está bien formulado pero no cuelga de ninguna prioridad: no pasa a Resultados clave hasta que el comité lo ubique. El objetivo descartado (OE-17) queda en el registro y no se valida.",
+    sinPrioridad: { justificacion: "Tiene verbo de logro, resultado e indicador impulsor, pero no está vinculado a ninguna prioridad estratégica: no se puede juzgar a qué apuesta aporta ni pasa a Resultados clave.", recomendaciones: ["Vincularlo a la prioridad a la que aporta (por ejemplo, Disciplina Operacional) o descartarlo con su motivo."] },
+    resumenValidacionIni: "Veintidós iniciativas cumplen los ocho elementos: nombre como entrega, qué logran, responsable, inicio y fin, capacidad que instalan, presupuesto, resultado clave que mueven y alcance acotado. Una (in23) no está vinculada a ningún resultado clave: no pasa a Priorización hasta que se vincule. Dos más (in24 e in25) están mapeadas como proyecto especial e iniciativa disruptiva, aún sin objetivo ni resultado clave: se consideran en el portafolio y no se priorizan hasta asociarles uno.",
+    sinKr: { justificacion: "Está bien formulada como entrega, con responsable, plazo, capacidad y presupuesto, pero no mueve ningún resultado clave: así no es estratégica ni pasa a Priorización.", recomendaciones: ["Vincularla al resultado clave de su objetivo que realmente mueve (por ejemplo, contactos efectivos por médico) o dejarla fuera del portafolio."] },
+    notasSalvaguardas: ["Hay inventario de los sistemas en uso, pero dos no tienen responsable designado.", "", "No se hace evaluación de privacidad antes de iniciar tratamientos de datos de pacientes y médicos.", "Un incidente menor de 2026 se gestionó sin registro formal.", ""],
+  },
+  evaluadores: EVALUADORES as PaqueteDemo["evaluadores"],
+  calificaciones: CALIFICACIONES, decisiones: DECISIONES, capacidades: CAPACIDADES, checklists: CHECKLISTS_PERSONALIZADOS,
+  articulacion: ARTICULACION, metas: METAS, f1Perfil: F1_PERFIL, f1Directivos: F1_DIRECTIVOS,
+  ejecucion: {
+    hoy: DEMO_HOY, personas: PERSONAS, planes: PLANES, riesgos: RIESGOS, gastos: GASTOS,
+    avanceKrT1: AVANCE_KR_T1, avanceKrPorDefecto: AVANCE_KR_POR_DEFECTO, notasKrT1: NOTAS_KR_T1, avanceIniciativas: AVANCE_INICIATIVAS, cierresT1: CIERRES_T1,
+    madurezPerfil: MADUREZ_PERFIL, madurezSesgo: MADUREZ_SESGO, madurezSalvaguardas: MADUREZ_SALVAGUARDAS, madurezCorte: MADUREZ_CORTE,
+  },
+};
 
-export async function crearDemoSiegfried(actor: SessionUser, opts: { recrear?: boolean; archivos?: boolean } = {}): Promise<{ ok: true; slug: string; resumen: Record<string, number>; avisos: string[] } | { ok: false; status: number; error: string }> {
-  let membresias: MembresiaGuardada[] = [];
-  if (listCompanies().some((c) => c.slug === DEMO_SLUG)) {
-    if (!opts.recrear) return { ok: false, status: 409, error: `La instancia «${DEMO_NAME}» ya existe (/${DEMO_SLUG}). Elimínala o pide recrearla.` };
-    // los accesos ya concedidos a la demo (advisors y directivos de otras empresas) se conservan al recrearla
-    membresias = await leerMembresias(DEMO_SLUG);
-    const d = await deleteCompany(actor, DEMO_SLUG);
-    if (!d.ok) return d;
-  }
-  const co = base.company as Record<string, unknown>;
-  const created = await createCompany(actor, {
-    name: DEMO_NAME, slug: DEMO_SLUG, shortName: DEMO_SHORT, city: String(co.city ?? ""), department: String(co.department ?? ""), sector: String(co.sector ?? ""), size: String(co.size ?? ""),
-    sectorKey: String(co.sectorKey ?? ""), ciiu: String(co.ciiu ?? ""), country: "CO", currency: "COP", template: "vacia",
-    horizons: co.horizons, levers: LEVERS, typeRule: "cresio", mode: "acompanamiento", instruments: ["f1"],
-  } as Parameters<typeof createCompany>[1]);
-  if (!created.ok) return created;
-
-  const avisos: string[] = [];
-  const check = (what: string, r: R | { ok: boolean; error?: string }) => { if (!r.ok) avisos.push(`${what}: ${"error" in r ? r.error : "falló"}`); };
-  const advisor = demoUser(EVALUADORES[2]);
-  const resumen = runWithTenant(DEMO_SLUG, () => {
-    fijarReloj("2026-11-09T15:00:00.000Z");   // el método se recorre en las sesiones de noviembre de 2026
-    // 1. catálogo: responsables, objetivos (línea base 2026 y 2027), resultados clave e iniciativas completas
-    for (const r of base.responsibles) check(`responsable ${r.id}`, upsertResponsible(advisor, r as never));
-    // objetivos: los resultados 2026 del catálogo real como línea base y los objetivos 2027 ideales de la capa demo
-    const objetivos = [...base.objectives.filter((o) => o.horizon === "LB"), ...OBJETIVOS];
-    for (const o of objetivos) check(`objetivo ${o.id}`, upsertObjective(advisor, { ...(o as object), kpis: [] } as never));
-    for (const k of base.kpis) check(`KPI ${k.code}`, upsertKpi(advisor, k as never));
-    for (const k of KRS) check(`KR ${k.code}`, upsertKpi(advisor, { ...k, line: 3, series: [{ period: "2026-T4", value: k.baseline, note: "Línea base 2026" }] } as never));
-    for (const o of objetivos) {
-      const kpis = o.horizon === "H1" ? KRS.filter((k) => k.cmi === o.id).map((k) => k.code) : ((o as { kpis?: string[] }).kpis ?? []);
-      check(`objetivo ${o.id} (KR)`, upsertObjective(advisor, { ...(o as object), kpis } as never));
-    }
-    for (const i of INICIATIVAS) check(`iniciativa ${i.id}`, upsertInitiative(advisor, { ...i, horizon: "H1", status: i.status ?? "PLANEADA", impact: 3, feasibility: 3, urgency: 3, dependency: 3, progress: 0 } as never));
-    // regla de paso · mapeadas sin objetivo ni resultado clave: un proyecto especial y una iniciativa disruptiva (no pasan a Priorización)
-    for (const i of INICIATIVAS_MAPEADAS) check(`iniciativa ${i.id}`, upsertInitiative(advisor, { ...i, cmi: "", kpi: "", horizon: "H1", status: "PLANEADA", impact: 3, feasibility: 3, urgency: 3, dependency: 3, progress: 0 } as never));
-
-    // 2. autoevaluación directiva: diez directivos con el perfil por dimensión
-    const rand = rng(20261105);
-    for (const [n, d] of F1_DIRECTIVOS.entries()) {
-      const r: Record<string, number> = {};
-      for (const p of PRACTICES) { const m = F1_PERFIL[p.dim] ?? 3.3; const v = Math.round(m + (rand() - 0.5) * 2.2 + ((n % 3) - 1) * 0.3); r[p.code] = Math.max(1, Math.min(5, v)); }
-      check(`F1 ${d.email}`, saveF1Response(demoUser({ email: d.email, name: d.name, role: "DIRECTIVO" }), { r, cargo: d.cargo }));
-    }
-
-    // 3. validaciones con IA en verde (objetivos e iniciativas del horizonte 2027)
-    const c = catalog();
-    const leverName = (id?: string) => leversOf(c.company).find((l) => l.id === id)?.name ?? "";
-    // los descartados no se validan; el objetivo sin prioridad queda en amarillo con la recomendación de ubicarlo
-    const alineacion: AlineacionIA = { horizon: "H1", resumen: "Dieciséis objetivos directivos 2027 están alineados con las siete prioridades (de dos a tres por prioridad): cada uno tiene verbo de logro, resultado, indicador impulsor declarado y el plazo del horizonte, sin cifras de meta, sin duplicidades y sin enunciados que sean resultados clave o iniciativas. Un objetivo (OE-18) está bien formulado pero no cuelga de ninguna prioridad: no pasa a Resultados clave hasta que el comité lo ubique. El objetivo descartado (OE-17) queda en el registro y no se valida.",
-      items: c.objectives.filter((o) => o.horizon === "H1" && !o.descartado).map((o) => o.id === OBJETIVO_SIN_PRIORIDAD
-        ? { id: o.id, color: "amarillo" as const, justificacion: "Tiene verbo de logro, resultado e indicador impulsor, pero no está vinculado a ninguna prioridad estratégica: no se puede juzgar a qué apuesta aporta ni pasa a Resultados clave.", recomendaciones: ["Vincularlo a la prioridad a la que aporta (por ejemplo, Disciplina Operacional) o descartarlo con su motivo."], naturaleza: "objetivo" as const, duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: ["prioridad"] }
-        : { id: o.id, color: "verde" as const, justificacion: JUSTIFICACION_OBJETIVO(leverName(o.lever)), recomendaciones: [], naturaleza: "objetivo" as const, duplicaDe: [], reformulacion: "", indicadorPropuesto: "", faltan: [] }) };
-    check("validación de objetivos", saveAlineacion(advisor, "H1", huellaAlineacion("H1"), alineacion, "demo", "alineacion"));
-    const validacionIni: ValidacionIni = { horizon: "H1", resumen: "Veintidós iniciativas cumplen los ocho elementos: nombre como entrega, qué logran, responsable, inicio y fin, capacidad que instalan, presupuesto, resultado clave que mueven y alcance acotado. Una (in23) no está vinculada a ningún resultado clave: no pasa a Priorización hasta que se vincule. Dos más (in24 e in25) están mapeadas como proyecto especial e iniciativa disruptiva, aún sin objetivo ni resultado clave: se consideran en el portafolio y no se priorizan hasta asociarles uno.",
-      items: c.initiatives.map((i) => i.id === INICIATIVA_SIN_KR
-        ? { id: i.id, color: "amarillo" as const, justificacion: "Está bien formulada como entrega, con responsable, plazo, capacidad y presupuesto, pero no mueve ningún resultado clave: así no es estratégica ni pasa a Priorización.", recomendaciones: ["Vincularla al resultado clave de su objetivo que realmente mueve (por ejemplo, contactos efectivos por médico) o dejarla fuera del portafolio."], naturaleza: "iniciativa" as const, duplicaDe: [], faltan: ["kr"], reformulacion: "", logroPropuesto: "" }
-        : i.categoria
-        ? { id: i.id, color: "amarillo" as const, justificacion: `Está mapeada como ${i.categoria === "especial" ? "proyecto especial" : "iniciativa disruptiva"}: tiene nombre, qué logra, responsable, plazo y presupuesto, pero aún no cuelga de un objetivo ni mueve un resultado clave.`, recomendaciones: ["Mantenerla mapeada para considerarla; cuando se le asocie un resultado clave pasa a Priorización."], naturaleza: "iniciativa" as const, duplicaDe: [], faltan: ["kr"], reformulacion: "", logroPropuesto: "" }
-        : { id: i.id, color: "verde" as const, justificacion: JUSTIFICACION_INI(i.kpi), recomendaciones: [], naturaleza: "iniciativa" as const, duplicaDe: [], faltan: [], reformulacion: "", logroPropuesto: "" }) };
-    check("validación de iniciativas", saveAlineacion(advisor, "H1", huellaIniciativas("H1"), validacionIni as unknown as AlineacionIA, "demo", "alineacion-ini"));
-
-    // 4. priorización: el advisor abre la calificación de todas las áreas con iniciativas, tres evaluadores califican, se cierra y se guarda el orden
-    const sponsors = [...new Set(c.initiatives.filter((i) => !!i.kpi).map((i) => i.ownerId).filter((x): x is string => !!x))];   // solo las áreas con iniciativas que pasan a priorización
-    for (const s of sponsors) check(`abrir ${s}`, setPrioSession(advisor, s, "abrir"));
-    let evaluaciones = 0;
-    for (const [id, filas] of Object.entries(CALIFICACIONES)) {
-      for (const [n, f] of filas.entries()) {
-        const r = evaluateInitiative(demoUser(EVALUADORES[n]), id, { scores: { D: f[0], E: f[1], M: f[2], L: f[3] }, type: {}, notes: {} });
-        check(`calificación ${id} · ${EVALUADORES[n].name}`, r); if (r.ok) evaluaciones++;
-      }
-    }
-    for (const s of sponsors) {
-      check(`cerrar ${s}`, setPrioSession(advisor, s, "cerrar"));
-      const orden = c.initiatives.filter((i) => i.ownerId === s && !!i.kpi).map((i) => i.id);   // solo las que pasan a priorización (vinculadas a un KR)
-      check(`guardar ${s}`, setPrioSession(advisor, s, "guardar", orden));
-    }
-    let decisiones = 0;
-    for (const [id, d] of Object.entries(DECISIONES)) { const r = decideInitiative(advisor, id, d); check(`decisión ${id}`, r); if (r.ok) decisiones++; }
-
-    // 5. capacidades para ejecutar: checklist personalizado en una iniciativa y revisión de todas las decididas
-    for (const [id, ch] of Object.entries(CHECKLISTS_PERSONALIZADOS)) check(`checklist ${id}`, saveChecklistCap(advisor, id, ch.frentes, ch.resumen, "demo"));
-    let revisiones = 0;
-    for (const [id, cp] of Object.entries(CAPACIDADES)) { const r = saveRevisionCap(advisor, id, { respuestas: cp.r, falta: cp.falta ?? {}, notas: cp.notas }); check(`capacidades ${id}`, r); if (r.ok) revisiones++; }
-
-    // 6. articulación entre áreas de cada iniciativa y cascada trimestral 2027
-    let articulaciones = 0;
-    for (const [id, areas] of Object.entries(ARTICULACION)) { const r = saveArticulacion(advisor, id, { areas }); check(`articulación ${id}`, r); if (r.ok) articulaciones++; }
-    let metas = 0;
-    for (const m of METAS) { const r = upsertMeta(advisor, { ...m, estado: m.estado ?? "PLANEADA" } as never); check(`meta ${m.initiative} ${m.quarter}`, r); if (r.ok) metas++; }
-
-    const cc = catalog();
-    return { responsables: cc.responsibles.length, objetivos: cc.objectives.length, resultadosClave: cc.kpis.length, iniciativas: cc.initiatives.length, autoevaluaciones: F1_DIRECTIVOS.length, calificaciones: evaluaciones, decisiones, revisionesCapacidades: revisiones, articulaciones, metasTrimestrales: metas };
-  });
-  const bad = await flushOrError(); if (bad) avisos.push(`escritura en la base: ${bad}`);
-  // la capa de ejecución: la empresa a la fecha fija de la demo, con el plan 2027 andando
-  const ejecucion = await runWithTenant(DEMO_SLUG, () => sembrarEjecucion(avisos, { archivos: opts.archivos }));
-  Object.assign(resumen as Record<string, number>, ejecucion);
-  if (membresias.length) {
-    const n = await restaurarMembresias(DEMO_SLUG, membresias);
-    if (n < membresias.length) avisos.push(`membresías: se conservaron ${n} de ${membresias.length}`);
-    (resumen as Record<string, number>).membresias = n;
-  }
-  return { ok: true, slug: DEMO_SLUG, resumen, avisos };
-}
+export const crearDemoSiegfried = (actor: SessionUser, opts: { recrear?: boolean; archivos?: boolean } = {}) => construirDemo(actor, PAQUETE_SIEGFRIED, opts);
