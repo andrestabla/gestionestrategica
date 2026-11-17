@@ -14,8 +14,9 @@ import { PageHeader, Card, CardHeader, StatCard } from "@/components/ui";
 import { useCatalog } from "@/components/catalog-context";
 import { useBase } from "@/components/user-context";
 import { fmtNum } from "@/data/demo";
-import { sectorFor, sectorKeyDe, fmtMillones, shortName } from "@/data/sector";
+import { sectorFor, sectorKeyDe, fmtMillones, shortName, posicionPropia, NIT_PROPIA, type SectorData, type SectorPeer } from "@/data/sector";
 import { MercadoFarma } from "@/components/mercado-farma";
+import { LINEAS_SUMINISTROS, COSTOS_SUMINISTROS } from "@/data/inteligencia/suministros-industriales";
 import { MERCADO_FARMA_CO } from "@/data/mercado-farma-co";
 import { inteligenciaOf, titularDe, coincideEmpresa, atc2Nombre } from "@/data/inteligencia";
 import { EC_POPULATION, EC_POPULATION_SOURCE } from "@/data/demanda-ec";
@@ -54,6 +55,11 @@ const BI_TABS: { id: BiTab; label: string; icon: typeof Layers; desc: string; fa
   { id: "territorio", label: "Territorio", icon: MapIcon, desc: "Demanda, presencia y competencia por departamento" },
   { id: "senales", label: "Señales y fuentes", icon: Radar, desc: "Cambios del entorno, agenda, hechos con fuente y cortes de datos" },
 ];
+/** Descripción de cada sección fuera de la industria farmacéutica. */
+const DESC_GENERAL: Partial<Record<BiTab, string>> = {
+  competencia: "Competidores directos por segmento, ranking del sector y concentración",
+  portafolio: "Líneas del canal, normas que mueven la demanda, importaciones y tasa de cambio",
+};
 
 export default function BiPage() {
   const router = useRouter();
@@ -68,7 +74,8 @@ export default function BiPage() {
   const tParam = params.get("t") as BiTab | null;
   const t: BiTab = tParam && tabs.some((x) => x.id === tParam) ? tParam : "resumen";
   const irA = (id: BiTab) => { router.replace(`?t=${id}`, { scroll: false }); window.scrollTo({ top: 0 }); };
-  const tabDef = tabs.find((x) => x.id === t) ?? tabs[0];
+  const tabDef0 = tabs.find((x) => x.id === t) ?? tabs[0];
+  const tabDef = { ...tabDef0, desc: (!farma && DESC_GENERAL[tabDef0.id]) || tabDef0.desc };
   const year = s.source.cut.slice(0, 4);
   const maxDept = Math.max(...s.departments.map((d) => d.share));
   const maxSize = Math.max(...s.sizes.map((x) => x.n));
@@ -80,12 +87,25 @@ export default function BiPage() {
   const smallBand = s.sizes[0];
   const smallPct = s.n ? Math.round((smallBand.n / s.n) * 100) : 0;
 
-  // la empresa entre las sociedades del sector (por nombre)
+  // la empresa entre las sociedades del sector: por nombre si la fuente la trae; si no, con las cifras que declara en su ficha
   const selfIdx = s.peers.findIndex((p) => coincideEmpresa(company, p.name));
-  const selfPeer = selfIdx >= 0 ? s.peers[selfIdx] : null;
-  const selfCiiuRank = selfPeer ? s.peers.filter((p) => p.ciiu === selfPeer.ciiu).findIndex((p) => p.nit === selfPeer.nit) + 1 : 0;
+  const propia = selfIdx < 0 ? posicionPropia(s, v.catalog) : null;
+  const selfPeer: SectorPeer | null = selfIdx >= 0 ? s.peers[selfIdx] : propia?.peer ?? null;
+  const declarada = !!propia;
+  const selfRank = selfIdx >= 0 ? selfIdx + 1 : propia?.rank ?? 0;
+  const selfCiiuRank = propia ? propia.ciiuRank : selfPeer ? s.peers.filter((p) => p.ciiu === selfPeer.ciiu).findIndex((p) => p.nit === selfPeer.nit) + 1 : 0;
+  const ciiuN = propia ? propia.ciiuN : selfPeer ? (s.byCiiu.find((c) => c.code === selfPeer.ciiu)?.n ?? 0) : 0;
   const top = s.peers.slice(0, 10);
-  const tabla = selfPeer && selfIdx >= 10 ? [...top, selfPeer] : top;
+  const tabla = selfPeer && selfRank > 10 ? [...top, selfPeer] : top;
+  const puestoDe = (p: SectorPeer) => (p.nit === NIT_PROPIA ? selfRank : s.peers.indexOf(p) + 1);
+  // competidores directos curados del sector (si los tiene), con la empresa en su lugar
+  const foco = !farma ? s.foco ?? null : null;
+  const directos: (SectorPeer & { segmento: string })[] = foco ? [...foco.pares, ...(selfPeer && !foco.pares.some((p) => p.nit === selfPeer.nit) ? [{ ...selfPeer, segmento: "Tu empresa" }] : [])].sort((a, b) => b.revenue - a.revenue) : [];
+  const segmentos = [...new Set((foco?.pares ?? []).map((p) => p.segmento))];
+  const med = (xs: (number | null)[]) => { const v = xs.filter((x): x is number => x !== null).sort((a, b) => a - b); return v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null; };
+  const pares = foco?.pares.filter((p) => p.revenue < 150_000) ?? [];   // los de tamaño comparable (sin las marcas ni los mayoristas grandes)
+  const medPares = { growth: med(pares.map((p) => p.growth)), gross: med(pares.map((p) => p.grossMargin)), op: med(pares.map((p) => p.opMargin)) };
+  const sDirectos: SectorData = foco ? { ...s, peers: directos } : s;
 
   // inteligencia regulatoria y macro (INVIMA · CNPMDM · TRM), si el sector la tiene
   const intel = inteligenciaOf(key);
@@ -104,7 +124,9 @@ export default function BiPage() {
   const cov = coverage(demandAll);
   const open = openMarkets(demandAll, 4);
   const demand = demandAll.filter((d, i) => i < 12 || d.presence !== "ninguna" || d.companies > 0).slice(0, 18);
-  const competition = competitorsByTerritory(s.peers, v.catalog.territories, 3).filter((c) => c.count > 0);
+  // con competidores directos curados, el territorio los lee a ellos primero (sin las grandes de otros negocios del mismo CIIU)
+  const peersTerritorio = !farma && s.foco ? s.foco.pares : s.peers;
+  const competition = competitorsByTerritory(peersTerritorio, v.catalog.territories, 3).filter((c) => c.count > 0);
 
   // mapa: sedes declaradas y domicilio según Supersociedades; comparables: fabricantes presentes en Supersociedades e INVIMA
   const home = v.catalog.territories.filter((t) => t.presence === "sede").map((t) => t.name);
@@ -142,7 +164,7 @@ export default function BiPage() {
 
   return (
     <>
-      <PageHeader kicker="M7 · Inteligencia" title={`Inteligencia del sector · ${s.label}`}
+      <PageHeader kicker={`M7 · Inteligencia · ${s.ciiu.map((c) => c.code).join(", ")}`} title={`Inteligencia del sector · ${company.sector?.trim() || s.label}`}
         desc="Los datos abiertos sistematizados complementan el diagnóstico con información sobre el contexto: la dinámica y concentración del sector, la posición de la empresa frente a sus pares, el portafolio y la exposición regulatoria de cada competidor, la distribución de la demanda y las señales del entorno que requieren seguimiento. Cada cifra indica su fuente y fecha de corte." />
 
       <div className="rise mb-5">
@@ -169,13 +191,21 @@ export default function BiPage() {
       {/* ── la empresa frente al sector ── */}
       {selfPeer && (
         <Card className="rise rise-1 mb-5">
-          <CardHeader title={`${company.shortName || company.name} entre las sociedades del sector`} sub={`posición por ingresos de ${year} entre las ${s.n} sociedades que reportaron · ${s.units}`} />
+          <CardHeader title={`${company.shortName || company.name} entre las sociedades del sector`} sub={`posición por ingresos de ${year} entre las ${s.n} sociedades que reportaron · ${s.units}${declarada ? ` · con los estados financieros ${v.catalog.financials?.year ?? year} que la empresa declara en su ficha (no figura en la fuente)` : ""}`} />
           <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Puesto en el sector</div><div className="num mt-1 text-[26px] font-extrabold text-ink">#{selfIdx + 1}</div><div className="text-[12px] text-muted">de {s.n} sociedades · #{selfCiiuRank} entre {s.byCiiu.find((c) => c.code === selfPeer.ciiu)?.n ?? "—"} con CIIU {selfPeer.ciiu}</div></div>
-            <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Ingresos {year}</div><div className="num mt-1 text-[26px] font-extrabold text-ink">{fmtMillones(selfPeer.revenue)}</div><div className="text-[12px] text-muted">{s.peers[0] ? `${fmtNum((selfPeer.revenue / s.peers[0].revenue) * 100, 1)} % de la mayor (${shortName(s.peers[0].name, 2)})` : ""}</div></div>
+            <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Puesto en el sector</div><div className="num mt-1 text-[26px] font-extrabold text-ink">#{selfRank}</div><div className="text-[12px] text-muted">de {s.n} sociedades · #{selfCiiuRank} entre {ciiuN || "—"} con CIIU {selfPeer.ciiu}</div></div>
+            <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Ingresos {year}</div><div className="num mt-1 text-[26px] font-extrabold text-ink">{fmtMillones(selfPeer.revenue)}</div><div className="text-[12px] text-muted">{declarada ? `percentil ${Math.round((1 - (selfRank - 1) / s.n) * 100)} del sector por tamaño · franja ${s.sizes.find((b, i) => { const lim = [10_000, 30_000, 100_000, Infinity][i]; return selfPeer.revenue < lim; })?.band.toLowerCase() ?? ""}` : s.peers[0] ? `${fmtNum((selfPeer.revenue / s.peers[0].revenue) * 100, 1)} % de la mayor (${shortName(s.peers[0].name, 2)})` : ""}</div></div>
             <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Crecimiento</div><div className="num mt-1 text-[26px] font-extrabold" style={{ color: (selfPeer.growth ?? 0) >= (s.dist.growth.p50 ?? 0) ? "var(--ok)" : "var(--bad)" }}>{selfPeer.growth !== null ? `${fmtNum(selfPeer.growth, 1)} %` : "—"}</div><div className="text-[12px] text-muted">mediana del sector {fmtNum(s.dist.growth.p50 ?? 0, 1)} % · cuartil superior {fmtNum(s.dist.growth.p75 ?? 0, 1)} %</div></div>
             <div className="rounded-xl bg-surface-2/60 px-4 py-3"><div className="label">Margen operacional</div><div className="num mt-1 text-[26px] font-extrabold" style={{ color: (selfPeer.opMargin ?? 0) >= (s.dist.opMargin.p50 ?? 0) ? "var(--ok)" : "var(--bad)" }}>{selfPeer.opMargin !== null ? `${fmtNum(selfPeer.opMargin, 1)} %` : "—"}</div><div className="text-[12px] text-muted">mediana del sector {fmtNum(s.dist.opMargin.p50 ?? 0, 1)} % · de su CIIU {fmtNum(s.byCiiu.find((c) => c.code === selfPeer.ciiu)?.opMarginP50 ?? 0, 1)} %</div></div>
           </div>
+          {foco && pares.length > 0 && (
+            <p className="border-t border-line px-5 py-3 text-[12.5px] leading-relaxed text-ink-soft">
+              <b className="text-ink">Frente a sus {pares.length} competidores directos de tamaño comparable</b> (medianas): crecimiento {fmtNum(medPares.growth ?? 0, 1)} %, margen bruto {fmtNum(medPares.gross ?? 0, 1)} % y margen operacional {fmtNum(medPares.op ?? 0, 1)} %. {company.shortName || company.name} {(selfPeer.growth ?? 0) >= (medPares.growth ?? 0) ? "crece más rápido" : "crece más despacio"} que ellos
+              {selfPeer.grossMargin !== null && medPares.gross !== null ? `, con ${selfPeer.grossMargin >= medPares.gross ? "más" : "menos"} margen bruto (${fmtNum(selfPeer.grossMargin, 1)} %)` : ""}
+              {selfPeer.opMargin !== null && medPares.op !== null ? ` y ${selfPeer.opMargin >= medPares.op ? "más" : "menos"} margen operacional (${fmtNum(selfPeer.opMargin, 1)} %)` : ""}.{" "}
+              <button type="button" onClick={() => irA("competencia")} className="font-semibold text-cyan-deep hover:underline">Ver los competidores por segmento →</button>
+            </p>
+          )}
         </Card>
       )}
 
@@ -188,10 +218,30 @@ export default function BiPage() {
       {/* ── ranking de la actividad y comparativo de laboratorios ── */}
       <div className="mb-5 grid gap-5 xl:grid-cols-[380px_1fr]">
         <Card className="rise rise-2">
-          <CardHeader title={ciiuFoco ? `Ranking ${ciiuFoco}` : "Ranking del sector"} sub={`${peersFoco.length} sociedades de ${s.byCiiu.find((c) => c.code === ciiuFoco)?.name?.split(",")[0].toLowerCase() ?? "la actividad"} por ingresos ${year} · crecimiento y margen al lado · miles de millones`} />
-          <div className="px-5 pb-5"><RankingActividad peers={peersFoco} selfNit={selfPeer?.nit ?? null} /></div>
+          {foco ? <>
+            <CardHeader title="Competidores directos por ingresos" sub={`${foco.pares.length} distribuidoras y marcas del canal industrial, ingresos ${year} · crecimiento y margen al lado · miles de millones`} />
+            <div className="px-5 pb-5"><RankingActividad peers={directos} selfNit={selfPeer?.nit ?? null} limit={14} /></div>
+          </> : <>
+            <CardHeader title={ciiuFoco ? `Ranking ${ciiuFoco}` : "Ranking del sector"} sub={`${peersFoco.length} sociedades de ${s.byCiiu.find((c) => c.code === ciiuFoco)?.name?.split(",")[0].toLowerCase() ?? "la actividad"} por ingresos ${year} · crecimiento y margen al lado · miles de millones`} />
+            <div className="px-5 pb-5"><RankingActividad peers={peersFoco} selfNit={selfPeer?.nit ?? null} /></div>
+          </>}
         </Card>
-        <Card className="rise rise-3">
+{foco ? (
+          <Card className="rise rise-3">
+            <CardHeader title="Competidores directos por segmento" sub={`${foco.nota}`} />
+            <div className="overflow-x-auto px-2 pb-3">
+              <table className="w-full min-w-[720px] text-[12px]">
+                <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">Sociedad</th><th className="px-2 py-2">{Unit}</th><th className="px-2 py-2 text-right">Ingresos</th><th className="px-2 py-2 text-right">Crec.</th><th className="px-2 py-2 text-right">Margen bruto</th><th className="px-2 py-2 text-right">Margen op.</th></tr></thead>
+                <tbody>
+                  {[...segmentos, ...(selfPeer && !foco.pares.some((p) => p.nit === selfPeer.nit) ? ["Tu empresa"] : [])].map((seg) => (
+                    <SegmentoFilas key={seg} seg={seg} filas={directos.filter((p) => p.segmento === seg)} selfNit={selfPeer?.nit ?? null} declarada={declarada} medG={medPares.growth} medB={medPares.gross} medO={medPares.op} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">En verde, lo que supera la mediana de los competidores de tamaño comparable (menos de 150.000 millones de ingresos): crecimiento {fmtNum(medPares.growth ?? 0, 1)} %, margen bruto {fmtNum(medPares.gross ?? 0, 1)} %, margen operacional {fmtNum(medPares.op ?? 0, 1)} %. Las marcas venden a través de distribuidores como la empresa y a la vez le compiten en las cuentas grandes; los mayoristas ferreteros compiten por precio en el producto de alta rotación.{declarada ? " La fila de la empresa usa los estados financieros que declara en su ficha." : ""}</p>
+          </Card>
+        ) :         <Card className="rise rise-3">
           <CardHeader title="Comparativo de laboratorios" sub="las sociedades de la actividad que también están entre los titulares con más registros: finanzas (Supersociedades) y portafolio regulatorio (INVIMA · CNPMDM) en una sola fila" />
           {comps.length ? (
             <div className="overflow-x-auto px-2 pb-3">
@@ -216,7 +266,7 @@ export default function BiPage() {
             </div>
           ) : <p className="px-5 pb-5 text-[12.5px] text-muted">Sin inteligencia regulatoria para este sector: el comparativo cruza Supersociedades con el INVIMA.</p>}
           <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Institucional: presentaciones cuya descripción comercial declara uso institucional u hospitalario; muestras: presentaciones marcadas como muestra médica (proxy de intensidad promocional con el cuerpo médico). El resto es canal comercial. Un laboratorio con menos exposición a precios regulados y más canal comercial compite por marca y prescripción; uno con mucha presentación institucional, por licitaciones y precio.</p>
-        </Card>
+        </Card>}
       </div>
 
       <div className="mb-5 grid gap-5 lg:grid-cols-3">
@@ -268,7 +318,7 @@ export default function BiPage() {
       </div>
 
       <Card className="rise rise-3 mb-5">
-        <CardHeader title={`Las diez mayores del sector en ${year}`} sub={`ingresos de actividades ordinarias, crecimiento y margen operacional · ${s.units}${selfPeer && selfIdx >= 10 ? " · tu empresa al final, en su puesto" : ""}`} />
+        <CardHeader title={`Las diez mayores del sector en ${year}`} sub={`ingresos de actividades ordinarias, crecimiento y margen operacional · ${s.units}${selfPeer && selfRank > 10 ? " · tu empresa al final, en su puesto" : ""}`} />
         <div className="overflow-x-auto px-2 pb-3">
           <table className="w-full text-[12px]">
             <thead><tr className="text-left text-[12px] uppercase tracking-wider text-faint"><th className="px-3 py-2">#</th><th className="px-2 py-2">Sociedad</th><th className="px-2 py-2">{Unit}</th><th className="px-2 py-2">CIIU</th><th className="px-2 py-2 text-right">Ingresos</th><th className="px-2 py-2 text-right">Crec.</th><th className="px-2 py-2 text-right">Margen op.</th></tr></thead>
@@ -277,7 +327,7 @@ export default function BiPage() {
                 const self = selfPeer?.nit === p.nit;
                 return (
                   <tr key={p.nit} className={`border-t border-line ${self ? "bg-gold-wash/40" : ""}`}>
-                    <td className="num px-3 py-2 text-muted">{s.peers.indexOf(p) + 1}</td>
+                    <td className="num px-3 py-2 text-muted">{puestoDe(p)}</td>
                     <td className="px-2 py-2 font-semibold text-ink" title={p.name}>{shortName(p.name, 4)}{self && <span className="chip chip-gold ml-2 !py-0 text-[11px]">tu empresa</span>}</td>
                     <td className="px-2 py-2 text-muted">{p.dept}</td>
                     <td className="num px-2 py-2 text-muted">{p.ciiu}</td>
@@ -299,6 +349,9 @@ export default function BiPage() {
       </>)}
 
       {t === "portafolio" && (<>
+      {/* ── fuera de la industria farmacéutica: las líneas del canal, lo que mueve su demanda y las normas con fuente ── */}
+      {!intel && key === "suministros-industriales" && <PortafolioCanal kb={kb} empresa={company.shortName || company.name} />}
+      {!intel && key !== "suministros-industriales" && <Card className="rise rise-1 mb-5"><CardHeader title="Portafolio y regulación" sub="la lectura de portafolio y normas se arma por industria" /><p className="px-5 pb-5 text-[12.5px] text-muted">Este sector todavía no tiene su lectura de portafolio y regulación. Las señales con fuente de la industria están en «Señales y fuentes».</p></Card>}
       {/* ── inteligencia regulatoria y macro ── */}
       {intel && (
         <>
@@ -414,12 +467,12 @@ export default function BiPage() {
       <div className="mb-5 grid gap-5 xl:grid-cols-2">
         <Card className="rise rise-1">
           <CardHeader title={`${isEC ? "Ecuador" : "Colombia"}: sector, población y competencia`} sub={`tres lentes sobre el mismo mapa · ${domicilio ? `domicilio de la empresa en ${domicilio}` : "sin domicilio identificado"}${home.length ? ` · sedes declaradas: ${home.join(", ")}` : " · la empresa aún no declara sedes ni cobertura"}`} />
-          <MapaSector s={s} demand={demandAll} home={home} domicilio={domicilio} country={isEC ? "EC" : "CO"} unitName={unitName} peers={s.peers} />
+          <MapaSector s={s} demand={demandAll} home={home} domicilio={domicilio} country={isEC ? "EC" : "CO"} unitName={unitName} peers={peersTerritorio} />
         </Card>
         <Card className="rise rise-2">
-          <CardHeader title="Crecimiento frente a margen operacional" sub={`las ${s.peers.length} mayores del sector en ${year}; tamaño del punto según ingresos · ${ciiuFoco ? `en color, las de la actividad ${ciiuFoco}` : ""}`} />
-          <div className="px-4 pb-3"><Dispersion s={s} selfNit={selfPeer?.nit ?? null} ciiuFoco={ciiuFoco} /></div>
-          <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Arriba a la derecha crecen por encima de la mediana con más margen que la mediana; abajo a la izquierda, lo contrario. {selfPeer ? `${company.shortName || company.name} aparece en dorado.` : "La empresa aparecerá en dorado cuando su razón social figure en la ficha."} Valores extremos recortados a los bordes.</p>
+          <CardHeader title="Crecimiento frente a margen operacional" sub={foco ? `los ${foco.pares.length} competidores directos y la empresa, ${year}; tamaño del punto según ingresos` : `las ${s.peers.length} mayores del sector en ${year}; tamaño del punto según ingresos · ${ciiuFoco ? `en color, las de la actividad ${ciiuFoco}` : ""}`} />
+          <div className="px-4 pb-3"><Dispersion s={sDirectos} selfNit={selfPeer?.nit ?? null} ciiuFoco={foco ? null : ciiuFoco} /></div>
+          <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">Arriba a la derecha crecen por encima de la mediana con más margen que la mediana; abajo a la izquierda, lo contrario. {selfPeer ? `${company.shortName || company.name} aparece en dorado${declarada ? ", con las cifras que declara" : ""}.` : "La empresa aparecerá en dorado cuando su razón social figure en la ficha."} Valores extremos recortados a los bordes.</p>
         </Card>
       </div>
 
@@ -457,7 +510,7 @@ export default function BiPage() {
 
       {competition.length > 0 && (
         <Card className="rise rise-2 mb-5">
-          <CardHeader title="Competencia donde operas y donde planeas abrir" sub={`sociedades del sector domiciliadas en cada ${unitName} de tu territorio, con las tres mayores · ${s.units}`} />
+          <CardHeader title="Competencia donde operas y donde planeas abrir" sub={`${foco ? "competidores directos" : "sociedades del sector"} domiciliados en cada ${unitName} de tu territorio, con los tres mayores · ${s.units}`} />
           <div className="grid gap-3 px-5 pb-5 sm:grid-cols-2 lg:grid-cols-3">
             {competition.map(({ territory: t, count, revenue, top: tres }) => (
               <div key={t.name} className="rounded-xl bg-surface-2/60 px-4 py-3">
@@ -555,6 +608,78 @@ export default function BiPage() {
         <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-faint">El sector de referencia se define en la ficha de la empresa (<Link href={`${base}/panel/admin`} className="text-cyan-deep hover:underline">Administración → Empresas</Link>, «Sector de referencia»); si no está definido, la plataforma lo infiere del CIIU o del sector declarado. Los datos se actualizan con los extractores de la plataforma en cada corte de las fuentes.</p>
       </Card>
       </>)}
+    </>
+  );
+}
+
+/** Filas de un segmento de competidores directos: el segmento como encabezado y cada sociedad con sus cifras. */
+function SegmentoFilas({ seg, filas, selfNit, declarada, medG, medB, medO }: { seg: string; filas: (SectorPeer & { segmento: string })[]; selfNit: string | null; declarada: boolean; medG: number | null; medB: number | null; medO: number | null }) {
+  const cls = (v: number | null, m: number | null) => (v === null || m === null ? "text-muted" : v >= m ? "font-bold text-[color:var(--ok)]" : "text-muted");
+  return (
+    <>
+      <tr className="border-t border-line bg-surface-2/50"><td colSpan={6} className="px-3 py-1.5 text-[11.5px] font-bold uppercase tracking-wider text-faint">{seg}</td></tr>
+      {filas.map((p) => {
+        const self = p.nit === selfNit;
+        return (
+          <tr key={p.nit} className={`border-t border-line ${self ? "bg-gold-wash/40" : ""}`}>
+            <td className={`px-3 py-2 ${self ? "font-extrabold" : "font-semibold"} text-ink`} title={p.name}>{shortName(p.name, 4)}{self && <span className="chip chip-gold ml-2 !py-0 text-[11px]">{declarada ? "tu empresa · cifras declaradas" : "tu empresa"}</span>}</td>
+            <td className="px-2 py-2 text-muted">{p.dept}</td>
+            <td className="num px-2 py-2 text-right font-bold text-ink">{fmtNum(p.revenue, 0)}</td>
+            <td className={`num px-2 py-2 text-right ${cls(p.growth, medG)}`}>{p.growth !== null ? `${fmtNum(p.growth, 1)} %` : "—"}</td>
+            <td className={`num px-2 py-2 text-right ${cls(p.grossMargin, medB)}`}>{p.grossMargin !== null ? `${fmtNum(p.grossMargin, 1)} %` : "—"}</td>
+            <td className={`num px-2 py-2 text-right ${cls(p.opMargin, medO)}`}>{p.opMargin !== null ? `${fmtNum(p.opMargin, 1)} %` : "—"}</td>
+          </tr>
+        );
+      })}
+    </>
+  );
+}
+
+/** Portafolio y regulación del canal de suministros industriales: líneas, qué mueve su demanda y los hechos con fuente que lo sustentan. */
+function PortafolioCanal({ kb, empresa }: { kb: BaseConocimiento | null; empresa: string }) {
+  const hecho = (id: string) => kb?.hechos.find((h) => h.id === id) ?? null;
+  const fuente = (id: string) => kb?.fuentes.find((f) => f.id === id) ?? null;
+  const Cita = ({ id }: { id: string }) => {
+    const h = hecho(id); const f = h ? fuente(h.fuente) : null;
+    if (!h) return null;
+    return (
+      <li className="rounded-lg bg-surface px-3 py-2 text-[12px] leading-snug text-ink-soft">
+        {h.hecho}
+        {f && <a href={f.url} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-1 whitespace-nowrap text-cyan-deep hover:underline">{f.editor} · {f.fecha} <ExternalLink size={10} /></a>}
+      </li>
+    );
+  };
+  const porTema = (tema: Tema) => (kb?.hechos ?? []).filter((h) => h.temas[0] === tema);
+  const normas = porTema("regulacion"), macro = COSTOS_SUMINISTROS.filter((id) => hecho(id)).map((id) => hecho(id)!);
+  return (
+    <>
+      <Card className="rise rise-1 mb-5">
+        <CardHeader title="Líneas del canal y qué mueve su demanda" sub={`las seis líneas que vende una distribuidora de suministros industriales como ${empresa}: quién compra, qué la mueve y cómo se compra`} />
+        <div className="grid gap-3 px-5 pb-5 md:grid-cols-2 xl:grid-cols-3">
+          {LINEAS_SUMINISTROS.map((l) => (
+            <div key={l.id} className="rounded-xl bg-surface-2/60 px-4 py-3">
+              <div className="text-[13.5px] font-extrabold text-ink">{l.linea}</div>
+              <p className="mt-1 text-[12px] leading-snug text-muted">{l.incluye}</p>
+              <dl className="mt-2 space-y-1.5 text-[12px] leading-snug">
+                <div><dt className="label">Quién compra</dt><dd className="text-ink-soft">{l.clientes}</dd></div>
+                <div><dt className="label">Qué mueve la demanda</dt><dd className="text-ink-soft">{l.motor}</dd></div>
+                <div><dt className="label">Cómo se compra</dt><dd className="text-ink-soft">{l.compra}</dd></div>
+              </dl>
+              {l.hechos.some((id) => hecho(id)) && <ul className="mt-2 space-y-1.5">{l.hechos.map((id) => <Cita key={id} id={id} />)}</ul>}
+            </div>
+          ))}
+        </div>
+      </Card>
+      <div className="mb-5 grid gap-5 lg:grid-cols-2">
+        <Card className="rise rise-2">
+          <CardHeader title="Normas que obligan a comprar o cambian la operación" sub="seguridad y salud en el trabajo, sustancias químicas, facturación y plazos de pago · cada una con su fuente" />
+          {normas.length ? <ul className="space-y-2 px-5 pb-5">{normas.map((h) => <Cita key={h.id} id={h.id} />)}</ul> : <p className="px-5 pb-5 text-[12.5px] text-muted">Sin normas cargadas todavía para este sector.</p>}
+        </Card>
+        <Card className="rise rise-3">
+          <CardHeader title="Importaciones, tasa de cambio y costos" sub="lo que mueve el costo del portafolio: dólar, origen de las importaciones, aranceles, inflación y salario" />
+          {macro.length ? <ul className="space-y-2 px-5 pb-5">{macro.map((h) => <Cita key={h.id} id={h.id} />)}</ul> : <p className="px-5 pb-5 text-[12.5px] text-muted">Sin cifras macro cargadas todavía para este sector.</p>}
+        </Card>
+      </div>
     </>
   );
 }

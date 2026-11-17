@@ -1,0 +1,141 @@
+{
+ "nombre": "Competidores directos · distribución de suministros industriales",
+ "nota": "Selección hecha a mano entre las 1.238 sociedades del sector: distribuidoras de protección personal, herramientas, tornillería, abrasivos, rodamientos, químicos y neumática que venden a la industria, más las marcas y mayoristas que fijan las condiciones del canal. Las cifras son las que cada sociedad reportó a Supersociedades.",
+ "pares": [
+  {
+   "nit": "860002693",
+   "segmento": "Marcas que fijan el canal",
+   "nombre": "3M COLOMBIA"
+  },
+  {
+   "nit": "830511110",
+   "segmento": "Marcas que fijan el canal",
+   "nombre": "SKF"
+  },
+  {
+   "nit": "900184924",
+   "segmento": "Marcas que fijan el canal",
+   "nombre": "ROBERT BOSCH"
+  },
+  {
+   "nit": "860070698",
+   "segmento": "Marcas que fijan el canal",
+   "nombre": "BLACK & DECKER"
+  },
+  {
+   "nit": "800130426",
+   "segmento": "Mayoristas ferreteros",
+   "nombre": "GYJ FERRETERIAS"
+  },
+  {
+   "nit": "890324420",
+   "segmento": "Mayoristas ferreteros",
+   "nombre": "FERRETERIA TUBOLAMINAS"
+  },
+  {
+   "nit": "800241495",
+   "segmento": "Mayoristas ferreteros",
+   "nombre": "FERREDISTARCO"
+  },
+  {
+   "nit": "802004266",
+   "segmento": "Mayoristas ferreteros",
+   "nombre": "FERRETERIA METROPOLIS"
+  },
+  {
+   "nit": "830057186",
+   "segmento": "Tornillería y fijaciones",
+   "nombre": "MUNDIAL DE TORNILLOS"
+  },
+  {
+   "nit": "800112440",
+   "segmento": "Tornillería y fijaciones",
+   "nombre": "TORNILLOS Y PARTES PLAZA"
+  },
+  {
+   "nit": "830120839",
+   "segmento": "Suministro industrial integral",
+   "nombre": "MULTISUMINISTROS INDUSTRIALES"
+  },
+  {
+   "nit": "890800788",
+   "segmento": "Suministro industrial integral",
+   "nombre": "SUMATEC"
+  },
+  {
+   "nit": "900147252",
+   "segmento": "Suministro industrial integral",
+   "nombre": "ORDENES Y SUMINISTROS"
+  },
+  {
+   "nit": "860065726",
+   "segmento": "Suministro industrial integral",
+   "nombre": "SUMINITROS INDUSTRIALES DE COLOMBIA"
+  },
+  {
+   "nit": "860510826",
+   "segmento": "Suministro industrial integral",
+   "nombre": "Industrial Taylor"
+  },
+  {
+   "nit": "800078935",
+   "segmento": "Suministro industrial integral",
+   "nombre": "IMPORTADORA INDUSTRIAL COLOMBIANA"
+  },
+  {
+   "nit": "800128989",
+   "segmento": "Protección personal y seguridad industrial",
+   "nombre": "GUIMAR SEGURIDAD"
+  },
+  {
+   "nit": "860051688",
+   "segmento": "Protección personal y seguridad industrial",
+   "nombre": "PRODUCTOS DE SEGURIDAD"
+  },
+  {
+   "nit": "900492874",
+   "segmento": "Protección personal y seguridad industrial",
+   "nombre": "DOTACION Y SUMINISTROS MRA"
+  },
+  {
+   "nit": "900147322",
+   "segmento": "Herramientas y abrasivos",
+   "nombre": "EQUIPOS Y HERRAMIENTAS INDUSTRIALES"
+  },
+  {
+   "nit": "860065036",
+   "segmento": "Herramientas y abrasivos",
+   "nombre": "HERRAMIENTAS UNIDAS"
+  },
+  {
+   "nit": "800166115",
+   "segmento": "Herramientas y abrasivos",
+   "nombre": "CONTINENTAL DE ABRASIVOS"
+  },
+  {
+   "nit": "900042180",
+   "segmento": "Rodamientos, transmisión y neumática",
+   "nombre": "TRANSMISIONES INDUSTRIALES COLOMBIA"
+  },
+  {
+   "nit": "860516860",
+   "segmento": "Rodamientos, transmisión y neumática",
+   "nombre": "INTERNACIONAL DE RODAMIENTOS"
+  },
+  {
+   "nit": "800062591",
+   "segmento": "Rodamientos, transmisión y neumática",
+   "nombre": "NEUMATICA DEL CARIBE"
+  },
+  {
+   "nit": "860055583",
+   "segmento": "Rodamientos, transmisión y neumática",
+   "nombre": "EQUIPOS Y CONTROLES INDUSTRIALES"
+  },
+  {
+   "nit": "800141903",
+   "segmento": "Químicos y lubricantes industriales",
+   "nombre": "QUIMICOS INDUSTRIALES ASOCIADOS"
+  }
+ ]
+}

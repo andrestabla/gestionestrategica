@@ -5,7 +5,7 @@
 
 import { catalog, tenantView } from "@/server/store";
 import { leversOf, horizonsOf } from "@/data/catalogo";
-import { sectorOf, sectorKeyDe } from "@/data/sector";
+import { sectorOf, sectorKeyDe, posicionPropia } from "@/data/sector";
 import { inteligenciaOf, titularDe, coincideEmpresa } from "@/data/inteligencia";
 import { executiveSummary } from "@/lib/logic";
 import { resumenMercadoFarma } from "@/data/mercado-farma-co";
@@ -40,6 +40,18 @@ export function contextoEmpresa(): string {
     const act = propio ? s.byCiiu.find((x) => x.code === propio.ciiu) : null;
     if (act) out.push(`ACTIVIDAD PROPIA DE LA EMPRESA: ${act.code} ${act.name}: ${act.n} sociedades, crecimiento mediano ${n1(act.growthP50)} %, margen operacional mediano ${n1(act.opMarginP50)} %. Compara a la empresa con esta actividad, no con el sector completo.`);
     if (propio) out.push(`POSICIÓN DE LA EMPRESA (${s.source.name}, ${s.source.cut.slice(0, 4)}): puesto ${idx + 1} de ${s.n} por ingresos${act ? ` y ${s.peers.filter((p) => p.ciiu === propio.ciiu).findIndex((p) => p.nit === propio.nit) + 1} de ${act.n} en su actividad` : ""}; ingresos ${Math.round(propio.revenue).toLocaleString("es-CO")} millones; crecimiento ${propio.growth == null ? "—" : n1(propio.growth) + " %"}; margen operacional ${propio.opMargin == null ? "—" : n1(propio.opMargin) + " %"}.`);
+    // sin la empresa en la fuente: su posición con los estados financieros que declara en la ficha
+    const dec = propio ? null : posicionPropia(s, cat);
+    if (dec) {
+      const p = dec.peer;
+      out.push(`POSICIÓN DE LA EMPRESA (con los estados financieros que declara en su ficha, frente a ${s.source.name} ${s.source.cut.slice(0, 4)}): puesto ${dec.rank} de ${s.n} por ingresos y ${dec.ciiuRank} de ${dec.ciiuN} en su actividad ${p.ciiu}; ingresos ${Math.round(p.revenue).toLocaleString("es-CO")} millones; crecimiento ${p.growth == null ? "—" : n1(p.growth) + " %"}; margen bruto ${n1(p.grossMargin)} %; margen operacional ${n1(p.opMargin)} %.`);
+    }
+    // competidores directos curados del sector: con quién se compara de verdad la empresa
+    if (s.foco?.pares.length) {
+      const pares = s.foco.pares.filter((x) => x.revenue < 150_000);
+      const med = (xs: (number | null)[]) => { const v = xs.filter((x): x is number => x !== null).sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)] : null; };
+      out.push(`COMPETIDORES DIRECTOS (${s.foco.nombre}; ${s.foco.pares.length} sociedades, cifras de ${s.source.name} ${s.source.cut.slice(0, 4)}): ${s.foco.pares.slice().sort((a, b) => b.revenue - a.revenue).slice(0, 14).map((x) => `${x.name.split(" ").slice(0, 4).join(" ")} (${x.segmento}, ${x.dept}, ingresos ${Math.round(x.revenue).toLocaleString("es-CO")} M, crecimiento ${n1(x.growth)} %, margen operacional ${n1(x.opMargin)} %)`).join("; ")}. Medianas de los de tamaño comparable: crecimiento ${n1(med(pares.map((x) => x.growth)))} %, margen bruto ${n1(med(pares.map((x) => x.grossMargin)))} %, margen operacional ${n1(med(pares.map((x) => x.opMargin)))} %. Compara a la empresa con ellos antes que con el sector completo.`);
+    }
   } else {
     out.push("INTELIGENCIA DEL SECTOR: sin benchmark sectorial asignado a esta empresa todavía (no inventes cifras del sector).");
   }

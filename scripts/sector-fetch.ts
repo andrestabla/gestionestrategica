@@ -14,7 +14,7 @@
 // expresan en millones de COP. Las tildes de los conceptos están almacenadas
 // como U+FFFD en el portal, por eso los nombres de concepto llevan ese carácter.
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const BASE = "https://www.datos.gov.co/resource";
@@ -242,6 +242,8 @@ async function main() {
   const step = Math.max(1, Math.floor(band.length / 40));
   const comparables = band.filter((_, i) => i % step === 0).slice(0, 40);
 
+  const focoFile = resolve(process.cwd(), "scripts/foco", `${key}.json`);
+  const foco = existsSync(focoFile) ? JSON.parse(readFileSync(focoFile, "utf8")) as { nombre: string; nota: string; pares: { nit: string; segmento: string; nombre: string }[] } : null;
   const out = {
     key,
     label: byCiiu.length === 1 ? byCiiu[0].name : "Comercio al por mayor · " + byCiiu.map((c) => c.code).join(", "),
@@ -265,9 +267,15 @@ async function main() {
     byCiiu,
     peers: peers.slice(0, 60),
     comparables,
+    // todas las sociedades por ingresos (CIIU e ingresos): ubica a una empresa que declara sus cifras sin estar entre las 60 mayores
+    ranking: peers.map((p) => [p.ciiu, Math.round(p.revenue)] as [string, number]),
+    // competidores directos curados a mano (scripts/foco/<clave>.json): las cifras salen de Supersociedades
+    ...(foco ? { foco: { nombre: foco.nombre, nota: foco.nota, pares: foco.pares.flatMap((f) => { const p = peers.find((x) => x.nit === f.nit); if (!p) { console.error(`foco: no está el NIT ${f.nit} (${f.nombre})`); return []; } return [{ ...p, segmento: f.segmento }]; }) } } : {}),
   };
   const file = resolve(process.cwd(), "src/data/sector", `${key}.json`);
   writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  // TODAS=<ruta>: vuelca todas las sociedades del sector (para curar a mano grupos de pares, p. ej. los competidores directos)
+  if (process.env.TODAS) writeFileSync(process.env.TODAS, JSON.stringify(peers, null, 1) + "\n");
   console.error(`→ ${file}: ${out.n} empresas, ingresos ${Math.round(revenue / 1000).toLocaleString("es-CO")} mil millones, crecimiento mediano ${out.dist.growth.p50} %, margen operacional mediano ${out.dist.opMargin.p50} %`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

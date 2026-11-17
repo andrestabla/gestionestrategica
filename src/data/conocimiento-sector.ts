@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import type { CompanyInfo, Lever } from "@/data/catalogo";
 import { sectorKeyDe } from "@/data/sector";
+import { F_SI, H_SI } from "@/data/conocimiento-suministros";
 
 export type TipoFuente = "oficial" | "empresa" | "prensa" | "consultora" | "academico";
 export type Fuente = { id: string; titulo: string; editor: string; fecha: string; url: string; tipo: TipoFuente };
@@ -210,12 +211,16 @@ const H_CO: Hecho[] = [
 export const BASES: BaseConocimiento[] = [
   { id: "farmacias-ecuador", nombre: "Retail farmacéutico · Ecuador", sectorKeys: ["farmacias-ecuador"], paises: ["EC"], fuentes: F, hechos: H },
   { id: "farmaceutico-colombia", nombre: "Industria farmacéutica · Colombia", sectorKeys: ["farmaceutico-colombia"], paises: ["CO"], fuentes: F_CO, hechos: H_CO },
+  { id: "suministros-industriales", nombre: "Distribución de suministros industriales · Colombia", sectorKeys: ["suministros-industriales"], paises: ["CO"], fuentes: F_SI, hechos: H_SI },
 ];
 
 /** Base aplicable a la empresa: por sector de referencia o, si el sector menciona farmacias, por país. */
 export function baseDe(c: (Pick<CompanyInfo, "sectorKey" | "sector" | "country"> & { ciiu?: string }) | null | undefined): BaseConocimiento | null {
   if (!c) return null;
   const key = sectorKeyDe(c);
+  // el sector por defecto (suministros industriales) es también el que recibe toda empresa sin ficha completa: su base
+  // solo aplica a quien de verdad es de ese negocio, por su CIIU o por el sector que declara
+  if (key === "suministros-industriales" && !/^G?46(59|63|69)/.test((c.ciiu ?? "").toUpperCase().replace(/\s+/g, "")) && !/suministro|ferreter|industrial/i.test(c.sector ?? "")) return null;
   return BASES.find((b) => b.sectorKeys.includes(key)) ?? null;
 }
 

@@ -33,7 +33,36 @@ export type SectorData = {
   byCiiu: { code: string; name: string; n: number; revenue: number; growthP50: number | null; opMarginP50: number | null }[];
   peers: SectorPeer[];
   comparables: SectorPeer[];
+  /** Todas las sociedades por ingresos [CIIU, ingresos], de mayor a menor: ubica a una empresa que declara sus cifras. */
+  ranking?: [string, number][];
+  /** Competidores directos curados a mano (scripts/foco/<clave>.json), con las cifras que reportaron. */
+  foco?: { nombre: string; nota: string; pares: (SectorPeer & { segmento: string })[] };
 };
+
+/** Identificador de la fila de la empresa cuando se ubica con sus propias cifras (no figura en la fuente). */
+export const NIT_PROPIA = "propia";
+
+/** La empresa ubicada en el sector con los estados financieros que declara en su ficha, cuando la fuente no la trae
+    (una empresa que no reporta a Supersociedades, o la empresa ficticia de demostración). Devuelve su fila, con las
+    mismas razones que las demás, y su puesto entre todas las sociedades y entre las de su actividad. */
+export function posicionPropia(s: SectorData, cat: Pick<Catalog, "company" | "financials">): { peer: SectorPeer; rank: number; ciiuRank: number; ciiuN: number } | null {
+  const f = cat.financials;
+  if (!f || !f.revenue) return null;
+  const c = cat.company;
+  const ciiu = (c.ciiu ?? "").toUpperCase().replace(/\s+/g, "");
+  const pct = (a: number, b: number) => Math.round((a / b) * 1000) / 10;
+  const peer: SectorPeer = {
+    nit: NIT_PROPIA, name: c.name, city: c.city, ciiu: ciiu || (s.ciiu[0]?.code ?? ""),
+    dept: /bogot/i.test(c.city) ? "Bogotá D.C." : c.department,
+    revenue: f.revenue, revenuePrev: f.revenuePrev ?? null, growth: f.revenuePrev ? pct(f.revenue - f.revenuePrev, f.revenuePrev) : null,
+    grossMargin: pct(f.grossProfit, f.revenue), opMargin: pct(f.operatingProfit, f.revenue), netMargin: pct(f.netProfit, f.revenue),
+    roa: f.assets ? pct(f.netProfit, f.assets) : null, assets: f.assets ?? null, equity: f.equity ?? null, leverage: f.assets ? pct(f.liabilities, f.assets) : null,
+  };
+  const r = s.ranking ?? [...s.peers, ...s.comparables].map((p) => [p.ciiu, p.revenue] as [string, number]);
+  const rank = r.filter(([, v]) => v > f.revenue).length + 1;
+  const mismos = r.filter(([k]) => k === peer.ciiu);
+  return { peer, rank, ciiuRank: mismos.filter(([, v]) => v > f.revenue).length + 1, ciiuN: mismos.length };
+}
 
 /** Sectores disponibles en la plataforma (uno por archivo JSON). */
 export const SECTORS: Record<string, SectorData> = {

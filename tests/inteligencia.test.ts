@@ -38,5 +38,6 @@ test("conocimiento: la industria farmacéutica colombiana tiene base propia con 
   assert.ok(b!.hechos.every((h) => b!.fuentes.some((f) => f.id === h.fuente)), "cada hecho cita una fuente existente");
   const ev = evidenciaPara({ sectorKey: "farmaceutico-colombia", country: "CO", sector: "" }, { id: "MAR", name: "Margen y portafolio" });
   assert.ok(ev.length >= 5 && ev.some((e) => /Circular 22/.test(e.hecho)));
-  assert.equal(baseDe({ sectorKey: "suministros-industriales", ciiu: "G4659", country: "CO", sector: "" }), null);
+  assert.equal(baseDe({ sectorKey: "suministros-industriales", ciiu: "G4659", country: "CO", sector: "" })?.id, "suministros-industriales");
+  assert.equal(baseDe({ sectorKey: "suministros-industriales", ciiu: "", country: "CO", sector: "Confecciones" }), null, "el sector por defecto no le presta su base a otra industria");
 });

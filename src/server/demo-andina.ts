@@ -7,13 +7,19 @@
 
 import { construirDemo, type PaqueteDemo } from "@/server/demo-builder";
 import { DEFAULT_TENANT } from "@/server/tenant";
-import { ANDINA_CATALOG } from "@/data/catalogo";
+import { ANDINA_CATALOG, type Catalog } from "@/data/catalogo";
 import { ANDINA_DOMINIO, HORIZONTES, RESPONSABLES, LEVERS, LB_PALANCA, OBJETIVOS, OBJETIVO_SIN_PRIORIDAD, KRS, INICIATIVAS, INICIATIVA_SIN_KR, INICIATIVAS_MAPEADAS, JUSTIFICACION_OBJETIVO, JUSTIFICACION_INI, TEXTOS, EVALUADORES, CALIFICACIONES, DECISIONES, CAPACIDADES, CHECKLISTS_PERSONALIZADOS, ARTICULACION, METAS, F1_PERFIL, F1_DIRECTIVOS } from "@/data/demo-andina/contenido";
 import { HOY, PERSONAS, PLANES, RIESGOS, GASTOS, AVANCE_KR_T1, AVANCE_KR_POR_DEFECTO, NOTAS_KR_T1, AVANCE_INICIATIVAS, CIERRES_T1, MADUREZ_PERFIL, MADUREZ_SESGO, MADUREZ_SALVAGUARDAS, MADUREZ_CORTE } from "@/data/demo-andina/ejecucion";
 import type { SessionUser } from "@/lib/session";
 
 /** Línea base 2026: los objetivos e indicadores del primer ciclo de Andina, con la serie hasta el cierre de 2026. */
 const A = ANDINA_CATALOG, INSTITUTION = A.company;
+/** Territorio a mayo de 2027: Barranquilla ya es sede (abrió en marzo) y Cartagena queda como la siguiente oportunidad. */
+const TERRITORIOS: Catalog["territories"] = A.territories.map((t) =>
+  t.name === "Atlántico" ? { ...t, presence: "sede" as const, weight: 2 as const, reading: "Sede Barranquilla, abierta el 1 de marzo de 2027 con operador logístico: 38 clientes activos al cierre del primer trimestre." }
+  : t.name === "Bolívar" ? { ...t, reading: "Demanda industrial de Cartagena (Mamonal) atendida hoy desde Barranquilla; candidata a cobertura con visita semanal en 2028." }
+  : t);
+
 const objetivosLB = A.objectives.map((o) => ({ ...o, horizon: "LB", lever: LB_PALANCA[o.id] }));
 const kpisLB = A.kpis.map((k) => ({ ...k, due: "2026", series: k.series.filter((p) => p.period <= "2026-T4") }));
 
@@ -22,7 +28,7 @@ export const PAQUETE_ANDINA: PaqueteDemo = {
   company: { city: INSTITUTION.city, department: INSTITUTION.department, sector: INSTITUTION.sector, size: "85 colaboradores · 4 sedes", sectorKey: INSTITUTION.sectorKey, ciiu: INSTITUTION.ciiu, horizons: HORIZONTES },
   typeRule: "cresio", mode: "acompanamiento", instruments: ["test", "f1", "f2", "captura"],
   base: { responsibles: RESPONSABLES, objectives: objetivosLB, kpis: kpisLB },
-  previo: { assessments: A.assessments, evidences: A.evidences, financials: A.financials, territories: A.territories },
+  previo: { assessments: A.assessments, evidences: A.evidences, financials: A.financials, territories: TERRITORIOS },
   levers: LEVERS, objetivos: OBJETIVOS, krs: KRS, iniciativas: INICIATIVAS, iniciativasMapeadas: INICIATIVAS_MAPEADAS,
   objetivoSinPrioridad: OBJETIVO_SIN_PRIORIDAD, iniciativaSinKr: INICIATIVA_SIN_KR,
   textos: { justificacionObjetivo: JUSTIFICACION_OBJETIVO, justificacionIni: JUSTIFICACION_INI, ...TEXTOS },

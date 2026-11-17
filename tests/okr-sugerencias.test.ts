@@ -81,7 +81,8 @@ test("base de conocimiento: hechos numerados por palanca, con fuente, solo para 
   assert.ok(ms.some((e) => /22\.238/.test(e.hecho)));
   const mad = evidenciaPara(cresio, { id: "MAD", name: "Madurez organizacional · productividad y cultura" });
   assert.match(mad[0].hecho, /rotación/i); assert.ok(mad.filter((e) => /rotación|eNPS|sucesores/i.test(e.hecho)).length >= 4);   // primero los temas propios de la palanca
-  assert.deepEqual(evidenciaPara({ sectorKey: "suministros-industriales", sector: "Suministros", country: "CO" }, { id: "X", name: "Ventas" }), []);
+  assert.deepEqual(evidenciaPara({ sectorKey: "suministros-industriales", sector: "Confecciones", country: "CO" }, { id: "X", name: "Ventas" }), []);
+  assert.ok(evidenciaPara({ sectorKey: "suministros-industriales", sector: "Suministros industriales", country: "CO" }, { id: "X", name: "Ventas" }).length > 0);
   assert.ok(evidenciaPara({ sectorKey: "otro", sector: "Retail de salud y farmacias", country: "EC" }, { id: "MAR", name: "Margen" }).length > 0);
   // la base no tiene hechos sin fuente ni fuentes repetidas
   for (const b of BASES) {
