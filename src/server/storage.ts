@@ -3,12 +3,12 @@
 // están definidas R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY y
 // R2_BUCKET. Misma interfaz en ambos casos: cambia el destino, no el contrato.
 
-import { unlink, readFile, writeFile, mkdir } from "node:fs/promises";
+import { unlink, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { effectiveR2 } from "@/server/store";
 
-export type Folder = "uploads" | "branding" | "materiales";
+export type Folder = "uploads" | "branding" | "materiales" | "acuerdos";
 
 const r2Config = () => {
   // rige la integración guardada en la plataforma (Administración → Integraciones) si está activa y completa; si no, el entorno
@@ -82,6 +82,26 @@ export async function deleteObject(folder: Folder, key: string): Promise<void> {
     }
     await unlink(path.join(process.cwd(), "var", folder, key));
   } catch { /* ya no existe */ }
+}
+
+/** Borra todos los objetos bajo un prefijo (p. ej. «materiales/<empresa>/» al eliminar una empresa). Devuelve cuántos borró. */
+export async function deletePrefix(folder: Folder, prefix: string): Promise<number> {
+  if (!/^[a-z0-9][a-z0-9-]*\/$/.test(prefix)) throw new Error("Prefijo inválido: se espera «<empresa>/».");
+  const cfg = r2Config();
+  if (!cfg) {
+    try { await rm(path.join(process.cwd(), "var", folder, prefix), { recursive: true, force: true }); } catch { /* no existía */ }
+    return 0;
+  }
+  const { ListObjectsV2Command, DeleteObjectsCommand } = await import("@aws-sdk/client-s3");
+  const cli = await s3();
+  let token: string | undefined, total = 0;
+  do {
+    const r = await cli.send(new ListObjectsV2Command({ Bucket: cfg.bucket, Prefix: `${folder}/${prefix}`, ContinuationToken: token }));
+    const keys = ((r.Contents ?? []) as { Key?: string }[]).map((o) => o.Key).filter((k): k is string => !!k);
+    if (keys.length) { await cli.send(new DeleteObjectsCommand({ Bucket: cfg.bucket, Delete: { Objects: keys.map((Key: string) => ({ Key })), Quiet: true } })); total += keys.length; }
+    token = r.IsTruncated ? r.NextContinuationToken : undefined;
+  } while (token);
+  return total;
 }
 
 export async function getObject(folder: Folder, key: string): Promise<Buffer | null> {

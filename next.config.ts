@@ -62,6 +62,8 @@ const SEGURIDAD = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // solo conexiones seguras durante dos años, también en los subdominios (la política de seguridad lo declara)
+  ...(DEV ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
 ];
 const SIN_CACHE = [{ key: "Cache-Control", value: "no-store" }];
 

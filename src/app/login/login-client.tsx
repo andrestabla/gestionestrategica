@@ -264,7 +264,11 @@ export function LoginClient({ tenant, company, verificar = false }: { tenant: st
       </>)}
       <div className="mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line pt-4 text-[12px] text-faint">
         <span>{DESARROLLADO_POR}</span>
-        <Link href="/" className="inline-flex items-center gap-1.5 font-semibold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Volver al sitio</Link>
+        <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Link href="/privacidad" className="hover:text-ink hover:underline">Privacidad</Link>
+          <Link href="/seguridad" className="hover:text-ink hover:underline">Seguridad</Link>
+          <Link href="/" className="inline-flex items-center gap-1.5 font-semibold text-cyan-deep hover:underline"><ArrowLeft size={13} /> Volver al sitio</Link>
+        </span>
       </div>
     </div>
   );

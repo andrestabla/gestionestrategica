@@ -5,7 +5,7 @@ import { urlTenant, urlTenantPath } from "@/server/request-tenant";
 import { getSession } from "@/lib/session";
 import { AppShell } from "@/components/shell";
 import { UserProvider } from "@/components/user-context";
-import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentPendingDb, exigeCodigoEn, sesionVigente, membresiaEn } from "@/server/store";
+import { hydrateCompanies, companyBySlug, listCompanies, tenantView, consentEstadoDb, exigeCodigoEn, sesionVigente, membresiaEn } from "@/server/store";
 import { inTenant } from "@/app/api/td/_helpers";
 import { FeedbackProvider } from "@/components/feedback";
 import { CatalogProvider } from "@/components/catalog-context";
@@ -45,7 +45,9 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
   // la vista de la empresa activa, resuelta en el servidor para esta sesión
   const view = company ? await inTenant(company.slug, async () => tenantView()) : null;
   // primer ingreso con cuenta: la política de tratamiento de datos se acepta antes de ver cualquier módulo
-  const pendienteConsentimiento = company ? await inTenant(company.slug, async () => consentPendingDb(user)) : false;
+  // (y de nuevo cuando cambia su versión: si ya había aceptado una anterior, el aviso explica que se actualizaron)
+  const consentimiento = company ? await inTenant(company.slug, async () => consentEstadoDb(user)) : { pendiente: false, previa: null };
+  const pendienteConsentimiento = consentimiento.pendiente, versionPrevia = consentimiento.previa;
   // el proveedor envuelve también al shell (buscador, notificaciones): sin
   // empresa activa, una vista vacía deja la interfaz utilizable para el admin
   return (
@@ -59,7 +61,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/panel">) {
               Tu cuenta no tiene una empresa activa asignada. Pide al administrador de la plataforma que te asigne una.
             </p>
           ) : pendienteConsentimiento && company ? (
-            <ConsentGate company={company.name} country={company.country} nombre={user.name.split(" ")[0]} />
+            <ConsentGate company={company.name} country={company.country} nombre={user.name.split(" ")[0]} actualizacion={!!versionPrevia} />
           ) : view ? children : (
             <p className="rounded-xl bg-surface-2 px-5 py-6 text-[13px] text-muted">
               No hay empresas activas. Crea una en Administración → Empresas.

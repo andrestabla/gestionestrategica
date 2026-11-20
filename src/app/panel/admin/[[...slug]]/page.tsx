@@ -20,12 +20,13 @@ import { LINES } from "@/data/demo";
 import { PERMISSION_MATRIX, MODULE_ACTIONS, type Action, type ModuleKey } from "@/lib/permissions";
 import { BrandingTab } from "./branding-tab";
 import { TourTab } from "./tour-tab";
+import { AcuerdosTab } from "./acuerdos-tab";
 import { CorreosTab } from "./correos-tab";
 import { CodigosTab } from "./codigos-tab";
 import { CatalogoTab } from "../catalogo-tab";
 import { confirmar, avisar, confirmarGuardar, confirmarEliminar } from "@/components/feedback";
 import {
-  UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff, Eye, EyeOff, LockKeyhole,
+  UserPlus, Loader2, AlertTriangle, X, ShieldCheck, Power, PowerOff, Eye, EyeOff, LockKeyhole, FileSignature,
   Users2, KeyRound, Plug, Palette, Check, Minus, Save, Building2, Trash2, Pencil, ArrowRightLeft, BookOpen, Send, Copy, MailCheck, Activity, RefreshCw, Mail, Sparkles, CalendarDays, Ticket, Compass } from "lucide-react"
 
 /* ═══ Actividad en vivo: quién hizo qué y cuándo, desde la base (todas las instancias) ═══ */
@@ -128,7 +129,7 @@ function ActividadTab() {
 
 /* ═══ pestañas con ruta propia ═══ */
 
-type Tab = "empresas" | "usuarios" | "codigos" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding" | "tour";
+type Tab = "empresas" | "usuarios" | "codigos" | "actividad" | "catalogo" | "permisos" | "correos" | "integraciones" | "branding" | "tour" | "acuerdos";
 const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "empresas", label: "Empresas", icon: Building2 },
   { id: "usuarios", label: "Usuarios y roles", icon: Users2 },
@@ -140,6 +141,7 @@ const TABS: { id: Tab; label: string; icon: typeof Users2 }[] = [
   { id: "integraciones", label: "Integraciones", icon: Plug },
   { id: "branding", label: "Branding", icon: Palette },
   { id: "tour", label: "Tour", icon: Compass },
+  { id: "acuerdos", label: "Acuerdos y datos", icon: FileSignature },
 ];
 
 export default function AdminPage() {
@@ -153,7 +155,7 @@ export default function AdminPage() {
 
   // el consultor administra usuarios, roles y el catálogo (también el líder); el admin, todo el módulo
   const visibleTabs = TABS.filter((t) =>
-    t.id === "codigos" ? (me.role === "ADMIN" || me.role === "CONSULTOR") : t.id === "usuarios" || t.id === "actividad" || t.id === "correos" || t.id === "tour" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
+    t.id === "codigos" ? (me.role === "ADMIN" || me.role === "CONSULTOR") : t.id === "usuarios" || t.id === "actividad" || t.id === "correos" || t.id === "tour" || t.id === "acuerdos" ? canUsers : t.id === "empresas" ? canCompanies : t.id === "catalogo" ? canCatalog : canPlatform);
   const tab: Tab = (visibleTabs.find((t) => t.id === params.slug?.[0])?.id
     ?? visibleTabs[0]?.id ?? "usuarios");
 
@@ -196,6 +198,7 @@ export default function AdminPage() {
       {tab === "integraciones" && <IntegracionesTab />}
       {tab === "branding" && <BrandingTab />}
       {tab === "tour" && <TourTab />}
+      {tab === "acuerdos" && <AcuerdosTab />}
     </>
   );
 }

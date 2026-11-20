@@ -1,3 +1,4 @@
+import { deleteObject, deletePrefix } from "@/server/storage";
 import { NextResponse, after } from "next/server";
 import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -61,5 +62,13 @@ export async function DELETE(req: Request) {
   if (!slug) return NextResponse.json({ error: "Falta el slug de la empresa." }, { status: 400 });
   const r = await deleteCompany(user, slug);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
-  return NextResponse.json({ ok: true });
+  // sus archivos (evidencias, materiales y acuerdos firmados) también se borran del almacenamiento, después de la base
+  const { slug: s, evidencias } = r.archivos;
+  const borrados = await Promise.allSettled([
+    ...evidencias.map((k) => deleteObject("uploads", k)),
+    deletePrefix("materiales", `${s}/`), deletePrefix("acuerdos", `${s}/`),
+  ]);
+  const fallas = borrados.filter((x) => x.status === "rejected").length;
+  if (fallas) console.warn(`[4shine] empresa ${s} eliminada: ${fallas} borrados de archivos fallaron`);
+  return NextResponse.json({ ok: true, archivosBorrados: borrados.length - fallas, fallas });
 }

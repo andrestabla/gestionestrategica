@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, KeyRound, Loader2 } from "lucide-react";
 import { MarcaGE, DESARROLLADO_POR } from "@/components/logo";
-import { consentSummary, consentText } from "@/lib/consentimiento";
+import { consentText } from "@/lib/consentimiento";
+import { AceptacionAcceso } from "@/components/consentimiento-gate";
 
 type Info = { estado: "nuevo" | "usado"; codigo: string; nombre: string; correo: string; organizacion: string; invita: string; alcance: { id: string; label: string }[]; vence: string };
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
@@ -96,7 +97,7 @@ export function CodigoClient({ inicial }: { inicial: string }) {
                   <input value={org.tamano} onChange={(e) => setOrg({ ...org, tamano: e.target.value })} maxLength={80} placeholder="Por ejemplo: 120 colaboradores" className="input mt-1 !py-2.5 text-[14px]" /></label>
               </div>
               <label className="mt-4 flex items-start gap-2.5"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--navy)]" />
-                <span className="text-[12px] leading-snug text-ink-soft">{consentSummary(empresa)}</span></label>
+                <span className="text-[12px] leading-snug text-ink-soft"><AceptacionAcceso company={empresa} /></span></label>
               <button type="button" onClick={() => setVerTexto((x) => !x)} aria-expanded={verTexto} className="mt-1.5 text-[12px] font-semibold text-cyan-deep hover:underline">{verTexto ? "Ocultar" : "Leer"} la política de tratamiento de datos</button>
               {verTexto && <div className="mt-1.5 space-y-1.5 rounded-xl bg-surface-2 px-3.5 py-3 text-[12px] leading-snug text-ink-soft">{consentText(empresa).map((p, i) => <p key={i}>{p}</p>)}</div>}
               {error && <p role="alert" className="mt-4 rounded-lg px-3.5 py-2.5 text-[12.5px]" style={{ background: "color-mix(in srgb, var(--bad) 8%, var(--surface))", color: "var(--bad-text)" }}>{error}</p>}

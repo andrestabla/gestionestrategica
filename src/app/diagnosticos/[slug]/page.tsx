@@ -148,6 +148,9 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ sl
             <Link href="/codigo">Tengo un código</Link>
             <Link href="/solicitar-codigo">Solicitar un código</Link>
             <Link href="/login">Iniciar sesión</Link>
+            <Link href="/privacidad">Privacidad</Link>
+            <Link href="/seguridad">Seguridad</Link>
+            <Link href="/legal">Centro de confianza</Link>
           </nav>
         </div>
         <div className="sp-wrap sp-pie-legal"><span>© {new Date().getFullYear()} Gestión estratégica</span><span>{DESARROLLADO_POR}</span></div>

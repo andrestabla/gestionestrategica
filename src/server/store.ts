@@ -22,6 +22,8 @@ import {
   type Catalog, type CompanyInfo, horizonsOf, horizonesTodos, typeRuleOf, isGuiada, isAcompanamiento, type Horizon, type Lever } from "@/data/catalogo";
 import { currentTenant, DEFAULT_TENANT, hasTenantContext, ahora, runWithTenant } from "@/server/tenant";
 import { parseTour, type Tour } from "@/lib/tour";
+import { camposLeidos, camposParaGuardar, secretosSinCifrar } from "@/server/secretos";
+import { readAcuerdos, parseDatosFirma, parseEstado, esAcuerdoId, type Acuerdos, type AcuerdoId, type ArchivoAcuerdo } from "@/lib/legal/acuerdos";
 import { CODIGO_ALFABETO, CODIGO_LARGO, CODIGO_DIAS, alcanceDe, estadoCodigo, normalizarCodigo, validarCodigoNuevo, validarOrganizacion, type CodigoAcceso, type AlcanceCodigo } from "@/lib/codigos";
 import { validarSolicitud, esEstadoSolicitud, type SolicitudCodigo } from "@/lib/solicitudes";
 import { ALL_MODULES as TODOS_LOS_MODULOS } from "@/lib/modulos";
@@ -387,6 +389,7 @@ export async function hydrateCompanies() {
         access: parseAccess(c.access).ok ? (parseAccess(c.access) as { access?: AccessConfig }).access : undefined,
         itinerary: readItinerary(c.itinerary),
         tour: (() => { const r = parseTour(c.tour); return r.ok ? r.tour : undefined; })(),
+        acuerdos: readAcuerdos(c.acuerdos),
         createdBy: c.createdBy ?? undefined, createdAt: c.createdAt.toISOString(), dbId: c.id,
       });
       // misma dirección pero otra empresa en la base (se eliminó y se volvió a crear, p. ej. la demo): lo que esta
@@ -566,19 +569,24 @@ async function loadTenant(st: TenantState) {
       const list = users();
       for (const u of dbUsers) {
         const existing = list.find((x) => x.email.toLowerCase() === u.email.toLowerCase());
-        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; existing.consentAt = u.consentAt?.toISOString(); existing.soloLectura = u.readOnly === true || undefined; }
-        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString() } : {}), ...(u.readOnly ? { soloLectura: true } : {}) });
+        if (existing) { existing.name = u.name; existing.role = u.role as SessionUser["role"]; existing.line = u.line ?? undefined; existing.responsibleId = u.responsibleId ?? undefined; existing.active = u.active; existing.consentAt = u.consentAt?.toISOString(); existing.consentVersion = u.consentVersion ?? undefined; existing.soloLectura = u.readOnly === true || undefined; }
+        else list.push({ email: u.email, name: u.name, role: u.role as SessionUser["role"], line: u.line ?? undefined, responsibleId: u.responsibleId ?? undefined, active: u.active, seeded: seedEmails.has(u.email), at: u.createdAt.toISOString(), ...(u.consentAt ? { consentAt: u.consentAt.toISOString(), consentVersion: u.consentVersion ?? undefined } : {}), ...(u.readOnly ? { soloLectura: true } : {}) });
       }
     }
     // membresías: cuentas de otra empresa que también operan en esta, con su propio rol y ámbito
-    for (const m of membershipRows as { role: string; line: number | null; responsibleId: string | null; active: boolean; createdAt: Date; user: { email: string; name: string; active: boolean; consentAt: Date | null; company: { slug: string } | null } }[]) {
+    for (const m of membershipRows as { role: string; line: number | null; responsibleId: string | null; active: boolean; createdAt: Date; user: { email: string; name: string; active: boolean; consentAt: Date | null; consentVersion: string | null; company: { slug: string } | null } }[]) {
       if (!m.user.active) continue;
       const list = users();
       const existing = list.find((x) => x.email.toLowerCase() === m.user.email.toLowerCase());
-      const fila: ManagedUser = { email: m.user.email, name: m.user.name, role: m.role as SessionUser["role"], line: m.line ?? undefined, responsibleId: m.responsibleId ?? undefined, active: m.active, seeded: false, membresia: true, principal: m.user.company?.slug, at: m.createdAt.toISOString(), ...(m.user.consentAt ? { consentAt: m.user.consentAt.toISOString() } : {}) };
+      const fila: ManagedUser = { email: m.user.email, name: m.user.name, role: m.role as SessionUser["role"], line: m.line ?? undefined, responsibleId: m.responsibleId ?? undefined, active: m.active, seeded: false, membresia: true, principal: m.user.company?.slug, at: m.createdAt.toISOString(), ...(m.user.consentAt ? { consentAt: m.user.consentAt.toISOString(), consentVersion: m.user.consentVersion ?? undefined } : {}) };
       if (existing) Object.assign(existing, fila); else list.push(fila);
     }
-    for (const i of integrationRows) integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields: i.fields as Record<string, string>, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
+    for (const i of integrationRows) {
+      const fields = camposLeidos(i.fields as Record<string, unknown>);
+      integrations().set(i.key as IntegrationKey, { enabled: i.enabled, fields, updatedBy: i.updatedBy ?? undefined, at: i.at.toISOString() });
+      // credenciales guardadas antes del cifrado: se reescriben cifradas (una sola vez, sin cambiar su valor)
+      if (secretosSinCifrar(i.fields as Record<string, unknown>)) { const key = i.key; void persistQuiet("cifrado de credenciales", (db2) => db2.integration.update({ where: { companyId_key: { companyId, key } }, data: { fields: camposParaGuardar(fields) } })); }
+    }
     if (br) Object.assign(branding(), br.data as Partial<Branding>);
     for (const n of notifRows) notifRead().set(n.email, new Set(n.ids as string[]));
     // diagnóstico: captura del corte en curso, corte publicado, respuestas y evidencias
@@ -973,15 +981,21 @@ export async function updateCompany(actor: SessionUser, slug: string, patch: Par
 }
 
 /** Elimina una empresa con todos sus datos (en cascada). La demo no se elimina. */
-export async function deleteCompany(actor: SessionUser, slug: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+/** Elimina la empresa de la base (en cascada) y de la memoria. Devuelve las claves de sus archivos para que la ruta
+    los borre del almacenamiento (el almacenamiento no se importa aquí: este módulo también llega al navegador). */
+export async function deleteCompany(actor: SessionUser, slug: string): Promise<{ ok: true; archivos: { slug: string; evidencias: string[] } } | { ok: false; status: number; error: string }> {
   olvidarCuentas();   // el cambio se refleja de inmediato en la vigencia de las sesiones
   if (!can(actor, "manage_companies")) return { ok: false, status: 403, error: "Solo el administrador de la plataforma elimina empresas." };
   const c = g.companies.get(slug);
   if (!c) return { ok: false, status: 404, error: "La empresa no existe." };
   if (slug === DEFAULT_TENANT) return { ok: false, status: 422, error: "La empresa de demostración no se elimina; puede desactivarse." };
+  // los archivos de la empresa (evidencias, materiales y acuerdos firmados) se borran del almacenamiento
+  // después de la base: la política de seguridad promete eliminar datos y archivos al terminar el servicio
+  let evidencias: string[] = [];
   if (hasDb() && c.dbId) {
     try {
       const db = await prisma();
+      evidencias = ((await db.fileAsset.findMany({ where: { companyId: c.dbId }, select: { filePath: true } }).catch(() => [])) as { filePath: string }[]).map((f) => f.filePath);
       await db.company.delete({ where: { id: c.dbId } });
     } catch (e) {
       return { ok: false, status: 500, error: `No se pudo eliminar en la base: ${(e as Error).message}` };
@@ -990,7 +1004,7 @@ export async function deleteCompany(actor: SessionUser, slug: string): Promise<{
   g.companies.delete(slug);
   g.tenants.delete(slug);
   audit(actor, "task", `empresa:${slug}`, `empresa eliminada`);
-  return { ok: true };
+  return { ok: true, archivos: { slug, evidencias: evidencias.filter((k) => /^[A-Za-z0-9._-]+$/.test(k)) } };
 }
 
 /** Reinicia la empresa de demostración por defecto (no se elimina): borra todos sus datos de trabajo —catálogo,
@@ -2738,7 +2752,7 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
   let user = users().find((u) => u.email.toLowerCase() === email);
   let created = false;
   // el tratamiento de datos se acepta la primera vez (o si aún no consta la aceptación)
-  if (!consent && (!user || !user.consentAt)) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
+  if (!consent && (!user || !consentVigente(user))) return { ok: false, status: 422, error: "Para entrar debes aceptar el tratamiento de tus datos personales." };
   if (!user && (!entryRole || (entryRoleNeedsTribe(entryRole) && !tribeId))) return { ok: false, status: 422, error: "Elige tu rol (miembro de tribu, líder de tribu o directivo) y, si eres de una tribu, cuál." };
   const consentAt = ahora();
   // el QR identifica a quien entra solo por su correo, sin contraseña. Por eso no abre cuentas que pueden más que un
@@ -2753,7 +2767,7 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
     if (elsewhere && elsewhere.company && elsewhere.company.slug !== rec.slug) return { ok: false, status: 409, error: `Ese correo ya tiene cuenta en ${elsewhere.company.name}; entra por su enlace.` };
     if (await correoDeOtraEmpresa(email)) return { ok: false, status: 409, error: "Ese correo ya tiene una cuenta en otra empresa. Entra por su enlace o usa otro correo." };
     const role: SessionUser["role"] = entryRole === "lider" ? "LIDER" : entryRole === "directivo" ? "DIRECTIVO" : "RESPONSABLE";
-    user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: ahora().toISOString(), consentAt: consentAt.toISOString() };
+    user = { email, name, role, ...(tribeId ? { responsibleId: tribeId } : {}), active: true, seeded: false, createdBy: `acceso QR · ${sec.label}`, at: ahora().toISOString(), consentAt: consentAt.toISOString(), consentVersion: CONSENT_VERSION };
     users().push(user);
     created = true;
     void persist("usuario", async (db) => {
@@ -2762,8 +2776,8 @@ export async function accessUser(token: string, input: { name?: unknown; email?:
       if (fila && fila.companyId && fila.companyId !== companyId) return;   // la cuenta es de otra empresa: no se mueve
       await db.user.upsert({ where: { email }, update: { name, active: true, companyId, consentAt, consentVersion: CONSENT_VERSION, ...(tribeId ? { responsibleId: tribeId } : {}) }, create: { email, name, role, passwordHash: "", companyId, consentAt, consentVersion: CONSENT_VERSION, ...(tribeId ? { responsibleId: tribeId } : {}) } });
     });
-  } else if (!user.consentAt) {
-    user.consentAt = consentAt.toISOString();
+  } else if (!consentVigente(user)) {
+    user.consentAt = consentAt.toISOString(); user.consentVersion = CONSENT_VERSION;
     void persist("usuario", async (db) => { await db.user.update({ where: { email }, data: { consentAt, consentVersion: CONSENT_VERSION } }); });
   }
   if (!user.active) return { ok: false, status: 403, error: "Tu cuenta está desactivada en esta empresa." };
@@ -2816,6 +2830,61 @@ export function setTour(actor: SessionUser, input: unknown): { ok: true; tour: T
   audit(actor, "task", `empresa:${rec.slug}`, tour ? `tour guardado (${tour.pasos.length} pasos, ${tour.activo ? "activo" : "inactivo"})` : "tour eliminado");
   if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("tour", (db) => db.company.update({ where: { id: dbId }, data: { tour: (tour ?? null) as never, dataVersion: { increment: 1 } } })); }
   return { ok: true, tour };
+}
+
+/* ═══ Acuerdos con la empresa (Administración → Acuerdos) ═══ */
+
+/** Acuerdos de la empresa activa: datos para llenarlos y estado de cada uno. Los administra el equipo consultor. */
+export const acuerdosOf = (): Acuerdos | undefined => companyRec()?.acuerdos;
+
+function guardarAcuerdos(actor: SessionUser, a: Acuerdos, que: string) {
+  const rec = companyRec(); if (!rec) return;
+  rec.acuerdos = a;
+  const t = g.tenants.get(rec.slug);
+  if (t) t.catalog.company = { ...t.catalog.company, acuerdos: a };
+  audit(actor, "task", `empresa:${rec.slug}`, que);
+  if (hasDb() && rec.dbId) { const dbId = rec.dbId; void persist("acuerdos", (db) => db.company.update({ where: { id: dbId }, data: { acuerdos: a as never, dataVersion: { increment: 1 } } })); }
+}
+
+/** Guarda los datos de la empresa con que se llenan los acuerdos (razón social, NIT, representante…). */
+export function setDatosAcuerdos(actor: SessionUser, input: unknown): { ok: true; acuerdos: Acuerdos } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Los acuerdos los administra el equipo consultor." };
+  if (!companyRec()) return { ok: false, status: 404, error: "La empresa no existe." };
+  const p = parseDatosFirma(input); if (!p.ok) return { ok: false, status: 422, error: p.error };
+  const a: Acuerdos = { ...acuerdosOf(), datos: p.datos };
+  guardarAcuerdos(actor, a, "datos de los acuerdos actualizados");
+  return { ok: true, acuerdos: a };
+}
+
+/** Cambia el estado de un acuerdo (pendiente, enviado, firmado con fecha y firmante). */
+export function setEstadoAcuerdo(actor: SessionUser, doc: unknown, input: unknown, version: string): { ok: true; acuerdos: Acuerdos } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Los acuerdos los administra el equipo consultor." };
+  if (!esAcuerdoId(doc)) return { ok: false, status: 404, error: "Acuerdo desconocido." };
+  if (!companyRec()) return { ok: false, status: 404, error: "La empresa no existe." };
+  const p = parseEstado(input); if (!p.ok) return { ok: false, status: 422, error: p.error };
+  const prev = acuerdosOf()?.docs?.[doc];
+  const reg = { estado: p.estado, version, ...(p.estado === "firmado" ? { fecha: p.fecha, firmante: p.firmante } : {}), ...(prev?.archivo ? { archivo: prev.archivo } : {}), at: ahora().toISOString(), by: actor.name };
+  const a: Acuerdos = { ...acuerdosOf(), docs: { ...acuerdosOf()?.docs, [doc]: reg } };
+  guardarAcuerdos(actor, a, `acuerdo «${doc}»: ${p.estado}${p.estado === "firmado" ? ` el ${p.fecha} por ${p.firmante}` : ""}`);
+  return { ok: true, acuerdos: a };
+}
+
+/** Registra la copia firmada (PDF ya guardado en el almacenamiento) de un acuerdo. */
+export function setArchivoAcuerdo(actor: SessionUser, doc: AcuerdoId, archivo: Omit<ArchivoAcuerdo, "at" | "by">, version: string): { ok: true; acuerdos: Acuerdos } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "Los acuerdos los administra el equipo consultor." };
+  const prev = acuerdosOf()?.docs?.[doc];
+  const reg = { ...(prev ?? { estado: "pendiente" as const, version }), archivo: { ...archivo, at: ahora().toISOString(), by: actor.name }, at: ahora().toISOString(), by: actor.name };
+  const a: Acuerdos = { ...acuerdosOf(), docs: { ...acuerdosOf()?.docs, [doc]: reg } };
+  guardarAcuerdos(actor, a, `acuerdo «${doc}»: copia firmada cargada (${archivo.name})`);
+  return { ok: true, acuerdos: a };
+}
+
+/** Quién aceptó la política de tratamiento y el compromiso de confidencialidad, y con qué versión (prueba de la autorización). */
+export function aceptacionesEmpresa(actor: SessionUser): { ok: true; filas: { email: string; name: string; role: SessionUser["role"]; active: boolean; consentAt: string | null; consentVersion: string | null; vigente: boolean; membresia: boolean }[] } | { ok: false; status: number; error: string } {
+  if (!can(actor, "manage_users")) return { ok: false, status: 403, error: "El registro de aceptaciones lo consulta el equipo consultor." };
+  const filas = users().map((u) => ({ email: u.email, name: u.name, role: u.role, active: u.active, consentAt: u.consentAt ?? null, consentVersion: u.consentVersion ?? null, vigente: consentVigente(u), membresia: !!u.membresia }))
+    .sort((a, b) => Number(a.vigente) - Number(b.vigente) || a.name.localeCompare(b.name));
+  return { ok: true, filas };
 }
 
 /** Carga o reemplaza el itinerario (manage_catalog); conserva publicación y enlace. */
@@ -3478,7 +3547,8 @@ export type ManagedUser = {
   principal?: string;          // slug de la empresa principal (solo en membresías)
   createdBy?: string;
   at?: string;
-  consentAt?: string;          // aceptación del tratamiento de datos personales
+  consentAt?: string;          // aceptación del tratamiento de datos personales y del compromiso de confidencialidad
+  consentVersion?: string;     // versión aceptada (src/lib/legal): si la vigente es otra, se pide de nuevo
   soloLectura?: boolean;       // cuenta de demostración: recorre todo y no guarda cambios (no aplica a membresías)
 };
 
@@ -3739,7 +3809,7 @@ export async function canjearCodigo(raw: unknown, datos: Record<string, unknown>
     if (!u.ok) return u;
     let e = await flushOrError(); if (e) return { ok: false, status: 500, error: e };
     // el tratamiento de datos lo aceptó en el formulario del código
-    const consentAt = new Date(); u.user.consentAt = consentAt.toISOString();
+    const consentAt = new Date(); u.user.consentAt = consentAt.toISOString(); u.user.consentVersion = CONSENT_VERSION;
     void persist("usuario", async (db) => { await db.user.update({ where: { email: c.email }, data: { consentAt, consentVersion: CONSENT_VERSION } }); });
     // quien generó el código acompaña el diagnóstico: si es consultor, queda con acceso al espacio (el admin ya opera en todas)
     if (c.createdByRole === "CONSULTOR") { const m = await addMembership(sistema, c.createdBy, { role: "CONSULTOR" }); if (!m.ok) console.warn("[4shine] código de acceso: no se pudo dar acceso al advisor:", m.error); }
@@ -3967,32 +4037,45 @@ export function removeUser(actor: SessionUser, email: string): { ok: true } | { 
 const propio = (user: SessionUser): ManagedUser | null =>
   (user.role === "ADMIN" ? g.platformUsers : users()).find((x) => x.email.toLowerCase() === user.email.toLowerCase()) ?? null;
 
-/** ¿Debe aceptar la política de tratamiento de datos antes de usar la plataforma? (todos menos el admin de plataforma y quien entró por QR, que ya la aceptó) */
+/** ¿La aceptación registrada corresponde a la versión vigente de la política y del compromiso de confidencialidad? */
+export const consentVigente = (u: { consentAt?: string | null; consentVersion?: string | null }): boolean => !!u.consentAt && u.consentVersion === CONSENT_VERSION;
+
+/** ¿Debe aceptar la política de tratamiento de datos y el compromiso de confidencialidad antes de usar la plataforma?
+    (todos menos el admin de plataforma). Se pide de nuevo cuando cambia la versión de los documentos. */
 export function consentPending(user: SessionUser): boolean {
-  if (user.role === "ADMIN" || user.qr) return false;
+  if (user.role === "ADMIN") return false;
   const u = propio(user);
-  return !!u && !u.consentAt;
+  return !!u && !consentVigente(u);
 }
 
 /** Igual que `consentPending`, pero la respuesta la da la base cuando existe: en despliegues con varias
-    instancias la memoria de una puede no saber todavía que la persona ya aceptó. */
-export async function consentPendingDb(user: SessionUser): Promise<boolean> {
-  if (user.role === "ADMIN" || user.qr) return false;
+    instancias la memoria de una puede no saber todavía que la persona ya aceptó. `previa` es la versión que había
+    aceptado antes (null si nunca aceptó): con ella el aviso explica que los documentos se actualizaron. */
+export async function consentEstadoDb(user: SessionUser): Promise<{ pendiente: boolean; previa: string | null }> {
+  if (user.role === "ADMIN") return { pendiente: false, previa: null };
   if (hasDb()) {
     try {
       const db = await prisma();
-      const row = await db.user.findUnique({ where: { email: user.email.toLowerCase() }, select: { consentAt: true } });
-      if (row) { const u = propio(user); if (u && row.consentAt) u.consentAt = row.consentAt.toISOString(); return !row.consentAt; }
+      const row = await db.user.findUnique({ where: { email: user.email.toLowerCase() }, select: { consentAt: true, consentVersion: true } });
+      if (row) {
+        const u = propio(user);
+        if (u && row.consentAt) { u.consentAt = row.consentAt.toISOString(); u.consentVersion = row.consentVersion ?? undefined; }
+        const pendiente = !consentVigente({ consentAt: row.consentAt?.toISOString(), consentVersion: row.consentVersion });
+        return { pendiente, previa: pendiente && row.consentAt ? row.consentVersion ?? "anterior" : null };
+      }
     } catch (e) { console.warn("[4shine] consentimiento:", (e as Error).message); }
   }
-  return consentPending(user);
+  const u = propio(user);
+  const pendiente = consentPending(user);
+  return { pendiente, previa: pendiente && u?.consentAt ? u.consentVersion ?? "anterior" : null };
 }
+export const consentPendingDb = async (user: SessionUser): Promise<boolean> => (await consentEstadoDb(user)).pendiente;
 
 /** Registra la aceptación de la política de tratamiento de datos con fecha y versión. */
 export async function acceptConsent(user: SessionUser): Promise<{ ok: true; at: string } | { ok: false; status: number; error: string }> {
   const u = propio(user);
   const at = ahora().toISOString();
-  if (u) u.consentAt = at;
+  if (u) { u.consentAt = at; u.consentVersion = CONSENT_VERSION; }
   if (hasDb()) {
     try {
       const db = await prisma();
@@ -4003,9 +4086,9 @@ export async function acceptConsent(user: SessionUser): Promise<{ ok: true; at: 
   return { ok: true, at };
 }
 
-export function ownProfile(user: SessionUser): { email: string; name: string; role: SessionUser["role"]; consentAt: string | null; company: string | null } | null {
+export function ownProfile(user: SessionUser): { email: string; name: string; role: SessionUser["role"]; consentAt: string | null; consentVersion: string | null; company: string | null } | null {
   const u = propio(user);
-  return u ? { email: u.email, name: u.name, role: u.role, consentAt: u.consentAt ?? null, company: user.company?.name ?? null } : null;
+  return u ? { email: u.email, name: u.name, role: u.role, consentAt: u.consentAt ?? null, consentVersion: u.consentVersion ?? null, company: user.company?.name ?? null } : null;
 }
 
 /** La persona actualiza sus datos básicos (por ahora el nombre). */
@@ -4307,7 +4390,7 @@ export function setIntegration(
   cfg.updatedBy = user.name;
   cfg.at = ahora().toISOString();
   integrations().set(key, cfg);
-  void persist("integración", (db) => db.integration.upsert({ where: { companyId_key: { companyId: cid(), key } }, update: { enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null }, create: { companyId: cid(), key, enabled: cfg.enabled, fields: cfg.fields, updatedBy: cfg.updatedBy ?? null } }));
+  void persist("integración", (db) => db.integration.upsert({ where: { companyId_key: { companyId: cid(), key } }, update: { enabled: cfg.enabled, fields: camposParaGuardar(cfg.fields), updatedBy: cfg.updatedBy ?? null }, create: { companyId: cid(), key, enabled: cfg.enabled, fields: camposParaGuardar(cfg.fields), updatedBy: cfg.updatedBy ?? null } }));
   audit(user, "task", `int-${key}`, `integración ${spec.name} ${patch.enabled !== undefined ? (patch.enabled ? "activada" : "desactivada") : "configurada"}`);
   return { ok: true };
 }

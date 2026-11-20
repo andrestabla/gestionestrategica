@@ -137,6 +137,7 @@ model Company {
   access      Json? // acceso por sección de la convención con QR: {seccion: {token, role, at}}
   itinerary   Json? // itinerario de la convención {title, days, items, public, token}
   tour        Json? // tour guiado de la empresa {activo, audiencia, version, pasos}
+  acuerdos    Json? // acuerdos firmados con la empresa {datos, docs: {confidencialidad, transmision}}
   financials  Json? // estados financieros de cierre (COP millones)
   territories Json? // presencia por departamento
   template    String  @default("vacia") // demo | vacia

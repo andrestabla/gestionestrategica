@@ -6,6 +6,7 @@
 // definición del sistema y es igual para todas las empresas.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { Acuerdos } from "@/lib/legal/acuerdos";
 import { DEFAULT_TYPE_RULE, type TypeRule } from "@/lib/priorizacion";
 import type { KrTemplate } from "@/lib/okr-plantillas";
 import type { PrioSessions } from "@/lib/priorizacion-sesion";
@@ -53,6 +54,7 @@ export type CompanyInfo = {
   access?: AccessConfig;    // acceso por sección de la convención con QR: token y rol por sección
   itinerary?: Itinerary;    // itinerario de la convención (momentos, publicación y enlace público)
   tour?: Tour;              // tour guiado de la empresa (Administración → Tour)
+  acuerdos?: Acuerdos;      // acuerdos de confidencialidad y de transmisión de datos firmados (Administración → Acuerdos)
   active: boolean;
   template?: "demo" | "vacia";
   createdBy?: string;

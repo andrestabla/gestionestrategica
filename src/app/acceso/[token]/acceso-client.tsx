@@ -4,7 +4,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, ArrowRight } from "lucide-react";
-import { consentSummary, consentText } from "@/lib/consentimiento";
+import { consentText } from "@/lib/consentimiento";
+import { AceptacionAcceso } from "@/components/consentimiento-gate";
 import { ENTRY_ROLES, entryRoleNeedsTribe, type EntryRole } from "@/lib/acceso";
 import { PasoCodigo, type PasoCodigoInfo } from "@/components/paso-codigo";
 
@@ -67,7 +68,7 @@ export function AccesoClient({ tenant, token, company, section, tribes = [] }: {
         <p className="mt-2 text-[12px] leading-snug text-faint">El correo te identifica: si ya entraste antes, se usa tu misma cuenta.</p>
         <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-surface-2/70 px-3 py-2.5">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--navy)]" />
-          <span className="text-[12px] leading-snug text-ink-soft">{consentSummary(company.name)}</span>
+          <span className="text-[12px] leading-snug text-ink-soft"><AceptacionAcceso company={company.name} /></span>
         </label>
         <details className="mt-1.5 px-1 text-[12px] text-faint">
           <summary className="cursor-pointer font-bold text-cyan-deep">Leer la autorización completa</summary>

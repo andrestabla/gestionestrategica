@@ -624,6 +624,9 @@ export function SitioPublico() {
             <a href="#diagnosticos">Diagnósticos</a>
             <Link href="/codigo">Tengo un código</Link>
             <Link href="/login">Iniciar sesión</Link>
+            <Link href="/privacidad">Privacidad</Link>
+            <Link href="/seguridad">Seguridad</Link>
+            <Link href="/legal">Centro de confianza</Link>
           </nav>
         </div>
         <div className="sp-wrap sp-pie-legal"><span>© {anio} Gestión estratégica</span><span>{DESARROLLADO_POR}</span></div>
